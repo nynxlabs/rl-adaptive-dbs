@@ -6,52 +6,73 @@ Roadmap, conventions, and implementation status for **rl-adaptive-dbs**. For clo
 
 ## 1. Roadmap
 
-Work proceeds in layers: one shared environment, then controllers, then cross-controller benchmarking.
+Work proceeds in layers: rough specs, then environment and controllers in paper order (DDPG first), then benchmarking and comparison, then fusion, then long-term modularity and a native plant.
 
-### Phase 0 — Specifications (complete)
+### Phase 0 — Rough specifications (complete)
+
+Draft specs that define scope, interfaces, and paper-aligned intent—not final implementation detail.
 
 | Deliverable | Spec | Code |
 |-------------|------|------|
 | Shared plant / Gym API | [environment.md](environment.md) | — |
-| DDPG controller | [controllers/ddpg.md](controllers/ddpg.md) | — |
-| SNN controller | [controllers/snn.md](controllers/snn.md) | — |
-| SEA-DBS controller | [controllers/sea_dbs.md](controllers/sea_dbs.md) | — |
+| DDPG controller | [controllers/ddpg/replication.md](controllers/ddpg/replication.md) | — |
+| SNN controller | [controllers/snn/replication.md](controllers/snn/replication.md) | — |
+| SEA-DBS controller | [controllers/sea_dbs/replication.md](controllers/sea_dbs/replication.md) | — |
 | Comparison protocol | [benchmarking.md](benchmarking.md) | — |
 
-### Phase 1 — Shared environment (current)
+### Phase 1 — Environment for the first controller (current)
 
-- Wrap Kumaravelu et al. (2016) MATLAB model (`reference-material/KumaraveluEtAl2016/`) or begin validated native Python port.
-- Gymnasium `reset` / `step`: parkinsonian ICs, STN DBS, GPi $P_\beta$, 2 s RL steps, reward Eq. (8).
+Replicate the shared plant and Mehregan et al. Gym API before any controller work.
+
+- Wrap Kumaravelu et al. (2016) MATLAB model (`reference-material/KumaraveluEtAl2016/`) per [environment.md](environment.md).
+- Gymnasium `reset` / `step`: parkinsonian ICs, STN DBS, GPi $P_\beta$, 2 s RL steps, reward Eq. (8)—the interface `ddpg` will use directly.
 - Equivalence checks vs reference (integration step, biomarker band, baseline traces).
-- **Exit criteria:** reproducible rollouts; baselines (`none`, `cdbs-130hz`, `periodic-45hz`) runnable from `envs/`.
+- **Exit criteria:** reproducible rollouts; baselines (`none`, `cdbs-130hz`, `periodic-45hz`) runnable from `envs/`; ready for Phase 3 training.
 
-### Phase 2 — First controller (`ddpg`)
+### Phase 3 — First controller (`ddpg`)
 
-- Actor–critic per [controllers/ddpg.md](controllers/ddpg.md); training loop (Algorithm 1).
+- Actor–critic per [controllers/ddpg/replication.md](controllers/ddpg/replication.md); training loop (Algorithm 1).
 - Variants: `paper`, `init-30hz`, optional PTQ/QAT (`ptq-int8`, etc.).
-- **Exit criteria:** training run completes; eval roll-out matches spec checklist.
+- **Exit criteria:** training run completes; eval roll-out matches spec checklist on `envs/` without adapters.
 
-### Phase 3 — Additional controllers
+### Phase 4 — Benchmarking the first controller
+
+- Suite definitions (YAML or equivalent) per [benchmarking.md](benchmarking.md).
+- **Per-paper suite** for Mehregan replication (`mehregan_eval`): baselines + `ddpg` variants × seeds → `results/`.
+- Runner and summary tables / plots over core metrics ($P_\beta$, reward, stim frequency).
+- **Exit criteria:** repeatable `mehregan_eval` runs; replication checklist passable for `ddpg`.
+
+### Phase 5 — Other controllers, adapters, and per-paper benchmarking
 
 | Package | Paper | Notes |
 |---------|--------|--------|
-| `controllers/snn/` | Nguyen et al. | Spec: [controllers/snn.md](controllers/snn.md); adapter for Nguyen I/O |
-| `controllers/sea_dbs/` | Ravivarapu et al. | Spec: [controllers/sea_dbs.md](controllers/sea_dbs.md); adapter for SEA-DBS I/O |
+| `controllers/snn/` | Nguyen et al. | Spec: [controllers/snn/replication.md](controllers/snn/replication.md); adapter for Nguyen I/O |
+| `controllers/sea_dbs/` | Ravivarapu et al. | Spec: [controllers/sea_dbs/replication.md](controllers/sea_dbs/replication.md); adapter for SEA-DBS I/O |
 
-- **Exit criteria:** each controller trains/evals on the **same plant wrapper** (no duplicated CBGT dynamics); `ddpg` uses `envs/` directly, others via adapters documented in their specs.
+- Replicate each controller; extend or wrap `envs/` only via **adapters** (no duplicated CBGT dynamics).
+- **Per-paper suites** for Nguyen and SEA-DBS (`nguyen_eval`, `sea_dbs_eval`); same runner as Phase 4.
+- **Exit criteria:** each controller trains/evals on the **same plant** through its documented adapter; per-paper benchmark runs complete.
 
-### Phase 4 — Benchmarking
+### Phase 6 — Cross-controller comparison and benchmarkability
 
-- Suite definitions (YAML or equivalent) per [benchmarking.md](benchmarking.md).
-- **Per-paper suites** for replication (`mehregan_eval`, `nguyen_eval`, `sea_dbs_eval`); optional **cross-paper** suite on the shared plant only (see [benchmarking.md](benchmarking.md) §3).
-- Runner: baselines + controllers × variants × seeds → `results/`.
-- Summary tables / plots over core metrics ($P_\beta$, reward, stim frequency).
+- Optional **cross-paper** suite on the shared plant only (see [benchmarking.md](benchmarking.md) §3).
+- Clarify which metrics are comparable across adapters vs plant-level only ($P_\beta$, stim duty cycle, etc.).
+- Harden the runner, manifests, and reporting so all three controllers can be compared fairly at the plant level.
+- **Exit criteria:** documented comparison protocol; cross-paper (or equivalent) runs reproducible with `adapter: true` and suite metadata logged.
 
-### Phase 5 — Optional
+### Phase 7 — Fusion
+
+- Synthesize SEA-DBS's predictive reward model with DSQN's spiking architecture: [controllers/fusion.md](controllers/fusion.md).
+- Hierarchical neuromorphic controller (fast gatekeeper + parameter-tuning SNN) and any fusion-specific benchmarking.
+
+### Phase 8 and beyond — Native plant, modularity, extensions
 
 - Native Python plant ([environment.md](environment.md) §12); drop MATLAB dependency after equivalence checks.
-- CI on smoke tests + selected benchmark suite.
+- Modular layout: swappable plant backends, controller packages, adapters, and benchmark runner; CI on smoke tests + selected suites.
 - Training/eval CLIs documented in [getting_started.md](getting_started.md).
+- Optional per-controller work beyond paper replication: [controllers/ddpg/extensions.md](controllers/ddpg/extensions.md), [controllers/snn/extensions.md](controllers/snn/extensions.md), [controllers/sea_dbs/extensions.md](controllers/sea_dbs/extensions.md), and broader framework ideas (other oscillatory conditions, patient-specific robustness, etc.).
+
+Phases 8+ are intentionally open; prioritize equivalence and replication paths before large refactors.
 
 ---
 
@@ -67,13 +88,13 @@ Work proceeds in layers: one shared environment, then controllers, then cross-co
 | Layer | Spec path | Code path |
 |-------|-----------|-----------|
 | Environment | [environment.md](environment.md) | `envs/` |
-| Controller | [controllers/ddpg.md](controllers/ddpg.md), [snn.md](controllers/snn.md), [sea_dbs.md](controllers/sea_dbs.md) | `controllers/<name>/` |
+| Controller | [controllers/ddpg/replication.md](controllers/ddpg/replication.md), [controllers/snn/replication.md](controllers/snn/replication.md), [controllers/sea_dbs/replication.md](controllers/sea_dbs/replication.md) | `controllers/<name>/` |
 | Benchmarks | [benchmarking.md](benchmarking.md) | runner TBD |
 
 ### Naming and layout
 
 - Python packages match directories: `ddpg`, `snn`, `sea_dbs`.
-- Controller docs mirror packages: `docs/controllers/ddpg.md`, etc.
+- Controller docs mirror packages: `docs/controllers/ddpg/replication.md`, etc.
 - Default paper-replication benchmark variant: `paper`.
 - Distribution name `rl-adaptive-dbs` (hyphen); imports `envs`, `controllers` (underscore, no hyphen).
 
@@ -95,7 +116,7 @@ Work proceeds in layers: one shared environment, then controllers, then cross-co
 
 ### Cross-controller benchmarking
 
-All controllers share the **Kumaravelu et al. (2016)** parkinsonian plant, but each paper defines its own **RL interface** (step length, observation, action, reward). The shared `envs/` package implements the **Mehregan et al.** Gym API ([environment.md](environment.md)); `ddpg` can train on it directly. **Nguyen** and **Ravivarapu** need adapters (see [controllers/snn.md](controllers/snn.md), [controllers/sea_dbs.md](controllers/sea_dbs.md)).
+All controllers share the **Kumaravelu et al. (2016)** parkinsonian plant, but each paper defines its own **RL interface** (step length, observation, action, reward). The shared `envs/` package implements the **Mehregan et al.** Gym API ([environment.md](environment.md)); `ddpg` can train on it directly. **Nguyen** and **Ravivarapu** need adapters (see [controllers/snn/replication.md](controllers/snn/replication.md), [controllers/sea_dbs/replication.md](controllers/sea_dbs/replication.md)).
 
 | Comparison type | What is held fixed | What differs | When to use |
 |-----------------|-------------------|--------------|-------------|
@@ -120,9 +141,13 @@ Do **not** commit:
 | Component | Status | Notes |
 |-----------|--------|--------|
 | [environment.md](environment.md) | Draft | — |
-| [controllers/ddpg.md](controllers/ddpg.md) | Draft | — |
-| [controllers/snn.md](controllers/snn.md) | Draft | Adapter + DSQN timing in spec |
-| [controllers/sea_dbs.md](controllers/sea_dbs.md) | Draft | Adapter + binary action / Eq. (7) in spec |
+| [controllers/ddpg/replication.md](controllers/ddpg/replication.md) | Draft | — |
+| [controllers/snn/replication.md](controllers/snn/replication.md) | Draft | Adapter + DSQN timing in spec |
+| [controllers/sea_dbs/replication.md](controllers/sea_dbs/replication.md) | Draft | Adapter + binary action / Eq. (7) in spec |
+| [controllers/ddpg/extensions.md](controllers/ddpg/extensions.md) | Outline | CV post-replication directions |
+| [controllers/snn/extensions.md](controllers/snn/extensions.md) | Outline | CV post-replication directions |
+| [controllers/sea_dbs/extensions.md](controllers/sea_dbs/extensions.md) | Outline | CV post-replication directions |
+| [controllers/fusion.md](controllers/fusion.md) | Outline | SEA-DBS + DSQN synthesis |
 | [benchmarking.md](benchmarking.md) | Draft | Per-paper vs cross-paper suites in spec; runner not implemented |
 | `envs/` | Placeholder | No Gym env yet |
 | `controllers/ddpg/` | Placeholder | — |
@@ -132,7 +157,7 @@ Do **not** commit:
 | Benchmark suite runner | Not started | — |
 | Training / eval CLI | Not started | — |
 
-**Current phase:** 1 (Phase 0 specs complete; shared environment implementation in progress).
+**Current phase:** 1 (Phase 0 rough specs complete; environment replication for `ddpg` in progress; Phases 3–8+ outlined).
 
 ---
 
@@ -141,9 +166,10 @@ Do **not** commit:
 | Doc | Role |
 |-----|------|
 | [getting_started.md](getting_started.md) | Setup and how to use the repo |
+| [testing.md](testing.md) | pytest layout, markers, what to test |
 | [development.md](development.md) | Roadmap, conventions, status (this file) |
 | [venv.md](venv.md) | `uv` and dependencies |
 | [environment.md](environment.md) | Shared plant / Gym API |
-| [controllers/](controllers/) | Per-controller specs |
+| [controllers/](controllers/) | Per-controller specs (replication + extensions + fusion) |
 | [benchmarking.md](benchmarking.md) | Cross-controller comparison |
 | [README.md](../README.md) | Project scope and References |

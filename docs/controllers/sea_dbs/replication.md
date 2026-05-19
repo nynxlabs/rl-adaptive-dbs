@@ -2,7 +2,7 @@
 
 This document specifies the **SEA-DBS** (sample-efficient actor–critic) controller from *Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson’s Disease* (Ravivarapu et al.). It is meant to align `controllers/sea_dbs/` (and training scripts) with the published method.
 
-**Companion spec:** The **Kumaravelu et al. (2016)** parkinsonian CBGT plant is shared with other controllers; dynamics and provenance are summarized in [environment.md](../environment.md) §2. That document is authoritative for the **Mehregan et al.** Gymnasium API (2 s steps, pattern actions, Eq. (8) reward). **This document is authoritative for the Ravivarapu controller**—binary actions, predictive reward modeling, Gumbel-Softmax exploration, timing, reward shape, and training—unless the two explicitly describe the same quantity.
+**Companion spec:** The **Kumaravelu et al. (2016)** parkinsonian CBGT plant is shared with other controllers; dynamics and provenance are summarized in [environment.md](../../environment.md) §2. That document is authoritative for the **Mehregan et al.** Gymnasium API (2 s steps, pattern actions, Eq. (8) reward). **This document is authoritative for the Ravivarapu controller**—binary actions, predictive reward modeling, Gumbel-Softmax exploration, timing, reward shape, and training—unless the two explicitly describe the same quantity.
 
 ---
 
@@ -10,8 +10,8 @@ This document specifies the **SEA-DBS** (sample-efficient actor–critic) contro
 
 | In scope | Out of scope |
 |----------|----------------|
-| **DDPG backbone** with **predictive reward model** $f_\theta$ and **Gumbel-Softmax (GS)** exploration (Algorithm 1, §IV) | Mehregan-style **discrete STN pattern alphabet** and **CNN** actor over many patterns (see [controllers/ddpg.md](ddpg.md)) |
-| **Binary** stimulation ($a_t \in \{0,1\}$: pulse vs. no pulse) | Nguyen **DSQN** / spike-matrix control (see [controllers/snn.md](snn.md)) |
+| **DDPG backbone** with **predictive reward model** $f_\theta$ and **Gumbel-Softmax (GS)** exploration (Algorithm 1, §IV) | Mehregan-style **discrete STN pattern alphabet** and **CNN** actor over many patterns (see [controllers/ddpg/replication.md](../ddpg/replication.md)) |
+| **Binary** stimulation ($a_t \in \{0,1\}$: pulse vs. no pulse) | Nguyen **DSQN** / spike-matrix control (see [controllers/snn/replication.md](../snn/replication.md)) |
 | **Augmented Q-target** $r_t + \hat{r}_t + \gamma Q_{\phi'}(s_{t+1}, \pi_{\theta'}(s_{t+1}))$ (Eq. (9)) | In vivo validation and clinical trial protocols |
 | **FP16 post-training quantization (PTQ)** for deployment (§V) | **QAT** (not reported for SEA-DBS) |
 | **Adapter** from the shared plant wrapper to Ravivarapu I/O when running on the repo’s unified `envs/` stack | Full network topology (layer counts, widths) where the paper is silent |
@@ -34,8 +34,8 @@ The controller does **not** compute $P_\beta$ inside the policy; it consumes the
 
 ## 3. Plant and biomarker (shared dynamics, paper-specific state)
 
-- **Plant:** Biophysical **6-OHDA rat CBGT** model “inspired by” Mehregan et al. (§III)—**10 neurons per region**, DBS to **STN** ([environment.md](../environment.md) §2).
-- **Biomarker:** **GPi beta-band power** $P_\beta$, **13–35 Hz**, averaged over **$n = 10$** GPi neurons (Eq. (1))—same frequency band as Eq. (1) in [environment.md](../environment.md) §3.1.
+- **Plant:** Biophysical **6-OHDA rat CBGT** model “inspired by” Mehregan et al. (§III)—**10 neurons per region**, DBS to **STN** ([environment.md](../../environment.md) §2).
+- **Biomarker:** **GPi beta-band power** $P_\beta$, **13–35 Hz**, averaged over **$n = 10$** GPi neurons (Eq. (1))—same frequency band as Eq. (1) in [environment.md](../../environment.md) §3.1.
 - **State $s_t$:** Fixed-length window $\{P_\beta(i)\}_{i=1}^{n_{\mathrm{obs}}}$ (Eq. (4)); **mean** $\bar{P}_\beta$ over the window (Eq. (5)) is the quantity used in the **reward** and described as input to actor and critic. Whether the networks consume the **full window**, **$\bar{P}_\beta$ only**, or both is **not** fully specified — **intentionally open**; pick one representation, document tensor shapes in code, and keep it fixed across train / eval / quantization. **Paper ambiguity:** §V.A emphasizes **mean** beta (Eq. (5)) for actor/critic input while Eq. (4) defines a window—the paper does not resolve whether the agent sees the full window or only the mean. **Default:** use **mean** (Eq. (5)) unless replicating unreleased reference code.
 
 **Adapter note:** When `controllers/sea_dbs/` trains against the shared `envs/` package, the **sea_dbs adapter** must (a) use Ravivarapu **step timing** (§5), (b) expose **binary pulse** actions instead of Mehregan **pattern indices**, (c) apply **Eq. (7)** reward (not Mehregan Eq. (8) unless they are intentionally unified—see §6), and (d) supply $(s, a, r, s')$ plus stored **logits** and **$\hat{r}$** for replay.
@@ -57,7 +57,7 @@ $$
 
 **Evaluation / inference:** **Argmax** (or hardened GS at $\tau \approx 0$) on actor logits—**intentionally open** which convention matches released code; document the choice next to `select_action`.
 
-**Baselines in the paper:** A **DDPG baseline** without predictive modeling or GS (same binary action space) is used for comparison (§V, Table II, Figs. 4–7). Implement `variant=baseline` vs `variant=sea_dbs` (full PM+GS) for benchmarking per [benchmarking.md](../benchmarking.md).
+**Baselines in the paper:** A **DDPG baseline** without predictive modeling or GS (same binary action space) is used for comparison (§V, Table II, Figs. 4–7). Implement `variant=baseline` vs `variant=paper` (full SEA-DBS: PM+GS) for benchmarking per [benchmarking.md](../../benchmarking.md).
 
 ---
 
@@ -65,7 +65,7 @@ $$
 
 Values from **§V.A (Experiment setup)** unless noted.
 
-| Quantity | Ravivarapu et al. (SEA-DBS) | Mehregan [environment.md](../environment.md) §5 |
+| Quantity | Ravivarapu et al. (SEA-DBS) | Mehregan [environment.md](../../environment.md) §5 |
 |----------|----------------------------|--------------------------------------------------|
 | **RL step duration** $l$ | **2 ms** | **2 s** |
 | **Steps per episode** | **30** | **30** |
@@ -94,7 +94,7 @@ $$
 - **Threshold:** $\beta_t = 0.35$ (§V.A).
 - **Intent:** Reward **favorable** outcomes when $\bar{P}_\beta$ is **below** $\beta_t$ (squared positive branch); **penalize** elevated beta quadratically.
 
-**Difference from Mehregan Eq. (8):** [environment.md](../environment.md) §6 uses a **linear** branch when $s_{\mathrm{sum}} < \beta_t$ and a **quadratic** penalty above threshold. SEA-DBS uses **squaring in both branches**. The **sea_dbs adapter** must implement **Eq. (7)** for paper-aligned training; do not assume the shared env’s Mehregan reward without an explicit `reward_mode`.
+**Difference from Mehregan Eq. (8):** [environment.md](../../environment.md) §6 uses a **linear** branch when $s_{\mathrm{sum}} < \beta_t$ and a **quadratic** penalty above threshold. SEA-DBS uses **squaring in both branches**. The **sea_dbs adapter** must implement **Eq. (7)** for paper-aligned training; do not assume the shared env’s Mehregan reward without an explicit `reward_mode`.
 
 **Normalization:** As with other controllers, $\beta_t = 0.35$ implies **consistent scaling** of $\bar{P}_\beta$ (or $s(i)$) between observations and reward—document the same normalization used for Mehregan if both share a pipeline, or separate scales if not.
 
@@ -126,7 +126,7 @@ $$
 
 Train $f_\theta$ **concurrently** with actor and critic (Algorithm 1, lines 16–17). **Architecture** (MLP depth, hidden size, whether $a$ is one-hot) is **not** specified — **intentionally open**; keep capacity modest for the reported **~65 MB** full-precision footprint (§V).
 
-**Ablation:** `variant=baseline+pm` enables predictive modeling only; full SEA-DBS uses PM **and** GS (Fig. 7).
+**Ablation:** `variant=baseline-pm` enables predictive modeling only; full SEA-DBS (`variant=paper`) uses PM **and** GS (Fig. 7).
 
 ---
 
@@ -147,7 +147,7 @@ $$
 \tau_t = \max\left(\tau_{\min},\, \tau_0\, e^{-\lambda_\tau t}\right)
 $$
 
-$\tau_0$, $\tau_{\min}$, and $\lambda_\tau$ are **not** in Table I — **intentionally open**; tune for stable early exploration and document values in code. **Ablation:** `variant=baseline+gs` enables GS without predictive modeling.[^gs]
+$\tau_0$, $\tau_{\min}$, and $\lambda_\tau$ are **not** in Table I — **intentionally open**; tune for stable early exploration and document values in code. **Ablation:** `variant=baseline-gs` enables GS without predictive modeling.[^gs]
 
 [^gs]: Fig. 7 labels this technique **“guided sampling”**; it is the same as **Gumbel-Softmax** (different naming in the paper).
 
@@ -219,7 +219,7 @@ Trained **actor** $\pi^* \approx \pi_\theta$ for closed-loop pulse decisions. Op
 | **Ablation (10 steps)** | Baseline, +PM, +GS, full SEA-DBS (Fig. 7); PM early noise with **~4,500** samples cited |
 | **FP16 PTQ** | Post-training; compare PSD over **10** stimulation steps (Fig. 6) |
 
-Use the `sea_dbs_eval` suite (§3.2) for replication; cross-paper metrics: [benchmarking.md](../benchmarking.md) §3.3.
+Use the `sea_dbs_eval` suite per [benchmarking.md](../../benchmarking.md) §3.2 for replication; cross-paper metrics: [benchmarking.md](../../benchmarking.md) §3.3.
 
 ---
 
@@ -241,7 +241,7 @@ Quantization affects **network inference only**, not plant timing or biomarker d
 - **`Critic`:** `forward(state, action) -> scalar` (action as binary index or one-hot per implementation).
 - **`PredictiveModel`:** `forward(state, action) -> r_hat`.
 - **`ReplayBuffer`:** Store $(s, a, a_{\mathrm{logits}}, r, \hat{r}, s', dw)$ (minimum fields for Algorithm 1 + done masking).
-- **`SEA_DBSTrainer`:** Algorithm 1 loop; `variant` in `{baseline, baseline_pm, baseline_gs, sea_dbs}` for ablations.
+- **`SEA_DBSTrainer`:** Algorithm 1 loop; `variant` in `{baseline, baseline-pm, baseline-gs, paper}` for ablations (Fig. 7: Baseline, +PM, +GS, full SEA-DBS).
 - **`SEA_DBSEnvAdapter`:** Maps shared `envs/` API ↔ Ravivarapu timing, binary actions, Eq. (7) reward.
 
 Defaults for Table I hyperparameters should match §V.A; open values should be **config fields** with comments pointing to this spec.
@@ -254,15 +254,63 @@ Defaults for Table I hyperparameters should match §V.A; open values should be *
 - [ ] Actions: **binary** $\{0,1\}$; training uses **GS**; replay stores **logits** where required.
 - [ ] Reward: **Eq. (7)** with $\beta_t = 0.35$ — **not** Mehregan Eq. (8) unless explicitly bridged.
 - [ ] Critic target includes **$r + \hat{r}$** plus bootstrapped $Q_{\phi'}$ (Eq. (9)); $\mathcal{L}_{\mathrm{pred}}$ on $(r - \hat{r})^2$.
-- [ ] Timing: **2 ms** × **30** steps × **150** episodes unless project convention documents a mapping from [environment.md](../environment.md).
+- [ ] Timing: **2 ms** × **30** steps × **150** episodes unless project convention documents a mapping from [environment.md](../../environment.md).
 - [ ] Table I: $\alpha_a = 5\times 10^{-4}$, $\alpha_c = 10^{-3}$, $\gamma = 0.99$, buffer **8192**, batch **32**.
 - [ ] Ablations and baseline DDPG variants reproducible via `variant` flag.
 - [ ] FP16 PTQ eval documented separately from training.
 
 ---
 
-## 14. Reference
+## 14. Open questions / TBD
+
+### 1. Actor/critic state representation
+
+Eq. (4) defines a $P_\beta$ window; §V.A emphasizes mean $\bar{P}_\beta$ (Eq. (5)) as actor/critic input. **Fixed:** reward uses $\bar{P}_\beta$; window length $n_{\mathrm{obs}}$ enters Eq. (7). **Open:** full window vs mean-only (or both) as network input. **Decide in** adapter/model config; **default:** mean only unless unreleased reference code differs.
+
+### 2. Inference action selection
+
+Training uses Gumbel-Softmax; deployment should be deterministic. **Fixed:** binary executed action $a_t \in \{0,1\}$. **Open:** argmax on logits vs hardened GS at $\tau \approx 0$. **Decide in** `select_action` and document next to eval code.
+
+### 3. RL step timing on shared `envs/` stack
+
+Ravivarapu uses **2 ms** steps; [environment.md](../../environment.md) defines **2 s** Mehregan steps for the unified Gym API. **Fixed:** **2 ms** × **30** steps × **150** episodes for paper parity. **Open:** dedicated `sea_dbs` env config vs mapping longer segments onto Ravivarapu semantics. **Decide in** `SEA_DBSEnvAdapter` once `envs/` supports both profiles; do not silently claim SEA-DBS parity on 2 s steps.
+
+### 4. Predictive model $f_\theta$ architecture
+
+Eqs. (8)–(10) fix the forward and losses but not MLP depth, hidden width, or action encoding (binary index vs one-hot). **Fixed:** $\hat{r}_t = f_\theta(s_t, a_t)$ trained concurrently with actor/critic. **Open:** network capacity (~**65 MB** FP footprint is a soft anchor). **Decide in** `PredictiveModel` module and document shapes.
+
+### 5. Gumbel-Softmax temperature schedule
+
+Eq. (14) anneals $\tau_t = \max(\tau_{\min}, \tau_0 e^{-\lambda_\tau t})$ but Table I omits $\tau_0$, $\tau_{\min}$, and $\lambda_\tau$. **Fixed:** GS exploration during training with annealing. **Open:** schedule values. **Decide in** trainer config; tune for stable early exploration and log chosen values.
+
+### 6. Episode done flag $dw$ in replay
+
+Algorithm 1 omits a done flag; standard DDPG bootstrapping masks with $(1 - dw)$. **Fixed:** **30** steps per episode. **Open:** whether to store and mask $dw$ in $\mathcal{D}$. **Decide in** replay layout; include $dw$ unless released code shows otherwise.
+
+### 7. Polyak soft-update rate and update ordering
+
+Table I gives $\gamma = 0.99$ but not Polyak $\tau$ (distinct from GS temperature $\tau_t$). Mehregan specifies critic-freeze ordering; Ravivarapu does not. **Fixed:** soft target updates for $\pi_{\theta'}$, $Q_{\phi'}$; use distinct names (e.g. `polyak_tau` vs `gs_tau`). **Open:** $\tau$ value, gradient steps per env step, critic-freeze ordering. **Decide in** `SEA_DBSTrainer`; follow standard DDPG practice or released code and document deviations.
+
+### 8. Hyperparameters absent from Table I
+
+Table I fixes actor/critic learning rates, $\gamma$, buffer **8192**, and batch **32**. **Fixed:** those values. **Open:** predictive-model learning rate, $n_{\mathrm{obs}}$, and items in §7 above. **Decide in** config fields with comments pointing to this spec.
+
+### 9. Actor/critic network topology
+
+Scope notes full layer counts and widths are out of scope where the paper is silent. **Fixed:** DDPG backbone with binary logits output. **Open:** hidden sizes and depth. **Decide in** `controllers/sea_dbs/` and keep fixed across train, eval, and FP16 PTQ.
+
+### 10. Stimulation carrier frequency at inference
+
+Fig. 5 compares **50 Hz** vs **30 Hz** carrier during inference; this is not a per-step RL action. **Fixed:** binary pulse/no-pulse control during training. **Open:** how the adapter/plant exposes carrier frequency for eval. **Decide in** benchmark harness as a fixed eval setting, not an RL action dimension.
+
+### 11. Beta normalization scale
+
+$\beta_t = 0.35$ implies consistent scaling of $\bar{P}_\beta$ between observations and reward, as with Mehregan. **Fixed:** Eq. (7) reward shape. **Open:** shared vs controller-specific normalization when both pipelines use the same plant wrapper. **Decide in** adapter; document scale if diverging from [environment.md](../../environment.md) §6.
+
+---
+
+## 15. References
 
 - Ravivarapu et al., *Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson’s Disease*.
 
-For the **shared plant** and **Mehregan Gym API**, see [environment.md](../environment.md). For the **DDPG pattern controller** and **quantization (PTQ/QAT)** study, see [controllers/ddpg.md](ddpg.md).
+For the **shared plant** and **Mehregan Gym API**, see [environment.md](../../environment.md). For the **DDPG pattern controller** and **quantization (PTQ/QAT)** study, see [controllers/ddpg/replication.md](../ddpg/replication.md).
