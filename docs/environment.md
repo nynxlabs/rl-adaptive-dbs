@@ -1,8 +1,8 @@
 # RL environment specification (Mehregan et al., adaptive DBS / quantization)
 
-This document specifies the **computational reinforcement-learning environment** described in *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning* (Mehregan et al.). It is meant to align a Gymnasium-style `envs/` implementation with the published setup. The **DDPG actor–critic controller** (networks, replay, losses, quantization) is specified separately in [controller_mehregan.md](controller_mehregan.md).
+This document specifies the **computational reinforcement-learning environment** described in *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning* (Mehregan et al.). It is meant to align a Gymnasium-style implementation under `envs/` (repository root) with the published setup. The **DDPG actor–critic controller** (networks, replay, losses, quantization) is specified separately in [controllers/ddpg.md](controllers/ddpg.md).
 
-The **plant** is the validated **cortex–basal ganglia–thalamus** biophysical network for **6-OHDA–lesioned (parkinsonian) rat**, with **DBS delivered in the STN**. Use the **Kumaravelu, Brocker, and Grill (2016)** biophysical network model (the MATLAB distribution bundled with this repository as third-party reference material; see the accompanying readme in that bundle for citation and provenance).
+The **plant** is the validated **cortex–basal ganglia–thalamus** biophysical network for **6-OHDA–lesioned (parkinsonian) rat**, with **DBS delivered in the STN**. Use the **Kumaravelu, Brocker, and Grill (2016)** biophysical network model (the MATLAB distribution under [`reference-material/KumaraveluEtAl2016/`](../reference-material/KumaraveluEtAl2016/); see [`readme.txt`](../reference-material/KumaraveluEtAl2016/readme.txt) for citation and provenance).
 
 ---
 
@@ -10,7 +10,7 @@ The **plant** is the validated **cortex–basal ganglia–thalamus** biophysical
 
 | In scope | Out of scope (same paper, different system) |
 |----------|---------------------------------------------|
-| Offline RL training against the **MATLAB / computational** network | **In vivo** rat optogenetics pipeline (trial timing, behavior, recording hardware) |
+| **Simulator-in-the-loop RL** (Algorithm 1: environment steps with transitions stored in a replay buffer) against the **MATLAB / computational** network | **In vivo** rat optogenetics pipeline (trial timing, behavior, recording hardware) |
 | **Single biomarker** control using **beta-band power** in GPi | **Error index (EI)** as a *driving* observation (used historically in related work; this study motivates **Pβ only** for practicality) |
 
 ---
@@ -18,11 +18,11 @@ The **plant** is the validated **cortex–basal ganglia–thalamus** biophysical
 ## 2. Plant (dynamics model)
 
 - **Topology:** Cortical (excitatory / inhibitory), direct and indirect striatum, **STN**, **GPe**, **GPi**, thalamus; stochastic and fixed excitatory/inhibitory inter-region connections as in the Kumaravelu et al. (2016) publication cited in the paper.
-- **Units per region:** **10** single-compartment **Hodgkin–Huxley–type** neurons per structure (as stated in the paper’s Section II.A).
+- **Units per region:** **10** single-compartment **Hodgkin–Huxley–type** neurons per structure (paper §II.A). §IV.A.1 briefly says “10 neurons” for the whole model; replication uses **10 per region** as in §II.A and the Kumaravelu reference implementation.
 - **Pathology:** Parkinsonian (6-OHDA lesioned) regime with exaggerated **beta** oscillations versus healthy controls.
 - **Actuation:** DBS **injected in the STN** (paper Figure 1a); compare to conventional **~130 Hz** periodic high-frequency STN DBS as a baseline. **Pulse timing, amplitude, and other waveform details** are not overridden in §IV.A.1; follow the **Kumaravelu et al. (2016)** reference implementation unless a later publication or released code specifies otherwise.
 
-**Implementation note:** Wrapping the reference MATLAB model in a Python RL loop is the expected path until a native reimplementation exists. Time base and numerical integration must match the reference simulator (the paper’s experimental setup uses a **0.02 ms** simulation time step; see §5).
+**Implementation note:** Wrapping the reference MATLAB model in a Python RL loop is the expected path until a native reimplementation exists. Mehregan et al. §IV.A.1 reports a plant integration step of **0.02 ms** (see §5). The bundled Kumaravelu et al. (2016) script in `reference-material/KumaraveluEtAl2016/` defaults to **0.01 ms** (`dt` in `simulate_network_model.m`). For paper replication, use **0.02 ms** unless Mehregan’s released training code specifies otherwise; document any deliberate deviation and validate biomarker statistics if you keep the reference default.
 
 ---
 
@@ -63,13 +63,13 @@ Values from **§IV.A.1 (computational setup)** unless noted.
 | Quantity | Value |
 |----------|--------|
 | **RL step duration** (`dt_rl` / “duration $l$” in Alg. 1) | **2 s** of simulated time per RL transition |
-| **Plant integration step** | **0.02 ms** (paper text: “step size of 0.02 ms”) |
+| **Plant integration step** | **0.02 ms** in Mehregan §IV.A.1 (“step size of 0.02 ms”); bundled Kumaravelu MATLAB defaults to **0.01 ms** — see §2 implementation note |
 | **Steps per training episode** | **30** |
 | **Episode reset** | New **initial conditions** for the plant; collect $P_\beta$ and reward over each step (Alg. 1) |
 
 **Suggested environment API:**
 
-- `reset()` → initialize parkinsonian network state (and optional noise seed).
+- `reset()` → new parkinsonian initial conditions (and optional noise seed); integrate for duration **$l$** (2 s) per Algorithm 1 step 7, compute **$P_\beta$** over the biomarker window, form initial observation **$s_0$**, and return it (plus optional initial **$R$** and info). The first `step` then applies an action for another **$l$**.
 - `step(action)` → apply selected **pattern** to STN for **2 s** simulated time, integrate the network, compute **$P_\beta$** over the window policy, return observation, reward, terminated, truncated, info.
 
 ---
@@ -91,7 +91,7 @@ R =
 $$
 
 - **Threshold:** $\beta_t = 0.35$ (paper §III.C).
-- **Intent:** Positive reward when average biomarker-derived state is **below** the threshold; **quadratic penalty** when above.
+- **Intent:** Reward **increases** (is more favorable) as the average biomarker-derived state moves **below** $\beta_t$; **quadratic penalty** when at or above. With raw $P_\beta$ on the order of hundreds (paper Figure 4), Eq. (8) is only meaningful after the **normalization** in the note below—do not assume every favorable transition has $R > 0$.
 
 **Relationship to the paper’s efficiency goal:** The problem statement motivates **both** symptom reduction (beta) and **energy-aware** stimulation (e.g. lower mean frequency vs **130 Hz** cDBS). The **published reward in Eq. (8) depends only on beta-band state vs $\beta_t$**—there is **no separate reward term** for pulse count or instantaneous frequency. Mean-frequency shaping enters through **initialization** (e.g. **45 Hz** / **30 Hz** target), the **learned discrete pattern family**, and **baseline comparisons** in §IV, not through an explicit energy penalty in $R$.
 
@@ -121,7 +121,7 @@ From **§IV.A.1** (for replication / defaults):
 
 **Not fixed numerically in §IV.A.1 (still required for DDPG replication):** Algorithm 1 also initializes **discount** $\gamma$, **target-network soft-update** coefficient $\tau$, and an inner-loop **update frequency** (gradient steps per environment step). The computational-setup paragraph does **not** report numeric values for these; match released code if available, or document chosen defaults explicitly in the implementation.
 
-**Evaluation protocol (paper §IV.A.2):** After training, fix **random seed**; run **10 s** simulation with **2 s** initial segment for reset / baseline, then **5** repeated applications of the **step** (stimulation) protocol for comparison across models and quantization variants.
+**Evaluation protocol (paper §IV.A.2):** After training, fix **random seed**; run a **10 s** simulation with **2 s** for reset / baseline, then **5** repeated applications of the stimulation **step** for comparison across models and quantization variants. The paper also describes a **2 s** GPi baseline before applying actor actions (Figure 5). If each eval segment uses the training step duration **$l = 2$ s**, five segments plus a 2 s reset exceed **10 s** total—**intentionally open** until released code or a project convention fixes segment length vs. the reported **10 s** wall time. Cross-controller use of this protocol (baselines, metrics, run identity) is defined in [benchmarking.md](benchmarking.md).
 
 ---
 
@@ -146,7 +146,7 @@ From **§IV.A.1** (for replication / defaults):
 ## 11. References
 
 - Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning*.
-- Kumaravelu K, Brocker DT, Grill WM (2016), *A biophysical model of the cortex–basal ganglia–thalamus network in the 6-OHDA lesioned rat model of Parkinson’s disease*, *J Comput Neurosci* 40:207–29 (reference MATLAB model distribution included with this project).
+- Kumaravelu K, Brocker DT, Grill WM (2016), *A biophysical model of the cortex–basal ganglia–thalamus network in the 6-OHDA lesioned rat model of Parkinson’s disease*, *J Comput Neurosci* 40:207–29 — bundled MATLAB model: [`reference-material/KumaraveluEtAl2016/`](../reference-material/KumaraveluEtAl2016/) ([`readme.txt`](../reference-material/KumaraveluEtAl2016/readme.txt)).
 
 ---
 
