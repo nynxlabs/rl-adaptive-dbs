@@ -38,7 +38,7 @@ Each benchmark run should be uniquely described by:
 
 Every controller trains against the **same** Kumaravelu et al. (2016) CBGT model ([environment.md](environment.md) §2). The **Gymnasium contract in `envs/`** follows **Mehregan et al.** (2 s steps, $P_\beta$-only state, pattern actions, Eq. (8) reward). That is the right default for `ddpg` and for **baselines** shared across papers.
 
-**Nguyen et al.** and **Ravivarapu et al.** use different step durations, observations, actions, and reward shapes (see [controllers/snn.md](controllers/snn.md), [controllers/sea_dbs.md](controllers/sea_dbs.md)). Their packages implement **adapters** around the shared plant wrapper—they do not fork the biophysical network.
+**Nguyen et al.** and **Ravivarapu et al.** use different step durations, observations, actions, and reward shapes (see [controllers/snn/replication.md](controllers/snn/replication.md), [controllers/sea_dbs/replication.md](controllers/sea_dbs/replication.md)). Their packages implement **adapters** around the shared plant wrapper—they do not fork the biophysical network.
 
 ### 3.2 Per-paper suites (primary — replication)
 
@@ -46,9 +46,9 @@ Use a **named suite per source paper** so eval matches that paper’s protocol. 
 
 | Suite name | Env / adapter profile | Spec anchors |
 |------------|----------------------|--------------|
-| `mehregan_eval` | Shared `envs/` API: 2 s steps, $P_\beta$, Eq. (8) | [environment.md](environment.md), [controllers/ddpg.md](controllers/ddpg.md) |
-| `nguyen_eval` | Adapter: 100 ms steps, spike obs, α–β, Eq. (7) | [controllers/snn.md](controllers/snn.md) |
-| `sea_dbs_eval` | Adapter: 2 ms × 30 steps × 150 episodes, binary pulse, Eq. (7) | [controllers/sea_dbs.md](controllers/sea_dbs.md) |
+| `mehregan_eval` | Shared `envs/` API: 2 s steps, $P_\beta$, Eq. (8) | [environment.md](environment.md), [controllers/ddpg/replication.md](controllers/ddpg/replication.md) |
+| `nguyen_eval` | Adapter: 100 ms steps, spike obs, α–β (7–35 Hz), **Nguyen Eq. (7)** reward | [controllers/snn/replication.md](controllers/snn/replication.md) |
+| `sea_dbs_eval` | Adapter: 2 ms × 30 steps × 150 episodes, binary pulse, **Ravivarapu Eq. (7)** reward | [controllers/sea_dbs/replication.md](controllers/sea_dbs/replication.md) |
 
 **Baselines** for `mehregan_eval` (and optionally reused as plant-only checks in other suites):
 
@@ -79,9 +79,11 @@ Log a **common core** on every eval rollout. Which columns are **comparable acro
 
 | Metric | Description | Cross-paper safe? |
 |--------|-------------|-------------------|
-| `p_beta_mean` | Mean $P_\beta$ over eval window (raw and normalized if used for reward). | Yes (plant-level) |
-| `p_beta_final` | $P_\beta$ at end of eval (or last step). | Yes |
-| `reward_sum` | Sum of per-step $R$ over eval episode(s). | **Within-paper suite only** (reward definition differs by default) |
+| `p_beta_mean` | Mean GPi **beta-band** power $P_\beta$ (**13–35 Hz**, Mehregan / SEA-DBS Eq. (1)); log raw and normalized if used for reward. | Yes as a **shared plant readout**; not the Nguyen training objective |
+| `p_beta_final` | $P_\beta$ at end of eval (or last step), same band as above. | Yes (same caveat) |
+| `alpha_beta_mean` | Mean GPi **$\alpha$–$\beta$** power (**7–35 Hz**, Nguyen et al. §II.A, §IV). | **Within `nguyen_eval` only** unless all suites compute it for cross-plant tables |
+| `alpha_beta_final` | $\alpha$–$\beta$ at end of eval. | Same as `alpha_beta_mean` |
+| `reward_sum` | Sum of per-step $R$ over eval episode(s). | **Within-paper suite only** — Mehregan Eq. (8) (linear below $\beta_t$), Nguyen Eq. (7) (energy + $\alpha$–$\beta$), Ravivarapu Eq. (7) (quadratic both branches) are **not** interchangeable |
 | `stim_frequency_mean` | Mean stimulation frequency over eval (when defined for that controller/baseline). | Usually yes; document definition in manifest |
 | `episode_length` | Steps or simulated seconds completed. | Compare only within same `protocol` / suite |
 
@@ -101,7 +103,7 @@ name: mehregan_eval
 version: 1
 protocol: mehregan   # 2 s steps, P_beta, Eq. (8)
 seeds: [0, 1, 2, 3, 4]
-env_ref: environment.md#5
+env_ref: environment.md#5-timing-and-transitions
 controllers:
   - { controller: baseline, variant: cdbs-130hz }
   - { controller: baseline, variant: periodic-45hz }
@@ -123,8 +125,10 @@ version: 1
 protocol: sea_dbs
 seeds: [0, 1, 2, 3, 4]
 controllers:
-  - { controller: sea_dbs, variant: paper }
-  - { controller: sea_dbs, variant: baseline }   # DDPG w/o PM+GS per paper
+  - { controller: sea_dbs, variant: paper }          # full SEA-DBS (PM+GS)
+  - { controller: sea_dbs, variant: baseline }       # DDPG w/o PM or GS (Fig. 4–5)
+  - { controller: sea_dbs, variant: baseline-pm }    # + predictive model only (Fig. 7)
+  - { controller: sea_dbs, variant: baseline-gs }  # + Gumbel-Softmax only (Fig. 7)
 ```
 
 ```yaml
@@ -132,7 +136,7 @@ name: cross_controller_plant
 version: 1
 protocol: cross_paper
 seeds: [0, 1, 2]
-metrics: [p_beta_mean, stim_frequency_mean]   # plant-level only; not reward_sum
+metrics: [p_beta_mean, alpha_beta_mean, stim_frequency_mean]   # plant readouts; not reward_sum
 controllers:
   - { controller: ddpg, variant: paper, adapter: false }
   - { controller: snn, variant: paper, adapter: true }

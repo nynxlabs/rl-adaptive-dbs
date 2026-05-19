@@ -19,5 +19,12 @@ dev = [
     "pytest>=9.0.3",
 ]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: long-running checks (large rollouts, training smoke)",
+    "matlab: requires MATLAB and the Kumaravelu reference bridge",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["envs", "controllers"]

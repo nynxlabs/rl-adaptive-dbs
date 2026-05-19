@@ -56,7 +56,7 @@ uv run pytest
 ```
 
 - Expect `ok` from the import check.
-- `pytest` may report **no tests collected** until test modules exist — that is fine.
+- Expect at least one passing test from `pytest` (import smoke). Details: [testing.md](testing.md).
 
 Imports confirm packaging only. The DBS plant and training loops are **not implemented yet** ([development.md](development.md) §3).
 
@@ -71,6 +71,7 @@ rl-adaptive-dbs/
 │   ├── ddpg/                # Mehregan et al.
 │   ├── snn/                 # Nguyen et al.
 │   └── sea_dbs/             # Ravivarapu et al.
+├── tests/                   # pytest (mirrors envs/ and controllers/)
 ├── docs/                    # Guides and specs
 ├── reference-material/      # Kumaravelu et al. (2016) MATLAB model
 ├── results/                 # Benchmark output (local, gitignored)
@@ -111,9 +112,9 @@ Commit `pyproject.toml` and `uv.lock` together after dependency changes.
 
 Typical flow (details and rules in [development.md](development.md)):
 
-1. **Read the spec** for what you are touching ([environment.md](environment.md) or `docs/controllers/<name>.md`).
+1. **Read the spec** for what you are touching ([environment.md](environment.md) or `docs/controllers/<name>/replication.md`).
 2. **Edit code** in `envs/` or `controllers/<name>/`.
-3. **Run checks** — `uv run pytest` (and any module-specific commands you add).
+3. **Run checks** — `uv run pytest` ([testing.md](testing.md)).
 4. **Update the spec** in the same PR/commit if behavior or the public API changed.
 5. **Benchmark later** — when the runner exists, use a named suite and log `controller`, `variant`, `seed` per [benchmarking.md](benchmarking.md).
 
@@ -128,7 +129,7 @@ Typical flow (details and rules in [development.md](development.md)):
 **New or updated controller**
 
 - Code: `controllers/<name>/`
-- Spec: `docs/controllers/<name>.md` (add if missing).
+- Spec: `docs/controllers/<name>/replication.md` (add if missing; optional `extensions.md` for post-replication work).
 - If the paper’s obs/action space differs from the shared env, add an **adapter** in that package.
 
 **Controller variant** (e.g. `ptq-int8`, `init-30hz`)
@@ -150,11 +151,13 @@ Typical flow (details and rules in [development.md](development.md)):
 |------|----------|
 | Roadmap and project status | [development.md](development.md) |
 | `uv`, lockfile, Python version | [venv.md](venv.md) |
+| Tests, markers, layout | [testing.md](testing.md) |
 | Plant, biomarker, reward, timing | [environment.md](environment.md) |
-| DDPG (Mehregan) | [controllers/ddpg.md](controllers/ddpg.md) |
-| SNN (Nguyen) | [controllers/snn.md](controllers/snn.md) |
-| SEA-DBS (Ravivarapu) | [controllers/sea_dbs.md](controllers/sea_dbs.md) |
+| DDPG (Mehregan) | [controllers/ddpg/replication.md](controllers/ddpg/replication.md) |
+| SNN (Nguyen) | [controllers/snn/replication.md](controllers/snn/replication.md) |
+| SEA-DBS (Ravivarapu) | [controllers/sea_dbs/replication.md](controllers/sea_dbs/replication.md) |
 | Cross-controller eval | [benchmarking.md](benchmarking.md) |
+| SEA-DBS + DSQN fusion (post-replication) | [controllers/fusion.md](controllers/fusion.md) |
 | Scope and citations | [README.md](../README.md) (References) |
 
 **Specs** = what to build. **Getting started** (this file) = how to set up and use the repo. **Development** = where the project is headed and team conventions.

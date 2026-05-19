@@ -2,7 +2,7 @@
 
 This document specifies the **deep spiking Q-network (DSQN)** controller from *Closed-Loop Neuromorphic Deep Brain Stimulation using Deep Spiking Q-Networks* (Nguyen et al.). It is meant to align `controllers/snn/` (and training scripts) with the published method.
 
-**Companion spec:** The **Kumaravelu et al. (2016)** parkinsonian CBGT plant is shared with other controllers; dynamics and provenance are summarized in [environment.md](../environment.md) §2. That document is authoritative for the **Mehregan et al.** Gymnasium API (2 s steps, $P_\beta$-only state, pattern actions, Eq. (8) reward). **This document is authoritative for the Nguyen controller**—observation, action, reward, timing, and DSQN training—unless the two explicitly describe the same quantity.
+**Companion spec:** The **Kumaravelu et al. (2016)** parkinsonian CBGT plant is shared with other controllers; dynamics and provenance are summarized in [environment.md](../../environment.md) §2. That document is authoritative for the **Mehregan et al.** Gymnasium API (2 s steps, $P_\beta$-only state, pattern actions, Eq. (8) reward). **This document is authoritative for the Nguyen controller**—observation, action, reward, timing, and DSQN training—unless the two explicitly describe the same quantity.
 
 ---
 
@@ -11,7 +11,7 @@ This document specifies the **deep spiking Q-network (DSQN)** controller from *C
 | In scope | Out of scope |
 |----------|----------------|
 | **DSQN** (three-layer **LIF** network, **DQN**-style value learning, §III.B) | Neuromorphic **hardware** deployment and on-chip learning rules |
-| **Closed-loop** modulation of **amplitude**, **frequency**, and **pulse width** via ternary $\{-1,0,1\}$ adjustments | Mehregan-style **discrete STN pattern logits** and **DDPG** actor–critic (see [controllers/ddpg.md](ddpg.md)) |
+| **Closed-loop** modulation of **amplitude**, **frequency**, and **pulse width** via ternary $\{-1,0,1\}$ adjustments | Mehregan-style **discrete STN pattern logits** and **DDPG** actor–critic (see [controllers/ddpg/replication.md](../ddpg/replication.md)) |
 | **Spike-matrix** observations, **GPi $\alpha$–$\beta$** feedback, **energy-aware** reward (Eq. (7)), **$\epsilon$‑greedy** exploration | In vivo validation, patient-specific clinical programming workflows |
 | **Adapter** from the shared plant wrapper to Nguyen I/O when running on the repo’s unified `envs/` stack | Exact **scalar step sizes** for DBS parameter updates (paper gives semantics only) |
 
@@ -32,10 +32,10 @@ The controller does **not** own plant integration; it owns **spike encoding**, *
 
 ## 3. Plant and biomarker (shared dynamics, paper-specific feedback)
 
-- **Plant:** Same validated **6-OHDA rat CBGT** Hodgkin–Huxley network as Nguyen §II.A (Kumaravelu et al., 2016)—**10 neurons per region**, STN DBS actuation ([environment.md](../environment.md) §2).
-- **Feedback signal:** **GPi $\alpha$–$\beta$ power**—combined **$\alpha$ (7–13 Hz)** and **$\beta$ (13–35 Hz)** band power (§II.A), **not** the Mehregan **$P_\beta$ (13–35 Hz)–only** biomarker used in [environment.md](../environment.md) §3.
+- **Plant:** Same validated **6-OHDA rat CBGT** network as Nguyen §II.A (Kumaravelu et al., 2016)—**10 neurons per region**, STN DBS actuation ([environment.md](../../environment.md) §2). The manuscript describes all regions as Hodgkin–Huxley–type; the Kumaravelu reference uses **HH dynamics in basal ganglia and thalamus** and **Izhikevich dynamics in cortex**—match the reference implementation for plant fidelity, as in [environment.md](../../environment.md) §2.
+- **Feedback signal:** **GPi $\alpha$–$\beta$ power**—oscillation power spanning **$\alpha$ (7–13 Hz)** and **$\beta$ (13–35 Hz)** (§II.A; treat as the **7–35 Hz** band unless released code specifies separate $\alpha$ and $\beta$ integrals). Unlike Mehregan Eq. (1), Nguyen does **not** give a closed-form PSD integral for this quantity—**intentionally open** how it is computed from GPi spikes. It is **not** the Mehregan **$P_\beta$ (13–35 Hz)–only** biomarker in [environment.md](../../environment.md) §3.
 - **Control threshold:** $\theta = 150$ on the **raw** $\alpha$–$\beta$ scale used in §IV (chosen from the PD-state distribution first quartile; Fig. 3).
-- **RL step duration:** **100 ms** simulated time per transition (§IV)—distinct from the **2 s** Mehregan step in [environment.md](../environment.md) §5.
+- **RL step duration:** **100 ms** simulated time per transition (§IV)—distinct from the **2 s** Mehregan step in [environment.md](../../environment.md) §5.
 
 **Adapter note:** When `controllers/snn/` trains against the shared `envs/` package, the **snn adapter** must (a) run or subsample the plant at Nguyen step duration, (b) build the **spike observation** (Eq. (4)), (c) compute **$\alpha$–$\beta$** for reward/termination, and (d) apply **ternary parameter deltas** instead of discrete STN patterns.
 
@@ -170,7 +170,7 @@ Energy enters the **reward** (§8) and reported **~22%** reduction vs. open-loop
 
 ## 8. Reward (Eq. (7))
 
-Let $\theta_u = 1$ if $\alpha$–$\beta > \theta$ (biomarker threshold), else $0$. Let $d$ be the **squared distance** of $\alpha$–$\beta$ from $\theta$. Let $E$ be DBS energy (§7). Then:
+Let $\theta_u = 1$ if $\alpha$–$\beta < \theta$ (**sub-threshold**, favorable), else $0$. Let $d$ be the **squared distance** of $\alpha$–$\beta$ from $\theta$. Let $E$ be DBS energy (§7). Then:
 
 $$
 R = \begin{cases}
@@ -182,13 +182,15 @@ $$
 | Symbol | Role |
 |--------|------|
 | $\delta$ | Energy penalty weight |
-| $\tau$ | Reward for staying under threshold / terminal bonus scale |
+| $\tau$ | Reward for staying **under** threshold ($\theta_u = 1$); also scales the **terminal** bonus |
 | $t_r$ | Remaining steps in episode when terminated early |
 | $d$ | Squared gap to $\theta$ when above threshold |
 
+**$\theta_u$ wording in the paper** is ambiguous (“greater than or less than the threshold”), but §III.D defines **$\tau$ as the reward for being under the threshold**, so $\theta_u = 1$ on the **sub-threshold** branch is the reading consistent with Eq. (7).
+
 **Coefficients $\delta$, $\tau$, and the exact $d$ normalization** are **not** given numerically in the excerpted methods — **intentionally open**; align with released code if available, else tune for stable learning and document values.
 
-**Distinction from shared env reward:** [environment.md](../environment.md) §6 uses Mehregan Eq. (8) on **normalized** beta state with $\beta_t = 0.35$. The **snn** trainer must use **Eq. (7)** above, not the shared-env reward, when replicating Nguyen et al.
+**Distinction from shared env reward:** [environment.md](../../environment.md) §6 uses Mehregan Eq. (8) on **normalized** beta state with $\beta_t = 0.35$. The **snn** trainer must use **Eq. (7)** above, not the shared-env reward, when replicating Nguyen et al.
 
 ---
 
@@ -227,15 +229,59 @@ Hyperparameters with **fixed** values in §IV (episode count, threshold **150**,
 - [ ] Observations are **binary spike matrices** (Eq. (4)); actions are **ternary per-parameter** deltas (Eq. (5)), **not** Mehregan pattern indices.
 - [ ] DSQN: **128** hidden LIF, **9** outputs, leak **$\beta = 0.95$**; control from **spike counts**, Q from **membrane potentials**.
 - [ ] Training: **500** episodes; replay update every **128** transitions; **decreasing $\epsilon$‑greedy**.
-- [ ] Reward follows **Eq. (7)** with energy **Eq. (6)**; early stop when $\alpha$–$\beta < \theta$ for **$t_u$** consecutive steps.
+- [ ] Reward follows **Eq. (7)** with energy **Eq. (6)**; **$\theta_u = 1$** when $\alpha$–$\beta < \theta$ (sub-threshold); early stop when sub-threshold for **$t_u$** consecutive steps.
 - [ ] Init DBS: **40 Hz**, **0.3 ms**, **300 nA/cm²**; eval: **50** episodes, **25** steps, seeded variability.
 - [ ] Adapter documented where shared `envs/` API differs from this spec.
 
 ---
 
-## 12. Reference
+## 12. Open questions / TBD
+
+### 1. Spike observation layout ($n \times N$)
+
+Eq. (4) defines a binary spike matrix; §III.B mentions **128** inputs per forward pass (distinct from replay cadence **128**). **Fixed:** binary encoding; **100 ms** RL step. **Open:** which CBGT regions are included, sequence length $n$, and alignment of $n$ with the 100 ms window. **Decide in** `SpikeObservationEncoder`; document tensor shapes and keep fixed across train/eval.
+
+### 2. Per-parameter DBS delta sensitivities
+
+Ternary actions $\{-1,0,1\}$ scale amplitude, frequency, and pulse width by unspecified scalar step sizes. **Fixed:** three parameters, three ternary choices each (nine outputs). **Open:** numeric sensitivities and plausible bounds. **Decide in** `DBSParameterState` / adapter; keep parameters in biologically plausible ranges.
+
+### 3. Nine-way vs factored action selection
+
+Nine output LIF units are consistent with three parameters × three choices, but the paper does not say whether control uses one **joint** argmax over nine actions or **three independent** argmaxes. **Fixed:** spike-count selection for behavior, membrane potentials for Q-learning. **Open:** head grouping scheme. **Decide in** `select_action` and use consistently for training and evaluation.
+
+### 4. DQN stabilizers and target-network policy
+
+The paper uses DQN bootstrapping but does not name Double DQN, dueling heads, or target-network **update period**. **Fixed:** replay flush every **128** stored transitions; Q-targets from output membrane potentials at $s'$. **Open:** stabilizer set ($\gamma$, learning rate, target copy/hard-update schedule). **Decide in** `DSQNTrainer` config beside the code.
+
+### 5. $\epsilon$-greedy exploration schedule
+
+§III.B specifies decreasing $\epsilon$ each time step; Fig. 4 qualitatively shifts toward exploitation around episode **~100**, but no numeric schedule is tabulated. **Fixed:** $\epsilon$-greedy overlay on spike-count argmax. **Open:** initial $\epsilon$, decay rule, and floor. **Decide in** trainer config and log values used.
+
+### 6. Early-termination persistence $t_u$
+
+Episodes terminate early when GPi $\alpha$–$\beta < \theta = 150$ for $t_u$ **consecutive** steps, with terminal bonus using remaining horizon $t_r$ (Eq. (7)). **Fixed:** threshold **150**; bonus uses $t_r$. **Open:** required consecutive sub-threshold steps $t_u$. **Decide in** `NguyenEnvAdapter` termination logic.
+
+### 7. Reward coefficients and distance metric $d$
+
+Eq. (7) combines energy penalty $\delta E$, threshold indicator $\theta_u$, squared gap $d$, and terminal scale $\tau$, but numeric $\delta$, $\tau$, and the exact normalization of $d$ are not given. **Fixed:** reward structure and energy index Eq. (6); **$\theta_u = 1$ when $\alpha$–$\beta < \theta$** (consistent with $\tau$ as “reward for being under the threshold”). **Open:** coefficient values. **Decide in** trainer/adapter config; align with released code if available, else tune for stable learning and document.
+
+### 8. LIF firing threshold $\theta_{\mathrm{th}}$
+
+§III.B fixes leak $\beta = 0.95$ and distinguishes biomarker threshold $\theta = 150$ from the LIF spike threshold symbol $\theta_{\mathrm{th}}$. **Fixed:** three-layer LIF DSQN with **128** hidden and **9** output units. **Open:** numeric $\theta_{\mathrm{th}}$ for membrane spike rule. **Decide in** `LIFLayer` defaults unless released code specifies otherwise.
+
+### 9. Shared `envs/` adapter vs Nguyen timing
+
+The unified Gym API follows Mehregan **2 s** steps and Eq. (8) reward; Nguyen requires **100 ms** steps, spike observations, $\alpha$–$\beta$ feedback, and Eq. (7) reward. **Fixed:** **100 ms** step, Eq. (7), ternary parameter deltas, early termination on $\alpha$–$\beta$. **Open:** subsampling/integration strategy on the shared plant wrapper. **Decide in** `NguyenEnvAdapter`; do not use Mehregan reward or step duration silently.
+
+### 10. Evaluation horizon extensions
+
+§IV eval reports **25** steps over **50** seeded episodes; §V notes longer horizons as future work. **Fixed:** default eval protocol above. **Open:** whether ablations extend episode length beyond 25 steps. **Decide in** `nguyen_eval` suite config when running horizon ablations.
+
+---
+
+## 13. References
 
 - Nguyen et al., *Closed-Loop Neuromorphic Deep Brain Stimulation using Deep Spiking Q-Networks*.
-- Kumaravelu et al. (2016) CBGT model (plant); see [environment.md](../environment.md) §2 for repo integration notes.
+- Kumaravelu et al. (2016) CBGT model (plant); see [environment.md](../../environment.md) §2 for repo integration notes.
 
-For **benchmarking**, use the `nguyen_eval` suite (§3.2); for optional cross-paper plant-level comparison, see [benchmarking.md](../benchmarking.md) §3.3.
+For **benchmarking**, use the `nguyen_eval` suite per [benchmarking.md](../../benchmarking.md) §3.2; for optional cross-paper plant-level comparison, see [benchmarking.md](../../benchmarking.md) §3.3.
