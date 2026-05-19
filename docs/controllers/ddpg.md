@@ -1,8 +1,8 @@
 # RL controller specification (Mehregan et al., adaptive DBS / quantization)
 
-This document specifies the **learning-based controller** (actor–critic training loop, losses, targets, and optional quantization) from *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning* (Mehregan et al.). It is meant to align `controllers/` (and training scripts) with the published method.
+This document specifies the **learning-based controller** (actor–critic training loop, losses, targets, and optional quantization) from *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning* (Mehregan et al.). It is meant to align `controllers/ddpg/` (and training scripts) with the published method.
 
-**Companion spec:** Plant dynamics, biomarker $P_\beta$, step timing, reward $R$, and baselines are defined in [environment.md](environment.md). That document is authoritative for **environment** I/O; this document is authoritative for **policy optimization** details unless the two explicitly cross-reference the same quantity.
+**Companion spec:** Plant dynamics, biomarker $P_\beta$, step timing, reward $R$, and baselines are defined in [environment.md](../environment.md). That document is authoritative for **environment** I/O; this document is authoritative for **policy optimization** details unless the two explicitly cross-reference the same quantity.
 
 ---
 
@@ -10,7 +10,7 @@ This document specifies the **learning-based controller** (actor–critic traini
 
 | In scope | Out of scope |
 |----------|----------------|
-| Offline DDPG-style **actor–critic** training with **replay buffer**, **target networks**, and losses as in the paper’s §III and Algorithm 1 | **In vivo** optogenetics protocol, trial structure, and recording pipeline (§IV.B) |
+| **DDPG-style actor–critic** training (Algorithm 1: **online** simulator interaction, **replay buffer**, **target networks**, losses as in §III) | **In vivo** optogenetics protocol, trial structure, and recording pipeline (§IV.B) |
 | **CNN** actor and critic over a **temporal** biomarker state; **discrete** stimulation patterns via **logits → softmax → argmax** | Exact **pattern alphabet** size and waveform encoding beyond “discrete STN patterns” (intentionally open; fix in code) |
 | **PTQ** and **QAT** as described in §III.D | Hardware-specific latency, power budgets, or certified medical deployment |
 
@@ -18,7 +18,7 @@ This document specifies the **learning-based controller** (actor–critic traini
 
 ## 2. Controller role in the closed loop
 
-At each RL step of duration $l$ (see [environment.md](environment.md) §5: **2 s** simulated time):
+At each RL step of duration $l$ (see [environment.md](../environment.md) §5: **2 s** simulated time):
 
 1. The **environment** integrates the parkinsonian network under the chosen STN stimulation pattern and returns biomarker-derived observations (primarily $P_\beta$ and its windowed form as state $s$).
 2. The **actor** $\mu(\cdot \mid \theta_\mu)$ maps the current state to **action logits**; **softmax + argmax** yields the discrete pattern applied until the next step.
@@ -36,7 +36,7 @@ The paper frames the method as **Deep Deterministic Policy Gradient (DDPG)** wit
 
 ### 3.2 Actor $\mu(s \mid \theta_\mu)$
 
-- **Input:** State $s$ formed from the biomarker trajectory (paper §III.B: **CNN** suited to temporal $P_\beta$ structure). For the computational study, the biomarker **window matches the full simulation segment** per step ([environment.md](environment.md) §3.2, §5).
+- **Input:** State $s$ formed from the biomarker trajectory (paper §III.B: **CNN** suited to temporal $P_\beta$ structure). For the computational study, the biomarker **window matches the full simulation segment** per step ([environment.md](../environment.md) §3.2, §5).
 - **Backbone:** Convolutional layers, **average pooling**, then **linear** layers (paper §III.B, Figure 3a). Channel counts, kernel sizes, and **“shrink dimension”** are **not** numerically specified in §IV.A.1 — **intentionally open**; choose a compact CNN, document shapes in code, and keep them fixed across training / evaluation / quantization comparisons.
 - **Output:** **Logits** over the discrete pattern set. Training stores these as $a_{\mathrm{logit}}$.
 - **Action execution:** $\mathrm{softmax}(\mathrm{logits})$ then **argmax** selects the pattern index sent to the plant (paper §III.B).
@@ -49,7 +49,7 @@ The paper frames the method as **Deep Deterministic Policy Gradient (DDPG)** wit
 
 ### 3.4 “Brain” configuration (paper wording)
 
-The paper’s **Brain** class bundles **pattern / frequency semantics**, biomarker **window shape**, and **action cardinality** (§III.B). A minimal implementation should expose those as explicit config fields so `envs/` and `controllers/` stay aligned.
+The paper’s **Brain** class bundles **pattern / frequency semantics**, biomarker **window shape**, and **action cardinality** (§III.B). A minimal implementation should expose those as explicit config fields so `envs/` and `controllers/ddpg/` stay aligned.
 
 ---
 
@@ -68,7 +68,7 @@ Initialize:
 For each environment step of duration $l$:
 
 1. **Select action:** $u \leftarrow \mu(s \mid \theta_\mu)$ (forward pass yields logits; argmax selects discrete pattern $a$ applied to STN).
-2. **Step environment:** obtain next state $s'$, reward $R$, and episode-done flag $dw \in \{0,1\}$ ($dw=1$ iff the episode finished after this transition, for $Q$ targets; see [environment.md](environment.md) §7).
+2. **Step environment:** obtain next state $s'$, reward $R$, and episode-done flag $dw \in \{0,1\}$ ($dw=1$ iff the episode finished after this transition, for $Q$ targets; see [environment.md](../environment.md) §7).
 3. **Store transition** in $B$. Algorithm 1 lists the tuple as $(s', a, a_{\mathrm{logit}}, R, s, dw)$; a practical layout is equivalent if it preserves $(s, a_{\mathrm{logit}}, R, s', dw)$ for standard replay sampling.
 
 ### 4.3 Minibatch update (repeated `update_frequency` times per step)
@@ -112,7 +112,7 @@ $$
 
 ### 4.4 Episode schedule
 
-- **30** steps per episode, **10** training episodes for the reported computational run ([environment.md](environment.md) §5, §8).
+- **30** steps per episode, **10** training episodes for the reported computational run ([environment.md](../environment.md) §5, §8).
 - **Policy initialization:** Regular pulses at **mean** frequency **45 Hz** for the main experiment; **30 Hz** variant with other hyperparameters unchanged (paper §IV.A.1–2).
 
 ### 4.5 Output artifact
@@ -123,7 +123,7 @@ After training, the **actor network** (full precision unless using QAT) is the *
 
 ## 5. Reward and critic alignment
 
-The **instantaneous reward** $R$ is defined in paper Eq. (8) from the averaged observation ([environment.md](environment.md) §6). The **critic** predicts discounted return under that reward; **normalization** of $s(i)$ must be **shared** between the observation pipeline and $R$ so that $\beta_t = 0.35$ remains meaningful ([environment.md](environment.md) §6 implementation note).
+The **instantaneous reward** $R$ is defined in paper Eq. (8) from the averaged observation ([environment.md](../environment.md) §6). The **critic** predicts discounted return under that reward; **normalization** of $s(i)$ must be **shared** between the observation pipeline and $R$ so that $\beta_t = 0.35$ remains meaningful ([environment.md](../environment.md) §6 implementation note).
 
 ---
 
@@ -136,11 +136,11 @@ Optional for replication of §IV.A.3:
 | **PTQ** | After full-precision training; **inference** only | PyTorch-style **dynamic** weight quantization mentioned in the paper; activations mapped with Eqs. (9)–(11). Evaluated at **FP16** and **INT8** in §IV.A.3. |
 | **QAT** | During training | **Fake quantization** on selected layers; actor: quant stub on **input**, dequant stub on **logits** before action selection (§III.D). Paper reports **weaker** beta suppression than PTQ under **10 episodes**; longer training may be needed. |
 
-**Environment contract:** Quantization changes **network weights/activations**, not plant timing or biomarker definition. The **env** step API stays as in [environment.md](environment.md).
+**Environment contract:** Quantization changes **network weights/activations**, not plant timing or biomarker definition. The **env** step API stays as in [environment.md](../environment.md).
 
 ---
 
-## 7. Suggested module interface (`controllers/`)
+## 7. Suggested module interface (`controllers/ddpg/`)
 
 **Intentionally minimal** so code can evolve without contradicting the paper:
 
@@ -148,7 +148,7 @@ Optional for replication of §IV.A.3:
 - **`Critic`:** `forward(state, action_logits) -> scalar`.
 - **`TargetNet`:** Polyak copy of actor/critic parameters each update.
 - **`ReplayBuffer`:** Store at least $(s, a_{\mathrm{logit}}, R, s', dw)$ with capacity 8192.
-- **`MehreganTrainer` (or equivalent):** Implements Algorithm 1 ordering (env step → buffer → `update_frequency` × minibatch updates).
+- **`DDPGTrainer` (or equivalent):** Implements Algorithm 1 ordering (env step → buffer → `update_frequency` × minibatch updates).
 
 Hyperparameters with **fixed** values in §IV.A.1 should be **defaults**; open values ($\gamma$, $\tau$, update frequency, CNN topology, pattern count) should be **constructor or config fields** with comments pointing to this spec.
 
@@ -170,4 +170,4 @@ Hyperparameters with **fixed** values in §IV.A.1 should be **defaults**; open v
 
 - Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning*.
 
-For the **computational plant and evaluation protocol**, see [environment.md](environment.md).
+For the **computational plant and evaluation protocol**, see [environment.md](../environment.md). For eval suites, use `mehregan_eval` per [benchmarking.md](../benchmarking.md) §3.2.
