@@ -59,7 +59,7 @@ The paper’s **Brain** class bundles **pattern / frequency semantics**, biomark
 
 Initialize:
 
-- Actor $\mu(\cdot \mid \theta_\mu)$, critic $Q(\cdot,\cdot \mid \theta_c)$, and matching **target** copies $\mu_{\mathrm{target}}$, $Q_{\mathrm{target}}$.
+- Actor $\mu(\cdot \mid \theta_\mu)$, critic $Q(\cdot,\cdot \mid \theta_c)$, and matching **target** copies $\mu_{\mathrm{target}}$, $Q_{\mathrm{target}}$. Algorithm 1 does not specify initializing target networks as copies of the online networks; that copy-at-init convention is standard in DDPG implementations but is not stated in the paper.
 - **Replay buffer** $B$ (capacity **8192** in §IV.A.1).
 - **Discount** $\gamma$, **soft update rate** $\tau$, and inner-loop **update frequency** (gradient steps per env step). **§IV.A.1 does not give numeric $\gamma$, $\tau$, or update frequency** — **intentionally open**; match released code if available, else pick standard DDPG defaults and document them next to the implementation.
 
@@ -69,7 +69,7 @@ For each environment step of duration $l$:
 
 1. **Select action:** $u \leftarrow \mu(s \mid \theta_\mu)$ (forward pass yields logits; argmax selects discrete pattern $a$ applied to STN).
 2. **Step environment:** obtain next state $s'$, reward $R$, and episode-done flag $dw \in \{0,1\}$ ($dw=1$ iff the episode finished after this transition, for $Q$ targets; see [environment.md](../environment.md) §7).
-3. **Store transition** in $B$. Algorithm 1 lists the tuple as $(s', a, a_{\mathrm{logit}}, R, s, dw)$; a practical layout is equivalent if it preserves $(s, a_{\mathrm{logit}}, R, s', dw)$ for standard replay sampling.
+3. **Store transition** in $B$. Algorithm 1 lists the tuple as $(s', a, a_{\mathrm{logit}}, R, s, dw)$; a practical layout is equivalent if it preserves $(s, a, a_{\mathrm{logit}}, R, s', dw)$ for standard replay sampling. Store the discrete pattern index $a$ alongside $a_{\mathrm{logit}}$ (derivable from argmax but included in the paper tuple) for paper-aligned replay dumps.
 
 ### 4.3 Minibatch update (repeated `update_frequency` times per step)
 
@@ -119,6 +119,17 @@ $$
 
 After training, the **actor network** (full precision unless using QAT) is the **deployed policy** $\pi^* \approx \mu(\cdot \mid \theta_\mu)$ mapping biomarker state to pattern logits.
 
+### 4.6 Variants (benchmark slugs)
+
+Repo **variant** slugs for `controller: ddpg` map to Mehregan et al. §IV experiments as follows (full taxonomy: [benchmarking.md](../benchmarking.md) §2):
+
+| Variant slug | Paper experiment |
+|--------------|------------------|
+| `paper` | §IV.A.1 — full-precision training with **45 Hz** mean init |
+| `init-30hz` | §IV.A.2 — **30 Hz** init ablation |
+| `ptq-fp16`, `ptq-int8` | §IV.A.3 — **PTQ** (post-training quantization) |
+| `qat` | §IV.A.3 — **QAT** (quantization-aware training) |
+
 ---
 
 ## 5. Reward and critic alignment
@@ -147,7 +158,7 @@ Optional for replication of §IV.A.3:
 - **`Actor`:** `forward(state) -> logits`; helper `select_action(logits) -> pattern_id` (softmax + argmax) for env interaction.
 - **`Critic`:** `forward(state, action_logits) -> scalar`.
 - **`TargetNet`:** Polyak copy of actor/critic parameters each update.
-- **`ReplayBuffer`:** Store at least $(s, a_{\mathrm{logit}}, R, s', dw)$ with capacity 8192.
+- **`ReplayBuffer`:** Store at least $(s, a, a_{\mathrm{logit}}, R, s', dw)$ with capacity 8192.
 - **`DDPGTrainer` (or equivalent):** Implements Algorithm 1 ordering (env step → buffer → `update_frequency` × minibatch updates).
 
 Hyperparameters with **fixed** values in §IV.A.1 should be **defaults**; open values ($\gamma$, $\tau$, update frequency, CNN topology, pattern count) should be **constructor or config fields** with comments pointing to this spec.
@@ -157,7 +168,7 @@ Hyperparameters with **fixed** values in §IV.A.1 should be **defaults**; open v
 ## 8. Consistency checklist
 
 - [ ] Actor is **CNN-over-time** on biomarker state; critic uses **same state geometry** plus **logits**.
-- [ ] Applied control is **discrete pattern index** from **argmax**; replay stores **logits** for the critic.
+- [ ] Applied control is **discrete pattern index** $a$ from **argmax**; replay stores **$a$** and **logits** $a_{\mathrm{logit}}$ for the critic.
 - [ ] Target value uses **$Q_{\mathrm{target}}(s', \mu_{\mathrm{target}}(s'))$** with $(1-dw)$ masking.
 - [ ] Critic **MSE** to bootstrap target; actor maximizes **$Q(s, a_{\mathrm{logit}})$** with critic **frozen** during actor Adam step.
 - [ ] Soft updates use shared **$\tau$** for actor and critic targets.

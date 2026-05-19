@@ -18,7 +18,7 @@ The **plant** is the validated **cortex–basal ganglia–thalamus** biophysical
 ## 2. Plant (dynamics model)
 
 - **Topology:** Cortical (excitatory / inhibitory), direct and indirect striatum, **STN**, **GPe**, **GPi**, thalamus; stochastic and fixed excitatory/inhibitory inter-region connections as in the Kumaravelu et al. (2016) publication cited in the paper.
-- **Units per region:** **10** single-compartment **Hodgkin–Huxley–type** neurons per structure (paper §II.A). §IV.A.1 briefly says “10 neurons” for the whole model; replication uses **10 per region** as in §II.A and the Kumaravelu reference implementation.
+- **Units per region:** **10** single-compartment **Hodgkin–Huxley–type** neurons per structure (paper §II.A). §IV.A.1 briefly says “10 neurons” for the whole model; replication uses **10 per region** as in §II.A and the Kumaravelu reference implementation. The Kumaravelu reference actually uses a **mix** of Hodgkin–Huxley dynamics (basal ganglia, thalamus) and **Izhikevich** dynamics (cortex), despite Mehregan’s paper describing all regions uniformly as “HH-type.”
 - **Pathology:** Parkinsonian (6-OHDA lesioned) regime with exaggerated **beta** oscillations versus healthy controls.
 - **Actuation:** DBS **injected in the STN** (paper Figure 1a); compare to conventional **~130 Hz** periodic high-frequency STN DBS as a baseline. **Pulse timing, amplitude, and other waveform details** are not overridden in §IV.A.1; follow the **Kumaravelu et al. (2016)** reference implementation unless a later publication or released code specifies otherwise.
 
@@ -30,7 +30,7 @@ The **plant** is the validated **cortex–basal ganglia–thalamus** biophysical
 
 ### 3.1 Beta power in GPi (primary signal)
 
-Integrated **beta (13–35 Hz)** power over GPi spiking, averaged across the **n = 10** GPi neurons (paper Equation (1)). The paper’s introduction cites literature using **12–35 Hz** in places; **Equation (1) and the computational biomarker use 13–35 Hz**—implementations should match Eq. (1) for replication.
+Integrated **beta (13–35 Hz)** power over GPi spiking, averaged across the **n = 10** GPi neurons (paper Equation (1)). The paper’s introduction cites literature using **12–35 Hz** in places; **Equation (1) and the computational biomarker use 13–35 Hz**—implementations should match Eq. (1) for replication. The bundled Kumaravelu reference’s `make_Spectrum` integrates over **7–35 Hz**, not 13–35 Hz; reimplementations that wrap the reference must **re-band** to 13–35 Hz for Mehregan fidelity.
 
 $$
 P_\beta = \frac{1}{n} \sum_{j=1}^{n} \int_{\omega = 2\pi \cdot 13\,\mathrm{Hz}}^{2\pi \cdot 35\,\mathrm{Hz}} P_j^{\mathrm{GPi}}(\omega)\, d\omega
@@ -91,7 +91,7 @@ R =
 $$
 
 - **Threshold:** $\beta_t = 0.35$ (paper §III.C).
-- **Intent:** Reward **increases** (is more favorable) as the average biomarker-derived state moves **below** $\beta_t$; **quadratic penalty** when at or above. With raw $P_\beta$ on the order of hundreds (paper Figure 4), Eq. (8) is only meaningful after the **normalization** in the note below—do not assume every favorable transition has $R > 0$.
+- **Intent:** Reward **increases** (is more favorable) as the average biomarker-derived state moves **below** $\beta_t$; **quadratic penalty** when at or above. The paper’s prose (“positive reward below threshold”) requires an **unspecified monotone transform** from raw $P_\beta$ to $s(i)$; **Equation (8) alone is underdetermined** for replication—the normalization mapping is never defined in the paper. With raw $P_\beta$ on the order of hundreds (paper Figure 4), Eq. (8) is only meaningful after the **normalization** in the note below—do not assume every favorable transition has $R > 0$.
 
 **Relationship to the paper’s efficiency goal:** The problem statement motivates **both** symptom reduction (beta) and **energy-aware** stimulation (e.g. lower mean frequency vs **130 Hz** cDBS). The **published reward in Eq. (8) depends only on beta-band state vs $\beta_t$**—there is **no separate reward term** for pulse count or instantaneous frequency. Mean-frequency shaping enters through **initialization** (e.g. **45 Hz** / **30 Hz** target), the **learned discrete pattern family**, and **baseline comparisons** in §IV, not through an explicit energy penalty in $R$.
 
@@ -121,7 +121,7 @@ From **§IV.A.1** (for replication / defaults):
 
 **Not fixed numerically in §IV.A.1 (still required for DDPG replication):** Algorithm 1 also initializes **discount** $\gamma$, **target-network soft-update** coefficient $\tau$, and an inner-loop **update frequency** (gradient steps per environment step). The computational-setup paragraph does **not** report numeric values for these; match released code if available, or document chosen defaults explicitly in the implementation.
 
-**Evaluation protocol (paper §IV.A.2):** After training, fix **random seed**; run a **10 s** simulation with **2 s** for reset / baseline, then **5** repeated applications of the stimulation **step** for comparison across models and quantization variants. The paper also describes a **2 s** GPi baseline before applying actor actions (Figure 5). If each eval segment uses the training step duration **$l = 2$ s**, five segments plus a 2 s reset exceed **10 s** total—**intentionally open** until released code or a project convention fixes segment length vs. the reported **10 s** wall time. Cross-controller use of this protocol (baselines, metrics, run identity) is defined in [benchmarking.md](benchmarking.md).
+**Evaluation protocol (paper §IV.A.2):** After training, fix **random seed**; run a **10 s** simulation with **2 s** for reset / baseline, then **5** repeated applications of the stimulation **step** for comparison across models and quantization variants. The paper also describes a **2 s** GPi baseline before applying actor actions (Figure 5). If each eval segment uses the training step duration **$l = 2$ s**, five segments plus a 2 s reset exceed **10 s** total—**intentionally open** until released code or a project convention fixes segment length vs. the reported **10 s** wall time. When released code is unavailable, a leading hypothesis is **1.6 s per eval step** ($2 + 5 \times 1.6 = 10$ s), which reconciles the paper’s three stated durations. Cross-controller use of this protocol (baselines, metrics, run identity) is defined in [benchmarking.md](benchmarking.md).
 
 ---
 

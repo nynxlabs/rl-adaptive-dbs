@@ -36,7 +36,7 @@ The controller does **not** compute $P_\beta$ inside the policy; it consumes the
 
 - **Plant:** Biophysical **6-OHDA rat CBGT** model “inspired by” Mehregan et al. (§III)—**10 neurons per region**, DBS to **STN** ([environment.md](../environment.md) §2).
 - **Biomarker:** **GPi beta-band power** $P_\beta$, **13–35 Hz**, averaged over **$n = 10$** GPi neurons (Eq. (1))—same frequency band as Eq. (1) in [environment.md](../environment.md) §3.1.
-- **State $s_t$:** Fixed-length window $\{P_\beta(i)\}_{i=1}^{n_{\mathrm{obs}}}$ (Eq. (4)); **mean** $\bar{P}_\beta$ over the window (Eq. (5)) is the quantity used in the **reward** and described as input to actor and critic. Whether the networks consume the **full window**, **$\bar{P}_\beta$ only**, or both is **not** fully specified — **intentionally open**; pick one representation, document tensor shapes in code, and keep it fixed across train / eval / quantization.
+- **State $s_t$:** Fixed-length window $\{P_\beta(i)\}_{i=1}^{n_{\mathrm{obs}}}$ (Eq. (4)); **mean** $\bar{P}_\beta$ over the window (Eq. (5)) is the quantity used in the **reward** and described as input to actor and critic. Whether the networks consume the **full window**, **$\bar{P}_\beta$ only**, or both is **not** fully specified — **intentionally open**; pick one representation, document tensor shapes in code, and keep it fixed across train / eval / quantization. **Paper ambiguity:** §V.A emphasizes **mean** beta (Eq. (5)) for actor/critic input while Eq. (4) defines a window—the paper does not resolve whether the agent sees the full window or only the mean. **Default:** use **mean** (Eq. (5)) unless replicating unreleased reference code.
 
 **Adapter note:** When `controllers/sea_dbs/` trains against the shared `envs/` package, the **sea_dbs adapter** must (a) use Ravivarapu **step timing** (§5), (b) expose **binary pulse** actions instead of Mehregan **pattern indices**, (c) apply **Eq. (7)** reward (not Mehregan Eq. (8) unless they are intentionally unified—see §6), and (d) supply $(s, a, r, s')$ plus stored **logits** and **$\hat{r}$** for replay.
 
@@ -102,6 +102,8 @@ $$
 
 ## 7. Predictive reward model (§IV.B)
 
+**Notation:** The paper uses $\theta$ for both actor $\pi_\theta$ and predictive model $f_\theta$. In code, use distinct parameter names (e.g. `actor_theta` vs. `pred_theta`) to avoid confusion.
+
 **Purpose:** Reduce reliance on sparse real stimulation feedback by learning $\hat{r}_t \approx r_t$ from $(s_t, a_t)$.
 
 **Forward:**
@@ -145,7 +147,9 @@ $$
 \tau_t = \max\left(\tau_{\min},\, \tau_0\, e^{-\lambda_\tau t}\right)
 $$
 
-$\tau_0$, $\tau_{\min}$, and $\lambda_\tau$ are **not** in Table I — **intentionally open**; tune for stable early exploration and document values in code. **Ablation:** `variant=baseline+gs` enables GS without predictive modeling.
+$\tau_0$, $\tau_{\min}$, and $\lambda_\tau$ are **not** in Table I — **intentionally open**; tune for stable early exploration and document values in code. **Ablation:** `variant=baseline+gs` enables GS without predictive modeling.[^gs]
+
+[^gs]: Fig. 7 labels this technique **“guided sampling”**; it is the same as **Gumbel-Softmax** (different naming in the paper).
 
 ---
 

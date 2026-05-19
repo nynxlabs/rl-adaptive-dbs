@@ -22,7 +22,7 @@ This document specifies the **deep spiking Q-network (DSQN)** controller from *C
 At each RL step of duration **100 ms** simulated time (§IV):
 
 1. The **plant** integrates the Kumaravelu CBGT network under the current STN DBS settings (amplitude, frequency, pulse width).
-2. The environment exposes **binary spike counts** per neuron (aggregated over regions for the observation tensor, §III.B Eq. (4)) and computes **GPi $\alpha$–$\beta$ oscillation power** for feedback and termination.
+2. The environment exposes a **binary spike matrix**—binary spike presence (0/1) per neuron/region in the observation tensor (§III.B Eq. (4))—and computes **GPi $\alpha$–$\beta$ oscillation power** for feedback and termination.
 3. The **DSQN** consumes the spike observation, maintains **LIF membrane potentials** over internal time steps, and produces **nine action outputs**. **Applied control** is derived from **spike counts** (argmax over actions) while **Q‑targets** use the **final layer membrane potentials** as continuous value estimates (§III.B).
 4. **Reward** balances sub-threshold $\alpha$–$\beta$ power and **DBS energy** (Eqs. (6)–(7)).
 
@@ -53,7 +53,7 @@ $$
 - **$n$:** Number of time steps in the observation sequence fed to the DSQN per RL transition.
 - **Encoding:** **Binary**—$1$ if a spike occurred in the window, $0$ otherwise (§III.B).
 
-The DSQN is described as processing **batches of 128 inputs** (§III.B)—treat this as the **flattened or sequenced spike feature dimension per forward pass** (implementation detail). **Which regions and how $n$ aligns with the 100 ms step** are **not** fully fixed in the manuscript — **intentionally open**; document tensor shapes in code and keep them fixed across train/eval.
+The DSQN is described as processing **batches of 128 inputs** (§III.B)—treat this as the **flattened or sequenced spike feature dimension per forward pass** (implementation detail). The paper also uses **128** for **replay update cadence** (§6.2)—these are distinct quantities; do not conflate input feature dimension with minibatch or replay size. **Which regions and how $n$ aligns with the 100 ms step** are **not** fully fixed in the manuscript — **intentionally open**; document tensor shapes in code and keep them fixed across train/eval.
 
 ### 4.2 Action (Eq. (5))
 
@@ -198,7 +198,7 @@ After **500** training episodes (§IV), qualitative replication targets:
 
 - **Learned parameters (approx.):** amplitude **~262 nA/cm²**, frequency **~78.65 Hz**, pulse width **~1 ms** (Fig. 6).
 - **$\alpha$–$\beta$:** Sustained reduction **below** $\theta = 150$ relative to PD distribution (Fig. 3, 6).
-- **Energy:** **~22%** lower than conventional **130 Hz** open-loop DBS under Eq. (6).
+- **Energy:** **~22%** lower **DBS stimulation energy** in simulation than conventional **130 Hz** open-loop DBS under Eq. (6)—not demonstrated neuromorphic hardware or SNN inference power reduction.
 
 These are **evaluation anchors**, not hard CI gates, until the adapter and hyperparameters are fixed in code.
 
