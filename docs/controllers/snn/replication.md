@@ -2,7 +2,7 @@
 
 This document specifies the **deep spiking Q-network (DSQN)** controller from *Closed-Loop Neuromorphic Deep Brain Stimulation using Deep Spiking Q-Networks* (Nguyen et al.). It is meant to align `controllers/snn/` (and training scripts) with the published method.
 
-**Companion spec:** The **Kumaravelu et al. (2016)** parkinsonian CBGT plant is shared with other controllers; dynamics and provenance are summarized in [environment.md](../../environment.md) §2. That document is authoritative for the **Mehregan et al.** Gymnasium API (2 s steps, $P_\beta$-only state, pattern actions, Eq. (8) reward). **This document is authoritative for the Nguyen controller**—observation, action, reward, timing, and DSQN training—unless the two explicitly describe the same quantity.
+**Companion spec:** The shared **Kumaravelu et al. (2016)** plant — [plant.md](../../plant.md). **Mehregan et al.** Gymnasium API — [environment.md](../../environment.md). **This document is authoritative for the Nguyen controller**—observation, action, reward, timing, and DSQN training—unless the others explicitly describe the same quantity.
 
 ---
 
@@ -32,7 +32,7 @@ The controller does **not** own plant integration; it owns **spike encoding**, *
 
 ## 3. Plant and biomarker (shared dynamics, paper-specific feedback)
 
-- **Plant:** Same validated **6-OHDA rat CBGT** network as Nguyen §II.A (Kumaravelu et al., 2016)—**10 neurons per region**, STN DBS actuation ([environment.md](../../environment.md) §2). The manuscript describes all regions as Hodgkin–Huxley–type; the Kumaravelu reference uses **HH dynamics in basal ganglia and thalamus** and **Izhikevich dynamics in cortex**—match the reference implementation for plant fidelity, as in [environment.md](../../environment.md) §2.
+- **Plant:** Same validated **6-OHDA rat CBGT** network as Nguyen §II.A (Kumaravelu et al., 2016)—**10 neurons per region**, STN DBS actuation ([plant.md](../../plant.md)). Match the reference neuron models (Izhikevich cortex, HH-type BG/thalamus) per [plant.md](../../plant.md) §3.
 - **Feedback signal:** **GPi $\alpha$–$\beta$ power**—oscillation power spanning **$\alpha$ (7–13 Hz)** and **$\beta$ (13–35 Hz)** (§II.A; treat as the **7–35 Hz** band unless released code specifies separate $\alpha$ and $\beta$ integrals). Unlike Mehregan Eq. (1), Nguyen does **not** give a closed-form PSD integral for this quantity—**intentionally open** how it is computed from GPi spikes. It is **not** the Mehregan **$P_\beta$ (13–35 Hz)–only** biomarker in [environment.md](../../environment.md) §3.
 - **Control threshold:** $\theta = 150$ on the **raw** $\alpha$–$\beta$ scale used in §IV (chosen from the PD-state distribution first quartile; Fig. 3).
 - **RL step duration:** **100 ms** simulated time per transition (§IV)—distinct from the **2 s** Mehregan step in [environment.md](../../environment.md) §5.
@@ -282,6 +282,6 @@ The unified Gym API follows Mehregan **2 s** steps and Eq. (8) reward; Nguyen re
 ## 13. References
 
 - Nguyen et al., *Closed-Loop Neuromorphic Deep Brain Stimulation using Deep Spiking Q-Networks*.
-- Kumaravelu et al. (2016) CBGT model (plant); see [environment.md](../../environment.md) §2 for repo integration notes.
+- Kumaravelu et al. (2016) CBGT model (plant); see [plant.md](../../plant.md) for repo integration notes.
 
 For **benchmarking**, use the `nguyen_eval` suite per [benchmarking.md](../../benchmarking.md) §3.2; for optional cross-paper plant-level comparison, see [benchmarking.md](../../benchmarking.md) §3.3.

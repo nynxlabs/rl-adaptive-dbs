@@ -2,7 +2,7 @@
 
 This document defines how to **compare controllers and variants** (iterations) on the **same** computational environment. Implementation of runners and result storage is **not required yet**; this spec is the target shape so training and eval code stay aligned.
 
-**Related specs:** Shared plant and Gym API — [environment.md](environment.md). Per-controller training — [controllers/](controllers/).
+**Related specs:** Shared plant — [plant.md](plant.md); Mehregan Gym API — [environment.md](environment.md). Per-controller training — [controllers/](controllers/).
 
 ---
 
@@ -36,7 +36,7 @@ Each benchmark run should be uniquely described by:
 
 ### 3.1 One plant, multiple RL interfaces
 
-Every controller trains against the **same** Kumaravelu et al. (2016) CBGT model ([environment.md](environment.md) §2). The **Gymnasium contract in `envs/`** follows **Mehregan et al.** (2 s steps, $P_\beta$-only state, pattern actions, Eq. (8) reward). That is the right default for `ddpg` and for **baselines** shared across papers.
+Every controller trains against the **same** Kumaravelu et al. (2016) CBGT model ([plant.md](plant.md)). The **Gymnasium contract in `envs/`** follows **Mehregan et al.** (2 s steps, $P_\beta$-only state, pattern actions, Eq. (8) reward) — [environment.md](environment.md). That is the right default for `ddpg` and for **baselines** shared across papers.
 
 **Nguyen et al.** and **Ravivarapu et al.** use different step durations, observations, actions, and reward shapes (see [controllers/snn/replication.md](controllers/snn/replication.md), [controllers/sea_dbs/replication.md](controllers/sea_dbs/replication.md)). Their packages implement **adapters** around the shared plant wrapper—they do not fork the biophysical network.
 

@@ -2,7 +2,7 @@
 
 This document specifies the **learning-based controller** (actor–critic training loop, losses, targets, and optional quantization) from *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning* (Mehregan et al.). It is meant to align `controllers/ddpg/` (and training scripts) with the published method.
 
-**Companion spec:** Plant dynamics, biomarker $P_\beta$, step timing, reward $R$, and baselines are defined in [environment.md](../../environment.md). That document is authoritative for **environment** I/O; this document is authoritative for **policy optimization** details unless the two explicitly cross-reference the same quantity.
+**Companion spec:** Plant dynamics and biomarker primitives — [plant.md](../../plant.md). Mehregan env ($P_\beta$ window, step timing, reward $R$, baselines) — [environment.md](../../environment.md). This document is authoritative for **policy optimization** unless the others explicitly describe the same quantity.
 
 ---
 
@@ -213,4 +213,4 @@ The **10 s** eval protocol in §IV.A.2 is ambiguous when each segment uses train
 
 - Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning*.
 
-For the **computational plant and evaluation protocol**, see [environment.md](../../environment.md). For eval suites, use `mehregan_eval` per [benchmarking.md](../../benchmarking.md) §3.2.
+For the **plant**, see [plant.md](../../plant.md). For the **Mehregan environment and evaluation protocol**, see [environment.md](../../environment.md). For eval suites, use `mehregan_eval` per [benchmarking.md](../../benchmarking.md) §3.2.

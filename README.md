@@ -33,7 +33,7 @@ Python code lives at the **repository root** as two installable top-level packag
 - **`envs/`** — Shared Gymnasium-style RL environment (Mehregan et al. computational setup).
 - **`controllers/`** — Per-paper controllers: `ddpg`, `snn`, `sea_dbs` (stubs until implemented).
 
-- `docs/` — [getting_started.md](docs/getting_started.md) (setup & use), [development.md](docs/development.md) (roadmap & status), specs under [environment.md](docs/environment.md), [controllers/](docs/controllers/) (per-controller specs + fusion), [benchmarking.md](docs/benchmarking.md), [venv.md](docs/venv.md).
+- `docs/` — [getting_started.md](docs/getting_started.md) (setup & use), [development.md](docs/development.md) (roadmap & status), [plant.md](docs/plant.md) (CBGT dynamics), [environment.md](docs/environment.md) (Mehregan Gym API), [controllers/](docs/controllers/) (per-controller specs + fusion), [benchmarking.md](docs/benchmarking.md), [venv.md](docs/venv.md).
 - `results/` — benchmark outputs (created by future eval runs; not committed).
 - `reference-material/` — Third-party models and scripts. Kumaravelu et al. (2016) MATLAB network: `reference-material/KumaraveluEtAl2016/` ([`readme.txt`](reference-material/KumaraveluEtAl2016/readme.txt) for citation and provenance).
 
@@ -45,7 +45,11 @@ Import example: `from envs.foo import Bar` once modules exist.
 
 **[docs/development.md](docs/development.md)** — roadmap, conventions, implementation status.
 
-Specs: [environment.md](docs/environment.md), [controllers/](docs/controllers/), [benchmarking.md](docs/benchmarking.md). Tooling: [venv.md](docs/venv.md).
+Specs: [plant.md](docs/plant.md), [environment.md](docs/environment.md), [controllers/](docs/controllers/), [benchmarking.md](docs/benchmarking.md). Tooling: [venv.md](docs/venv.md).
+
+## Benchmarking
+
+Cross-controller comparison uses **per-paper eval suites** plus an optional **same-plant** suite; see [docs/benchmarking.md](docs/benchmarking.md) §3 and [docs/development.md](docs/development.md#cross-controller-benchmarking).
 
 ## References
 
@@ -60,8 +64,6 @@ Specs: [environment.md](docs/environment.md), [controllers/](docs/controllers/),
 
 ### Biophysical plant model
 
-- **Kumaravelu, K., Brocker, D. T., Grill, W. M.** (2016). *A biophysical model of the cortex–basal ganglia–thalamus network in the 6-OHDA lesioned rat model of Parkinson’s disease.* *Journal of Computational Neuroscience*, 40, 207–229. Upstream MATLAB: [ModelDBRepository/206232](https://github.com/ModelDBRepository/206232) (vendored: [reference-material/KumaraveluEtAl2016/](reference-material/KumaraveluEtAl2016/); see `readme.txt` for citation and provenance).
+- **Kumaravelu, K., Brocker, D. T., Grill, W. M.** (2016). *A biophysical model of the cortex–basal ganglia–thalamus network in the 6-OHDA lesioned rat model of Parkinson’s disease.* *Journal of Computational Neuroscience*, 40, 207–229. Spec: [docs/plant.md](docs/plant.md). Upstream MATLAB: [ModelDBRepository/206232](https://github.com/ModelDBRepository/206232) (vendored: [reference-material/KumaraveluEtAl2016/](reference-material/KumaraveluEtAl2016/); see `readme.txt` for citation and provenance).
 
-### Benchmarking
 
-Cross-controller comparison uses **per-paper eval suites** plus an optional **same-plant** suite; see [docs/benchmarking.md](docs/benchmarking.md) §3 and [docs/development.md](docs/development.md#cross-controller-benchmarking).

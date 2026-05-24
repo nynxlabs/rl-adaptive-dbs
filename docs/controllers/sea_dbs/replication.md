@@ -2,7 +2,7 @@
 
 This document specifies the **SEA-DBS** (sample-efficient actor–critic) controller from *Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson’s Disease* (Ravivarapu et al.). It is meant to align `controllers/sea_dbs/` (and training scripts) with the published method.
 
-**Companion spec:** The **Kumaravelu et al. (2016)** parkinsonian CBGT plant is shared with other controllers; dynamics and provenance are summarized in [environment.md](../../environment.md) §2. That document is authoritative for the **Mehregan et al.** Gymnasium API (2 s steps, pattern actions, Eq. (8) reward). **This document is authoritative for the Ravivarapu controller**—binary actions, predictive reward modeling, Gumbel-Softmax exploration, timing, reward shape, and training—unless the two explicitly describe the same quantity.
+**Companion spec:** The shared **Kumaravelu et al. (2016)** plant — [plant.md](../../plant.md). **Mehregan et al.** Gymnasium API — [environment.md](../../environment.md). **This document is authoritative for the Ravivarapu controller**—binary actions, predictive reward modeling, Gumbel-Softmax exploration, timing, reward shape, and training—unless the others explicitly describe the same quantity.
 
 ---
 
@@ -34,7 +34,7 @@ The controller does **not** compute $P_\beta$ inside the policy; it consumes the
 
 ## 3. Plant and biomarker (shared dynamics, paper-specific state)
 
-- **Plant:** Biophysical **6-OHDA rat CBGT** model “inspired by” Mehregan et al. (§III)—**10 neurons per region**, DBS to **STN** ([environment.md](../../environment.md) §2).
+- **Plant:** Biophysical **6-OHDA rat CBGT** model “inspired by” Mehregan et al. (§III)—**10 neurons per region**, DBS to **STN** ([plant.md](../../plant.md)).
 - **Biomarker:** **GPi beta-band power** $P_\beta$, **13–35 Hz**, averaged over **$n = 10$** GPi neurons (Eq. (1))—same frequency band as Eq. (1) in [environment.md](../../environment.md) §3.1.
 - **State $s_t$:** Fixed-length window $\{P_\beta(i)\}_{i=1}^{n_{\mathrm{obs}}}$ (Eq. (4)); **mean** $\bar{P}_\beta$ over the window (Eq. (5)) is the quantity used in the **reward** and described as input to actor and critic. Whether the networks consume the **full window**, **$\bar{P}_\beta$ only**, or both is **not** fully specified — **intentionally open**; pick one representation, document tensor shapes in code, and keep it fixed across train / eval / quantization. **Paper ambiguity:** §V.A emphasizes **mean** beta (Eq. (5)) for actor/critic input while Eq. (4) defines a window—the paper does not resolve whether the agent sees the full window or only the mean. **Default:** use **mean** (Eq. (5)) unless replicating unreleased reference code.
 
@@ -313,4 +313,4 @@ $\beta_t = 0.35$ implies consistent scaling of $\bar{P}_\beta$ between observati
 
 - Ravivarapu et al., *Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson’s Disease*.
 
-For the **shared plant** and **Mehregan Gym API**, see [environment.md](../../environment.md). For the **DDPG pattern controller** and **quantization (PTQ/QAT)** study, see [controllers/ddpg/replication.md](../ddpg/replication.md).
+For the **shared plant**, see [plant.md](../../plant.md). For the **Mehregan Gym API**, see [environment.md](../../environment.md). For the **DDPG pattern controller** and **quantization (PTQ/QAT)** study, see [controllers/ddpg/replication.md](../ddpg/replication.md).

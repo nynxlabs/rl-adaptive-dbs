@@ -54,7 +54,7 @@ Naming: files `test_*.py`, functions `test_*` (pytest default discovery).
 | **Smoke** | `tests/` | imports, config loads |
 | **Unit** | `tests/` | reward math, observation windows, adapter shapes |
 | **Integration** | `tests/` | `reset` / `step`, episode length, baseline policies |
-| **Equivalence / regression** | `tests/` with `@pytest.mark.matlab` or `slow` | traces or $P_\beta$ vs Kumaravelu MATLAB ([environment.md](environment.md)) |
+| **Equivalence / regression** | `tests/` with `@pytest.mark.matlab` or `slow` | traces or $P_\beta$ vs Kumaravelu MATLAB ([plant.md](plant.md) §8) |
 | **Paper replication benchmarks** | future runner + `results/` | full suites per [benchmarking.md](benchmarking.md); not the full eval matrix in pytest |
 
 Keep CI fast: default runs should pass without MATLAB; skip or mark heavy checks.

@@ -152,7 +152,8 @@ Typical flow (details and rules in [development.md](development.md)):
 | Roadmap and project status | [development.md](development.md) |
 | `uv`, lockfile, Python version | [venv.md](venv.md) |
 | Tests, markers, layout | [testing.md](testing.md) |
-| Plant, biomarker, reward, timing | [environment.md](environment.md) |
+| Biophysical plant (CBGT, DBS, biomarkers) | [plant.md](plant.md) |
+| Mehregan env (reward, RL timing, Gym API) | [environment.md](environment.md) |
 | DDPG (Mehregan) | [controllers/ddpg/replication.md](controllers/ddpg/replication.md) |
 | SNN (Nguyen) | [controllers/snn/replication.md](controllers/snn/replication.md) |
 | SEA-DBS (Ravivarapu) | [controllers/sea_dbs/replication.md](controllers/sea_dbs/replication.md) |

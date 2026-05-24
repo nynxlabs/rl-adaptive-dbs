@@ -1,0 +1,182 @@
+# Plant specification (Kumaravelu et al., 2016 CBGT model)
+
+This document is the **authoritative spec for the shared biophysical plant**: the **cortex–basal ganglia–thalamus (CBGT)** network for the **6-OHDA–lesioned (parkinsonian) rat**, with **DBS delivered in the STN**. All controllers and adapters drive **one** instance of this dynamics model—no duplicated CBGT code under `controllers/`.
+
+**Related specs:**
+
+- **Mehregan Gymnasium API** (2 s RL steps, pattern actions, Eq. (8) reward, baselines) — [environment.md](environment.md).
+- **Per-controller RL interfaces** (timing, observations, rewards) — [controllers/](controllers/).
+- **Equivalence testing** — [testing.md](testing.md) §3 (`@pytest.mark.matlab`).
+
+---
+
+## 1. Scope
+
+| In scope | Out of scope |
+|----------|----------------|
+| Kumaravelu et al. (2016) **network topology**, neuron models, pathology flag, **STN DBS** waveform parameters in the reference script | Mehregan **RL** step duration, reward Eq. (8), discrete pattern alphabet cardinality ([environment.md](environment.md)) |
+| **Plant integration** ($\Delta t$), simulated-time segments, IC reset | DDPG / DSQN / SEA-DBS **training loops** ([controllers/](controllers/)) |
+| **Biomarker primitives** from GPi spiking (PSD, band integrals); which band applies is **suite- or adapter-specific** | Benchmark **run manifests** and cross-paper tables ([benchmarking.md](benchmarking.md)) |
+
+The plant layer exposes **dynamics + actuation + spike/biomarker outputs**. The `envs/` package wraps it with the Mehregan RL contract; Nguyen and SEA-DBS adapters subsample or re-window the same plant without reimplementing dynamics.
+
+---
+
+## 2. Reference and provenance
+
+- **Publication:** Kumaravelu, K., Brocker, D. T., Grill, W. M. (2016). *A biophysical model of the cortex–basal ganglia–thalamus network in the 6-OHDA lesioned rat model of Parkinson’s disease.* *Journal of Computational Neuroscience*, 40, 207–229.
+- **Bundled MATLAB:** [`reference-material/KumaraveluEtAl2016/`](../reference-material/KumaraveluEtAl2016/) — entry script `simulate_network_model.m`, network routine `CTX_BG_TH_network` in the same file. Citation and provenance: [`readme.txt`](../reference-material/KumaraveluEtAl2016/readme.txt).
+- **Upstream:** [ModelDBRepository/206232](https://github.com/ModelDBRepository/206232).
+
+**Replication default:** **Parkinsonian** runs use `pd = 1` in the reference script (`pd = 0` is healthy). RL work in this repo targets the **parkinsonian** regime unless a benchmark explicitly includes healthy controls.
+
+---
+
+## 3. Network topology and dynamics
+
+- **Regions:** Cortex (excitatory / inhibitory populations), direct and indirect striatum, **STN**, **GPe**, **GPi**, thalamus; inter-region connections as in Kumaravelu et al. (2016).
+- **Units per region:** **$n = 10$** neurons per structure in the reference implementation (`n = 10` in `simulate_network_model.m`).
+- **Neuron models:** The reference uses **Izhikevich** dynamics for cortical populations and **Hodgkin–Huxley–type** dynamics for basal ganglia and thalamus. Adaptive DBS papers often describe the model uniformly as “HH-type”; **match the reference implementation** for fidelity, not the prose shorthand alone.
+- **Pathology:** `pd = 1` selects parkinsonian (6-OHDA lesioned) parameters with exaggerated **beta** oscillations versus `pd = 0` (healthy).
+- **Outputs used downstream:** At minimum, **GPi action-potential trains** for biomarker computation; the reference also saves STN, GPe, striatal, cortical, and thalamic APs.
+
+---
+
+## 4. STN DBS actuation
+
+The reference drives DBS as a **current injected in STN** (`Idbs` passed to `CTX_BG_TH_network`).
+
+| Parameter | Reference default (`simulate_network_model.m`) | Notes |
+|-----------|-----------------------------------------------|--------|
+| **Pulse width** `PW` | **0.3 ms** | Rectangular pulse |
+| **Amplitude** | **300 nA/cm²** | Constant within pulse |
+| **Carrier pattern** | Scalar **frequency in Hz** via `pick_dbs_freq` indexing `freqs = 0:5:200` | `pick_dbs_freq == 1` → **no DBS** (`Idbs = 0`); otherwise `creatdbs` builds a pulse train at `pattern` Hz |
+| **Optional cortical stimulus** | `corstim` | Off (`0`) for standard DBS-only runs |
+
+**Pulse train construction (`creatdbs`):** For frequency `pattern` Hz, pulses of width `PW` at amplitude `amplitude` are placed with inter-pulse interval `isi = 1000 / pattern` ms on the integration grid.
+
+**Mehregan discrete patterns:** Mehregan et al. apply a **discrete STN pattern alphabet** at the RL layer ([environment.md](environment.md) §4). The plant must accept a **drive specification** per simulated segment (frequency, pulse train, or precomputed `Idbs` waveform). **Open:** exact mapping from Mehregan pattern indices to STN current—**decide in** the MATLAB/Python bridge; keep stable across training, eval, and quantization.
+
+**Baselines (plant-level):** **No stimulation**, conventional **~130 Hz** cDBS, and periodic **45 Hz** (and **30 Hz** where papers compare)—implemented as fixed `pattern` / `Idbs` settings with documented seeds.
+
+---
+
+## 5. Integration and simulated time
+
+| Quantity | Reference (`simulate_network_model.m`) | Mehregan replication target |
+|----------|----------------------------------------|-----------------------------|
+| **Integration step** $\Delta t$ | **0.01 ms** (`dt = 0.01`) | Mehregan §IV.A.1 reports **0.02 ms** for the computational plant |
+| **Default segment in reference script** | **2000 ms** (`tmax = 2000`) per call | RL **segment length** is set by the env or adapter (e.g. **2 s** Mehregan, **100 ms** Nguyen, **2 ms** SEA-DBS)—the plant integrates whatever duration the caller requests |
+
+**Implementation note:** For Mehregan-aligned replication, default plant config should use **$\Delta t = 0.02$ ms** unless released Mehregan training code specifies otherwise. If the bridge keeps the reference **0.01 ms** step, **document the deviation** and validate biomarker statistics ($P_\beta$, baseline traces) under the same protocols.
+
+**Episode / IC reset:** A new RL episode draws **new initial conditions** (reference: randomized membrane voltages per population, e.g. `v1 = -62 + randn(n,1)*5`). The plant `reset` (or equivalent) must support reproducible seeds for benchmarking.
+
+---
+
+## 6. Biomarkers from GPi spiking
+
+Biomarker **definitions differ by paper**; the plant and wrapper should compute spectra from **GPi spike trains** and expose band integrals consistently.
+
+### 6.1 Reference script (Kumaravelu bundle)
+
+After simulation, `make_Spectrum(GPi_APs, params)` computes a multitaper PSD (`mtspectrumpt`, Chronux-style parameters in-script: `Fs` from `dt`, `fpass = [1 100]`, `tapers = [3 5]`). The reference integrates power over **7–35 Hz**:
+
+```matlab
+beta = S(f>7 & f<35);
+area = trapz(betaf, beta);  % gpi_alpha_beta_area
+```
+
+This **`gpi_alpha_beta_area`** is the reference’s “alpha–beta” scalar for GPi.
+
+### 6.2 Mehregan $P_\beta$ (13–35 Hz)
+
+Mehregan Eq. (1) integrates GPi spike PSD over **13–35 Hz**, averaged over **$n = 10$** GPi neurons:
+
+$$
+P_\beta = \frac{1}{n} \sum_{j=1}^{n} \int_{\omega = 2\pi \cdot 13\,\mathrm{Hz}}^{2\pi \cdot 35\,\mathrm{Hz}} P_j^{\mathrm{GPi}}(\omega)\, d\omega
+$$
+
+**Replication:** Use **13–35 Hz** for Mehregan fidelity even when wrapping the reference script—**re-band** or post-process; do not silently use the reference’s **7–35 Hz** integral for Mehregan metrics ([environment.md](environment.md) §3.1).
+
+### 6.3 Nguyen $\alpha$–$\beta$ feedback
+
+Nguyen uses **7–35 Hz** GPi oscillation power for reward and early termination ([controllers/snn/replication.md](controllers/snn/replication.md)). That aligns with the **reference integral band**, not Mehregan’s **13–35 Hz** $P_\beta$ alone.
+
+### 6.4 Logging for cross-controller comparison
+
+For optional **plant-level** suites ([benchmarking.md](benchmarking.md) §3.3), log **raw GPi traces** and/or **multiple band integrals** ($P_\beta$, 7–35 Hz, duty cycle) so adapters are not conflated in tables.
+
+---
+
+## 7. Target plant wrapper API
+
+The plant lives under `envs/` (or a dedicated submodule) as a **non-Gym** service the Mehregan `Env` and adapters call.
+
+**Suggested surface:**
+
+| Method | Behavior |
+|--------|----------|
+| `reset(seed=None)` | Parkinsonian ICs (`pd = 1`); optional RNG seed |
+| `integrate(duration_s, dbs_spec, *, record_spikes=True)` | Advance dynamics for `duration_s` simulated seconds with STN drive `dbs_spec`; return GPi (and optionally other) APs, last biomarker samples, info |
+| `config` | $\Delta t$, `pd`, default DBS waveform parameters, biomarker bands |
+
+**Not in the plant API:** Gymnasium `step`/`reset` return shapes, Mehregan reward, or controller actions—the **environment** and **adapters** map RL actions to `dbs_spec` and call `integrate` for the correct **segment duration**.
+
+---
+
+## 8. Equivalence and validation
+
+Before trusting the Python/MATLAB bridge for training:
+
+1. **Fixed seed, `pd = 1`, no DBS:** compare GPi traces or $P_\beta$ / 7–35 Hz integral to a reference `.mat` output from `simulate_network_model.m`.
+2. **Fixed DBS frequency** (e.g. 130 Hz, 45 Hz): match pulse timing and biomarker level within documented tolerance.
+3. **$\Delta t$:** if using 0.02 ms vs reference 0.01 ms, document and run (1)–(2) under the chosen step.
+4. **Band:** confirm Mehregan metrics use **13–35 Hz** even when the reference script returns **7–35 Hz**.
+
+Mark heavy checks `@pytest.mark.matlab` ([testing.md](testing.md)). CI defaults should skip MATLAB.
+
+---
+
+## 9. Future direction: native Python plant
+
+The project may **replace the MATLAB bridge** with a **native Python** reimplementation of the same network validated against the reference ([development.md](development.md) Phase 8+). Until equivalence passes, treat **`reference-material/KumaraveluEtAl2016/`** as source of truth for dynamics and default biomarker pipelines.
+
+---
+
+## 10. Open questions / TBD
+
+### 1. Integration step $\Delta t$
+
+**Fixed:** Mehregan replication target **0.02 ms**; reference default **0.01 ms**. **Open:** released Mehregan code value. **Decide in** plant config; validate biomarkers if keeping 0.01 ms.
+
+### 2. Mehregan pattern → STN current
+
+**Fixed:** actuation is STN-injected DBS per Kumaravelu et al. (2016). **Open:** encoding of discrete Mehregan patterns. **Decide in** env bridge ([environment.md](environment.md) §4).
+
+### 3. Multitaper / PSD parameters
+
+Reference uses specific `Fs`, `fpass`, and tapers. **Open:** whether adapters may share one PSD implementation for all bands. **Decide in** `envs/` biomarker module; document if diverging from reference `make_Spectrum`.
+
+### 4. Healthy vs parkinsonian eval
+
+**Fixed:** training targets **parkinsonian** (`pd = 1`). **Open:** whether benchmarks include `pd = 0` controls. **Decide in** suite manifests.
+
+---
+
+## 11. Consistency checklist
+
+- [ ] Single plant backend; **no** CBGT dynamics under `controllers/`.
+- [ ] **$n = 10$** neurons per region; **Izhikevich** cortex + **HH-type** BG/thalamus per reference.
+- [ ] STN DBS via documented `PW`, amplitude, and frequency / `Idbs` waveform.
+- [ ] Mehregan metrics: GPi **13–35 Hz** $P_\beta$; Nguyen adapter: **7–35 Hz** where required.
+- [ ] $\Delta t$ and segment duration documented per bridge and adapter.
+- [ ] Equivalence tests vs reference MATLAB for at least no-DBS and one cDBS frequency.
+
+---
+
+## 12. References
+
+- Kumaravelu et al. (2016) — plant dynamics; bundled MATLAB under [`reference-material/KumaraveluEtAl2016/`](../reference-material/KumaraveluEtAl2016/).
+- Mehregan et al. — RL environment using this plant; [environment.md](environment.md).
+- Nguyen et al., Ravivarapu et al. — adapters on the same plant; [controllers/snn/replication.md](controllers/snn/replication.md), [controllers/sea_dbs/replication.md](controllers/sea_dbs/replication.md).
