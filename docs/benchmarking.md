@@ -172,7 +172,7 @@ results/
 | Spec (this document) | Done |
 | `envs/` implements [environment.md](environment.md) | Pending |
 | Each controller exposes `train()` / `evaluate(seed, checkpoint)` with shared metric dict | Pending |
-| Suite runner (CLI or `benchmarks/` package) loads suite YAML, runs baselines + controllers, writes `results/` | Pending |
+| Suite runner (`rl-dbs benchmark` per [cli.md](cli.md), or `benchmarks/` package) loads suite YAML, runs baselines + controllers, writes `results/` | Pending |
 | Summary script or notebook: table/plot across `controller` × `variant` | Pending |
 
 When adding code, prefer a **thin** runner that calls into `controllers.*` and `envs` rather than duplicating plant logic in scripts.
