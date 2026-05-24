@@ -2,7 +2,7 @@
 
 This document specifies the **computational reinforcement-learning environment** described in *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning* (Mehregan et al.). It is meant to align a Gymnasium-style implementation under `envs/` (repository root) with the published setup. The **DDPG actor–critic controller** (networks, replay, losses, quantization) is specified separately in [controllers/ddpg/replication.md](controllers/ddpg/replication.md).
 
-The **plant** is the validated **cortex–basal ganglia–thalamus** biophysical network for **6-OHDA–lesioned (parkinsonian) rat**, with **DBS delivered in the STN**. Use the **Kumaravelu, Brocker, and Grill (2016)** biophysical network model (the MATLAB distribution under [`reference-material/KumaraveluEtAl2016/`](../reference-material/KumaraveluEtAl2016/); see [`readme.txt`](../reference-material/KumaraveluEtAl2016/readme.txt) for citation and provenance).
+The **plant** is the shared **Kumaravelu et al. (2016)** parkinsonian CBGT model with **STN DBS**—topology, integration, actuation, and biomarker primitives are specified in **[plant.md](plant.md)**. This document covers the **Mehregan et al. Gymnasium-style RL environment** built on that plant.
 
 ---
 
@@ -17,12 +17,7 @@ The **plant** is the validated **cortex–basal ganglia–thalamus** biophysical
 
 ## 2. Plant (dynamics model)
 
-- **Topology:** Cortical (excitatory / inhibitory), direct and indirect striatum, **STN**, **GPe**, **GPi**, thalamus; stochastic and fixed excitatory/inhibitory inter-region connections as in the Kumaravelu et al. (2016) publication cited in the paper.
-- **Units per region:** **10** single-compartment **Hodgkin–Huxley–type** neurons per structure (paper §II.A). §IV.A.1 briefly says “10 neurons” for the whole model; replication uses **10 per region** as in §II.A and the Kumaravelu reference implementation. The Kumaravelu reference actually uses a **mix** of Hodgkin–Huxley dynamics (basal ganglia, thalamus) and **Izhikevich** dynamics (cortex), despite Mehregan’s paper describing all regions uniformly as “HH-type.”
-- **Pathology:** Parkinsonian (6-OHDA lesioned) regime with exaggerated **beta** oscillations versus healthy controls.
-- **Actuation:** DBS **injected in the STN** (paper Figure 1a); compare to conventional **~130 Hz** periodic high-frequency STN DBS as a baseline. **Pulse timing, amplitude, and other waveform details** are not overridden in §IV.A.1; follow the **Kumaravelu et al. (2016)** reference implementation unless a later publication or released code specifies otherwise.
-
-**Implementation note:** Wrapping the reference MATLAB model in a Python RL loop is the expected path until a native reimplementation exists. Mehregan et al. §IV.A.1 reports a plant integration step of **0.02 ms** (see §5). The bundled Kumaravelu et al. (2016) script in `reference-material/KumaraveluEtAl2016/` defaults to **0.01 ms** (`dt` in `simulate_network_model.m`). For paper replication, use **0.02 ms** unless Mehregan’s released training code specifies otherwise; document any deliberate deviation and validate biomarker statistics if you keep the reference default.
+Use the shared biophysical plant per **[plant.md](plant.md)** (Kumaravelu et al., 2016 CBGT, STN DBS, $n = 10$ per region, parkinsonian default). Mehregan §IV.A.1 reports integration step **0.02 ms**; the bundled reference defaults to **0.01 ms**—see [plant.md](plant.md) §5. The `envs/` Mehregan API does not duplicate dynamics; it wraps the plant with **2 s** RL steps, biomarker windows, and reward Eq. (8) below.
 
 ---
 
@@ -30,7 +25,7 @@ The **plant** is the validated **cortex–basal ganglia–thalamus** biophysical
 
 ### 3.1 Beta power in GPi (primary signal)
 
-Integrated **beta (13–35 Hz)** power over GPi spiking, averaged across the **n = 10** GPi neurons (paper Equation (1)). The paper’s introduction cites literature using **12–35 Hz** in places; **Equation (1) and the computational biomarker use 13–35 Hz**—implementations should match Eq. (1) for replication. The bundled Kumaravelu reference’s `make_Spectrum` integrates over **7–35 Hz**, not 13–35 Hz; reimplementations that wrap the reference must **re-band** to 13–35 Hz for Mehregan fidelity.
+Integrated **beta (13–35 Hz)** power over GPi spiking, averaged across the **n = 10** GPi neurons (paper Equation (1)). The paper’s introduction cites literature using **12–35 Hz** in places; **Equation (1) and the computational biomarker use 13–35 Hz**—implementations should match Eq. (1) for replication. The reference script integrates **7–35 Hz** by default; Mehregan replication must use **13–35 Hz** ([plant.md](plant.md) §6).
 
 $$
 P_\beta = \frac{1}{n} \sum_{j=1}^{n} \int_{\omega = 2\pi \cdot 13\,\mathrm{Hz}}^{2\pi \cdot 35\,\mathrm{Hz}} P_j^{\mathrm{GPi}}(\omega)\, d\omega
@@ -63,7 +58,7 @@ Values from **§IV.A.1 (computational setup)** unless noted.
 | Quantity | Value |
 |----------|--------|
 | **RL step duration** (`dt_rl` / “duration $l$” in Alg. 1) | **2 s** of simulated time per RL transition |
-| **Plant integration step** | **0.02 ms** in Mehregan §IV.A.1 (“step size of 0.02 ms”); bundled Kumaravelu MATLAB defaults to **0.01 ms** — see §2 implementation note |
+| **Plant integration step** | **0.02 ms** in Mehregan §IV.A.1; reference default **0.01 ms** — [plant.md](plant.md) §5 |
 | **Steps per training episode** | **30** |
 | **Episode reset** | New **initial conditions** for the plant; collect $P_\beta$ and reward over each step (Alg. 1) |
 
@@ -147,11 +142,11 @@ From **§IV.A.1** (for replication / defaults):
 
 ### 1. DBS pulse waveform details
 
-Mehregan §IV.A.1 does not override pulse timing, amplitude, or other STN waveform parameters. **Fixed:** actuation is STN-injected DBS per Kumaravelu et al. (2016). **Open:** exact waveform encoding. **Decide in** the plant wrapper / reference MATLAB bridge unless Mehregan released code or a later publication specifies otherwise.
+Mehregan §IV.A.1 does not override pulse timing, amplitude, or other STN waveform parameters. **Fixed:** STN DBS per Kumaravelu et al. (2016). **Open:** exact waveform encoding. **Decide in** plant bridge — [plant.md](plant.md) §4, §10.
 
 ### 2. Plant integration step ($\Delta t$)
 
-Mehregan §IV.A.1 reports **0.02 ms**; bundled Kumaravelu MATLAB defaults to **0.01 ms**. **Fixed:** paper replication target is **0.02 ms**. **Open:** whether released Mehregan training code uses a different value. **Decide in** `envs/` config; document and validate biomarker statistics if keeping the reference default.
+See [plant.md](plant.md) §5, §10. **Decide in** plant config; validate biomarkers if keeping reference **0.01 ms**.
 
 ### 3. Discrete pattern alphabet
 
@@ -175,17 +170,17 @@ Training runs **30** steps per episode with no true dynamical terminal state des
 
 ### 8. Kumaravelu reference beta band vs Eq. (1)
 
-Kumaravelu `make_Spectrum` integrates **7–35 Hz**; Mehregan Eq. (1) uses **13–35 Hz**. **Fixed:** replication band is **13–35 Hz** over **10** GPi neurons. **Open:** whether to patch the reference spectrum call or re-band in the wrapper. **Decide in** biomarker pipeline; re-band to **13–35 Hz** for Mehregan fidelity.
+See [plant.md](plant.md) §6. **Decide in** biomarker pipeline; use **13–35 Hz** for Mehregan fidelity.
 
 ---
 
 ## 12. Future direction: native Python plant (optional)
 
-The project may **eventually replace the MATLAB wrapper** with a **native Python** reimplementation of the same biophysical network (or a subset validated against it), for example to remove the MATLAB dependency, simplify CI, or improve batching and deployment. If that happens, treat the reference MATLAB simulator as the **source of truth** until a port passes **equivalence checks** (time step, dynamics, and biomarker statistics under the same protocols).
+See [plant.md](plant.md) §9.
 
 ---
 
 ## 13. References
 
 - Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning*.
-- Kumaravelu K, Brocker DT, Grill WM (2016), *A biophysical model of the cortex–basal ganglia–thalamus network in the 6-OHDA lesioned rat model of Parkinson’s disease*, *J Comput Neurosci* 40:207–29 — bundled MATLAB model: [`reference-material/KumaraveluEtAl2016/`](../reference-material/KumaraveluEtAl2016/) ([`readme.txt`](../reference-material/KumaraveluEtAl2016/readme.txt)).
+- Kumaravelu et al. (2016) — plant: [plant.md](plant.md); bundled MATLAB: [`reference-material/KumaraveluEtAl2016/`](../reference-material/KumaraveluEtAl2016/) ([`readme.txt`](../reference-material/KumaraveluEtAl2016/readme.txt)).
