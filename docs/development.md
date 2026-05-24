@@ -8,7 +8,7 @@ Roadmap, conventions, and implementation status for **rl-adaptive-dbs**. For clo
 
 Work proceeds in layers: rough specs, then environment and controllers in paper order (DDPG first), then benchmarking and comparison, then fusion, then long-term modularity and a native plant.
 
-### Phase 0 — Rough specifications (complete)
+### Phase 1 — Rough specifications (complete)
 
 Draft specs that define scope, interfaces, and paper-aligned intent—not final implementation detail.
 
@@ -21,7 +21,7 @@ Draft specs that define scope, interfaces, and paper-aligned intent—not final 
 | SEA-DBS controller | [controllers/sea_dbs/replication.md](controllers/sea_dbs/replication.md) | — |
 | Comparison protocol | [benchmarking.md](benchmarking.md) | — |
 
-### Phase 1 — Environment for the first controller (current)
+### Phase 2 — Environment for the first controller (current)
 
 Replicate the shared plant and Mehregan et al. Gym API before any controller work.
 
@@ -162,7 +162,7 @@ Do **not** commit:
 | Benchmark suite runner | Not started | — |
 | Training / eval CLI | Not started | — |
 
-**Current phase:** 1 (Phase 0 rough specs complete; environment replication for `ddpg` in progress; Phases 3–8+ outlined).
+**Current phase:** 2 (Phase 1 rough specs complete; environment replication for `ddpg` in progress; Phases 3–8+ outlined).
 
 ---
 

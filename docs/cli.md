@@ -70,7 +70,7 @@ rl-dbs [--verbose | --quiet] [--seed SEED] <subcommand> [subcommand options]
 | `eval` | 3+ | Evaluate a trained checkpoint on a suite or single rollout. |
 | `benchmark` | 4+ | Run a full suite from a YAML manifest → `results/`. |
 | `info` | 4+ | Print available controllers, variants, suites, env summary. |
-| `config` | 1+ | Show or set plant/env defaults (read-only until env exists). |
+| `config` | 2+ | Show or set plant/env defaults (read-only until env exists). |
 
 Global flags apply before the subcommand and affect logging only unless noted.
 
@@ -270,7 +270,7 @@ rl-dbs config set KEY VALUE [--persist]
 | `env.biomarker.band_hz` | [environment.md](environment.md) §3 | `13`, `35` |
 | `env.episode_steps` | [environment.md](environment.md) §5 | `30` |
 
-**Phase 1 behavior:** `show` may print spec defaults when `envs/` is not implemented; `set` without `--persist` affects in-process overrides for the current CLI invocation only. Persistent user config file format is **intentionally open** (see §2.3).
+**Phase 2 behavior:** `show` may print spec defaults when `envs/` is not implemented; `set` without `--persist` affects in-process overrides for the current CLI invocation only. Persistent user config file format is **intentionally open** (see §2.3).
 
 **Examples:**
 
@@ -350,9 +350,9 @@ CI smoke tests may invoke `rl-dbs info` and `rl-dbs benchmark --dry-run` expecti
 
 | Step | Phase | Status |
 |------|-------|--------|
-| Spec (this document) | 0 | Done |
-| `info`, `config show` (static/spec defaults) | 1+ | Pending |
-| `eval` + baselines on `envs/` | 1–3 | Pending |
+| Spec (this document) | 1 | Done |
+| `info`, `config show` (static/spec defaults) | 2+ | Pending |
+| `eval` + baselines on `envs/` | 2–3 | Pending |
 | `train` for `ddpg` | 3 | Pending |
 | `benchmark` suite runner | 4 | Pending |
 | `train` / `eval` for `snn`, `sea_dbs` | 5 | Pending |
