@@ -40,7 +40,7 @@ Replicate the shared plant and Mehregan et al. Gym API before any controller wor
 
 - Suite definitions (YAML or equivalent) per [benchmarking.md](benchmarking.md).
 - **Per-paper suite** for Mehregan replication (`mehregan_eval`): baselines + `ddpg` variants × seeds → `results/`.
-- Runner and summary tables / plots over core metrics ($P_\beta$, reward, stim frequency).
+- Runner and summary tables / plots over core metrics ($P_\beta$, reward, stim frequency); CLI `benchmark` and TUI per [cli.md](cli.md), [tui.md](tui.md).
 - **Exit criteria:** repeatable `mehregan_eval` runs; replication checklist passable for `ddpg`.
 
 ### Phase 5 — Other controllers, adapters, and per-paper benchmarking
@@ -70,7 +70,7 @@ Replicate the shared plant and Mehregan et al. Gym API before any controller wor
 
 - Native Python plant ([plant.md](plant.md) §9); drop MATLAB dependency after equivalence checks.
 - Modular layout: swappable plant backends, controller packages, adapters, and benchmark runner; CI on smoke tests + selected suites.
-- Training/eval CLIs documented in [getting_started.md](getting_started.md).
+- Training/eval CLIs per [cli.md](cli.md); monitoring TUI per [tui.md](tui.md); day-to-day setup in [getting_started.md](getting_started.md).
 - Optional per-controller work beyond paper replication: [controllers/ddpg/extensions.md](controllers/ddpg/extensions.md), [controllers/snn/extensions.md](controllers/snn/extensions.md), [controllers/sea_dbs/extensions.md](controllers/sea_dbs/extensions.md), and broader framework ideas (other oscillatory conditions, patient-specific robustness, etc.).
 
 Phases 8+ are intentionally open; prioritize equivalence and replication paths before large refactors.
@@ -152,6 +152,8 @@ Do **not** commit:
 | [controllers/sea_dbs/extensions.md](controllers/sea_dbs/extensions.md) | Outline | CV post-replication directions |
 | [controllers/fusion.md](controllers/fusion.md) | Outline | SEA-DBS + DSQN synthesis |
 | [benchmarking.md](benchmarking.md) | Draft | Per-paper vs cross-paper suites in spec; runner not implemented |
+| [cli.md](cli.md) | Draft | `rl-dbs` entry point spec; not implemented |
+| [tui.md](tui.md) | Draft | `rl-dbs-tui` read-only monitor; not implemented |
 | `envs/` | Placeholder | No Gym env yet |
 | `controllers/ddpg/` | Placeholder | — |
 | `controllers/snn/` | Placeholder | — |
@@ -176,4 +178,6 @@ Do **not** commit:
 | [environment.md](environment.md) | Mehregan Gym API on the plant |
 | [controllers/](controllers/) | Per-controller specs (replication + extensions + fusion) |
 | [benchmarking.md](benchmarking.md) | Cross-controller comparison |
+| [cli.md](cli.md) | `rl-dbs` command-line interface (train, eval, benchmark, info, config) |
+| [tui.md](tui.md) | `rl-dbs-tui` terminal UI (monitor training and results) |
 | [README.md](../README.md) | Project scope and References |
