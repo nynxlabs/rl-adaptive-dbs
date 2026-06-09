@@ -158,7 +158,6 @@ Do **not** commit:
 | `controllers/ddpg/` | Placeholder | — |
 | `controllers/snn/` | Placeholder | — |
 | `controllers/sea_dbs/` | Placeholder | — |
-| MATLAB install / engine | Installed on nynxbox (`~/MATLAB`); **license pending** | [matlab.md](matlab.md) |
 | MATLAB plant bridge | Not started | Reference in `reference-material/` |
 | Benchmark suite runner | Not started | — |
 | Training / eval CLI | Not started | — |
@@ -175,7 +174,6 @@ Do **not** commit:
 | [testing.md](testing.md) | pytest layout, markers, what to test |
 | [development.md](development.md) | Roadmap, conventions, status (this file) |
 | [venv.md](venv.md) | `uv` and dependencies |
-| [matlab.md](matlab.md) | MATLAB install, license, Python engine |
 | [plant.md](plant.md) | Shared CBGT plant (Kumaravelu et al.) |
 | [environment.md](environment.md) | Mehregan Gym API on the plant |
 | [controllers/](controllers/) | Per-controller specs (replication + extensions + fusion) |
