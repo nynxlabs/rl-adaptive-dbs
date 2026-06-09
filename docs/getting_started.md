@@ -23,7 +23,7 @@ Packages install in editable mode so local changes are importable immediately af
 |-------------|--------|
 | **Git** | To clone the repository |
 | **uv** | Python + venv manager — [install uv](https://docs.astral.sh/uv/getting-started/installation/) ([more detail](venv.md#install-uv)) |
-| **MATLAB** | Required only when implementing the MATLAB plant bridge; skip for Python-only setup |
+| **MATLAB** | Required for the Kumaravelu plant bridge (Phase 2); skip for Python-only work. Install and license: [matlab.md](matlab.md) |
 
 **Platforms:** Windows, macOS, Linux (including WSL).
 
@@ -152,6 +152,7 @@ Typical flow (details and rules in [development.md](development.md)):
 | Roadmap and project status | [development.md](development.md) |
 | `uv`, lockfile, Python version | [venv.md](venv.md) |
 | Tests, markers, layout | [testing.md](testing.md) |
+| MATLAB install, license, Python engine | [matlab.md](matlab.md) |
 | Biophysical plant (CBGT, DBS, biomarkers) | [plant.md](plant.md) |
 | Mehregan env (reward, RL timing, Gym API) | [environment.md](environment.md) |
 | DDPG (Mehregan) | [controllers/ddpg/replication.md](controllers/ddpg/replication.md) |

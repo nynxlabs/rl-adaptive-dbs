@@ -58,6 +58,13 @@ uv add --dev <package>   # test or lint tools → dev group
 
 Commit `pyproject.toml` and `uv.lock` together so others get the same versions on any OS.
 
+**Optional — MATLAB Engine API** (after MATLAB is installed and licensed; see [matlab.md](matlab.md)):
+
+```bash
+uv sync --group matlab
+source scripts/matlab-env.sh   # sets LD_LIBRARY_PATH for matlab.engine
+```
+
 ## Migrating from `python -m venv`
 
 Remove the old `.venv` directory, then sync again.
