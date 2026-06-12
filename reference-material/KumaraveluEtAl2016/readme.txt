@@ -12,3 +12,5 @@ supplied q file.
 20161212 Karthik Kumaravelu supplied a minor typo update where some
 multiplicative forms (t_vec-t_d_...) were removed from bi-exponential
 synaptic functions.
+
+rl-adaptive-dbs vendor edits: see changes.md in this folder.

@@ -62,6 +62,7 @@ def test_plant_md_links_resolve() -> None:
     [
         DOCS / "environment.md",
         DOCS / "development.md",
+        DOCS / "development" / "roadmap.md",
         DOCS / "benchmarking.md",
         DOCS / "getting_started.md",
         DOCS / "testing.md",

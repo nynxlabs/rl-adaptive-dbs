@@ -1,9 +1,11 @@
-function [] = simulate_network_model(IT,pd,corstim,pick_dbs_freq)
+function [] = simulate_network_model(IT,pd,corstim,pick_dbs_freq,dynamics_only)
 
 %IT - iteration number (trial no)
 %pd - 0(normal/healthy condition), 1(Parkinson's disease(PD) condition)
 %corstim (cortical stimulation) - 0(off), 1(on)
 %pick_dbs_freq - choose appropriate DBS frequency
+%dynamics_only (optional) - if true, return after CTX_BG_TH_network (plant bridge smoke)
+if nargin < 5, dynamics_only = false; end
 
 rng shuffle
 
@@ -47,6 +49,10 @@ end
 
 % Run CTX-BG-TH Network Model
 [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco);
+
+if dynamics_only
+  return
+end
 
 % Calculate GPi pathological low-frequency oscillatory power
 dt1=0.01*10^-3;
@@ -337,21 +343,22 @@ t_list_gpe(1:n) = struct('times',[]);
 t_list_gpi(1:n) = struct('times',[]);
 
 
-all=randsample(n,n);
-bll=randsample(n,n);
-cll=randsample(n,n);
-dll=randsample(n,n);
-ell=randsample(n,n);
-fll=randsample(n,n);
-gll=randsample(n,n);
-hll=randsample(n,n);
-ill=randsample(n,n);
-jll=randsample(n,n);
-kll=randsample(n,n);
-lll=randsample(n,n);
-mll=randsample(n,n);
-nll=randsample(n,n);
-oll=randsample(n,n);
+% randperm (base MATLAB) replaces randsample (Statistics Toolbox) for wiring shuffle.
+all=randperm(n);
+bll=randperm(n);
+cll=randperm(n);
+dll=randperm(n);
+ell=randperm(n);
+fll=randperm(n);
+gll=randperm(n);
+hll=randperm(n);
+ill=randperm(n);
+jll=randperm(n);
+kll=randperm(n);
+lll=randperm(n);
+mll=randperm(n);
+nll=randperm(n);
+oll=randperm(n);
 
 gcorsna=0.3*rand(n,1);
 gcorsnn=0.003*rand(n,1);

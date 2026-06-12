@@ -140,7 +140,7 @@ Mark heavy checks `@pytest.mark.matlab` ([testing.md](testing.md)). CI defaults 
 
 ## 9. Future direction: native Python plant
 
-The project may **replace the MATLAB bridge** with a **native Python** reimplementation of the same network validated against the reference ([development.md](development.md) Phase 8+). Until equivalence passes, treat **`reference-material/KumaraveluEtAl2016/`** as source of truth for dynamics and default biomarker pipelines.
+The project may **replace the MATLAB bridge** with a **native Python** reimplementation of the same network validated against the reference ([development/roadmap.md](development/roadmap.md) Phase 8+). Until equivalence passes, treat **`reference-material/KumaraveluEtAl2016/`** as source of truth for dynamics and default biomarker pipelines.
 
 ---
 

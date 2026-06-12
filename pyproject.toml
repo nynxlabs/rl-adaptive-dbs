@@ -18,6 +18,9 @@ dependencies = [
 dev = [
     "pytest>=9.0.3",
 ]
+matlab = [
+    "matlabengine==25.2.2",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

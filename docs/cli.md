@@ -2,7 +2,7 @@
 
 This document defines the **`rl-dbs`** CLI: training, evaluation, benchmarking, configuration, and repository introspection. Implementation is planned for **Phase 4+** (benchmark runner) and **Phase 8+** (training/eval workflows); the spec is forward-looking so runners and controllers can align early.
 
-**Related specs:** [development.md](development.md) (phases), [benchmarking.md](benchmarking.md) (suites, results layout), [environment.md](environment.md) (Mehregan Gym API), [plant.md](plant.md) (plant config), [controllers/](controllers/) (per-paper training). Tooling: [venv.md](venv.md) (`uv run`).
+**Related specs:** [development/roadmap.md](development/roadmap.md) (phases), [benchmarking.md](benchmarking.md) (suites, results layout), [environment.md](environment.md) (Mehregan Gym API), [plant.md](plant.md) (plant config), [controllers/](controllers/) (per-paper training). Tooling: [venv.md](venv.md) (`uv run`).
 
 ---
 
@@ -101,7 +101,7 @@ rl-dbs train --controller NAME --variant VARIANT [options]
 | Option | Required | Description |
 |--------|----------|-------------|
 | `--controller` | Yes | Package id: `ddpg`, `snn`, `sea_dbs`. |
-| `--variant` | Yes | Slug, e.g. `paper`, `init-30hz`, `ptq-int8`. Default replication id is `paper` ([development.md](development.md) §2). |
+| `--variant` | Yes | Slug, e.g. `paper`, `init-30hz`, `ptq-int8`. Default replication id is `paper` ([development/roadmap.md](development/roadmap.md) §2). |
 | `--seeds` | No | Comma-separated training seeds (default: global `--seed` only). |
 | `--episodes` | No | Override training episode count when spec allows (Mehregan default **10** — [environment.md](environment.md) §8). |
 | `--checkpoint-dir` | No | Directory for checkpoints (default: `artifacts/<controller>/<variant>/`). |
@@ -172,7 +172,7 @@ uv run rl-dbs eval --controller snn --variant paper \
 
 ### 5.3 `benchmark`
 
-Run a **full benchmark suite** from a YAML manifest. Primary interface for Phase 4 ([development.md](development.md)).
+Run a **full benchmark suite** from a YAML manifest. Primary interface for Phase 4 ([development/roadmap.md](development/roadmap.md)).
 
 ```
 rl-dbs benchmark --suite PATH | --suite-name NAME [options]
@@ -314,7 +314,7 @@ Structured training/benchmark events should use JSON lines in log files under `r
 | Suite manifest | `results/<suite>/manifest.json` | Suite version, env snapshot, git hash |
 | Checkpoints | `artifacts/` or per-run dir | **intentionally open** |
 
-Do not commit `results/` or large checkpoints ([development.md](development.md) §2).
+Do not commit `results/` or large checkpoints ([development/roadmap.md](development/roadmap.md) §2).
 
 ---
 
@@ -364,7 +364,7 @@ Prefer a thin `rl_adaptive_dbs/cli/` (or `cli/`) module that calls into `control
 
 ## 11. Consistency checklist
 
-- [ ] Subcommands match [development.md](development.md) phase plan (`benchmark` before full `train` for all controllers is acceptable).
+- [ ] Subcommands match [development/roadmap.md](development/roadmap.md) phase plan (`benchmark` before full `train` for all controllers is acceptable).
 - [ ] Suite YAML validated against [benchmarking.md](benchmarking.md) §5 before runs start.
 - [ ] Every `eval` / `benchmark` run logs `controller`, `variant`, `run_id`, `seed`.
 - [ ] Baselines use `controller=baseline` and documented variant ids.

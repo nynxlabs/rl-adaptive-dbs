@@ -4,7 +4,7 @@ Replication of published **adaptive DBS** reinforcement-learning work on one sha
 
 ## Scope
 
-Work is delivered in **phases** (see [docs/development.md](docs/development.md)): rough specs → environment for the first controller → `ddpg` → Mehregan benchmarking → SNN and SEA-DBS with adapters → cross-controller comparison → fusion → native Python plant and framework hardening. Architecturally, the repo has three layers:
+Work is delivered in **phases** (see [docs/development/roadmap.md](docs/development/roadmap.md)): rough specs → environment for the first controller → `ddpg` → Mehregan benchmarking → SNN and SEA-DBS with adapters → cross-controller comparison → fusion → native Python plant and framework hardening. Architecturally, the repo has three layers:
 
 1. **Environment (single source of truth)** — Replicate the **computational RL environment** from Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning*: Kumaravelu et al. (2016) **cortex–basal ganglia–thalamus** dynamics, GPi **beta-band** biomarker, 2 s steps, reward Eq. (8), and a Gymnasium-style API that `ddpg` uses directly. Other papers connect through **adapters** on the same plant. Spec: [docs/environment.md](docs/environment.md). **Current focus:** Phase 2 (environment before controllers).
 
@@ -20,7 +20,7 @@ Work is delivered in **phases** (see [docs/development.md](docs/development.md))
 
 3. **Benchmarking** — **Per-paper suites** first (`mehregan_eval`, then `nguyen_eval`, `sea_dbs_eval`); then optional **cross-paper** comparison on **plant-level** metrics only (`cross_controller_plant`). Spec: [docs/benchmarking.md](docs/benchmarking.md). Runs are keyed by `controller` + `variant` + `run_id`; outputs go under `results/` (local, gitignored).
 
-**Later (Phase 8+):** validated native Python plant (drop MATLAB after equivalence checks), modular plant/controller/benchmark layout, CI, and training/eval CLIs—see [docs/development.md](docs/development.md).
+**Later (Phase 8+):** validated native Python plant (drop MATLAB after equivalence checks), modular plant/controller/benchmark layout, CI, and training/eval CLIs—see [docs/development/roadmap.md](docs/development/roadmap.md).
 
 ## Platform support
 
@@ -33,7 +33,7 @@ Python code lives at the **repository root** as two installable top-level packag
 - **`envs/`** — Shared Gymnasium-style RL environment (Mehregan et al. computational setup).
 - **`controllers/`** — Per-paper controllers: `ddpg`, `snn`, `sea_dbs` (stubs until implemented).
 
-- `docs/` — [getting_started.md](docs/getting_started.md) (setup & use), [development.md](docs/development.md) (roadmap & status), [plant.md](docs/plant.md) (CBGT dynamics), [environment.md](docs/environment.md) (Mehregan Gym API), [controllers/](docs/controllers/) (per-controller specs + fusion), [benchmarking.md](docs/benchmarking.md), [venv.md](docs/venv.md).
+- `docs/` — [getting_started.md](docs/getting_started.md) (setup & use), [development/](docs/development/) (roadmap & status), [plant.md](docs/plant.md) (CBGT dynamics), [environment.md](docs/environment.md) (Mehregan Gym API), [controllers/](docs/controllers/) (per-controller specs + fusion), [benchmarking.md](docs/benchmarking.md), [venv.md](docs/venv.md).
 - `results/` — benchmark outputs (created by future eval runs; not committed).
 - `reference-material/` — Third-party models and scripts. Kumaravelu et al. (2016) MATLAB network: `reference-material/KumaraveluEtAl2016/` ([`readme.txt`](reference-material/KumaraveluEtAl2016/readme.txt) for citation and provenance).
 
@@ -43,13 +43,13 @@ Import example: `from envs.foo import Bar` once modules exist.
 
 **[docs/getting_started.md](docs/getting_started.md)** — install, verify, and day-to-day use.
 
-**[docs/development.md](docs/development.md)** — roadmap, conventions, implementation status.
+**[docs/development/roadmap.md](docs/development/roadmap.md)** — roadmap, conventions, implementation status.
 
 Specs: [plant.md](docs/plant.md), [environment.md](docs/environment.md), [controllers/](docs/controllers/), [benchmarking.md](docs/benchmarking.md). Tooling: [venv.md](docs/venv.md).
 
 ## Benchmarking
 
-Cross-controller comparison uses **per-paper eval suites** plus an optional **same-plant** suite; see [docs/benchmarking.md](docs/benchmarking.md) §3 and [docs/development.md](docs/development.md#cross-controller-benchmarking).
+Cross-controller comparison uses **per-paper eval suites** plus an optional **same-plant** suite; see [docs/benchmarking.md](docs/benchmarking.md) §3 and [docs/development/roadmap.md](docs/development/roadmap.md#cross-controller-benchmarking).
 
 ## References
 
