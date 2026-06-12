@@ -101,7 +101,7 @@ rl-dbs train --controller NAME --variant VARIANT [options]
 | Option | Required | Description |
 |--------|----------|-------------|
 | `--controller` | Yes | Package id: `ddpg`, `snn`, `sea_dbs`. |
-| `--variant` | Yes | Slug, e.g. `paper`, `init-30hz`, `ptq-int8`. Default replication id is `paper` ([development/roadmap.md](development/roadmap.md) §2). |
+| `--variant` | Yes | Slug, e.g. `paper`, `init-30hz`, `ptq-int8`. Default replication id is `paper` ([development/conventions.md](development/conventions.md)). |
 | `--seeds` | No | Comma-separated training seeds (default: global `--seed` only). |
 | `--episodes` | No | Override training episode count when spec allows (Mehregan default **10** — [environment.md](environment.md) §8). |
 | `--checkpoint-dir` | No | Directory for checkpoints (default: `artifacts/<controller>/<variant>/`). |
@@ -314,7 +314,7 @@ Structured training/benchmark events should use JSON lines in log files under `r
 | Suite manifest | `results/<suite>/manifest.json` | Suite version, env snapshot, git hash |
 | Checkpoints | `artifacts/` or per-run dir | **intentionally open** |
 
-Do not commit `results/` or large checkpoints ([development/roadmap.md](development/roadmap.md) §2).
+Do not commit `results/` or large checkpoints ([development/conventions.md](development/conventions.md)).
 
 ---
 
