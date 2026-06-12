@@ -1,6 +1,6 @@
 # Getting started
 
-Set up the repository, confirm your install, and use the project day to day. For the **roadmap**, **conventions**, and **status table**, see [development/roadmap.md](development/roadmap.md). For scope and architecture, see [README.md](../README.md).
+Set up the repository, confirm your install, and use the project day to day. For **phases** and **status**, see [development/roadmap.md](development/roadmap.md); for **conventions**, [development/conventions.md](development/conventions.md). For scope and architecture, see [README.md](../README.md).
 
 ---
 
@@ -110,7 +110,7 @@ Commit `pyproject.toml` and `uv.lock` together after dependency changes.
 
 ## 6. How to work on a change
 
-Typical flow (details and rules in [development/roadmap.md](development/roadmap.md)):
+Typical flow (details in [development/conventions.md](development/conventions.md), phases in [development/roadmap.md](development/roadmap.md)):
 
 1. **Read the spec** for what you are touching ([environment.md](environment.md) or `docs/controllers/<name>/replication.md`).
 2. **Edit code** in `envs/` or `controllers/<name>/`.
@@ -150,6 +150,7 @@ Typical flow (details and rules in [development/roadmap.md](development/roadmap.
 | Goal | Document |
 |------|----------|
 | Roadmap and project status | [development/roadmap.md](development/roadmap.md) |
+| Conventions | [development/conventions.md](development/conventions.md) |
 | `uv`, lockfile, Python version | [venv.md](venv.md) |
 | MATLAB install, license, Python engine | [matlab.md](matlab.md) |
 | Tests, markers, layout | [testing.md](testing.md) |

@@ -1,6 +1,6 @@
 # Testing
 
-How to run and extend **pytest** checks for **rl-adaptive-dbs**. Setup and `uv` usage: [getting_started.md](getting_started.md). Roadmap and conventions: [development/roadmap.md](development/roadmap.md).
+How to run and extend **pytest** checks for **rl-adaptive-dbs**. Setup and `uv` usage: [getting_started.md](getting_started.md). Roadmap: [development/roadmap.md](development/roadmap.md). Conventions: [development/conventions.md](development/conventions.md).
 
 ---
 
@@ -93,6 +93,6 @@ pytest.importorskip("matlab")  # or env-based skip in conftest
 1. Implement under `envs/` or `controllers/<name>/` per the relevant spec.
 2. Add or extend tests under the matching `tests/` subtree.
 3. Run `uv run pytest` before opening a PR.
-4. If behavior is spec-defined, update the spec in the same change ([development/roadmap.md](development/roadmap.md) §2).
+4. If behavior is spec-defined, update the spec in the same change ([development/conventions.md](development/conventions.md)).
 
 Shared fixtures (env instances, seeds, reference traces) belong in `tests/conftest.py` or `tests/envs/conftest.py` as the suite grows.

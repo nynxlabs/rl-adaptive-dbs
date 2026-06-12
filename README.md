@@ -43,13 +43,13 @@ Import example: `from envs.foo import Bar` once modules exist.
 
 **[docs/getting_started.md](docs/getting_started.md)** — install, verify, and day-to-day use.
 
-**[docs/development/roadmap.md](docs/development/roadmap.md)** — roadmap, conventions, implementation status.
+**[docs/development/roadmap.md](docs/development/roadmap.md)** — phases and status. **[docs/development/conventions.md](docs/development/conventions.md)** — contributor rules.
 
 Specs: [plant.md](docs/plant.md), [environment.md](docs/environment.md), [controllers/](docs/controllers/), [benchmarking.md](docs/benchmarking.md). Tooling: [venv.md](docs/venv.md).
 
 ## Benchmarking
 
-Cross-controller comparison uses **per-paper eval suites** plus an optional **same-plant** suite; see [docs/benchmarking.md](docs/benchmarking.md) §3 and [docs/development/roadmap.md](docs/development/roadmap.md#cross-controller-benchmarking).
+Cross-controller comparison uses **per-paper eval suites** plus an optional **same-plant** suite; see [docs/benchmarking.md](docs/benchmarking.md) §3 and [docs/development/conventions.md](docs/development/conventions.md#cross-controller-benchmarking).
 
 ## References
 
