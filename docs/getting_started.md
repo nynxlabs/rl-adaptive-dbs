@@ -1,6 +1,6 @@
 # Getting started
 
-Set up the repository, confirm your install, and use the project day to day. For the **roadmap**, **conventions**, and **status table**, see [development.md](development.md). For scope and architecture, see [README.md](../README.md).
+Set up the repository, confirm your install, and use the project day to day. For the **roadmap**, **conventions**, and **status table**, see [development/roadmap.md](development/roadmap.md). For scope and architecture, see [README.md](../README.md).
 
 ---
 
@@ -23,7 +23,7 @@ Packages install in editable mode so local changes are importable immediately af
 |-------------|--------|
 | **Git** | To clone the repository |
 | **uv** | Python + venv manager — [install uv](https://docs.astral.sh/uv/getting-started/installation/) ([more detail](venv.md#install-uv)) |
-| **MATLAB** | Required only when implementing the MATLAB plant bridge; skip for Python-only setup |
+| **MATLAB** | Phase 2 plant bridge — run `bash scripts/matlab/setup.sh` or [matlab.md](matlab.md). Skip for Python-only setup |
 
 **Platforms:** Windows, macOS, Linux (including WSL).
 
@@ -58,7 +58,7 @@ uv run pytest
 - Expect `ok` from the import check.
 - Expect at least one passing test from `pytest` (import smoke). Details: [testing.md](testing.md).
 
-Imports confirm packaging only. The DBS plant and training loops are **not implemented yet** ([development.md](development.md) §3).
+Imports confirm packaging only. The DBS plant and training loops are **not implemented yet** ([development/roadmap.md](development/roadmap.md) §3).
 
 ---
 
@@ -110,7 +110,7 @@ Commit `pyproject.toml` and `uv.lock` together after dependency changes.
 
 ## 6. How to work on a change
 
-Typical flow (details and rules in [development.md](development.md)):
+Typical flow (details and rules in [development/roadmap.md](development/roadmap.md)):
 
 1. **Read the spec** for what you are touching ([environment.md](environment.md) or `docs/controllers/<name>/replication.md`).
 2. **Edit code** in `envs/` or `controllers/<name>/`.
@@ -149,8 +149,9 @@ Typical flow (details and rules in [development.md](development.md)):
 
 | Goal | Document |
 |------|----------|
-| Roadmap and project status | [development.md](development.md) |
+| Roadmap and project status | [development/roadmap.md](development/roadmap.md) |
 | `uv`, lockfile, Python version | [venv.md](venv.md) |
+| MATLAB install, license, Python engine | [matlab.md](matlab.md) |
 | Tests, markers, layout | [testing.md](testing.md) |
 | Biophysical plant (CBGT, DBS, biomarkers) | [plant.md](plant.md) |
 | Mehregan env (reward, RL timing, Gym API) | [environment.md](environment.md) |

@@ -2,3 +2,8 @@
 __pycache__/
 *.py[cod]
 results/
+
+# Vault symlinks on disk — hookless in kb-repo-link.toml; not materialized in git
+AGENTS.md
+matlab-license.md
+notes.md

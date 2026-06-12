@@ -1,6 +1,6 @@
 # Terminal user interface specification
 
-This document defines the **`rl-dbs-tui`** terminal UI: monitor training, browse benchmark results, inspect rollouts, and tail logs—**without** a background server. Implementation is planned alongside **Phase 4+** benchmarking and **Phase 8+** training workflows ([development.md](development.md)); the CLI writes artifacts per [cli.md](cli.md) and [benchmarking.md](benchmarking.md).
+This document defines the **`rl-dbs-tui`** terminal UI: monitor training, browse benchmark results, inspect rollouts, and tail logs—**without** a background server. Implementation is planned alongside **Phase 4+** benchmarking and **Phase 8+** training workflows ([development/roadmap.md](development/roadmap.md)); the CLI writes artifacts per [cli.md](cli.md) and [benchmarking.md](benchmarking.md).
 
 **Related specs:** [cli.md](cli.md) (commands and output paths), [benchmarking.md](benchmarking.md) (results layout, metrics), [environment.md](environment.md) ($P_\beta$, eval protocol), [plant.md](plant.md) (biomarker bands).
 
