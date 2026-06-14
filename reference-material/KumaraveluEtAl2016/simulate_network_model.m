@@ -1,16 +1,17 @@
-function [] = simulate_network_model(IT,pd,corstim,pick_dbs_freq,dynamics_only)
+function varargout = simulate_network_model(IT,pd,corstim,pick_dbs_freq,dynamics_only,seed,tmax_ms)
 
 %IT - iteration number (trial no)
 %pd - 0(normal/healthy condition), 1(Parkinson's disease(PD) condition)
 %corstim (cortical stimulation) - 0(off), 1(on)
 %pick_dbs_freq - choose appropriate DBS frequency
-%dynamics_only (optional) - if true, return after CTX_BG_TH_network (plant bridge smoke)
+%dynamics_only (optional) - if true, return after CTX_BG_TH_network (plant bridge)
+%seed (optional) - RNG seed for reproducible ICs; default rng('shuffle')
+%tmax_ms (optional) - segment duration in ms; default 2000
 if nargin < 5, dynamics_only = false; end
-
-rng shuffle
+if nargin < 6 || isempty(seed), rng('shuffle'); else, rng(seed); end
+if nargin < 7 || isempty(tmax_ms), tmax = 2000; else, tmax = double(tmax_ms); end
 
 n = 10;             % number of neurons in each nucleus
-tmax = 2000;       % ms
 dt = 0.01;          % ms
 t=0:dt:tmax;
 
@@ -51,6 +52,16 @@ end
 [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco);
 
 if dynamics_only
+  if nargout > 0
+    varargout{1} = spikes_to_cell(GPi_APs);
+  end
+  if nargout > 1
+    varargout{2} = dt;
+    varargout{3} = tmax;
+    varargout{4} = pd;
+    varargout{5} = pick_dbs_freq;
+    varargout{6} = pattern;
+  end
   return
 end
 
@@ -835,6 +846,15 @@ function [data] = find_spike_times(v,t,nn)
         data(k).times = t(diff(v(k,:)>-20)==1)';
     end
 
+end
+
+function cells = spikes_to_cell(ap_struct)
+% Pack find_spike_times output for matlab.engine (scalar struct only).
+    n = numel(ap_struct);
+    cells = cell(1, n);
+    for k = 1:n
+        cells{k} = ap_struct(k).times(:);
+    end
 end
 
 function [ainf] = gpe_ainf(V)

@@ -111,9 +111,32 @@ For optional **plant-level** suites ([benchmarking.md](benchmarking.md) §3.3), 
 
 ## 7. Target plant wrapper API
 
-The plant lives under `envs/` (or a dedicated submodule) as a **non-Gym** service the Mehregan `Env` and adapters call.
+The plant lives under `envs/plant/` as a **non-Gym** service the Mehregan `Env` and adapters call.
 
-**Suggested surface:**
+### Implemented (Phase 2, partial)
+
+| Symbol | Module | Notes |
+|--------|--------|--------|
+| `MatlabPlant` | `envs.plant` | `matlab.engine` bridge to `simulate_network_model(..., dynamics_only=true)` |
+| `PlantConfig` | `envs.plant` | `pd`, `dt_ms` (reference **0.01 ms**), `corstim` |
+| `DbsSpec` | `envs.plant` | `pick_dbs_freq` index; `DbsSpec.none()`, `from_frequency_hz(hz)` |
+| `IntegrateResult` | `envs.plant` | `gpi_spikes` (10 neurons, times in **seconds**), `info` |
+
+```python
+from envs.plant import DbsSpec, MatlabPlant
+
+with MatlabPlant() as plant:
+    result = plant.reset(seed=42).integrate(2.0, DbsSpec.none())
+    # result.gpi_spikes[i] — spike times for GPi neuron i
+```
+
+MATLAB vendor args and return packing: [`reference-material/KumaraveluEtAl2016/changes.md`](../reference-material/KumaraveluEtAl2016/changes.md). Tests: `tests/envs/matlab_plant_test.py` ([testing.md](testing.md)).
+
+**Biomarkers (implemented):** `envs.plant.biomarkers.p_beta` — multitaper GPi PSD (Chronux-style; Kumaravelu `Fs` / tapers), **13–35 Hz** per-neuron integral then mean (Mehregan Eq. (1)). `MatlabPlant.integrate` sets `IntegrateResult.p_beta`.
+
+**Mehregan Gym (implemented):** `envs.mehregan.MehreganEnv` — see [environment.md](environment.md); baselines via `run_baseline_rollout`.
+
+### Target surface
 
 | Method | Behavior |
 |--------|----------|
@@ -154,6 +177,8 @@ The project may **replace the MATLAB bridge** with a **native Python** reimpleme
 
 **Fixed:** actuation is STN-injected DBS per Kumaravelu et al. (2016). **Open:** encoding of discrete Mehregan patterns. **Decide in** env bridge ([environment.md](environment.md) §4).
 
+**Implemented:** `envs/mehregan/patterns.py` — action index → `pick_dbs_freq` (see [environment.md](environment.md) §11.3).
+
 ### 3. Multitaper / PSD parameters
 
 Reference uses specific `Fs`, `fpass`, and tapers. **Open:** whether adapters may share one PSD implementation for all bands. **Decide in** `envs/` biomarker module; document if diverging from reference `make_Spectrum`.
@@ -166,12 +191,12 @@ Reference uses specific `Fs`, `fpass`, and tapers. **Open:** whether adapters ma
 
 ## 11. Consistency checklist
 
-- [ ] Single plant backend; **no** CBGT dynamics under `controllers/`.
-- [ ] **$n = 10$** neurons per region; **Izhikevich** cortex + **HH-type** BG/thalamus per reference.
-- [ ] STN DBS via documented `PW`, amplitude, and frequency / `Idbs` waveform.
-- [ ] Mehregan metrics: GPi **13–35 Hz** $P_\beta$; Nguyen adapter: **7–35 Hz** where required.
-- [ ] $\Delta t$ and segment duration documented per bridge and adapter.
-- [ ] Equivalence tests vs reference MATLAB for at least no-DBS and one cDBS frequency.
+- [x] Single plant backend; **no** CBGT dynamics under `controllers/`.
+- [x] **$n = 10$** neurons per region; reference Kumaravelu topology via `MatlabPlant`.
+- [x] STN DBS via Kumaravelu `PW`, amplitude, and `pick_dbs_freq` / `Idbs` waveform.
+- [x] Mehregan metrics: GPi **13–35 Hz** $P_\beta$ (`envs.plant.biomarkers`); Nguyen **7–35 Hz** deferred to adapter.
+- [x] $\Delta t$ **0.01 ms** (reference default) documented in `PlantConfig`; Mehregan **0.02 ms** target noted in §10.
+- [x] Equivalence tests: GPi spike reproducibility, $P_\beta$, `MehreganEnv` rollouts (`tests/envs/*_test.py`, `@pytest.mark.matlab`).
 
 ---
 

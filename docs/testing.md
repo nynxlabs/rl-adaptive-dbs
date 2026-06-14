@@ -17,9 +17,11 @@ Useful variants:
 
 ```bash
 uv run pytest -v                          # verbose
-uv run pytest tests/envs                  # one area
+uv run pytest tests/envs                  # env / plant tests
+uv run pytest -m "not matlab"             # fast subset (CI default; skips MATLAB)
+uv run pytest -m matlab                   # plant bridge only (~6 min; needs license)
+uv run pytest tests/envs/matlab_plant_test.py -v
 uv run pytest -k "beta"                   # name filter
-uv run pytest -m "not slow and not matlab" # fast subset (when marked tests exist)
 ```
 
 Configuration lives in `pyproject.toml` under `[tool.pytest.ini_options]` (`testpaths = ["tests"]`, registered markers).
@@ -32,18 +34,27 @@ Tests live under **`tests/`** at the repo root (not inside `envs/` or `controlle
 
 ```
 tests/
-├── conftest.py              # shared fixtures
-├── test_imports.py          # smoke: editable install
-├── envs/                    # plant, Gym API, reward, baselines
+├── conftest.py              # shared fixtures; skips @pytest.mark.matlab when unlicensed
+├── imports_test.py          # smoke: editable install
+├── docs_test.py             # spec link / section checks
+├── envs/
+│   ├── mock_plant.py        # helper (not collected)
+│   ├── biomarkers_test.py
+│   ├── baselines_test.py
+│   ├── mehregan_reward_test.py
+│   ├── mehregan_env_test.py     # MehreganEnv (mock plant)
+│   ├── matlab_plant_test.py     # MatlabPlant bridge (@pytest.mark.matlab)
+│   ├── matlab_biomarkers_test.py
+│   └── matlab_mehregan_env_test.py
 └── controllers/
     ├── ddpg/
     ├── snn/
     └── sea_dbs/
 ```
 
-Mirror **`envs/`** and **`controllers/<name>/`** when adding modules (e.g. `tests/envs/test_gym_api.py`, `tests/controllers/ddpg/test_actor.py`).
+Mirror **`envs/`** and **`controllers/<name>/`** when adding modules (e.g. `tests/envs/gym_api_test.py`, `tests/controllers/ddpg/actor_test.py`).
 
-Naming: files `test_*.py`, functions `test_*` (pytest default discovery).
+Naming: files `*_test.py`, functions `test_*` (pytest default discovery).
 
 ---
 
@@ -54,7 +65,7 @@ Naming: files `test_*.py`, functions `test_*` (pytest default discovery).
 | **Smoke** | `tests/` | imports, config loads |
 | **Unit** | `tests/` | reward math, observation windows, adapter shapes |
 | **Integration** | `tests/` | `reset` / `step`, episode length, baseline policies |
-| **Equivalence / regression** | `tests/` with `@pytest.mark.matlab` or `slow` | traces or $P_\beta$ vs Kumaravelu MATLAB ([plant.md](plant.md) §8) |
+| **Equivalence / regression** | `tests/` with `@pytest.mark.matlab` or `slow` | GPi spikes (`matlab_plant_test.py`); $P_\beta$ vs MATLAB (`matlab_biomarkers_test.py`, needs `dpss`) |
 | **Paper replication benchmarks** | future runner + `results/` | full suites per [benchmarking.md](benchmarking.md); not the full eval matrix in pytest |
 
 Keep CI fast: default runs should pass without MATLAB; skip or mark heavy checks.
@@ -80,11 +91,7 @@ def test_p_beta_matches_reference_segment() -> None:
     ...
 ```
 
-Skip when MATLAB is unavailable (add in `conftest.py` when the bridge exists):
-
-```python
-pytest.importorskip("matlab")  # or env-based skip in conftest
-```
+Skip when MATLAB is unavailable: `tests/conftest.py` skips `@pytest.mark.matlab` tests when batch `license('test','MATLAB')` fails. With MATLAB, run `source scripts/matlab/env.sh` and `uv sync --group matlab` first ([matlab.md](matlab.md)).
 
 ---
 

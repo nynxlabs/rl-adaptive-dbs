@@ -21,7 +21,7 @@ Draft specs that define scope, interfaces, and paper-aligned intent—not final 
 | SEA-DBS controller | [controllers/sea_dbs/replication.md](../controllers/sea_dbs/replication.md) | — |
 | Comparison protocol | [benchmarking.md](../benchmarking.md) | — |
 
-### Phase 2 — Environment for the first controller (current)
+### Phase 2 — Environment for the first controller (complete)
 
 Replicate the shared plant and Mehregan et al. Gym API before any controller work.
 
@@ -30,7 +30,7 @@ Replicate the shared plant and Mehregan et al. Gym API before any controller wor
 - Equivalence checks vs reference (integration step, biomarker band, baseline traces).
 - **Exit criteria:** reproducible rollouts; baselines (`none`, `cdbs-130hz`, `periodic-45hz`) runnable from `envs/`; ready for Phase 3 training.
 
-### Phase 3 — First controller (`ddpg`)
+### Phase 3 — First controller (`ddpg`) (current)
 
 - Actor–critic per [controllers/ddpg/replication.md](../controllers/ddpg/replication.md); training loop (Algorithm 1).
 - Variants: `paper`, `init-30hz`, optional PTQ/QAT (`ptq-int8`, etc.).
@@ -95,16 +95,16 @@ Phases 8+ are intentionally open; prioritize equivalence and replication paths b
 | [benchmarking.md](../benchmarking.md) | Draft | Per-paper vs cross-paper suites in spec; runner not implemented |
 | [cli.md](../cli.md) | Draft | `rl-dbs` entry point spec; not implemented |
 | [tui.md](../tui.md) | Draft | `rl-dbs-tui` read-only monitor; not implemented |
-| `envs/` | Placeholder | No Gym env yet |
-| `controllers/ddpg/` | Placeholder | — |
+| `envs/` | Done | `MatlabPlant`, `MehreganEnv`, $P_\beta$, baselines (`run_baseline_rollout`) |
+| `controllers/ddpg/` | Placeholder | Phase 3 |
 | `controllers/snn/` | Placeholder | — |
 | `controllers/sea_dbs/` | Placeholder | — |
 | [matlab.md](../matlab.md) + `scripts/matlab/` | Done | Install, connect, verify; cross-platform |
-| MATLAB plant bridge | Not started | Reference in `reference-material/`; patches in [`changes.md`](../../reference-material/KumaraveluEtAl2016/changes.md) |
-| Benchmark suite runner | Not started | — |
-| Training / eval CLI | Not started | — |
+| MATLAB plant bridge | Done | `envs/plant/` + `envs/mehregan/`; `@pytest.mark.matlab` equivalence suite |
+| Benchmark suite runner | Not started | Phase 4 |
+| Training / eval CLI | Not started | Phase 4+ |
 
-**Current phase:** 2 (Phase 1 rough specs complete; environment replication for `ddpg` in progress; Phases 3–8+ outlined).
+**Current phase:** 3 (Phase 2 env replication complete; DDPG controller next).
 
 ---
 
