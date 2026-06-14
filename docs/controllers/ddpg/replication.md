@@ -160,6 +160,9 @@ Optional for replication of §IV.A.3:
 - **`TargetNet`:** Polyak copy of actor/critic parameters each update.
 - **`ReplayBuffer`:** Store at least $(s, a, a_{\mathrm{logit}}, R, s', dw)$ with capacity 8192.
 - **`DDPGTrainer` (or equivalent):** Implements Algorithm 1 ordering (env step → buffer → `update_frequency` × minibatch updates).
+- **`train` / `evaluate`:** Module entry points for training and post-training eval (`controllers/ddpg/__init__.py`); CLI delegates here in a later phase.
+- **`save_checkpoint` / `load_actor`:** Persist and restore actor weights + `DDPGConfig` (`controllers/ddpg/checkpoint.py`).
+- **`run_policy_rollout` / `run_mehregan_eval`:** Full-episode and §IV.A.2 eval rollouts (`controllers/ddpg/eval.py`); metrics align with [benchmarking.md](../../benchmarking.md) §4 core fields.
 
 Hyperparameters with **fixed** values in §IV.A.1 should be **defaults**; open values ($\gamma$, $\tau$, update frequency, CNN topology, pattern count) should be **constructor or config fields** with comments pointing to this spec.
 
@@ -167,12 +170,12 @@ Hyperparameters with **fixed** values in §IV.A.1 should be **defaults**; open v
 
 ## 8. Consistency checklist
 
-- [ ] Actor is **CNN-over-time** on biomarker state; critic uses **same state geometry** plus **logits**.
-- [ ] Applied control is **discrete pattern index** $a$ from **argmax**; replay stores **$a$** and **logits** $a_{\mathrm{logit}}$ for the critic.
-- [ ] Target value uses **$Q_{\mathrm{target}}(s', \mu_{\mathrm{target}}(s'))$** with $(1-dw)$ masking.
-- [ ] Critic **MSE** to bootstrap target; actor maximizes **$Q(s, a_{\mathrm{logit}})$** with critic **frozen** during actor Adam step.
-- [ ] Soft updates use shared **$\tau$** for actor and critic targets.
-- [ ] Learning rates **$5\times 10^{-4}$** (actor), **$10^{-3}$** (critic); buffer **8192**; batch **32**; **10** episodes × **30** steps; step **2 s**; init mean **45 Hz** (and **30 Hz** ablation).
+- [x] Actor is **CNN-over-time** on biomarker state; critic uses **same state geometry** plus **logits**.
+- [x] Applied control is **discrete pattern index** $a$ from **argmax**; replay stores **$a$** and **logits** $a_{\mathrm{logit}}$ for the critic.
+- [x] Target value uses **$Q_{\mathrm{target}}(s', \mu_{\mathrm{target}}(s'))$** with $(1-dw)$ masking.
+- [x] Critic **MSE** to bootstrap target; actor maximizes **$Q(s, \mu(s))$** with critic **frozen** during actor Adam step.
+- [x] Soft updates use shared **$\tau$** for actor and critic targets.
+- [x] Learning rates **$5\times 10^{-4}$** (actor), **$10^{-3}$** (critic); buffer **8192**; batch **32**; **10** episodes × **30** steps; step **2 s**; init mean **45 Hz** (and **30 Hz** ablation via `init-30hz` variant).
 - [ ] Quantization experiments: document **FP16 / INT8 PTQ** vs **QAT** training budget separately.
 
 ---
@@ -187,9 +190,13 @@ The actor outputs logits over a finite STN pattern set, but the paper does not f
 
 §III.B specifies a CNN with average pooling and linear heads but §IV.A.1 gives no channel counts, kernel sizes, or **shrink dimension**. **Fixed:** temporal CNN over biomarker state; critic fuses the same state with action logits. **Open:** layer shapes. **Decide in** `controllers/ddpg/` and document tensor geometry in code.
 
+**Implemented (`controllers/ddpg/networks.py`):** `Conv1d(1→16, k=3)` → `AdaptiveAvgPool1d(shrink_dim=4)` → `Conv1d(16→32, k=3)` → flatten → linear head; critic concatenates encoded state with action logits before MLP. `shrink_dim` and `conv_channels` are `DDPGConfig` fields.
+
 ### 3. Discount, Polyak $\tau$, and update frequency
 
 Algorithm 1 requires $\gamma$, soft-update $\tau$, and **update_frequency** (gradient steps per env step); §IV.A.1 lists none of these numerically. **Fixed:** Adam rates, buffer **8192**, batch **32**, **10** episodes × **30** steps. **Open:** $\gamma$, $\tau$, update cadence. **Decide in** trainer config; match released code if available, else standard DDPG defaults with explicit documentation.
+
+**Implemented (`controllers/ddpg/config.py`):** $\gamma = 0.99$, $\tau = 0.005$, `update_frequency = 1` (standard DDPG defaults when the paper is silent).
 
 ### 4. Target network initialization
 

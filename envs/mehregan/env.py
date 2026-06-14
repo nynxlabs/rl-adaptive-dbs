@@ -129,6 +129,7 @@ class MehreganEnv(gym.Env):
         info = self._segment_info(result, reset_spec)
         info["reward"] = reward
         info["episode_seed"] = self._episode_seed
+        info["dw"] = 0.0
         return observation, info
 
     def step(
@@ -148,4 +149,5 @@ class MehreganEnv(gym.Env):
         terminated = False
         info = self._segment_info(result, dbs_spec)
         info["action"] = int(action)
+        info["dw"] = 1.0 if truncated else 0.0
         return observation, reward, terminated, truncated, info
