@@ -28,7 +28,7 @@ Contributor rules for **rl-adaptive-dbs** — layout, spec-driven workflow, and 
 ## Cross-platform code
 
 - Use `pathlib`, `uv run`; avoid hard-coded POSIX-only paths in library code.
-- Document OS-specific steps only in [venv.md](../venv.md) or [getting_started.md](../getting_started.md).
+- Document OS-specific steps only in [venv.md](venv.md) or [getting_started.md](../getting_started.md).
 
 ## Documentation
 

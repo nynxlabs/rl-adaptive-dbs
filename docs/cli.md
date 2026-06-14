@@ -2,7 +2,7 @@
 
 This document defines the **`rl-dbs`** CLI: training, evaluation, benchmarking, configuration, and repository introspection. Implementation is planned for **Phase 4+** (benchmark runner) and **Phase 8+** (training/eval workflows); the spec is forward-looking so runners and controllers can align early.
 
-**Related specs:** [development/roadmap.md](development/roadmap.md) (phases), [benchmarking.md](benchmarking.md) (suites, results layout), [environment.md](environment.md) (Mehregan Gym API), [plant.md](plant.md) (plant config), [controllers/](controllers/) (per-paper training). Tooling: [venv.md](venv.md) (`uv run`).
+**Related specs:** [development/roadmap.md](development/roadmap.md) (phases), [benchmarking.md](benchmarking.md) (suites, results layout), [environment.md](environment.md) (Mehregan Gym API), [plant.md](plant.md) (plant config), [controllers/](controllers/) (per-paper training). Tooling: [development/venv.md](development/venv.md) (`uv run`).
 
 ---
 
@@ -41,7 +41,7 @@ uv run rl-dbs <subcommand> [options]
 | Mode | When |
 |------|------|
 | `uv run rl-dbs …` | Default for docs and CI—uses project lockfile and venv. |
-| `rl-dbs …` after `uv sync` | Same if the venv is activated ([venv.md](venv.md)). |
+| `rl-dbs …` after `uv sync` | Same if the venv is activated ([development/venv.md](development/venv.md)). |
 
 Do not require users to set `PYTHONPATH` manually; editable installs from `uv sync` must suffice.
 
@@ -325,7 +325,7 @@ Do not commit `results/` or large checkpoints ([development/conventions.md](deve
 | **Paths** | Accept `\` and `/`; store paths in JSON as forward slashes or platform-neutral relative paths from repo root. |
 | **Working directory** | Commands may be run from any directory if `--suite` / `--results-dir` are absolute or relative to cwd; project discovery uses git root when available. |
 | **Shell** | Docs show `uv run rl-dbs ...` without bash-specific syntax; line continuation uses `\` in examples (works in bash, zsh, sh; PowerShell users copy one line or use `` ` ``). |
-| **MATLAB bridge** | If plant backend is MATLAB, `train`/`eval`/`benchmark` fail fast with exit **4** and a clear message when MATLAB is unavailable ([testing.md](testing.md) `@pytest.mark.matlab`). |
+| **MATLAB bridge** | If plant backend is MATLAB, `train`/`eval`/`benchmark` fail fast with exit **4** and a clear message when MATLAB is unavailable ([development/testing.md](development/testing.md) `@pytest.mark.matlab`). |
 | **Console encoding** | UTF-8 preferred; avoid box-drawing in CLI text (reserve for TUI — [tui.md](tui.md)). |
 | **Process exit** | Use `sys.exit(code)` so Windows and Unix share semantics. |
 

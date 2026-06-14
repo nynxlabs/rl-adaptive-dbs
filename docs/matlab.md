@@ -1,6 +1,6 @@
 # MATLAB setup (Kumaravelu plant bridge)
 
-MATLAB is required for **Phase 2** plant work: running the bundled Kumaravelu et al. (2016) network (`reference-material/KumaraveluEtAl2016/`) and validating the Python bridge. CI and day-to-day Python-only work do **not** need MATLAB ([testing.md](testing.md)).
+MATLAB is required for **Phase 2** plant work: running the bundled Kumaravelu et al. (2016) network (`reference-material/KumaraveluEtAl2016/`) and validating the Python bridge. CI and day-to-day Python-only work do **not** need MATLAB ([development/testing.md](development/testing.md)).
 
 **Platforms:** **Windows, macOS, and Linux** (including WSL) — same repo contract everywhere ([AGENTS.md](../AGENTS.md)). Shell helpers (`scripts/matlab/env.sh`, `scripts/matlab/verify.sh`) are **bash**; on Windows use **Git Bash**, **WSL**, or the manual steps in §2.3 / §5.
 
@@ -26,7 +26,7 @@ Walks through install (optional), `MATLAB_ROOT`, license, `uv sync`, shell persi
 | **MATLAB** (R2024b+; repo tested on **R2025b**) | Run `simulate_network_model.m` and the plant bridge |
 | **Valid license** | Batch mode and `matlab.engine` both require it |
 | **`matlabengine` (Python)** | `import matlab.engine` from the project venv — version must match your MATLAB release |
-| **Toolboxes** | **Base MATLAB** for Phase 2 bridge (`CTX_BG_TH_network`; vendored patches in [`reference-material/KumaraveluEtAl2016/changes.md`](../reference-material/KumaraveluEtAl2016/changes.md)). Full upstream `simulate_network_model` also needs **Signal Processing Toolbox** (`dpss` in `make_Spectrum`) — biomarkers for Mehregan are computed in Python per [plant.md](plant.md) |
+| **Toolboxes** | **Base MATLAB** for Phase 2 bridge (`CTX_BG_TH_network`; vendored patches in [kumaravelu_vendor_patches.md](reference-material/kumaravelu_vendor_patches.md)). Full upstream `simulate_network_model` also needs **Signal Processing Toolbox** (`dpss` in `make_Spectrum`) — biomarkers for Mehregan are computed in Python per [plant.md](plant.md) |
 | **OS extras** | Headless **Linux/WSL** only: `xvfb` + GTK libs (§3.1) |
 
 Default `MATLAB_ROOT` assumed by scripts: **`~/MATLAB`** (Linux/macOS) or your MathWorks install path (§2). Override when your install lives elsewhere.
@@ -337,7 +337,7 @@ cd reference-material/KumaraveluEtAl2016
 matlab -batch "simulate_network_model(1,1,0,1,true); exit"
 ```
 
-Fifth argument `dynamics_only=true` returns after `CTX_BG_TH_network` (vendored patch; see [`changes.md`](../reference-material/KumaraveluEtAl2016/changes.md)).
+Fifth argument `dynamics_only=true` returns after `CTX_BG_TH_network` (vendored patch; see [kumaravelu_vendor_patches.md](reference-material/kumaravelu_vendor_patches.md)).
 
 **Full upstream script** (optional, for `.mat` reference dumps):
 
@@ -380,5 +380,5 @@ uv run pytest -m matlab          # requires licensed MATLAB
 
 - Cross-platform policy: [AGENTS.md](../AGENTS.md)
 - Plant spec and bridge API: [plant.md](plant.md)
-- Equivalence testing: [testing.md](testing.md)
-- Day-to-day Python setup: [getting_started.md](getting_started.md), [venv.md](venv.md)
+- Equivalence testing: [development/testing.md](development/testing.md)
+- Day-to-day Python setup: [getting_started.md](getting_started.md), [development/venv.md](development/venv.md)

@@ -1,6 +1,6 @@
 # Testing
 
-How to run and extend **pytest** checks for **rl-adaptive-dbs**. Setup and `uv` usage: [getting_started.md](getting_started.md). Roadmap: [development/roadmap.md](development/roadmap.md). Conventions: [development/conventions.md](development/conventions.md).
+How to run and extend **pytest** checks for **rl-adaptive-dbs**. Setup and `uv` usage: [getting_started.md](../getting_started.md). Roadmap: [roadmap.md](roadmap.md). Conventions: [conventions.md](conventions.md).
 
 ---
 
@@ -71,7 +71,7 @@ Naming: files `*_test.py`, functions `test_*` (pytest default discovery).
 | **Unit** | `tests/` | reward math, observation windows, adapter shapes |
 | **Integration** | `tests/` | `reset` / `step`, episode length, baseline policies |
 | **Equivalence / regression** | `tests/` with `@pytest.mark.matlab` or `slow` | GPi spikes (`matlab_plant_test.py`); $P_\beta$ vs MATLAB (`matlab_biomarkers_test.py`, needs `dpss`) |
-| **Paper replication benchmarks** | future runner + `results/` | full suites per [benchmarking.md](benchmarking.md); not the full eval matrix in pytest |
+| **Paper replication benchmarks** | future runner + `results/` | full suites per [benchmarking.md](../benchmarking.md); not the full eval matrix in pytest |
 
 Keep CI fast: default runs should pass without MATLAB; skip or mark heavy checks.
 
@@ -96,7 +96,7 @@ def test_p_beta_matches_reference_segment() -> None:
     ...
 ```
 
-Skip when MATLAB is unavailable: `tests/conftest.py` skips `@pytest.mark.matlab` tests when batch `license('test','MATLAB')` fails. With MATLAB, run `source scripts/matlab/env.sh` and `uv sync --group matlab` first ([matlab.md](matlab.md)).
+Skip when MATLAB is unavailable: `tests/conftest.py` skips `@pytest.mark.matlab` tests when batch `license('test','MATLAB')` fails. With MATLAB, run `source scripts/matlab/env.sh` and `uv sync --group matlab` first ([matlab.md](../matlab.md)).
 
 ---
 
@@ -105,6 +105,6 @@ Skip when MATLAB is unavailable: `tests/conftest.py` skips `@pytest.mark.matlab`
 1. Implement under `envs/` or `controllers/<name>/` per the relevant spec.
 2. Add or extend tests under the matching `tests/` subtree.
 3. Run `uv run pytest` before opening a PR.
-4. If behavior is spec-defined, update the spec in the same change ([development/conventions.md](development/conventions.md)).
+4. If behavior is spec-defined, update the spec in the same change ([conventions.md](conventions.md)).
 
 Shared fixtures (env instances, seeds, reference traces) belong in `tests/conftest.py` or `tests/envs/conftest.py` as the suite grows.
