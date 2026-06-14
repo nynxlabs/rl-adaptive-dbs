@@ -48,8 +48,12 @@ tests/
 │   └── matlab_mehregan_env_test.py
 └── controllers/
     ├── ddpg/
-    ├── snn/
-    └── sea_dbs/
+    │   ├── buffer_test.py
+    │   ├── checkpoint_test.py
+    │   ├── eval_test.py
+    │   ├── matlab_trainer_test.py   # train + eval on MatlabPlant (@pytest.mark.matlab)
+    │   ├── networks_test.py
+    │   └── trainer_test.py
 ```
 
 Mirror **`envs/`** and **`controllers/<name>/`** when adding modules (e.g. `tests/envs/gym_api_test.py`, `tests/controllers/ddpg/actor_test.py`).
