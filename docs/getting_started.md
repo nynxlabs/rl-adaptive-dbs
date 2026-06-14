@@ -58,7 +58,7 @@ uv run pytest
 - Expect `ok` from the import check.
 - Expect passing tests from `pytest` (import smoke + docs). Details: [testing.md](testing.md).
 
-**Phase 2 (complete):** MATLAB plant bridge, Python $P_\beta$, and **`MehreganEnv`** (`envs/mehregan/`). **Phase 3 (in progress):** DDPG actor–critic in `controllers/ddpg/` — see [development/roadmap.md](development/roadmap.md).
+**Phase 3 (complete):** DDPG in `controllers/ddpg/` — train, eval, replication workflow. **Phase 4 (current):** benchmark runner — [development/roadmap.md](development/roadmap.md).
 
 ```python
 from envs import MehreganEnv, run_baseline_rollout
@@ -81,6 +81,15 @@ result = train(env, DDPGConfig(variant="paper"), checkpoint_path="artifacts/ddpg
 metrics = evaluate(env, "artifacts/ddpg/paper.pt")
 env.close()
 ```
+
+**Full paper replication on MATLAB** (slow — hours at 10 episodes × 30 steps):
+
+```bash
+source scripts/matlab/env.sh
+uv run python scripts/replicate_mehregan_ddpg.py --variant paper --train-seed 0
+```
+
+Writes `artifacts/ddpg/paper_train0.pt` and a JSON summary for baseline comparison.
 
 With MATLAB set up ([matlab.md](matlab.md)):
 
@@ -105,6 +114,7 @@ rl-adaptive-dbs/
 ├── tests/                   # pytest (mirrors envs/ and controllers/)
 ├── docs/                    # Guides and specs
 ├── reference-material/      # Kumaravelu et al. (2016) MATLAB model
+├── scripts/                 # replication and setup helpers
 ├── results/                 # Benchmark output (local, gitignored)
 ├── pyproject.toml
 └── uv.lock

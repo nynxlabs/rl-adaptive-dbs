@@ -162,7 +162,7 @@ Optional for replication of §IV.A.3:
 - **`DDPGTrainer` (or equivalent):** Implements Algorithm 1 ordering (env step → buffer → `update_frequency` × minibatch updates).
 - **`train` / `evaluate`:** Module entry points for training and post-training eval (`controllers/ddpg/__init__.py`); CLI delegates here in a later phase.
 - **`save_checkpoint` / `load_actor`:** Persist and restore actor weights + `DDPGConfig` (`controllers/ddpg/checkpoint.py`).
-- **`run_policy_rollout` / `run_mehregan_eval`:** Full-episode and §IV.A.2 eval rollouts (`controllers/ddpg/eval.py`); metrics align with [benchmarking.md](../../benchmarking.md) §4 core fields.
+- **`run_replication` / `write_replication_summary`:** Paper-scale train → `mehregan_eval` → baseline comparison (`controllers/ddpg/replication.py`); MATLAB entry point: `scripts/replicate_mehregan_ddpg.py`.
 
 Hyperparameters with **fixed** values in §IV.A.1 should be **defaults**; open values ($\gamma$, $\tau$, update frequency, CNN topology, pattern count) should be **constructor or config fields** with comments pointing to this spec.
 
@@ -176,7 +176,7 @@ Hyperparameters with **fixed** values in §IV.A.1 should be **defaults**; open v
 - [x] Critic **MSE** to bootstrap target; actor maximizes **$Q(s, \mu(s))$** with critic **frozen** during actor Adam step.
 - [x] Soft updates use shared **$\tau$** for actor and critic targets.
 - [x] Learning rates **$5\times 10^{-4}$** (actor), **$10^{-3}$** (critic); buffer **8192**; batch **32**; **10** episodes × **30** steps; step **2 s**; init mean **45 Hz** (and **30 Hz** ablation via `init-30hz` variant).
-- [ ] Quantization experiments: document **FP16 / INT8 PTQ** vs **QAT** training budget separately.
+- [ ] Quantization experiments (**FP16 / INT8 PTQ**, **QAT**): deferred to [extensions.md](extensions.md) after full-precision replication is benchmarked (Phase 4+).
 
 ---
 

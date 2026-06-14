@@ -30,13 +30,13 @@ Replicate the shared plant and Mehregan et al. Gym API before any controller wor
 - Equivalence checks vs reference (integration step, biomarker band, baseline traces).
 - **Exit criteria:** reproducible rollouts; baselines (`none`, `cdbs-130hz`, `periodic-45hz`) runnable from `envs/`; ready for Phase 3 training.
 
-### Phase 3 — First controller (`ddpg`) (current)
+### Phase 3 — First controller (`ddpg`) (complete)
 
 - Actor–critic per [controllers/ddpg/replication.md](../controllers/ddpg/replication.md); training loop (Algorithm 1).
-- Variants: `paper`, `init-30hz`, optional PTQ/QAT (`ptq-int8`, etc.).
-- **Exit criteria:** training run completes; eval roll-out matches spec checklist on `envs/` without adapters.
+- Variants: `paper`, `init-30hz` (full-precision); PTQ/QAT deferred — see [controllers/ddpg/extensions.md](../controllers/ddpg/extensions.md).
+- **Exit criteria:** training run completes; eval roll-out matches spec checklist on `envs/` without adapters — met via `run_replication`, `scripts/replicate_mehregan_ddpg.py`, and mock/MATLAB tests.
 
-### Phase 4 — Benchmarking the first controller
+### Phase 4 — Benchmarking the first controller (current)
 
 - Suite definitions (YAML or equivalent) per [benchmarking.md](../benchmarking.md).
 - **Per-paper suite** for Mehregan replication (`mehregan_eval`): baselines + `ddpg` variants × seeds → `results/`.
@@ -96,7 +96,7 @@ Phases 8+ are intentionally open; prioritize equivalence and replication paths b
 | [cli.md](../cli.md) | Draft | `rl-dbs` entry point spec; not implemented |
 | [tui.md](../tui.md) | Draft | `rl-dbs-tui` read-only monitor; not implemented |
 | `envs/` | Done | `MatlabPlant`, `MehreganEnv`, $P_\beta$, baselines (`run_baseline_rollout`) |
-| `controllers/ddpg/` | In progress | Actor–critic CNN, replay buffer, `train` / `evaluate`, checkpoints; mock + `@pytest.mark.matlab` e2e smoke; full replication run TBD |
+| `controllers/ddpg/` | Done | Full-precision `paper` / `init-30hz`; `run_replication` + replication script; PTQ/QAT in extensions |
 | `controllers/snn/` | Placeholder | — |
 | `controllers/sea_dbs/` | Placeholder | — |
 | [matlab.md](../matlab.md) + `scripts/matlab/` | Done | Install, connect, verify; cross-platform |
@@ -104,7 +104,7 @@ Phases 8+ are intentionally open; prioritize equivalence and replication paths b
 | Benchmark suite runner | Not started | Phase 4 |
 | Training / eval CLI | Not started | Phase 4+ |
 
-**Current phase:** 3 (Phase 2 env replication complete; DDPG controller next).
+**Current phase:** 4 (Phase 3 DDPG complete; benchmarking runner next).
 
 ---
 

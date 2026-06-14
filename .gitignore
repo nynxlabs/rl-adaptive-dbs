@@ -2,8 +2,9 @@
 __pycache__/
 *.py[cod]
 results/
+artifacts/
 
-# My own personal git ignores
+# My own (wilzen3476) personal git ignores
 AGENTS.md
 matlab-license.md
 notes.md
