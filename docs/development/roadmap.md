@@ -96,7 +96,7 @@ Phases 8+ are intentionally open; prioritize equivalence and replication paths b
 | [cli.md](../cli.md) | Draft | `rl-dbs` entry point spec; not implemented |
 | [tui.md](../tui.md) | Draft | `rl-dbs-tui` read-only monitor; not implemented |
 | `envs/` | Done | `MatlabPlant`, `MehreganEnv`, $P_\beta$, baselines (`run_baseline_rollout`) |
-| `controllers/ddpg/` | In progress | Actor–critic CNN, replay buffer, `train` / `train_ddpg`, `evaluate`, checkpoints, `mehregan_eval` rollout on mock plant; MATLAB end-to-end training TBD |
+| `controllers/ddpg/` | In progress | Actor–critic CNN, replay buffer, `train` / `evaluate`, checkpoints; mock + `@pytest.mark.matlab` e2e smoke; full replication run TBD |
 | `controllers/snn/` | Placeholder | — |
 | `controllers/sea_dbs/` | Placeholder | — |
 | [matlab.md](../matlab.md) + `scripts/matlab/` | Done | Install, connect, verify; cross-platform |
