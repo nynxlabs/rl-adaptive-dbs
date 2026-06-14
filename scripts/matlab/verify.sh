@@ -51,17 +51,28 @@ fi
 
 if uv run python -c "import matlab.engine" >/dev/null 2>&1; then
   pass "Python matlab.engine import"
-  if uv run python -c "
+if uv run python -c "
 import matlab.engine
 eng = matlab.engine.start_matlab()
 eng.cd('$model_dir')
 assert eng.which('simulate_network_model')
 eng.exit()
 " >/dev/null 2>&1; then
-    pass "Python engine start + model path"
-  else
-    warn "matlab.engine import works but start_matlab() failed (license or LD_LIBRARY_PATH?)"
-  fi
+  pass "Python engine start + model path"
+else
+  warn "matlab.engine import works but start_matlab() failed (license or LD_LIBRARY_PATH?)"
+fi
+
+if uv run python -c "
+from envs.plant import DbsSpec, MatlabPlant
+with MatlabPlant() as plant:
+    r = plant.reset(seed=0).integrate(0.1, DbsSpec.none())
+    assert len(r.gpi_spikes) == 10
+" >/dev/null 2>&1; then
+  pass "Python MatlabPlant bridge (short segment)"
+else
+  warn "MatlabPlant bridge failed — see envs/plant/"
+fi
 else
   warn "Python matlab.engine not installed (run: uv sync --group matlab)"
 fi

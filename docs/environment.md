@@ -96,8 +96,10 @@ $$
 
 ## 7. Episode termination
 
-- **Training (paper Alg. 1):** After **30** steps, end episode (`terminated=True` or `truncated=True` depending on whether the plant can reach a true terminal dynamical state; typically **truncation at horizon**).
+- **Training (paper Alg. 1):** After **30** steps, end episode.
 - **`dw` (done flag) for DDPG targets:** 1 if episode finished, else 0 (paper Equation (3)).
+
+**Implemented (`MehreganEnv`):** no dynamical terminal state — episodes end with **`truncated=True`** at `max_episode_steps` (default **30**); `terminated=False`. Set `info` flags for replay consumers in Phase 3.
 
 ---
 
@@ -129,12 +131,12 @@ From **§IV.A.1** (for replication / defaults):
 
 ## 10. Minimal consistency checklist
 
-- [ ] STN-injected patterns match discrete action set used during training.
-- [ ] **2 s** simulated time per RL step, **30** steps per episode (training config).
-- [ ] **$P_\beta$** from **GPi** spikes, **13–35 Hz**, mean over **10** neurons.
-- [ ] Reward uses **$s_{\mathrm{sum}}$** vs **$\beta_t = 0.35$** with documented scaling of **$s$**.
-- [ ] Baselines: **no stimulation**, **130 Hz** cDBS, periodic **45 Hz** (and **30 Hz** where relevant), same seeds for fair comparison.
-- [ ] DDPG: **$\gamma$, $\tau$,** and **updates per env step** documented (not numerically fixed in §IV.A.1 of the paper).
+- [x] STN-injected patterns match discrete action set used during training (`PatternAlphabet` → `DbsSpec`).
+- [x] **2 s** simulated time per RL step, **30** steps per episode (`MehreganEnvConfig` defaults).
+- [x] **$P_\beta$** from **GPi** spikes, **13–35 Hz**, mean over **10** neurons (`envs.plant.biomarkers`).
+- [x] Reward uses **$s_{\mathrm{sum}}$** vs **$\beta_t = 0.35$** with documented scaling of **$s$** (`observation_scale=1000`).
+- [x] Baselines: **no stimulation**, **130 Hz** cDBS, periodic **45 Hz** (and **30 Hz** where relevant), same seeds (`run_baseline_rollout`).
+- [ ] DDPG: **$\gamma$, $\tau$,** and **updates per env step** documented (Phase 3 — [controllers/ddpg/replication.md](controllers/ddpg/replication.md)).
 
 ---
 
@@ -152,9 +154,13 @@ See [plant.md](plant.md) §5, §10. **Decide in** plant config; validate biomark
 
 The actor emits logits over a discrete STN pattern set, but §IV.A.1 does not state **cardinality** or **waveform encoding**. **Fixed:** discrete patterns via softmax + argmax. **Open:** alphabet size and per-pattern STN drive semantics. **Decide in** code and keep stable across training, evaluation, and quantization comparisons.
 
+**Implemented (`envs/mehregan/patterns.py`):** 41 actions → Kumaravelu `pick_dbs_freq` 1…41 (`freqs = 0:5:200`); action `0` is no DBS (`pick_dbs_freq == 1`).
+
 ### 4. Observation normalization for reward Eq. (8)
 
 Eq. (8) uses threshold $\beta_t = 0.35$ on averaged state entries $s(i)$, but the paper never defines the **monotone mapping** from raw $P_\beta$ (order hundreds in Figure 4) to $s(i)$. **Fixed:** reward shape (linear below $\beta_t$, quadratic at/above). **Open:** normalization pipeline shared by observation and reward. **Decide in** the environment implementation with a single documented transform.
+
+**Implemented (`envs/mehregan/`):** $s(i) = P_\beta / 1000$ (`MehreganEnvConfig.observation_scale`). Unstimulated parkinsonian segments (~400–500 raw) map to ~0.4–0.5, aligning with Mehregan Fig. 3c–4 prose. Override `observation_scale` if released code differs.
 
 ### 5. DDPG hyperparameters not in §IV.A.1
 
@@ -167,6 +173,8 @@ Algorithm 1 requires discount $\gamma$, target soft-update $\tau$, and inner-loo
 ### 7. Episode termination flag semantics
 
 Training runs **30** steps per episode with no true dynamical terminal state described. **Fixed:** horizon of 30 steps; $dw = 1$ when the episode finishes (Eq. (3)). **Open:** Gymnasium `terminated` vs `truncated` assignment. **Decide in** `envs/` API; typically **truncation at horizon**.
+
+**Implemented:** `MehreganEnv` sets `truncated=True` at horizon; `terminated=False` ([§7](#7-episode-termination)).
 
 ### 8. Kumaravelu reference beta band vs Eq. (1)
 

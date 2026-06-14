@@ -56,9 +56,28 @@ uv run pytest
 ```
 
 - Expect `ok` from the import check.
-- Expect at least one passing test from `pytest` (import smoke). Details: [testing.md](testing.md).
+- Expect passing tests from `pytest` (import smoke + docs). Details: [testing.md](testing.md).
 
-Imports confirm packaging only. The DBS plant and training loops are **not implemented yet** ([development/roadmap.md](development/roadmap.md) §3).
+**Phase 2 (complete):** MATLAB plant bridge, Python $P_\beta$, and **`MehreganEnv`** (`envs/mehregan/`). Phase 3 (`controllers/ddpg`) is next ([development/roadmap.md](development/roadmap.md)).
+
+```python
+from envs import MehreganEnv, run_baseline_rollout
+
+env = MehreganEnv()
+obs, info = env.reset(seed=42)
+obs, reward, terminated, truncated, info = env.step(0)  # no DBS
+result = run_baseline_rollout(env, "cdbs-130hz", seed=0)
+env.close()
+```
+
+With MATLAB set up ([matlab.md](matlab.md)):
+
+```bash
+source scripts/matlab/env.sh
+uv sync --group matlab
+uv run pytest -m matlab tests/envs/matlab_plant_test.py -v   # ~6 min; one shared engine
+uv run pytest -m "not matlab"                                   # fast CI subset
+```
 
 ---
 
@@ -66,7 +85,7 @@ Imports confirm packaging only. The DBS plant and training loops are **not imple
 
 ```
 rl-adaptive-dbs/
-├── envs/                    # Shared environment (implement per environment.md)
+├── envs/                    # Plant bridge (`envs/plant/`) + Mehregan env (`envs/mehregan/`)
 ├── controllers/
 │   ├── ddpg/                # Mehregan et al.
 │   ├── snn/                 # Nguyen et al.
@@ -83,6 +102,7 @@ rl-adaptive-dbs/
 
 ```python
 import envs
+from envs.plant import DbsSpec, MatlabPlant   # MATLAB bridge (Phase 2)
 from controllers import ddpg   # also: snn, sea_dbs
 ```
 
