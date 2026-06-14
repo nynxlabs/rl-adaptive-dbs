@@ -13,4 +13,4 @@ supplied q file.
 multiplicative forms (t_vec-t_d_...) were removed from bi-exponential
 synaptic functions.
 
-rl-adaptive-dbs vendor edits: see changes.md in this folder.
+rl-adaptive-dbs vendor patches (integration only; dynamics unchanged): docs/reference-material/kumaravelu_vendor_patches.md

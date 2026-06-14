@@ -61,11 +61,11 @@ def test_plant_md_links_resolve() -> None:
     "doc_path",
     [
         DOCS / "environment.md",
-        DOCS / "development.md",
+        DOCS / "development" / "README.md",
         DOCS / "development" / "roadmap.md",
         DOCS / "benchmarking.md",
         DOCS / "getting_started.md",
-        DOCS / "testing.md",
+        DOCS / "development" / "testing.md",
         REPO_ROOT / "README.md",
     ],
     ids=lambda p: p.name,

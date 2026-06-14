@@ -24,7 +24,7 @@ Work is delivered in **phases** (see [docs/development/roadmap.md](docs/developm
 
 ## Platform support
 
-This repository is intended to work on **Windows**, **macOS**, and **Linux** (including WSL on Windows). Python setup uses [uv](https://docs.astral.sh/uv/) with a shared lockfile; see [docs/venv.md](docs/venv.md). Scripts and docs should stay portable unless a step is explicitly OS-specific.
+This repository is intended to work on **Windows**, **macOS**, and **Linux** (including WSL on Windows). Python setup uses [uv](https://docs.astral.sh/uv/) with a shared lockfile; see [docs/development/venv.md](docs/development/venv.md). Scripts and docs should stay portable unless a step is explicitly OS-specific.
 
 ## Layout
 
@@ -33,7 +33,7 @@ Python code lives at the **repository root** as two installable top-level packag
 - **`envs/`** — Shared Gymnasium-style RL environment (Mehregan et al. computational setup).
 - **`controllers/`** — Per-paper controllers: `ddpg`, `snn`, `sea_dbs` (stubs until implemented).
 
-- `docs/` — [getting_started.md](docs/getting_started.md) (setup & use), [development/](docs/development/) (roadmap & status), [plant.md](docs/plant.md) (CBGT dynamics), [environment.md](docs/environment.md) (Mehregan Gym API), [controllers/](docs/controllers/) (per-controller specs + fusion), [benchmarking.md](docs/benchmarking.md), [venv.md](docs/venv.md).
+- `docs/` — [getting_started.md](docs/getting_started.md) (setup & use), [development/](docs/development/) (roadmap, conventions, `uv`, pytest), [plant.md](docs/plant.md) (CBGT dynamics), [environment.md](docs/environment.md) (Mehregan Gym API), [controllers/](docs/controllers/) (per-controller specs + fusion), [benchmarking.md](docs/benchmarking.md).
 - `results/` — benchmark outputs (created by future eval runs; not committed).
 - `reference-material/` — Third-party models and scripts. Kumaravelu et al. (2016) MATLAB network: `reference-material/KumaraveluEtAl2016/` ([`readme.txt`](reference-material/KumaraveluEtAl2016/readme.txt) for citation and provenance).
 
@@ -45,7 +45,7 @@ Import example: `from envs.foo import Bar` once modules exist.
 
 **[docs/development/roadmap.md](docs/development/roadmap.md)** — phases and status. **[docs/development/conventions.md](docs/development/conventions.md)** — contributor rules.
 
-Specs: [plant.md](docs/plant.md), [environment.md](docs/environment.md), [controllers/](docs/controllers/), [benchmarking.md](docs/benchmarking.md). Tooling: [venv.md](docs/venv.md).
+Specs: [plant.md](docs/plant.md), [environment.md](docs/environment.md), [controllers/](docs/controllers/), [benchmarking.md](docs/benchmarking.md). Tooling: [development/](docs/development/) (`venv.md`, `testing.md`).
 
 ## Benchmarking
 

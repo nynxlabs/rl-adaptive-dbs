@@ -6,7 +6,7 @@ This document is the **authoritative spec for the shared biophysical plant**: th
 
 - **Mehregan Gymnasium API** (2 s RL steps, pattern actions, Eq. (8) reward, baselines) — [environment.md](environment.md).
 - **Per-controller RL interfaces** (timing, observations, rewards) — [controllers/](controllers/).
-- **Equivalence testing** — [testing.md](testing.md) §3 (`@pytest.mark.matlab`).
+- **Equivalence testing** — [development/testing.md](development/testing.md) §3 (`@pytest.mark.matlab`).
 
 ---
 
@@ -130,7 +130,7 @@ with MatlabPlant() as plant:
     # result.gpi_spikes[i] — spike times for GPi neuron i
 ```
 
-MATLAB vendor args and return packing: [`reference-material/KumaraveluEtAl2016/changes.md`](../reference-material/KumaraveluEtAl2016/changes.md). Tests: `tests/envs/matlab_plant_test.py` ([testing.md](testing.md)).
+MATLAB vendor args and return packing: [kumaravelu_vendor_patches.md](reference-material/kumaravelu_vendor_patches.md). Tests: `tests/envs/matlab_plant_test.py` ([development/testing.md](development/testing.md)).
 
 **Biomarkers (implemented):** `envs.plant.biomarkers.p_beta` — multitaper GPi PSD (Chronux-style; Kumaravelu `Fs` / tapers), **13–35 Hz** per-neuron integral then mean (Mehregan Eq. (1)). `MatlabPlant.integrate` sets `IntegrateResult.p_beta`.
 
@@ -157,7 +157,7 @@ Before trusting the Python/MATLAB bridge for training:
 3. **$\Delta t$:** if using 0.02 ms vs reference 0.01 ms, document and run (1)–(2) under the chosen step.
 4. **Band:** confirm Mehregan metrics use **13–35 Hz** even when the reference script returns **7–35 Hz**.
 
-Mark heavy checks `@pytest.mark.matlab` ([testing.md](testing.md)). CI defaults should skip MATLAB.
+Mark heavy checks `@pytest.mark.matlab` ([development/testing.md](development/testing.md)). CI defaults should skip MATLAB.
 
 ---
 

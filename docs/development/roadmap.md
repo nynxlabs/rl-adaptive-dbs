@@ -113,11 +113,11 @@ Phases 8+ are intentionally open; prioritize equivalence and replication paths b
 | Doc | Role |
 |-----|------|
 | [getting_started.md](../getting_started.md) | Setup and how to use the repo |
-| [testing.md](../testing.md) | pytest layout, markers, what to test |
+| [testing.md](testing.md) | pytest layout, markers, what to test |
 | [development/](README.md) | Dev docs hub ([roadmap.md](roadmap.md), [conventions.md](conventions.md)) |
 | [conventions.md](conventions.md) | Contributor rules and layout |
 | [matlab.md](../matlab.md) | MATLAB install, connect, Python engine |
-| [venv.md](../venv.md) | `uv` and dependencies |
+| [venv.md](venv.md) | `uv` and dependencies |
 | [plant.md](../plant.md) | Shared CBGT plant (Kumaravelu et al.) |
 | [environment.md](../environment.md) | Mehregan Gym API on the plant |
 | [controllers/](../controllers/) | Per-controller specs (replication + extensions + fusion) |

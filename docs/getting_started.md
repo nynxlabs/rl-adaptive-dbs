@@ -22,7 +22,7 @@ Packages install in editable mode so local changes are importable immediately af
 | Requirement | Notes |
 |-------------|--------|
 | **Git** | To clone the repository |
-| **uv** | Python + venv manager — [install uv](https://docs.astral.sh/uv/getting-started/installation/) ([more detail](venv.md#install-uv)) |
+| **uv** | Python + venv manager — [install uv](https://docs.astral.sh/uv/getting-started/installation/) ([more detail](development/venv.md#install-uv)) |
 | **MATLAB** | Phase 2 plant bridge — run `bash scripts/matlab/setup.sh` or [matlab.md](matlab.md). Skip for Python-only setup |
 
 **Platforms:** Windows, macOS, Linux (including WSL).
@@ -42,7 +42,7 @@ uv sync --all-groups
 | `uv sync` | Runtime deps + editable `envs` / `controllers` (minimal / CI) |
 | `uv sync --all-groups` | Above + **dev** group (`pytest`, etc.) — use locally |
 
-Details: activation, `uv add`, pinning Python → [venv.md](venv.md).
+Details: activation, `uv add`, pinning Python → [development/venv.md](development/venv.md).
 
 ---
 
@@ -56,7 +56,7 @@ uv run pytest
 ```
 
 - Expect `ok` from the import check.
-- Expect passing tests from `pytest` (import smoke + docs). Details: [testing.md](testing.md).
+- Expect passing tests from `pytest` (import smoke + docs). Details: [development/testing.md](development/testing.md).
 
 **Phase 3 (complete):** DDPG in `controllers/ddpg/` — train, eval, replication workflow. **Phase 4 (current):** benchmark runner — [development/roadmap.md](development/roadmap.md).
 
@@ -146,7 +146,7 @@ uv add --dev <package>            # add dev dependency (e.g. torch later)
 
 Commit `pyproject.toml` and `uv.lock` together after dependency changes.
 
-**Optional activation** (macOS / Linux / WSL): `source .venv/bin/activate` — see [venv.md](venv.md).
+**Optional activation** (macOS / Linux / WSL): `source .venv/bin/activate` — see [development/venv.md](development/venv.md).
 
 ---
 
@@ -156,7 +156,7 @@ Typical flow (details in [development/conventions.md](development/conventions.md
 
 1. **Read the spec** for what you are touching ([environment.md](environment.md) or `docs/controllers/<name>/replication.md`).
 2. **Edit code** in `envs/` or `controllers/<name>/`.
-3. **Run checks** — `uv run pytest` ([testing.md](testing.md)).
+3. **Run checks** — `uv run pytest` ([development/testing.md](development/testing.md)).
 4. **Update the spec** in the same PR/commit if behavior or the public API changed.
 5. **Benchmark later** — when the runner exists, use a named suite and log `controller`, `variant`, `seed` per [benchmarking.md](benchmarking.md).
 
@@ -193,9 +193,9 @@ Typical flow (details in [development/conventions.md](development/conventions.md
 |------|----------|
 | Roadmap and project status | [development/roadmap.md](development/roadmap.md) |
 | Conventions | [development/conventions.md](development/conventions.md) |
-| `uv`, lockfile, Python version | [venv.md](venv.md) |
+| `uv`, lockfile, Python version | [development/venv.md](development/venv.md) |
 | MATLAB install, license, Python engine | [matlab.md](matlab.md) |
-| Tests, markers, layout | [testing.md](testing.md) |
+| Tests, markers, layout | [development/testing.md](development/testing.md) |
 | Biophysical plant (CBGT, DBS, biomarkers) | [plant.md](plant.md) |
 | Mehregan env (reward, RL timing, Gym API) | [environment.md](environment.md) |
 | DDPG (Mehregan) | [controllers/ddpg/replication.md](controllers/ddpg/replication.md) |
