@@ -53,6 +53,7 @@ tests/
     │   ├── eval_test.py
     │   ├── matlab_trainer_test.py   # train + eval on MatlabPlant (@pytest.mark.matlab)
     │   ├── networks_test.py
+    │   ├── replication_test.py
     │   └── trainer_test.py
 ```
 

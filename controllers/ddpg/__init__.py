@@ -10,6 +10,14 @@ from controllers.ddpg.checkpoint import load_actor, load_checkpoint, save_checkp
 from controllers.ddpg.config import DDPGConfig, init_baseline_for_variant
 from controllers.ddpg.eval import EvalConfig, RolloutResult, run_mehregan_eval, run_policy_rollout
 from controllers.ddpg.networks import Actor, Critic, clone_module, hard_update, soft_update
+from controllers.ddpg.replication import (
+    ReplicationConfig,
+    ReplicationResult,
+    baseline_names_for_variant,
+    run_replication,
+    write_replication_summary,
+)
+
 from controllers.ddpg.trainer import DDPGTrainer, TrainMetrics, TrainResult, train_ddpg
 
 if TYPE_CHECKING:
@@ -21,11 +29,14 @@ __all__ = [
     "DDPGConfig",
     "DDPGTrainer",
     "EvalConfig",
+    "ReplicationConfig",
+    "ReplicationResult",
     "ReplayBuffer",
     "RolloutResult",
     "TrainMetrics",
     "TrainResult",
     "Transition",
+    "baseline_names_for_variant",
     "clone_module",
     "evaluate",
     "hard_update",
@@ -34,10 +45,12 @@ __all__ = [
     "load_checkpoint",
     "run_mehregan_eval",
     "run_policy_rollout",
+    "run_replication",
     "save_checkpoint",
     "soft_update",
     "train",
     "train_ddpg",
+    "write_replication_summary",
 ]
 
 
