@@ -31,6 +31,7 @@ def test_reset_returns_normalized_observation(mock_env: MehreganEnv) -> None:
     assert obs.dtype == np.float32
     assert info["p_beta_raw"] == pytest.approx(450.0)
     assert info["p_beta_norm"] == pytest.approx(0.45)
+    assert info["dw"] == 0.0
     assert "reward" in info
 
 
@@ -44,6 +45,7 @@ def test_step_truncates_at_horizon(mock_env: MehreganEnv) -> None:
     _, _, terminated, truncated, info = mock_env.step(action)
     assert not terminated
     assert truncated
+    assert info["dw"] == 1.0
     assert info["episode_step"] == 3
 
 

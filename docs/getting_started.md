@@ -58,7 +58,7 @@ uv run pytest
 - Expect `ok` from the import check.
 - Expect passing tests from `pytest` (import smoke + docs). Details: [testing.md](testing.md).
 
-**Phase 2 (complete):** MATLAB plant bridge, Python $P_\beta$, and **`MehreganEnv`** (`envs/mehregan/`). Phase 3 (`controllers/ddpg`) is next ([development/roadmap.md](development/roadmap.md)).
+**Phase 2 (complete):** MATLAB plant bridge, Python $P_\beta$, and **`MehreganEnv`** (`envs/mehregan/`). **Phase 3 (in progress):** DDPG actor–critic in `controllers/ddpg/` — see [development/roadmap.md](development/roadmap.md).
 
 ```python
 from envs import MehreganEnv, run_baseline_rollout
@@ -67,6 +67,18 @@ env = MehreganEnv()
 obs, info = env.reset(seed=42)
 obs, reward, terminated, truncated, info = env.step(0)  # no DBS
 result = run_baseline_rollout(env, "cdbs-130hz", seed=0)
+env.close()
+```
+
+**Phase 3 (DDPG, mock or MATLAB env):**
+
+```python
+from controllers.ddpg import DDPGConfig, evaluate, train
+from envs import MehreganEnv
+
+env = MehreganEnv()
+result = train(env, DDPGConfig(variant="paper"), checkpoint_path="artifacts/ddpg/paper.pt")
+metrics = evaluate(env, "artifacts/ddpg/paper.pt")
 env.close()
 ```
 

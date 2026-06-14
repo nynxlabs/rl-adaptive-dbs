@@ -136,7 +136,7 @@ From **§IV.A.1** (for replication / defaults):
 - [x] **$P_\beta$** from **GPi** spikes, **13–35 Hz**, mean over **10** neurons (`envs.plant.biomarkers`).
 - [x] Reward uses **$s_{\mathrm{sum}}$** vs **$\beta_t = 0.35$** with documented scaling of **$s$** (`observation_scale=1000`).
 - [x] Baselines: **no stimulation**, **130 Hz** cDBS, periodic **45 Hz** (and **30 Hz** where relevant), same seeds (`run_baseline_rollout`).
-- [ ] DDPG: **$\gamma$, $\tau$,** and **updates per env step** documented (Phase 3 — [controllers/ddpg/replication.md](controllers/ddpg/replication.md)).
+- [x] DDPG: **$\gamma$, $\tau$,** and **updates per env step** documented (Phase 3 — [controllers/ddpg/replication.md](controllers/ddpg/replication.md)).
 
 ---
 
@@ -165,6 +165,8 @@ Eq. (8) uses threshold $\beta_t = 0.35$ on averaged state entries $s(i)$, but th
 ### 5. DDPG hyperparameters not in §IV.A.1
 
 Algorithm 1 requires discount $\gamma$, target soft-update $\tau$, and inner-loop **update frequency**, but §IV.A.1 reports no numeric values. **Fixed:** actor/critic learning rates, buffer **8192**, batch **32**. **Open:** $\gamma$, $\tau$, updates per env step. **Decide in** `controllers/ddpg/` config; match released code if available (see [controllers/ddpg/replication.md](controllers/ddpg/replication.md)).
+
+**Implemented (`controllers/ddpg/config.py`):** $\gamma = 0.99$, $\tau = 0.005$, `update_frequency = 1`.
 
 ### 6. Post-training evaluation segment timing
 
