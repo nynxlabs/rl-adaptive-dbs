@@ -1,6 +1,6 @@
-# Getting started
+# Setup
 
-Set up the repository, confirm your install, and use the project day to day. For **phases** and **status**, see [development/roadmap.md](development/roadmap.md); for **conventions**, [development/conventions.md](development/conventions.md). For scope and architecture, see [README.md](../README.md).
+Install, verify, and use **rl-adaptive-dbs** day to day. For **phases** and **status**, see [development/roadmap.md](development/roadmap.md); for **conventions**, [development/conventions.md](development/conventions.md). For scope and architecture, see [README.md](../README.md).
 
 ---
 
@@ -10,8 +10,9 @@ Set up the repository, confirm your install, and use the project day to day. For
 
 - A shared **plant** (Kumaravelu et al., 2016; MATLAB in `reference-material/`) wrapped for RL
 - A shared **Gymnasium-style environment** (`envs/`) — Mehregan et al. API (2 s steps, $P_\beta$, Eq. (8) reward)
-- **Controllers** (`controllers/ddpg`, `snn`, `sea_dbs`) — one implementation per paper; `ddpg` uses `envs/` directly, `snn` and `sea_dbs` use **adapters** for their paper’s RL interface
-- **Benchmarking** (future) — per-paper eval suites and optional cross-plant comparison; see [benchmarking.md](benchmarking.md) §3
+- **Controllers** (`controllers/ddpg` implemented; `snn`, `sea_dbs` placeholders until Phase 5) — one implementation per paper; `ddpg` uses `envs/` directly, `snn` and `sea_dbs` use **adapters** for their paper’s RL interface
+- **Benchmarking & CLI** (Phase 4) — `mehregan_eval` suites, `results/` layout, [`rl-dbs`](cli.md) (`benchmark`, `info`, `ddpg` train/eval), [`rl-dbs-tui`](tui.md) (Benchmarks tab); see [benchmarking.md](benchmarking.md) §3 and [development/roadmap.md](development/roadmap.md)
+- **Setup scripts** — **`scripts/setup.sh`** (Python + optional MATLAB); MATLAB detail in **`scripts/matlab/`** — [matlab.md](matlab.md)
 
 Packages install in editable mode so local changes are importable immediately after `uv sync`.
 
@@ -23,42 +24,81 @@ Packages install in editable mode so local changes are importable immediately af
 |-------------|--------|
 | **Git** | To clone the repository |
 | **uv** | Python + venv manager — [install uv](https://docs.astral.sh/uv/getting-started/installation/) ([more detail](development/venv.md#install-uv)) |
-| **MATLAB** | Phase 2 plant bridge — run `bash scripts/matlab/setup.sh` or [matlab.md](matlab.md). Skip for Python-only setup |
+| **MATLAB** | Optional — plant bridge only; `bash scripts/setup.sh --with-matlab` or [matlab.md](matlab.md). Skip for Python-only work |
 
-**Platforms:** Windows, macOS, Linux (including WSL).
+**Platforms:** Windows, macOS, Linux (including WSL). Shell scripts are **bash**; on Windows use **Git Bash** or **WSL**.
 
 ---
 
 ## 2. Install
 
+**Recommended (from repo root):**
+
 ```bash
 git clone <repository-url>
 cd rl-adaptive-dbs
+bash scripts/setup.sh
+```
+
+`scripts/setup.sh` runs `uv sync --all-groups`, import check, and fast `pytest` (`-m "not matlab"`). It can optionally delegate to **`scripts/matlab/setup.sh`** for the Kumaravelu plant bridge.
+
+| Flag | Effect |
+|------|--------|
+| `--python-only` | Skip MATLAB (non-interactive default) |
+| `--with-matlab` | Run full MATLAB setup flow |
+| `--skip-tests` | Skip pytest after Python setup |
+| `--non-interactive` | No prompts; use with `--python-only` or `--with-matlab` |
+
+**Manual Python-only:**
+
+```bash
 uv sync --all-groups
+```
+
+**MATLAB only** (if Python deps are already installed):
+
+```bash
+bash scripts/matlab/setup.sh
 ```
 
 | Command | What it does |
 |---------|----------------|
+| `bash scripts/setup.sh` | Python + verify; optional MATLAB ([matlab.md](matlab.md)) |
 | `uv sync` | Runtime deps + editable `envs` / `controllers` (minimal / CI) |
 | `uv sync --all-groups` | Above + **dev** group (`pytest`, etc.) — use locally |
+| `bash scripts/matlab/setup.sh` | MATLAB install/connect, `uv sync`, `verify.sh` |
 
 Details: activation, `uv add`, pinning Python → [development/venv.md](development/venv.md).
+
+### Fresh machine validation (Phase 4)
+
+Confirm the repo works on **other devices**, not only your daily machine. Use a **clean VM or host** with git and [uv](https://docs.astral.sh/uv/) installed (MATLAB optional):
+
+| Target | Minimum check | Full stack (optional) |
+|--------|----------------|------------------------|
+| **Linux** (or WSL) | `git clone … && cd rl-adaptive-dbs && bash scripts/setup.sh --python-only --non-interactive` | `bash scripts/setup.sh --with-matlab` |
+| **macOS** | Same Python-only command | `bash scripts/matlab/setup.sh` after Python setup |
+| **Windows** | Same via **Git Bash** or **WSL** | MATLAB per [matlab.md](matlab.md) §2–3 |
+
+**Pass:** import check prints `ok`; `pytest -m "not matlab"` passes. **With MATLAB:** `bash scripts/matlab/verify.sh` passes after `source scripts/matlab/env.sh`.
+
+Record OS version, blockers, and doc fixes in [development/roadmap.md](development/roadmap.md) status or [matlab.md](matlab.md) when something fails only on one platform.
 
 ---
 
 ## 3. Verify install
 
-From the repository root:
+After `bash scripts/setup.sh` (or manual `uv sync` + checks):
 
 ```bash
 uv run python -c "import envs; import controllers; print('ok')"
-uv run pytest
+uv run pytest -m "not matlab"
 ```
 
 - Expect `ok` from the import check.
-- Expect passing tests from `pytest` (import smoke + docs). Details: [development/testing.md](development/testing.md).
+- Expect passing tests from the fast pytest subset. Details: [development/testing.md](development/testing.md).
 
-**Phase 3 (complete):** DDPG in `controllers/ddpg/` — train, eval, replication workflow. **Phase 4 (current):** benchmark runner — [development/roadmap.md](development/roadmap.md).
+**Phase 3 (complete):** DDPG in `controllers/ddpg/` — train, eval, replication workflow (full-precision). **Phase 4 (current):** benchmark runner, Mehregan **PTQ/QAT** variants, starting **`rl-dbs`** / **`rl-dbs-tui`**, setup scripts, and **fresh-VM validation** — [development/roadmap.md](development/roadmap.md).
 
 ```python
 from envs import MehreganEnv, run_baseline_rollout
@@ -112,10 +152,13 @@ rl-adaptive-dbs/
 │   ├── snn/                 # Nguyen et al.
 │   └── sea_dbs/             # Ravivarapu et al.
 ├── tests/                   # pytest (mirrors envs/ and controllers/)
-├── docs/                    # Guides and specs
+├── docs/                    # Guides and specs (this file: setup.md)
 ├── reference-material/      # Kumaravelu et al. (2016) MATLAB model
-├── scripts/                 # replication and setup helpers
-├── results/                 # Benchmark output (local, gitignored)
+├── scripts/
+│   ├── setup.sh             # Project setup (Python + optional MATLAB)
+│   └── matlab/              # MATLAB install, env, verify
+├── results/                 # Benchmark output (`rl-dbs benchmark`; gitignored)
+├── artifacts/               # Training checkpoints (optional; gitignored)
 ├── pyproject.toml
 └── uv.lock
 ```
@@ -158,7 +201,7 @@ Typical flow (details in [development/conventions.md](development/conventions.md
 2. **Edit code** in `envs/` or `controllers/<name>/`.
 3. **Run checks** — `uv run pytest` ([development/testing.md](development/testing.md)).
 4. **Update the spec** in the same PR/commit if behavior or the public API changed.
-5. **Benchmark later** — when the runner exists, use a named suite and log `controller`, `variant`, `seed` per [benchmarking.md](benchmarking.md).
+5. **Benchmark** (Phase 4) — use a named suite via `rl-dbs benchmark`; log `controller`, `variant`, `seed` per [benchmarking.md](benchmarking.md). Until the CLI lands, use `scripts/replicate_mehregan_ddpg.py` and `controllers.ddpg` APIs directly.
 
 ### Common tasks
 
@@ -179,7 +222,7 @@ Typical flow (details in [development/conventions.md](development/conventions.md
 - Same package as the base controller; distinguish with `variant` in configs and benchmark outputs.
 - Do not copy or fork `envs/` for variants.
 
-**Compare runs** (when tooling exists)
+**Compare runs** (Phase 4 — `rl-dbs benchmark` + `rl-dbs-tui`)
 
 - Write under `results/`; do not commit.
 - **Within-paper:** use that paper’s suite (`mehregan_eval`, `nguyen_eval`, `sea_dbs_eval`) and the same seeds for all variants in a table.
@@ -202,7 +245,9 @@ Typical flow (details in [development/conventions.md](development/conventions.md
 | SNN (Nguyen) | [controllers/snn/replication.md](controllers/snn/replication.md) |
 | SEA-DBS (Ravivarapu) | [controllers/sea_dbs/replication.md](controllers/sea_dbs/replication.md) |
 | Cross-controller eval | [benchmarking.md](benchmarking.md) |
+| CLI (`rl-dbs`) | [cli.md](cli.md) |
+| TUI (`rl-dbs-tui`) | [tui.md](tui.md) |
 | SEA-DBS + DSQN fusion (post-replication) | [controllers/fusion.md](controllers/fusion.md) |
 | Scope and citations | [README.md](../README.md) (References) |
 
-**Specs** = what to build. **Getting started** (this file) = how to set up and use the repo. **Development** = where the project is headed and team conventions.
+**Specs** = what to build. **Setup** (this file) = how to install and use the repo. **Development** = roadmap and team conventions.

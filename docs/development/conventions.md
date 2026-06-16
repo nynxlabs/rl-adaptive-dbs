@@ -16,7 +16,9 @@ Contributor rules for **rl-adaptive-dbs** — layout, spec-driven workflow, and 
 | Plant | [plant.md](../plant.md) | `envs/` (dynamics backend) |
 | Environment (Mehregan API) | [environment.md](../environment.md) | `envs/` |
 | Controller | [controllers/ddpg/replication.md](../controllers/ddpg/replication.md), [controllers/snn/replication.md](../controllers/snn/replication.md), [controllers/sea_dbs/replication.md](../controllers/sea_dbs/replication.md) | `controllers/<name>/` |
-| Benchmarks | [benchmarking.md](../benchmarking.md) | runner TBD |
+| Benchmarks | [benchmarking.md](../benchmarking.md) | `rl-dbs benchmark` (Phase 4) |
+| CLI | [cli.md](../cli.md) | `rl_adaptive_dbs.cli` (Phase 4 start) |
+| TUI | [tui.md](../tui.md) | `rl_adaptive_dbs.tui` (Phase 4 start) |
 
 ## Naming and layout
 
@@ -28,7 +30,7 @@ Contributor rules for **rl-adaptive-dbs** — layout, spec-driven workflow, and 
 ## Cross-platform code
 
 - Use `pathlib`, `uv run`; avoid hard-coded POSIX-only paths in library code.
-- Document OS-specific steps only in [venv.md](venv.md) or [getting_started.md](../getting_started.md).
+- Document OS-specific steps only in [venv.md](venv.md) or [setup.md](../setup.md).
 
 ## Documentation
 

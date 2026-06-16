@@ -1,8 +1,8 @@
 # Benchmarking and cross-controller comparison
 
-This document defines how to **compare controllers and variants** (iterations) on the **same** computational environment. Implementation of runners and result storage is **not required yet**; this spec is the target shape so training and eval code stay aligned.
+This document defines how to **compare controllers and variants** (iterations) on the **same** computational environment. **Phase 4** implements the suite runner, `results/` layout, and integration with [`rl-dbs benchmark`](cli.md) and [`rl-dbs-tui`](tui.md); status: [development/roadmap.md](development/roadmap.md) §2.
 
-**Related specs:** Shared plant — [plant.md](plant.md); Mehregan Gym API — [environment.md](environment.md). Per-controller training — [controllers/](controllers/).
+**Related specs:** Shared plant — [plant.md](plant.md); Mehregan Gym API — [environment.md](environment.md); per-controller training — [controllers/](controllers/); CLI — [cli.md](cli.md); TUI — [tui.md](tui.md).
 
 ---
 
@@ -108,6 +108,9 @@ controllers:
   - { controller: baseline, variant: cdbs-130hz }
   - { controller: baseline, variant: periodic-45hz }
   - { controller: ddpg, variant: paper }
+  - { controller: ddpg, variant: ptq-fp16 }   # PTQ after full-precision train (§IV.A.3)
+  - { controller: ddpg, variant: ptq-int8 }
+  - { controller: ddpg, variant: qat }         # QAT train + eval
 ```
 
 ```yaml
@@ -170,10 +173,13 @@ results/
 | Step | Status |
 |------|--------|
 | Spec (this document) | Done |
-| `envs/` implements [environment.md](environment.md) | Pending |
-| Each controller exposes `train()` / `evaluate(seed, checkpoint)` with shared metric dict | Pending |
-| Suite runner (`rl-dbs benchmark` per [cli.md](cli.md), or `benchmarks/` package) loads suite YAML, runs baselines + controllers, writes `results/` | Pending |
-| Summary script or notebook: table/plot across `controller` × `variant` | Pending |
+| `envs/` implements [environment.md](environment.md) | Done |
+| Mehregan **PTQ** / **QAT** in `controllers/ddpg/` ([replication.md](controllers/ddpg/replication.md) §6) | Not started |
+| Each controller exposes `train()` / `evaluate(seed, checkpoint)` with shared metric dict | Partial (`ddpg` only) |
+| Suite runner (`rl-dbs benchmark` per [cli.md](cli.md), or `benchmarks/` package) loads suite YAML, runs baselines + controllers (including quantized variants), writes `results/` | Not started |
+| Initial `rl-dbs` / `rl-dbs-tui` per Phase 4 ([cli.md](cli.md), [tui.md](tui.md)) | Not started |
+| Setup scripts: `scripts/setup.sh` + `scripts/matlab/`; fresh-VM validation ([setup.md](setup.md), [matlab.md](matlab.md)) | In progress |
+| Summary script or notebook: table/plot across `controller` × `variant` | Not started (Phase 4+) |
 
 When adding code, prefer a **thin** runner that calls into `controllers.*` and `envs` rather than duplicating plant logic in scripts.
 

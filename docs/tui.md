@@ -1,6 +1,6 @@
 # Terminal user interface specification
 
-This document defines the **`rl-dbs-tui`** terminal UI: monitor training, browse benchmark results, inspect rollouts, and tail logs—**without** a background server. Implementation is planned alongside **Phase 4+** benchmarking and **Phase 8+** training workflows ([development/roadmap.md](development/roadmap.md)); the CLI writes artifacts per [cli.md](cli.md) and [benchmarking.md](benchmarking.md).
+This document defines the **`rl-dbs-tui`** terminal UI: monitor training, browse benchmark results, inspect rollouts, and tail logs—**without** a background server. **Phase 4** starts implementation: results loader + **Benchmarks** tab over `results/` from `rl-dbs benchmark` ([cli.md](cli.md), [benchmarking.md](benchmarking.md)). Training monitor, eval drill-down, and logs tabs land in later phases ([development/roadmap.md](development/roadmap.md)).
 
 **Related specs:** [cli.md](cli.md) (commands and output paths), [benchmarking.md](benchmarking.md) (results layout, metrics), [environment.md](environment.md) ($P_\beta$, eval protocol), [plant.md](plant.md) (biomarker bands).
 
@@ -254,11 +254,11 @@ Invalid JSON: show row-level error badge; do not crash the TUI.
 | Step | Phase | Status |
 |------|-------|--------|
 | Spec (this document) | 1 | Done |
-| Fixture `results/` tree + loader unit tests | 4 | Pending |
-| Benchmarks tab only | 4 | Pending |
-| Eval tab + timeseries sparklines | 4–5 | Pending |
-| Training tab + artifacts watcher | 8+ | Pending |
-| Logs tab + bookmarks | 8+ | Pending |
+| Fixture `results/` tree + loader unit tests | 4 | Not started |
+| Benchmarks tab only | 4 | Not started |
+| Eval tab + timeseries sparklines | 5–6 | Not started |
+| Training tab + artifacts watcher | 8+ | Not started |
+| Logs tab + bookmarks | 8+ | Not started |
 
 ---
 

@@ -2,7 +2,7 @@
 
 This document specifies the **learning-based controller** (actor–critic training loop, losses, targets, and optional quantization) from *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning* (Mehregan et al.). It is meant to align `controllers/ddpg/` (and training scripts) with the published method.
 
-**Companion spec:** Plant dynamics and biomarker primitives — [plant.md](../../plant.md). Mehregan env ($P_\beta$ window, step timing, reward $R$, baselines) — [environment.md](../../environment.md). This document is authoritative for **policy optimization** unless the others explicitly describe the same quantity.
+**Companion spec:** Plant dynamics and biomarker primitives — [plant.md](../../plant.md). Mehregan env ($P_\beta$ window, step timing, reward $R$, baselines) — [environment.md](../../environment.md). Benchmark suites and variant slugs — [benchmarking.md](../../benchmarking.md); CLI — [cli.md](../../cli.md). This document is authoritative for **policy optimization** unless the others explicitly describe the same quantity.
 
 ---
 
@@ -176,7 +176,7 @@ Hyperparameters with **fixed** values in §IV.A.1 should be **defaults**; open v
 - [x] Critic **MSE** to bootstrap target; actor maximizes **$Q(s, \mu(s))$** with critic **frozen** during actor Adam step.
 - [x] Soft updates use shared **$\tau$** for actor and critic targets.
 - [x] Learning rates **$5\times 10^{-4}$** (actor), **$10^{-3}$** (critic); buffer **8192**; batch **32**; **10** episodes × **30** steps; step **2 s**; init mean **45 Hz** (and **30 Hz** ablation via `init-30hz` variant).
-- [ ] Quantization experiments (**FP16 / INT8 PTQ**, **QAT**): deferred to [extensions.md](extensions.md) after full-precision replication is benchmarked (Phase 4+).
+- [ ] Quantization experiments (**FP16 / INT8 PTQ**, **QAT**): Phase 4 — implement in `controllers/ddpg/`; validate via `mehregan_eval` variant slugs `ptq-fp16`, `ptq-int8`, `qat` ([benchmarking.md](../../benchmarking.md)).
 
 ---
 
