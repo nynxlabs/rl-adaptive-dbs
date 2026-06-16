@@ -1,6 +1,6 @@
 # Roadmap & status
 
-Phases and implementation status for **rl-adaptive-dbs**. Contributor rules: [conventions.md](conventions.md). For clone, install, and day-to-day commands, see [getting_started.md](../getting_started.md). Paper-aligned behavior lives in the **specs**, not here.
+Phases and implementation status for **rl-adaptive-dbs**. Contributor rules: [conventions.md](conventions.md). For clone, install, and day-to-day commands, see [setup.md](../setup.md). Paper-aligned behavior lives in the **specs**, not here.
 
 ---
 
@@ -33,15 +33,20 @@ Replicate the shared plant and Mehregan et al. Gym API before any controller wor
 ### Phase 3 — First controller (`ddpg`) (complete)
 
 - Actor–critic per [controllers/ddpg/replication.md](../controllers/ddpg/replication.md); training loop (Algorithm 1).
-- Variants: `paper`, `init-30hz` (full-precision); PTQ/QAT deferred — see [controllers/ddpg/extensions.md](../controllers/ddpg/extensions.md).
+- Variants: `paper`, `init-30hz` (full-precision, complete); **PTQ** (`ptq-fp16`, `ptq-int8`) and **QAT** (`qat`) — Phase 4 ([controllers/ddpg/replication.md](../controllers/ddpg/replication.md) §6).
 - **Exit criteria:** training run completes; eval roll-out matches spec checklist on `envs/` without adapters — met via `run_replication`, `scripts/replicate_mehregan_ddpg.py`, and mock/MATLAB tests.
 
 ### Phase 4 — Benchmarking the first controller (current)
 
 - Suite definitions (YAML or equivalent) per [benchmarking.md](../benchmarking.md).
 - **Per-paper suite** for Mehregan replication (`mehregan_eval`): baselines + `ddpg` variants × seeds → `results/`.
-- Runner and summary tables / plots over core metrics ($P_\beta$, reward, stim frequency); CLI `benchmark` and TUI per [cli.md](../cli.md), [tui.md](../tui.md).
-- **Exit criteria:** repeatable `mehregan_eval` runs; replication checklist passable for `ddpg`.
+- **DDPG quantization** (Mehregan §III.D / §IV.A.3): **PTQ** (`ptq-fp16`, `ptq-int8`) and **QAT** (`qat`) in `controllers/ddpg/` — used to exercise variant logging and the benchmark runner alongside full-precision `paper` / `init-30hz`.
+- **Benchmark runner** and summary tables / plots over core metrics ($P_\beta$, reward, stim frequency).
+- **CLI** ([cli.md](../cli.md)) — **start** `rl-dbs`: entry point, `benchmark` (primary), `info`, and Mehregan-focused `train` / `eval` wrappers for `ddpg` (including quantized variants).
+- **TUI** ([tui.md](../tui.md)) — **start** `rl-dbs-tui`: read-only **Benchmarks** tab over `results/` (loader + fixture tests); training/logs tabs remain later.
+- **Setup scripts** ([setup.md](../setup.md), [matlab.md](../matlab.md)) — **`scripts/setup.sh`** (Python + optional MATLAB); harden **`scripts/matlab/`** cross-platform; **validate on fresh VMs** (clean Linux, macOS, Windows via Git Bash/WSL) so clone → setup → verify works on other machines.
+- **Fresh-machine validation** — exercise the full path on VMs or clean hosts with only git + uv (+ optional MATLAB license): `bash scripts/setup.sh`, docs match prompts, `pytest -m "not matlab"` passes; document OS-specific gaps in [setup.md](../setup.md) / [matlab.md](../matlab.md).
+- **Exit criteria:** repeatable `mehregan_eval` runs across full-precision and quantized `ddpg` variants; replication checklist passable for `ddpg` (including §IV.A.3 quantization); `uv run rl-dbs benchmark` and `uv run rl-dbs-tui` usable for Phase 4 workflows; **setup scripts pass on fresh VMs** on each supported OS (or gaps documented with repro steps).
 
 ### Phase 5 — Other controllers, adapters, and per-paper benchmarking
 
@@ -51,7 +56,8 @@ Replicate the shared plant and Mehregan et al. Gym API before any controller wor
 | `controllers/sea_dbs/` | Ravivarapu et al. | Spec: [controllers/sea_dbs/replication.md](../controllers/sea_dbs/replication.md); adapter for SEA-DBS I/O |
 
 - Replicate each controller; extend or wrap `envs/` only via **adapters** (no duplicated CBGT dynamics).
-- **Per-paper suites** for Nguyen and SEA-DBS (`nguyen_eval`, `sea_dbs_eval`); same runner as Phase 4.
+- Extend `rl-dbs train` / `eval` to `snn` and `sea_dbs` (Phase 4 covers `ddpg` only).
+- **Per-paper suites** for Nguyen and SEA-DBS (`nguyen_eval`, `sea_dbs_eval`); same runner and `rl-dbs` patterns as Phase 4.
 - **Exit criteria:** each controller trains/evals on the **same plant** through its documented adapter; per-paper benchmark runs complete.
 
 ### Phase 6 — Cross-controller comparison and benchmarkability
@@ -70,7 +76,7 @@ Replicate the shared plant and Mehregan et al. Gym API before any controller wor
 
 - Native Python plant ([plant.md](../plant.md) §9); drop MATLAB dependency after equivalence checks.
 - Modular layout: swappable plant backends, controller packages, adapters, and benchmark runner; CI on smoke tests + selected suites.
-- Training/eval CLIs per [cli.md](../cli.md); monitoring TUI per [tui.md](../tui.md); day-to-day setup in [getting_started.md](../getting_started.md).
+- **Expand** `rl-dbs` / `rl-dbs-tui` (all controllers, training monitor, logs)—initial shells land in Phase 4 ([cli.md](../cli.md), [tui.md](../tui.md)).
 - Optional per-controller work beyond paper replication: [controllers/ddpg/extensions.md](../controllers/ddpg/extensions.md), [controllers/snn/extensions.md](../controllers/snn/extensions.md), [controllers/sea_dbs/extensions.md](../controllers/sea_dbs/extensions.md), and broader framework ideas (other oscillatory conditions, patient-specific robustness, etc.).
 
 Phases 8+ are intentionally open; prioritize equivalence and replication paths before large refactors.
@@ -92,19 +98,21 @@ Phases 8+ are intentionally open; prioritize equivalence and replication paths b
 | [controllers/snn/extensions.md](../controllers/snn/extensions.md) | Outline | CV post-replication directions |
 | [controllers/sea_dbs/extensions.md](../controllers/sea_dbs/extensions.md) | Outline | CV post-replication directions |
 | [controllers/fusion.md](../controllers/fusion.md) | Outline | SEA-DBS + DSQN synthesis |
-| [benchmarking.md](../benchmarking.md) | Draft | Per-paper vs cross-paper suites in spec; runner not implemented |
-| [cli.md](../cli.md) | Draft | `rl-dbs` entry point spec; not implemented |
-| [tui.md](../tui.md) | Draft | `rl-dbs-tui` read-only monitor; not implemented |
+| [benchmarking.md](../benchmarking.md) | Draft | Suites + `results/` layout; runner + CLI integration — Phase 4 |
+| [cli.md](../cli.md) | Draft | Phase 4 — start `rl-dbs` (`benchmark`, `info`, `ddpg` train/eval) |
+| [tui.md](../tui.md) | Draft | Phase 4 — start `rl-dbs-tui` (Benchmarks tab over `results/`) |
 | `envs/` | Done | `MatlabPlant`, `MehreganEnv`, $P_\beta$, baselines (`run_baseline_rollout`) |
-| `controllers/ddpg/` | Done | Full-precision `paper` / `init-30hz`; `run_replication` + replication script; PTQ/QAT in extensions |
+| `controllers/ddpg/` | Done (FP) | Full-precision `paper` / `init-30hz`; PTQ/QAT not started (Phase 4) |
 | `controllers/snn/` | Placeholder | — |
 | `controllers/sea_dbs/` | Placeholder | — |
-| [matlab.md](../matlab.md) + `scripts/matlab/` | Done | Install, connect, verify; cross-platform |
+| [matlab.md](../matlab.md) + `scripts/matlab/` | Done (WSL) | Cross-platform + fresh-VM validation — Phase 4 |
+| Project setup script | Done | `scripts/setup.sh`; fresh-VM validation — Phase 4 |
 | MATLAB plant bridge | Done | `envs/plant/` + `envs/mehregan/`; `@pytest.mark.matlab` equivalence suite |
-| Benchmark suite runner | Not started | Phase 4 |
-| Training / eval CLI | Not started | Phase 4+ |
+| Benchmark suite runner | Not started | Phase 4 — `mehregan_eval` suites; exercise via FP + quantized `ddpg` variants |
+| `rl-dbs` CLI | Not started | Phase 4 — initial subcommands per [cli.md](../cli.md) |
+| `rl-dbs-tui` | Not started | Phase 4 — Benchmarks tab per [tui.md](../tui.md) |
 
-**Current phase:** 4 (Phase 3 DDPG complete; benchmarking runner next).
+**Current phase:** 4 (benchmark runner, Mehregan quantization, CLI/TUI start, setup scripts + fresh-VM validation).
 
 ---
 
@@ -112,7 +120,7 @@ Phases 8+ are intentionally open; prioritize equivalence and replication paths b
 
 | Doc | Role |
 |-----|------|
-| [getting_started.md](../getting_started.md) | Setup and how to use the repo |
+| [setup.md](../setup.md) | Setup and how to use the repo |
 | [testing.md](testing.md) | pytest layout, markers, what to test |
 | [development/](README.md) | Dev docs hub ([roadmap.md](roadmap.md), [conventions.md](conventions.md)) |
 | [conventions.md](conventions.md) | Contributor rules and layout |

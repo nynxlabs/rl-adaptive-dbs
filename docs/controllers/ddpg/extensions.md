@@ -6,7 +6,7 @@
 
 ## 1. Quantization deeper dives
 
-The replication spec covers **PTQ (FP16/INT8)** and **QAT** as described in Mehregan et al. §III.D–§IV.A.3. Extensions beyond the paper:
+Paper-aligned **PTQ** and **QAT** for Mehregan et al. are **Phase 4** scope — see [replication.md](replication.md) §6. This section covers extensions **beyond** §IV.A.3:
 
 - **Mixed-precision quantization** — different bitwidths per layer based on sensitivity analysis.
 - **Quantization-aware fine-tuning** — start from a PTQ checkpoint and fine-tune with fake quantization for fewer training episodes than full QAT.

@@ -1,6 +1,6 @@
 # Testing
 
-How to run and extend **pytest** checks for **rl-adaptive-dbs**. Setup and `uv` usage: [getting_started.md](../getting_started.md). Roadmap: [roadmap.md](roadmap.md). Conventions: [conventions.md](conventions.md).
+How to run and extend **pytest** checks for **rl-adaptive-dbs**. Setup and `uv` usage: [setup.md](../setup.md). Roadmap: [roadmap.md](roadmap.md). Conventions: [conventions.md](conventions.md).
 
 ---
 
@@ -71,7 +71,7 @@ Naming: files `*_test.py`, functions `test_*` (pytest default discovery).
 | **Unit** | `tests/` | reward math, observation windows, adapter shapes |
 | **Integration** | `tests/` | `reset` / `step`, episode length, baseline policies |
 | **Equivalence / regression** | `tests/` with `@pytest.mark.matlab` or `slow` | GPi spikes (`matlab_plant_test.py`); $P_\beta$ vs MATLAB (`matlab_biomarkers_test.py`, needs `dpss`) |
-| **Paper replication benchmarks** | future runner + `results/` | full suites per [benchmarking.md](../benchmarking.md); not the full eval matrix in pytest |
+| **Paper replication benchmarks** | `rl-dbs benchmark` + `results/` (Phase 4) | full suites per [benchmarking.md](../benchmarking.md); smoke subsets in pytest only |
 
 Keep CI fast: default runs should pass without MATLAB; skip or mark heavy checks.
 
@@ -108,3 +108,16 @@ Skip when MATLAB is unavailable: `tests/conftest.py` skips `@pytest.mark.matlab`
 4. If behavior is spec-defined, update the spec in the same change ([conventions.md](conventions.md)).
 
 Shared fixtures (env instances, seeds, reference traces) belong in `tests/conftest.py` or `tests/envs/conftest.py` as the suite grows.
+
+---
+
+## 6. Setup scripts and fresh VMs (Phase 4)
+
+Automated tests do **not** replace a clean-machine run. After changing `scripts/setup.sh`, `scripts/matlab/`, or install docs:
+
+1. On a **fresh VM or host** (only git + uv; optional MATLAB), run [setup.md](../setup.md) §2 **Fresh machine validation**.
+2. Confirm `bash scripts/setup.sh --python-only --non-interactive` exits 0.
+3. If MATLAB is in scope for that platform, run `bash scripts/matlab/verify.sh`.
+4. File doc or script fixes when prompts, paths, or dependencies drift.
+
+CI default (`pytest -m "not matlab"`) is the fast gate; fresh-VM checks are the portability gate for other devices.

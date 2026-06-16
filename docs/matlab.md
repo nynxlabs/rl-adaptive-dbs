@@ -7,15 +7,19 @@ MATLAB is required for **Phase 2** plant work: running the bundled Kumaravelu et
 **Quick start (interactive):** from the repo root,
 
 ```bash
+bash scripts/setup.sh              # Python + optional MATLAB
+# or MATLAB only:
 bash scripts/matlab/setup.sh
 ```
 
 Walks through install (optional), `MATLAB_ROOT`, license, `uv sync`, shell persistence, and `scripts/matlab/verify.sh`. Manual steps below if you prefer.
 
+**Phase 4:** harden `scripts/matlab/` on Linux, macOS, and Windows (Git Bash / WSL) and keep prompts aligned with this doc. Top-level **`scripts/setup.sh`** runs Python setup and can delegate here — [setup.md](setup.md), [development/roadmap.md](development/roadmap.md).
+
 | You have… | Start at |
 |-----------|----------|
-| MATLAB already installed and licensed | **§2 Connect** — or run `setup-matlab.sh` |
-| No MATLAB on this machine | **§3 Fresh install** — or run `setup-matlab.sh` |
+| MATLAB already installed and licensed | **§2 Connect** — or run `bash scripts/matlab/setup.sh` |
+| No MATLAB on this machine | **§3 Fresh install** — or run `bash scripts/matlab/setup.sh` |
 
 ---
 
@@ -319,7 +323,8 @@ eng.exit()
 Repo helpers:
 
 ```bash
-bash scripts/matlab/setup.sh      # interactive full setup (recommended)
+bash scripts/setup.sh             # Python + optional MATLAB (see docs/setup.md)
+bash scripts/matlab/setup.sh      # interactive MATLAB-only setup
 bash scripts/matlab/install.sh    # Linux/WSL install only
 bash scripts/matlab/activate.sh   # license activation (Linux/WSL)
 bash scripts/matlab/verify.sh     # install + license + Python engine (all OS via bash)
@@ -381,4 +386,4 @@ uv run pytest -m matlab          # requires licensed MATLAB
 - Cross-platform policy: [AGENTS.md](../AGENTS.md)
 - Plant spec and bridge API: [plant.md](plant.md)
 - Equivalence testing: [development/testing.md](development/testing.md)
-- Day-to-day Python setup: [getting_started.md](getting_started.md), [development/venv.md](development/venv.md)
+- Day-to-day Python setup: [setup.md](setup.md), [development/venv.md](development/venv.md)
