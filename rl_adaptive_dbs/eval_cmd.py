@@ -14,6 +14,7 @@ from benchmarks.runner import env_snapshot, execute_planned_run, make_run_id, ru
 from benchmarks.schema import ControllerEntry, PlannedRun, RunRecord, SuiteManifest
 from benchmarks.suite import find_repo_root, load_suite
 from envs.mehregan import MehreganEnv
+from controllers.ddpg.quantization import fp_source_variant, is_ptq_variant
 from rl_adaptive_dbs.info import CONTROLLER_VARIANTS
 
 
@@ -46,7 +47,8 @@ def _resolve_checkpoint(
         return None
     if checkpoint is not None:
         return checkpoint if checkpoint.is_absolute() else (repo_root / checkpoint).resolve()
-    default = repo_root / "artifacts" / "ddpg" / f"{variant}_train{train_seed}.pt"
+    ckpt_variant = fp_source_variant(variant) if is_ptq_variant(variant) else variant
+    default = repo_root / "artifacts" / "ddpg" / f"{ckpt_variant}_train{train_seed}.pt"
     return default
 
 

@@ -5,11 +5,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import torch.nn as nn
+
 from controllers.ddpg.buffer import ReplayBuffer, Transition
 from controllers.ddpg.checkpoint import load_actor, load_checkpoint, save_checkpoint
 from controllers.ddpg.config import DDPGConfig, init_baseline_for_variant
 from controllers.ddpg.eval import EvalConfig, RolloutResult, run_mehregan_eval, run_policy_rollout
 from controllers.ddpg.networks import Actor, Critic, clone_module, hard_update, soft_update
+from controllers.ddpg.quantization import is_ptq_variant, prepare_actor_for_eval, unwrap_actor
 from controllers.ddpg.replication import (
     ReplicationConfig,
     ReplicationResult,
@@ -82,27 +85,44 @@ def train(
 
 def evaluate(
     env: MehreganEnv,
-    checkpoint: str | Path | Actor,
+    checkpoint: str | Path | Actor | nn.Module,
     *,
     config: EvalConfig | None = None,
     protocol: str = "mehregan_eval",
+    variant: str | None = None,
 ) -> dict[str, Any]:
     """Evaluate a trained policy (checkpoint path or ``Actor``) on ``env``."""
+    device = config.device if config is not None else "cpu"
+    eval_variant: str
+
     if isinstance(checkpoint, Actor):
         actor = checkpoint
-        device = (config.device if config is not None else "cpu")
+        eval_variant = variant or "paper"
+    elif isinstance(checkpoint, nn.Module):
+        actor = unwrap_actor(checkpoint)
+        eval_variant = variant or "paper"
     else:
-        device = config.device if config is not None else "cpu"
-        actor, _ddpg_config = load_actor(checkpoint, device=device)
+        actor, ddpg_config = load_actor(checkpoint, device="cpu")
+        eval_variant = variant or ddpg_config.variant
+
+    policy = prepare_actor_for_eval(actor, eval_variant, device=device)
+    eval_device = device if eval_variant != "ptq-int8" else "cpu"
 
     if protocol == "mehregan_eval":
-        return run_mehregan_eval(env, actor, config=config or EvalConfig(device=device))
+        payload = run_mehregan_eval(
+            env,
+            policy,
+            config=(config or EvalConfig(device=eval_device)),
+        )
+        if is_ptq_variant(eval_variant):
+            payload.setdefault("metrics_extra", {})["quantization"] = eval_variant
+        return payload
     if protocol == "training_episode":
         rollout = run_policy_rollout(
             env,
-            actor,
+            policy,
             seed=None if config is None else config.seed,
-            device=device,
+            device=eval_device,
         )
         return rollout.to_dict()
     msg = f"unknown eval protocol {protocol!r}"

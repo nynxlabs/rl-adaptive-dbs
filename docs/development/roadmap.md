@@ -102,7 +102,7 @@ Phases 8+ are intentionally open; prioritize equivalence and replication paths b
 | [cli.md](../cli.md) | Draft | Phase 4 — start `rl-dbs` (`benchmark`, `info`, `ddpg` train/eval) |
 | [tui.md](../tui.md) | Draft | Phase 4 — start `rl-dbs-tui` (Benchmarks tab over `results/`) |
 | `envs/` | Done | `MatlabPlant`, `MehreganEnv`, $P_\beta$, baselines (`run_baseline_rollout`) |
-| `controllers/ddpg/` | Done (FP) | Full-precision `paper` / `init-30hz`; PTQ/QAT not started (Phase 4) |
+| `controllers/ddpg/` | Done (FP + PTQ/QAT) | Full-precision `paper` / `init-30hz`; PTQ/QAT in `quantization.py` |
 | `controllers/snn/` | Placeholder | — |
 | `controllers/sea_dbs/` | Placeholder | — |
 | [matlab.md](../matlab.md) + `scripts/matlab/` | Done (WSL) | Cross-platform + fresh-VM validation — Phase 4 |

@@ -11,8 +11,9 @@ import numpy as np
 
 from controllers.ddpg.config import DDPGConfig
 from controllers.ddpg.eval import EvalConfig
+from controllers.ddpg.quantization import fp_source_variant, is_ptq_variant
 from controllers.ddpg.trainer import TrainMetrics, TrainResult
-from envs.mehregan.baselines import run_baseline_rollout
+from envs.mehregan.baselines import run_baseline_mehregan_eval, run_baseline_rollout
 
 if TYPE_CHECKING:
     from envs.mehregan.env import MehreganEnv
@@ -57,22 +58,27 @@ class ReplicationResult:
     variant: str
     train_seed: int
     eval_seed: int
-    train: TrainResult
     eval_metrics: dict[str, Any]
+    train: TrainResult | None = None
     baseline_metrics: dict[str, dict[str, Any]] = field(default_factory=dict)
     checkpoint_path: Path | None = None
+    fp_checkpoint_path: Path | None = None
 
     def summary(self) -> dict[str, Any]:
         """Compact comparison table for logging or JSON export."""
-        return {
+        payload: dict[str, Any] = {
             "variant": self.variant,
             "train_seed": self.train_seed,
             "eval_seed": self.eval_seed,
             "checkpoint": str(self.checkpoint_path) if self.checkpoint_path else None,
-            "train_episode_rewards": list(self.train.metrics.episode_rewards),
             "ddpg_eval": self.eval_metrics,
             "baselines": self.baseline_metrics,
         }
+        if self.fp_checkpoint_path is not None:
+            payload["fp_checkpoint"] = str(self.fp_checkpoint_path)
+        if self.train is not None:
+            payload["train_episode_rewards"] = list(self.train.metrics.episode_rewards)
+        return payload
 
 
 def _resolve_ddpg_config(config: ReplicationConfig) -> DDPGConfig:
@@ -94,32 +100,81 @@ def _checkpoint_path(config: ReplicationConfig, ddpg: DDPGConfig) -> Path | None
     return config.checkpoint_dir / f"{ddpg.variant}_train{config.train_seed}.pt"
 
 
+def _fp_checkpoint_path(config: ReplicationConfig) -> Path | None:
+    if config.checkpoint_dir is None:
+        return None
+    fp_variant = fp_source_variant(config.variant)
+    return config.checkpoint_dir / f"{fp_variant}_train{config.train_seed}.pt"
+
+
+def _eval_baselines(
+    env: MehreganEnv,
+    config: ReplicationConfig,
+    *,
+    eval_steps: int = 5,
+) -> dict[str, dict[str, Any]]:
+    baseline_names = config.baselines or baseline_names_for_variant(config.variant)
+    baseline_metrics: dict[str, dict[str, Any]] = {}
+    for name in baseline_names:
+        rollout = run_baseline_mehregan_eval(
+            env,
+            name,
+            seed=config.eval_seed,
+            eval_steps=eval_steps,
+        )
+        baseline_metrics[name] = _rollout_metrics(rollout, label=name)
+    return baseline_metrics
+
+
 def run_replication(
     env: MehreganEnv,
     config: ReplicationConfig,
     *,
     checkpoint_path: Path | None = None,
 ) -> ReplicationResult:
-    """Train DDPG, run ``mehregan_eval``, and compare to fixed baselines on ``env``."""
+    """Train DDPG (or PTQ-eval only), run ``mehregan_eval``, compare baselines."""
     from controllers.ddpg import evaluate, train
 
     ddpg = _resolve_ddpg_config(config)
     eval_cfg = _resolve_eval_config(config, ddpg)
+    eval_steps = eval_cfg.eval_steps
+
+    if is_ptq_variant(config.variant):
+        fp_ckpt = _fp_checkpoint_path(config)
+        if fp_ckpt is None or not fp_ckpt.is_file():
+            msg = f"full-precision checkpoint required for {config.variant}: {fp_ckpt}"
+            raise FileNotFoundError(msg)
+        eval_metrics = evaluate(
+            env,
+            fp_ckpt,
+            config=eval_cfg,
+            protocol="mehregan_eval",
+            variant=config.variant,
+        )
+        baseline_metrics = _eval_baselines(env, config, eval_steps=eval_steps)
+        return ReplicationResult(
+            variant=config.variant,
+            train_seed=config.train_seed,
+            eval_seed=config.eval_seed,
+            train=None,
+            eval_metrics=eval_metrics,
+            baseline_metrics=baseline_metrics,
+            checkpoint_path=fp_ckpt,
+            fp_checkpoint_path=fp_ckpt,
+        )
+
     ckpt = checkpoint_path if checkpoint_path is not None else _checkpoint_path(config, ddpg)
-
     train_result = train(env, ddpg, checkpoint_path=ckpt)
-    if ckpt is None:
-        eval_target = train_result.actor
-    else:
-        eval_target = ckpt
+    eval_target = train_result.actor if ckpt is None else ckpt
 
-    eval_metrics = evaluate(env, eval_target, config=eval_cfg, protocol="mehregan_eval")
-
-    baseline_names = config.baselines or baseline_names_for_variant(config.variant)
-    baseline_metrics: dict[str, dict[str, Any]] = {}
-    for name in baseline_names:
-        rollout = run_baseline_rollout(env, name, seed=config.eval_seed)
-        baseline_metrics[name] = _rollout_metrics(rollout, label=name)
+    eval_metrics = evaluate(
+        env,
+        eval_target,
+        config=eval_cfg,
+        protocol="mehregan_eval",
+        variant=config.variant,
+    )
+    baseline_metrics = _eval_baselines(env, config, eval_steps=eval_steps)
 
     return ReplicationResult(
         variant=ddpg.variant,

@@ -131,7 +131,42 @@ uv run python scripts/replicate_mehregan_ddpg.py --variant paper --train-seed 0
 
 Writes `artifacts/ddpg/paper_train0.pt` and a JSON summary for baseline comparison.
 
+**Mehregan replication workflow (train → eval → benchmark → checklist):**
+
+```bash
+source scripts/matlab/env.sh
+
+# 1. Train full-precision DDPG (paper defaults: 10 episodes × 30 steps)
+uv run rl-dbs train --controller ddpg --variant paper --seeds 0
+
+# Or the replication script (train + mehregan_eval + baselines + checklist)
+uv run python scripts/replicate_mehregan_ddpg.py --variant paper --train-seed 0
+
+# 2. PTQ eval (uses paper_train0.pt — no retraining)
+uv run python scripts/replicate_mehregan_ddpg.py --variant ptq-fp16 --train-seed 0
+uv run python scripts/replicate_mehregan_ddpg.py --variant ptq-int8 --train-seed 0
+
+# 3. QAT (trains with fake-quant actor stubs)
+uv run rl-dbs train --controller ddpg --variant qat --seeds 0
+
+# 4. Full benchmark suite → results/
+uv run rl-dbs benchmark --suite-name mehregan_eval --controllers ddpg:paper,ddpg:ptq-int8
+
+# 5. Summary table + checklist on a replication JSON
+uv run rl-dbs summary --suite-name mehregan_eval
+uv run python scripts/check_mehregan_replication.py artifacts/ddpg/paper_train0_summary.json
+```
+
+PTQ variants load **`paper_train{seed}.pt`** automatically ([controllers/ddpg/quantization.py](controllers/ddpg/quantization.py)). The checklist encodes qualitative §IV claims (DDPG lowers beta vs unstimulated; PTQ tracks FP).
+
 With MATLAB set up ([matlab.md](matlab.md)):
+
+```bash
+source scripts/matlab/env.sh
+uv sync --group matlab
+uv run pytest -m matlab tests/envs/matlab_plant_test.py -v   # ~6 min; one shared engine
+uv run pytest -m "not matlab"                                   # fast CI subset
+```
 
 ```bash
 source scripts/matlab/env.sh

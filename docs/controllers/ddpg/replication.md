@@ -176,7 +176,7 @@ Hyperparameters with **fixed** values in §IV.A.1 should be **defaults**; open v
 - [x] Critic **MSE** to bootstrap target; actor maximizes **$Q(s, \mu(s))$** with critic **frozen** during actor Adam step.
 - [x] Soft updates use shared **$\tau$** for actor and critic targets.
 - [x] Learning rates **$5\times 10^{-4}$** (actor), **$10^{-3}$** (critic); buffer **8192**; batch **32**; **10** episodes × **30** steps; step **2 s**; init mean **45 Hz** (and **30 Hz** ablation via `init-30hz` variant).
-- [ ] Quantization experiments (**FP16 / INT8 PTQ**, **QAT**): Phase 4 — implement in `controllers/ddpg/`; validate via `mehregan_eval` variant slugs `ptq-fp16`, `ptq-int8`, `qat` ([benchmarking.md](../../benchmarking.md)).
+- [x] Quantization experiments (**FP16 / INT8 PTQ**, **QAT**): `controllers/ddpg/quantization.py`; validate via `mehregan_eval` slugs `ptq-fp16`, `ptq-int8`, `qat` ([benchmarking.md](../../benchmarking.md)).
 
 ---
 

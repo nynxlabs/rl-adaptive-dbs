@@ -46,6 +46,19 @@ def test_resolve_suite_path_by_name() -> None:
     assert path.name == "mehregan_eval.yaml"
 
 
+def test_resolve_ptq_checkpoint(tmp_path: Path) -> None:
+    ckpt_dir = tmp_path / "artifacts" / "ddpg"
+    ckpt_dir.mkdir(parents=True)
+    fp_ckpt = ckpt_dir / "paper_train0.pt"
+    fp_ckpt.write_bytes(b"placeholder")
+    suite = load_suite("mehregan_eval", repo_root=REPO_ROOT)
+    entry = next(e for e in suite.controllers if e.variant == "ptq-int8")
+    from benchmarks.suite import _resolve_checkpoint
+
+    path = _resolve_checkpoint(entry, suite, repo_root=tmp_path)
+    assert path == fp_ckpt.resolve()
+
+
 def test_parse_controller_filter_invalid() -> None:
     with pytest.raises(ValueError, match="controller:variant"):
         parse_controller_filter("ddpg")
