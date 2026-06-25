@@ -109,8 +109,8 @@ Phases 8+ are intentionally open; prioritize equivalence and replication paths b
 | Project setup script | Done | `scripts/setup.sh`; fresh-VM validation — Phase 4 |
 | MATLAB plant bridge | Done | `envs/plant/` + `envs/mehregan/`; `@pytest.mark.matlab` equivalence suite |
 | Benchmark suite runner | Done | `benchmarks/` + `suites/mehregan_eval*.yaml`; baselines + `ddpg` eval |
-| `rl-dbs` CLI | Partial | `benchmark` subcommand; `info`, `train`, `eval` pending |
-| `rl-dbs-tui` | Not started | Phase 4 — Benchmarks tab per [tui.md](../tui.md) |
+| `rl-dbs` CLI | Partial | `benchmark`, `summary`, `info`, `config show`, `train`/`eval` (`ddpg`); `snn`/`sea_dbs` Phase 5 |
+| `rl-dbs-tui` | Partial | Benchmarks tab ([Textual](https://textual.textualize.io/)); Training/Eval/Logs later |
 
 **Current phase:** 4 (benchmark runner, Mehregan quantization, CLI/TUI start, setup scripts + fresh-VM validation).
 

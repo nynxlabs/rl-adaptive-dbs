@@ -179,7 +179,7 @@ results/
 | Suite runner (`benchmarks/` + `rl-dbs benchmark` per [cli.md](cli.md)) loads suite YAML, runs baselines + controllers (including quantized variants), writes `results/` | Done (Mehregan baselines + `ddpg`; PTQ/QAT pending) |
 | Initial `rl-dbs` / `rl-dbs-tui` per Phase 4 ([cli.md](cli.md), [tui.md](tui.md)) | Not started |
 | Setup scripts: `scripts/setup.sh` + `scripts/matlab/`; fresh-VM validation ([setup.md](setup.md), [matlab.md](matlab.md)) | In progress |
-| Summary script or notebook: table/plot across `controller` × `variant` | Not started (Phase 4+) |
+| Summary tables / plots over `results/` | Done | `rl-dbs summary` (+ optional `--csv`); TUI Benchmarks tab |
 
 When adding code, prefer a **thin** runner that calls into `controllers.*` and `envs` rather than duplicating plant logic in scripts.
 
