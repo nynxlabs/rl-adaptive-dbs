@@ -6,7 +6,7 @@ Replication of published **adaptive DBS** reinforcement-learning work on one sha
 
 Work is delivered in **phases** (see [docs/development/roadmap.md](docs/development/roadmap.md)): rough specs → environment → full-precision `ddpg` → **Mehregan benchmarking** (runner, PTQ/QAT, `rl-dbs`, `rl-dbs-tui`, setup scripts) → SNN and SEA-DBS with adapters → cross-controller comparison → fusion → native Python plant and framework hardening. Architecturally, the repo has three layers:
 
-1. **Environment (single source of truth)** — Replicate the **computational RL environment** from Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning*: Kumaravelu et al. (2016) **cortex–basal ganglia–thalamus** dynamics, GPi **beta-band** biomarker, 2 s steps, reward Eq. (8), and a Gymnasium-style API that `ddpg` uses directly. Other papers connect through **adapters** on the same plant. Spec: [docs/environment.md](docs/environment.md). **Current focus:** Phase 4 — **`rl-dbs benchmark`** and **`benchmarks/`** runner (Mehregan baselines + `ddpg` eval landed); PTQ/QAT, **`rl-dbs-tui`**, and setup-script hardening remain ([docs/setup.md](docs/setup.md)).
+1. **Environment (single source of truth)** — Replicate the **computational RL environment** from Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning*: Kumaravelu et al. (2016) **cortex–basal ganglia–thalamus** dynamics, GPi **beta-band** biomarker, 2 s steps, reward Eq. (8), and a Gymnasium-style API that `ddpg` uses directly. Other papers connect through **adapters** on the same plant. Spec: [docs/environment.md](docs/environment.md). **Current focus:** Phase 4 — benchmark runner, **`rl-dbs`** / **`rl-dbs-tui`**, and **PTQ/QAT** (**done**); fresh-VM validation and full MATLAB replication runs remain ([docs/setup.md](docs/setup.md)).
 
 2. **Controllers (one per paper)** — Replicate each paper’s **learning-based controller** under `controllers/`, all driving the **same plant** (no duplicated CBGT dynamics):
 
@@ -34,7 +34,7 @@ Python code lives at the **repository root** as two installable top-level packag
 - **`controllers/`** — Per-paper controllers: `ddpg` (implemented), `snn` and `sea_dbs` (placeholders until Phase 5).
 - **`benchmarks/`** — Suite runner: YAML manifests → `results/` ([docs/benchmarking.md](docs/benchmarking.md)).
 - **`suites/`** — Versioned eval configs (`mehregan_eval.yaml`, smoke variant for CI).
-- **`rl_adaptive_dbs/`** — CLI (`rl-dbs benchmark`; more subcommands in Phase 4).
+- **`rl_adaptive_dbs/`** — CLI (`rl-dbs`) and TUI (`rl-dbs-tui`).
 
 - `docs/` — [setup.md](docs/setup.md) (setup & use), [development/](docs/development/) (roadmap, conventions, `uv`, pytest), [plant.md](docs/plant.md), [environment.md](docs/environment.md), [controllers/](docs/controllers/), [benchmarking.md](docs/benchmarking.md), [cli.md](docs/cli.md), [tui.md](docs/tui.md).
 - `results/` — benchmark outputs from `rl-dbs benchmark` (local, gitignored).
