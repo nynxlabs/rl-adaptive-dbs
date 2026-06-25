@@ -8,6 +8,7 @@ from typing import Any
 import yaml
 
 from benchmarks.schema import ControllerEntry, PlannedRun, SuiteManifest
+from controllers.ddpg.quantization import fp_source_variant, is_ptq_variant
 
 
 def find_repo_root(start: Path | None = None) -> Path:
@@ -137,5 +138,6 @@ def _resolve_checkpoint(
         return path if path.is_absolute() else (repo_root / path).resolve()
     train_seed = entry.train_seed if entry.train_seed is not None else suite.train_seed
     checkpoint_dir = suite.checkpoint_dir or Path("artifacts/ddpg")
-    rel = checkpoint_dir / f"{entry.variant}_train{train_seed}.pt"
+    ckpt_variant = fp_source_variant(entry.variant) if is_ptq_variant(entry.variant) else entry.variant
+    rel = checkpoint_dir / f"{ckpt_variant}_train{train_seed}.pt"
     return (repo_root / rel).resolve() if not rel.is_absolute() else rel.resolve()

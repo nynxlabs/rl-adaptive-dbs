@@ -9,6 +9,8 @@ def init_baseline_for_variant(variant: str) -> str:
     """Map benchmark variant slug to periodic init frequency."""
     if variant == "init-30hz":
         return "periodic-30hz"
+    if variant in ("ptq-fp16", "ptq-int8", "qat", "paper"):
+        return "periodic-45hz"
     return "periodic-45hz"
 
 

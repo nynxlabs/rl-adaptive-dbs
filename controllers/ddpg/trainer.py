@@ -11,6 +11,7 @@ import torch.nn.functional as F
 
 from controllers.ddpg.buffer import ReplayBuffer
 from controllers.ddpg.config import DDPGConfig
+from controllers.ddpg.quantization import unwrap_actor, wrap_actor_for_training
 from controllers.ddpg.networks import Actor, Critic, clone_module, hard_update, soft_update
 from envs.mehregan.baselines import baseline_action
 
@@ -58,6 +59,7 @@ class DDPGTrainer:
             conv_channels=config.conv_channels,
             shrink_dim=config.shrink_dim,
         )
+        self.actor = wrap_actor_for_training(self.actor, config.variant)
         self.critic = critic or Critic(
             state_length=state_length,
             n_actions=n_actions,
@@ -176,7 +178,7 @@ class DDPGTrainer:
             metrics.episode_steps.append(steps)
 
         return TrainResult(
-            actor=self.actor,
+            actor=unwrap_actor(self.actor),
             critic=self.critic,
             metrics=metrics,
             config=self.config,

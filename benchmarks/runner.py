@@ -92,6 +92,7 @@ def _execute_mehregan_run(
             planned.checkpoint,
             config=EvalConfig(seed=planned.seed, eval_steps=suite.eval_steps),
             protocol="mehregan_eval",
+            variant=planned.variant,
         )
     msg = (
         f"controller {planned.controller!r} is not implemented for protocol "

@@ -16,13 +16,16 @@ import sys
 from pathlib import Path
 
 from controllers.ddpg.config import DDPGConfig
+from controllers.ddpg.checklist import assess_replication_summary
 from controllers.ddpg.replication import ReplicationConfig, run_replication, write_replication_summary
 from envs.mehregan import MehreganEnv
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Mehregan DDPG replication (train + eval + baselines)")
-    parser.add_argument("--variant", default="paper", choices=("paper", "init-30hz"))
+    parser.add_argument("--variant", default="paper", choices=(
+        "paper", "init-30hz", "ptq-fp16", "ptq-int8", "qat",
+    ))
     parser.add_argument("--train-seed", type=int, default=0)
     parser.add_argument("--eval-seed", type=int, default=0)
     parser.add_argument(
@@ -72,6 +75,9 @@ def main(argv: list[str] | None = None) -> int:
         summary_path = args.checkpoint_dir / f"{args.variant}_train{args.train_seed}_summary.json"
     write_replication_summary(result, summary_path)
 
+    report = assess_replication_summary(result.summary())
+    checklist_status = "PASS" if report["passed"] else "FAIL"
+
     ddpg_eval = result.eval_metrics
     print(f"variant={result.variant} train_seed={result.train_seed} eval_seed={result.eval_seed}")
     print(f"checkpoint={result.checkpoint_path}")
@@ -85,7 +91,8 @@ def main(argv: list[str] | None = None) -> int:
             f"{name:14} p_beta_mean={metrics['p_beta_mean']:.1f} "
             f"p_beta_final={metrics['p_beta_final']:.1f} reward_sum={metrics['reward_sum']:.2f}"
         )
-    return 0
+    print(f"checklist={checklist_status}")
+    return 0 if report["passed"] else 1
 
 
 if __name__ == "__main__":

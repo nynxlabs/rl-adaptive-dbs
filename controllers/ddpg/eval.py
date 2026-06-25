@@ -5,13 +5,18 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+import torch.nn as nn
+
 import numpy as np
 import torch
 
 from controllers.ddpg.networks import Actor
+from controllers.ddpg.quantization import actor_state_dtype
 
 if TYPE_CHECKING:
     from envs.mehregan.env import MehreganEnv
+
+PolicyModule = nn.Module
 
 
 @dataclass(frozen=True)
@@ -74,19 +79,24 @@ class RolloutResult:
         return self.total_reward
 
 
-def select_policy_action(actor: Actor, state: np.ndarray, *, device: str = "cpu") -> int:
+def select_policy_action(actor: PolicyModule, state: np.ndarray, *, device: str = "cpu") -> int:
     """Greedy action from actor logits (softmax + argmax)."""
     actor.eval()
+    dtype = actor_state_dtype(actor)
     with torch.no_grad():
-        state_t = torch.as_tensor(state, device=device, dtype=torch.float32).unsqueeze(0)
+        state_t = torch.as_tensor(state, device=device, dtype=dtype).unsqueeze(0)
+        if dtype == torch.float16:
+            state_t = state_t.half()
         logits = actor(state_t)
+        if logits.dtype != torch.float32:
+            logits = logits.float()
         action_t, _ = Actor.select_action(logits)
         return int(action_t.item())
 
 
 def run_policy_rollout(
     env: MehreganEnv,
-    actor: Actor,
+    actor: PolicyModule,
     *,
     seed: int | None = None,
     device: str = "cpu",
@@ -118,7 +128,7 @@ def run_policy_rollout(
 
 def run_mehregan_eval(
     env: MehreganEnv,
-    actor: Actor,
+    actor: PolicyModule,
     *,
     config: EvalConfig | None = None,
 ) -> dict[str, Any]:

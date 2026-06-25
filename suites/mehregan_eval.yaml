@@ -14,3 +14,6 @@ controllers:
   - { controller: baseline, variant: periodic-45hz }
   - { controller: ddpg, variant: paper }
   - { controller: ddpg, variant: init-30hz }
+  - { controller: ddpg, variant: ptq-fp16 }
+  - { controller: ddpg, variant: ptq-int8 }
+  - { controller: ddpg, variant: qat }

@@ -80,6 +80,20 @@ def test_write_replication_summary(repl_env: MehreganEnv, tmp_path: Path) -> Non
     assert "baselines" in payload
 
 
+def test_ptq_replication_eval_only(repl_env: MehreganEnv, tmp_path: Path) -> None:
+    fp_config = DDPGConfig(num_episodes=1, batch_size=4, min_buffer_size=4, seed=0)
+    ckpt = tmp_path / "paper_train0.pt"
+    from controllers.ddpg import save_checkpoint, train
+
+    train(repl_env, fp_config, checkpoint_path=ckpt)
+    result = run_replication(
+        repl_env,
+        ReplicationConfig(variant="ptq-fp16", checkpoint_dir=tmp_path, train_seed=0),
+    )
+    assert result.train is None
+    assert result.eval_metrics.get("metrics_extra", {}).get("quantization") == "ptq-fp16"
+
+
 @pytest.mark.slow
 def test_paper_episode_horizon_on_mock(repl_env: MehreganEnv, tmp_path: Path) -> None:
     """Full 30-step episode horizon with paper episode count (mock plant)."""

@@ -174,7 +174,7 @@ results/
 |------|--------|
 | Spec (this document) | Done |
 | `envs/` implements [environment.md](environment.md) | Done |
-| Mehregan **PTQ** / **QAT** in `controllers/ddpg/` ([replication.md](controllers/ddpg/replication.md) §6) | Not started |
+| Mehregan **PTQ** / **QAT** in `controllers/ddpg/` ([replication.md](controllers/ddpg/replication.md) §6) | Done |
 | Each controller exposes `train()` / `evaluate(seed, checkpoint)` with shared metric dict | Partial (`ddpg` only) |
 | Suite runner (`benchmarks/` + `rl-dbs benchmark` per [cli.md](cli.md)) loads suite YAML, runs baselines + controllers (including quantized variants), writes `results/` | Done (Mehregan baselines + `ddpg`; PTQ/QAT pending) |
 | Initial `rl-dbs` / `rl-dbs-tui` per Phase 4 ([cli.md](cli.md), [tui.md](tui.md)) | Not started |
