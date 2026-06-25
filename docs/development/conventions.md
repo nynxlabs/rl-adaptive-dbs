@@ -16,7 +16,7 @@ Contributor rules for **rl-adaptive-dbs** — layout, spec-driven workflow, and 
 | Plant | [plant.md](../plant.md) | `envs/` (dynamics backend) |
 | Environment (Mehregan API) | [environment.md](../environment.md) | `envs/` |
 | Controller | [controllers/ddpg/replication.md](../controllers/ddpg/replication.md), [controllers/snn/replication.md](../controllers/snn/replication.md), [controllers/sea_dbs/replication.md](../controllers/sea_dbs/replication.md) | `controllers/<name>/` |
-| Benchmarks | [benchmarking.md](../benchmarking.md) | `rl-dbs benchmark` (Phase 4) |
+| Benchmarks | [benchmarking.md](../benchmarking.md) | `benchmarks/` + `rl-dbs benchmark` |
 | CLI | [cli.md](../cli.md) | `rl_adaptive_dbs.cli` (Phase 4 start) |
 | TUI | [tui.md](../tui.md) | `rl_adaptive_dbs.tui` (Phase 4 start) |
 

@@ -6,7 +6,7 @@ Replication of published **adaptive DBS** reinforcement-learning work on one sha
 
 Work is delivered in **phases** (see [docs/development/roadmap.md](docs/development/roadmap.md)): rough specs → environment → full-precision `ddpg` → **Mehregan benchmarking** (runner, PTQ/QAT, `rl-dbs`, `rl-dbs-tui`, setup scripts) → SNN and SEA-DBS with adapters → cross-controller comparison → fusion → native Python plant and framework hardening. Architecturally, the repo has three layers:
 
-1. **Environment (single source of truth)** — Replicate the **computational RL environment** from Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning*: Kumaravelu et al. (2016) **cortex–basal ganglia–thalamus** dynamics, GPi **beta-band** biomarker, 2 s steps, reward Eq. (8), and a Gymnasium-style API that `ddpg` uses directly. Other papers connect through **adapters** on the same plant. Spec: [docs/environment.md](docs/environment.md). **Current focus:** Phase 4 — benchmark runner, Mehregan **PTQ/QAT** variants, `mehregan_eval` suites, starting **`rl-dbs`** / **`rl-dbs-tui`**, and setup-script hardening ([docs/setup.md](docs/setup.md)).
+1. **Environment (single source of truth)** — Replicate the **computational RL environment** from Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning*: Kumaravelu et al. (2016) **cortex–basal ganglia–thalamus** dynamics, GPi **beta-band** biomarker, 2 s steps, reward Eq. (8), and a Gymnasium-style API that `ddpg` uses directly. Other papers connect through **adapters** on the same plant. Spec: [docs/environment.md](docs/environment.md). **Current focus:** Phase 4 — **`rl-dbs benchmark`** and **`benchmarks/`** runner (Mehregan baselines + `ddpg` eval landed); PTQ/QAT, **`rl-dbs-tui`**, and setup-script hardening remain ([docs/setup.md](docs/setup.md)).
 
 2. **Controllers (one per paper)** — Replicate each paper’s **learning-based controller** under `controllers/`, all driving the **same plant** (no duplicated CBGT dynamics):
 
@@ -18,7 +18,7 @@ Work is delivered in **phases** (see [docs/development/roadmap.md](docs/developm
 
    Per-paper specs: [docs/controllers/](docs/controllers/) (`replication.md`, `extensions.md` for post-replication ideas). **Fusion** (SEA-DBS + DSQN synthesis) is Phase 7: [docs/controllers/fusion.md](docs/controllers/fusion.md).
 
-3. **Benchmarking & tooling** — **Per-paper suites** first (`mehregan_eval`, then `nguyen_eval`, `sea_dbs_eval`); optional **cross-paper** comparison on **plant-level** metrics (`cross_controller_plant`). Spec: [docs/benchmarking.md](docs/benchmarking.md). Runs are keyed by `controller` + `variant` + `run_id`; outputs go under `results/` (local, gitignored). **Phase 4** starts the suite runner plus [`rl-dbs`](docs/cli.md) and [`rl-dbs-tui`](docs/tui.md).
+3. **Benchmarking & tooling** — **Per-paper suites** first (`mehregan_eval`, then `nguyen_eval`, `sea_dbs_eval`); optional **cross-paper** comparison on **plant-level** metrics (`cross_controller_plant`). Spec: [docs/benchmarking.md](docs/benchmarking.md). The **`benchmarks/`** package loads YAML from **`suites/`**, runs baselines and controllers, and writes **`results/`** (local, gitignored). **`uv run rl-dbs benchmark`** is the primary entry point ([docs/cli.md](docs/cli.md)); **`rl-dbs-tui`** (Benchmarks tab) is next.
 
 **Later (Phase 8+):** validated native Python plant (drop MATLAB after equivalence checks), modular plant/controller/benchmark layout, CI, and **full** CLI/TUI coverage for all controllers—see [docs/development/roadmap.md](docs/development/roadmap.md).
 
@@ -32,6 +32,9 @@ Python code lives at the **repository root** as two installable top-level packag
 
 - **`envs/`** — Shared Gymnasium-style RL environment (Mehregan et al. computational setup).
 - **`controllers/`** — Per-paper controllers: `ddpg` (implemented), `snn` and `sea_dbs` (placeholders until Phase 5).
+- **`benchmarks/`** — Suite runner: YAML manifests → `results/` ([docs/benchmarking.md](docs/benchmarking.md)).
+- **`suites/`** — Versioned eval configs (`mehregan_eval.yaml`, smoke variant for CI).
+- **`rl_adaptive_dbs/`** — CLI (`rl-dbs benchmark`; more subcommands in Phase 4).
 
 - `docs/` — [setup.md](docs/setup.md) (setup & use), [development/](docs/development/) (roadmap, conventions, `uv`, pytest), [plant.md](docs/plant.md), [environment.md](docs/environment.md), [controllers/](docs/controllers/), [benchmarking.md](docs/benchmarking.md), [cli.md](docs/cli.md), [tui.md](docs/tui.md).
 - `results/` — benchmark outputs from `rl-dbs benchmark` (local, gitignored).
@@ -53,7 +56,7 @@ Specs: [plant.md](docs/plant.md), [environment.md](docs/environment.md), [contro
 
 ## Benchmarking
 
-Cross-controller comparison uses **per-paper eval suites** plus an optional **same-plant** suite; see [docs/benchmarking.md](docs/benchmarking.md) §3 and [docs/development/conventions.md](docs/development/conventions.md#cross-controller-benchmarking). **Phase 4** adds the suite runner, [`rl-dbs`](docs/cli.md), and [`rl-dbs-tui`](docs/tui.md).
+Cross-controller comparison uses **per-paper eval suites** plus an optional **same-plant** suite; see [docs/benchmarking.md](docs/benchmarking.md) §3 and [docs/development/conventions.md](docs/development/conventions.md#cross-controller-benchmarking). Run suites with **`uv run rl-dbs benchmark --suite-name mehregan_eval`** (or `--suite suites/mehregan_eval_smoke.yaml` for a quick check); browse outputs under `results/`. **`rl-dbs-tui`** is planned for read-only comparison tables.
 
 ## References
 

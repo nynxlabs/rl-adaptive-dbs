@@ -108,8 +108,8 @@ Phases 8+ are intentionally open; prioritize equivalence and replication paths b
 | [matlab.md](../matlab.md) + `scripts/matlab/` | Done (WSL) | Cross-platform + fresh-VM validation — Phase 4 |
 | Project setup script | Done | `scripts/setup.sh`; fresh-VM validation — Phase 4 |
 | MATLAB plant bridge | Done | `envs/plant/` + `envs/mehregan/`; `@pytest.mark.matlab` equivalence suite |
-| Benchmark suite runner | Not started | Phase 4 — `mehregan_eval` suites; exercise via FP + quantized `ddpg` variants |
-| `rl-dbs` CLI | Not started | Phase 4 — initial subcommands per [cli.md](../cli.md) |
+| Benchmark suite runner | Done | `benchmarks/` + `suites/mehregan_eval*.yaml`; baselines + `ddpg` eval |
+| `rl-dbs` CLI | Partial | `benchmark` subcommand; `info`, `train`, `eval` pending |
 | `rl-dbs-tui` | Not started | Phase 4 — Benchmarks tab per [tui.md](../tui.md) |
 
 **Current phase:** 4 (benchmark runner, Mehregan quantization, CLI/TUI start, setup scripts + fresh-VM validation).

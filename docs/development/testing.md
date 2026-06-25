@@ -17,6 +17,7 @@ Useful variants:
 
 ```bash
 uv run pytest -v                          # verbose
+uv run pytest tests/benchmarks          # suite runner (mock plant)
 uv run pytest tests/envs                  # env / plant tests
 uv run pytest -m "not matlab"             # fast subset (CI default; skips MATLAB)
 uv run pytest -m matlab                   # plant bridge only (~6 min; needs license)
@@ -37,6 +38,10 @@ tests/
 ├── conftest.py              # shared fixtures; skips @pytest.mark.matlab when unlicensed
 ├── imports_test.py          # smoke: editable install
 ├── docs_test.py             # spec link / section checks
+├── benchmarks/
+│   ├── suite_test.py        # YAML load, run expansion
+│   ├── runner_test.py       # mock-plant suite execution
+│   └── cli_test.py          # rl-dbs benchmark dry-run
 ├── envs/
 │   ├── mock_plant.py        # helper (not collected)
 │   ├── biomarkers_test.py

@@ -4,6 +4,7 @@ from envs.mehregan.baselines import (
     BaselineSpec,
     baseline_action,
     default_baselines,
+    run_baseline_mehregan_eval,
     run_baseline_rollout,
 )
 from envs.mehregan.config import MehreganEnvConfig
@@ -19,5 +20,6 @@ __all__ = [
     "baseline_action",
     "default_baselines",
     "mehregan_reward",
+    "run_baseline_mehregan_eval",
     "run_baseline_rollout",
 ]
