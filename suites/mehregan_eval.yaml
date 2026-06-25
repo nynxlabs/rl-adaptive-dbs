@@ -1,0 +1,16 @@
+# Mehregan et al. eval suite — baselines + full-precision DDPG variants.
+# Spec: docs/benchmarking.md §5, docs/environment.md §8
+name: mehregan_eval
+version: 1
+protocol: mehregan
+env_ref: environment.md#5-timing-and-transitions
+eval_steps: 5
+train_seed: 0
+checkpoint_dir: artifacts/ddpg
+seeds: [0, 1, 2, 3, 4]
+controllers:
+  - { controller: baseline, variant: none }
+  - { controller: baseline, variant: cdbs-130hz }
+  - { controller: baseline, variant: periodic-45hz }
+  - { controller: ddpg, variant: paper }
+  - { controller: ddpg, variant: init-30hz }

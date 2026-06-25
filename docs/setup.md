@@ -11,7 +11,7 @@ Install, verify, and use **rl-adaptive-dbs** day to day. For **phases** and **st
 - A shared **plant** (Kumaravelu et al., 2016; MATLAB in `reference-material/`) wrapped for RL
 - A shared **Gymnasium-style environment** (`envs/`) — Mehregan et al. API (2 s steps, $P_\beta$, Eq. (8) reward)
 - **Controllers** (`controllers/ddpg` implemented; `snn`, `sea_dbs` placeholders until Phase 5) — one implementation per paper; `ddpg` uses `envs/` directly, `snn` and `sea_dbs` use **adapters** for their paper’s RL interface
-- **Benchmarking & CLI** (Phase 4) — `mehregan_eval` suites, `results/` layout, [`rl-dbs`](cli.md) (`benchmark`, `info`, `ddpg` train/eval), [`rl-dbs-tui`](tui.md) (Benchmarks tab); see [benchmarking.md](benchmarking.md) §3 and [development/roadmap.md](development/roadmap.md)
+- **Benchmarking & CLI** (Phase 4) — `benchmarks/` suite runner, `suites/mehregan_eval*.yaml`, [`rl-dbs benchmark`](cli.md) (landed); `info`, `train`/`eval`, [`rl-dbs-tui`](tui.md) pending — [benchmarking.md](benchmarking.md), [development/roadmap.md](development/roadmap.md)
 - **Setup scripts** — **`scripts/setup.sh`** (Python + optional MATLAB); MATLAB detail in **`scripts/matlab/`** — [matlab.md](matlab.md)
 
 Packages install in editable mode so local changes are importable immediately after `uv sync`.
@@ -98,7 +98,7 @@ uv run pytest -m "not matlab"
 - Expect `ok` from the import check.
 - Expect passing tests from the fast pytest subset. Details: [development/testing.md](development/testing.md).
 
-**Phase 3 (complete):** DDPG in `controllers/ddpg/` — train, eval, replication workflow (full-precision). **Phase 4 (current):** benchmark runner, Mehregan **PTQ/QAT** variants, starting **`rl-dbs`** / **`rl-dbs-tui`**, setup scripts, and **fresh-VM validation** — [development/roadmap.md](development/roadmap.md).
+**Phase 3 (complete):** DDPG in `controllers/ddpg/` — train, eval, replication workflow (full-precision). **Phase 4 (current):** benchmark runner (**done** for Mehregan baselines + `ddpg` eval), **`rl-dbs benchmark`** (**partial** CLI), Mehregan **PTQ/QAT** variants, **`rl-dbs-tui`**, setup scripts, and **fresh-VM validation** — [development/roadmap.md](development/roadmap.md).
 
 ```python
 from envs import MehreganEnv, run_baseline_rollout
@@ -151,7 +151,10 @@ rl-adaptive-dbs/
 │   ├── ddpg/                # Mehregan et al.
 │   ├── snn/                 # Nguyen et al.
 │   └── sea_dbs/             # Ravivarapu et al.
-├── tests/                   # pytest (mirrors envs/ and controllers/)
+├── benchmarks/              # Suite runner (YAML → results/)
+├── suites/                  # Benchmark manifests (e.g. mehregan_eval.yaml)
+├── rl_adaptive_dbs/         # CLI entry points (`rl-dbs`)
+├── tests/                   # pytest (mirrors envs/, controllers/, benchmarks/)
 ├── docs/                    # Guides and specs (this file: setup.md)
 ├── reference-material/      # Kumaravelu et al. (2016) MATLAB model
 ├── scripts/
@@ -182,10 +185,30 @@ Prefer **`uv run`** so you do not need to activate `.venv/`:
 ```bash
 uv sync --all-groups              # refresh after pull or pyproject change
 uv run pytest                     # run tests
+uv run pytest tests/benchmarks    # suite runner only (mock plant)
 uv run python -c "import envs"    # quick import check
 uv add <package>                  # add runtime dependency
 uv add --dev <package>            # add dev dependency (e.g. torch later)
 ```
+
+**Benchmarks** (Mehregan eval suite; needs MATLAB for real plant unless you inject a mock env in Python):
+
+```bash
+# Inspect planned runs without executing
+uv run rl-dbs -v benchmark --suite-name mehregan_eval_smoke --dry-run
+
+# Fast smoke suite (2 baselines × 2 seeds)
+uv run rl-dbs benchmark --suite-name mehregan_eval_smoke
+
+# Full suite — train DDPG first (artifacts/ddpg/{variant}_train0.pt)
+uv run rl-dbs benchmark --suite-name mehregan_eval
+
+# Filter controllers or override seeds
+uv run rl-dbs benchmark --suite-name mehregan_eval \
+  --controllers baseline:cdbs-130hz,ddpg:paper --seeds 0,1
+```
+
+Outputs land under `results/<suite_name>/` ([benchmarking.md](benchmarking.md) §6). Checkpoints default to `artifacts/ddpg/`.
 
 Commit `pyproject.toml` and `uv.lock` together after dependency changes.
 
@@ -201,7 +224,7 @@ Typical flow (details in [development/conventions.md](development/conventions.md
 2. **Edit code** in `envs/` or `controllers/<name>/`.
 3. **Run checks** — `uv run pytest` ([development/testing.md](development/testing.md)).
 4. **Update the spec** in the same PR/commit if behavior or the public API changed.
-5. **Benchmark** (Phase 4) — use a named suite via `rl-dbs benchmark`; log `controller`, `variant`, `seed` per [benchmarking.md](benchmarking.md). Until the CLI lands, use `scripts/replicate_mehregan_ddpg.py` and `controllers.ddpg` APIs directly.
+5. **Benchmark** (Phase 4) — run a named suite via `uv run rl-dbs benchmark --suite-name mehregan_eval` (or `mehregan_eval_smoke` for a quick check). For ad hoc train/eval without the suite matrix, use `scripts/replicate_mehregan_ddpg.py` or `controllers.ddpg` APIs directly. Every run logs `controller`, `variant`, and `seed` per [benchmarking.md](benchmarking.md).
 
 ### Common tasks
 

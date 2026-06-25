@@ -1,0 +1,9 @@
+# Fast smoke suite for CI and local checks (mock or MATLAB plant).
+name: mehregan_eval_smoke
+version: 1
+protocol: mehregan
+eval_steps: 2
+seeds: [0, 1]
+controllers:
+  - { controller: baseline, variant: none }
+  - { controller: baseline, variant: cdbs-130hz }

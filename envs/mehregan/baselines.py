@@ -85,3 +85,45 @@ def run_baseline_rollout(
         "p_beta": p_beta_trace,
         "steps": len(rewards) - 1,
     }
+
+
+def run_baseline_mehregan_eval(
+    env: MehreganEnv,
+    name: str,
+    *,
+    seed: int | None = None,
+    eval_steps: int = 5,
+) -> dict[str, object]:
+    """Mehregan §IV.A.2 eval for a fixed baseline: reset segment + ``eval_steps`` stim steps."""
+    if name not in default_baselines():
+        msg = f"unknown baseline {name!r}"
+        raise ValueError(msg)
+    action = baseline_action(name, env.alphabet)
+    _, info = env.reset(seed=seed)
+    total_reward = float(info.get("reward", 0.0))
+    rewards: list[float] = [total_reward]
+    p_beta_trace: list[float] = [float(info.get("p_beta_raw", np.nan))]
+    stim_trace: list[float] = [float(info.get("dbs_freq_hz", 0.0))]
+
+    for _ in range(eval_steps):
+        _, reward, terminated, truncated, info = env.step(action)
+        total_reward += reward
+        rewards.append(reward)
+        p_beta_trace.append(float(info.get("p_beta_raw", np.nan)))
+        stim_trace.append(float(info.get("dbs_freq_hz", 0.0)))
+        if terminated or truncated:
+            break
+
+    return {
+        "baseline": name,
+        "seed": seed,
+        "action": action,
+        "total_reward": total_reward,
+        "reward_sum": total_reward,
+        "rewards": rewards,
+        "p_beta": p_beta_trace,
+        "stim_freq_hz": stim_trace,
+        "steps": len(rewards) - 1,
+        "protocol": "mehregan_eval",
+        "eval_steps": eval_steps,
+    }
