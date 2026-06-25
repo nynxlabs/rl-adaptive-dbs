@@ -7,7 +7,7 @@ from pathlib import Path
 from benchmarks.loader import filter_runs, load_suite_results
 from benchmarks.summary import load_results_summary, render_summary_table, rows_to_csv
 
-FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "results"
+FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "benchmark_results"
 SUITE_DIR = FIXTURES / "mehregan_eval_smoke"
 
 

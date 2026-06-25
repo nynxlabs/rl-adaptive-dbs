@@ -7,7 +7,7 @@ from pathlib import Path
 
 from rl_adaptive_dbs.cli import main
 
-FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "results"
+FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "benchmark_results"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
