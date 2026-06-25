@@ -254,8 +254,8 @@ Invalid JSON: show row-level error badge; do not crash the TUI.
 | Step | Phase | Status |
 |------|-------|--------|
 | Spec (this document) | 1 | Done |
-| Fixture `results/` tree + loader unit tests | 4 | Not started |
-| Benchmarks tab only | 4 | Not started |
+| Fixture `results/` tree + loader unit tests | 4 | Done |
+| Benchmarks tab only | 4 | Done (Textual) |
 | Eval tab + timeseries sparklines | 5–6 | Not started |
 | Training tab + artifacts watcher | 8+ | Not started |
 | Logs tab + bookmarks | 8+ | Not started |

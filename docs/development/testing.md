@@ -17,7 +17,8 @@ Useful variants:
 
 ```bash
 uv run pytest -v                          # verbose
-uv run pytest tests/benchmarks          # suite runner (mock plant)
+uv run pytest tests/benchmarks          # suite runner + loader
+uv run pytest tests/rl_adaptive_dbs     # CLI + TUI data layer
 uv run pytest tests/envs                  # env / plant tests
 uv run pytest -m "not matlab"             # fast subset (CI default; skips MATLAB)
 uv run pytest -m matlab                   # plant bridge only (~6 min; needs license)

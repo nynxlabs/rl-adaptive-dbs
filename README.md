@@ -56,7 +56,7 @@ Specs: [plant.md](docs/plant.md), [environment.md](docs/environment.md), [contro
 
 ## Benchmarking
 
-Cross-controller comparison uses **per-paper eval suites** plus an optional **same-plant** suite; see [docs/benchmarking.md](docs/benchmarking.md) §3 and [docs/development/conventions.md](docs/development/conventions.md#cross-controller-benchmarking). Run suites with **`uv run rl-dbs benchmark --suite-name mehregan_eval`** (or `--suite suites/mehregan_eval_smoke.yaml` for a quick check); browse outputs under `results/`. **`rl-dbs-tui`** is planned for read-only comparison tables.
+Cross-controller comparison uses **per-paper eval suites** plus an optional **same-plant** suite; see [docs/benchmarking.md](docs/benchmarking.md) §3. Run suites with **`uv run rl-dbs benchmark`**, summarize with **`uv run rl-dbs summary`**, browse with **`uv run rl-dbs-tui`**. **`rl-dbs train`** / **`eval`** wrap `ddpg` for now.
 
 ## References
 

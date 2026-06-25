@@ -18,10 +18,12 @@ dependencies = [
 
 [project.scripts]
 rl-dbs = "rl_adaptive_dbs.cli:main"
+rl-dbs-tui = "rl_adaptive_dbs.tui:main"
 
 [dependency-groups]
 dev = [
     "pytest>=9.0.3",
+    "textual>=1.0.0",
 ]
 matlab = [
     "matlabengine==25.2.2",
