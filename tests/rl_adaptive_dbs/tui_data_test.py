@@ -6,7 +6,7 @@ from pathlib import Path
 
 from rl_adaptive_dbs.tui.data import refresh_suites, suite_table_rows, suite_status_line
 
-FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "results"
+FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "benchmark_results"
 
 
 def test_refresh_suites() -> None:

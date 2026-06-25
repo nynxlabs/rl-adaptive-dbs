@@ -1,0 +1,10 @@
+{
+  "controller": "ddpg",
+  "variant": "paper",
+  "seed": 0,
+  "run_id": "20260625-120030-c3d4",
+  "suite": "mehregan_eval_smoke",
+  "protocol": "mehregan",
+  "eval_steps": 2,
+  "checkpoint": "artifacts/ddpg/paper_train0.pt"
+}

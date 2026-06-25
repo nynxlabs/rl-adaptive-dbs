@@ -1,0 +1,9 @@
+{
+  "controller": "baseline",
+  "variant": "cdbs-130hz",
+  "seed": 0,
+  "run_id": "20260625-120001-a1b2",
+  "suite": "mehregan_eval_smoke",
+  "protocol": "mehregan",
+  "eval_steps": 2
+}

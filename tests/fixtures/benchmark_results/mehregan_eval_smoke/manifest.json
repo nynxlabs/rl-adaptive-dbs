@@ -1,0 +1,9 @@
+{
+  "name": "mehregan_eval_smoke",
+  "version": 1,
+  "protocol": "mehregan",
+  "seeds": [0, 1],
+  "planned_runs": 2,
+  "completed_runs": 2,
+  "eval_steps": 2
+}

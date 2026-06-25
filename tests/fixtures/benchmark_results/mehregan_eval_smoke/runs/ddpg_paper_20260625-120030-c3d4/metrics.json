@@ -1,0 +1,12 @@
+{
+  "controller": "ddpg",
+  "variant": "paper",
+  "seed": 0,
+  "run_id": "20260625-120030-c3d4",
+  "protocol": "mehregan_eval",
+  "p_beta_mean": 89.2,
+  "p_beta_final": 85.0,
+  "reward_sum": -12.4,
+  "stim_frequency_mean": 45.0,
+  "episode_length": 2
+}
