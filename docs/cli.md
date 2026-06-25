@@ -353,7 +353,7 @@ CI smoke tests may invoke `rl-dbs info` and `rl-dbs benchmark --dry-run` expecti
 | Spec (this document) | 1 | Done |
 | Entry point + `info`, `config show`, `summary` | 4 | Done |
 | `benchmark` suite runner | 4 | Done |
-| `train` / `eval` for `ddpg` (incl. PTQ/QAT variants) | 4 | Partial (`ddpg` FP; PTQ/QAT pending) |
+| `train` / `eval` for `ddpg` (incl. PTQ/QAT variants) | 4 | Done |
 | `train` / `eval` for `snn`, `sea_dbs` | 5 | Not started |
 | Cross-platform packaging + config persist | 8+ | Not started |
 

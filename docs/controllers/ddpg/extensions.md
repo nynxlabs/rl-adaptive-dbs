@@ -6,7 +6,7 @@
 
 ## 1. Quantization deeper dives
 
-Paper-aligned **PTQ** and **QAT** for Mehregan et al. are **Phase 4** scope — see [replication.md](replication.md) §6. This section covers extensions **beyond** §IV.A.3:
+Paper-aligned **PTQ** and **QAT** for Mehregan et al. are implemented in [replication.md](replication.md) §6 (`controllers/ddpg/quantization.py`). This section covers extensions **beyond** §IV.A.3:
 
 - **Mixed-precision quantization** — different bitwidths per layer based on sensitivity analysis.
 - **Quantization-aware fine-tuning** — start from a PTQ checkpoint and fine-tune with fake quantization for fewer training episodes than full QAT.

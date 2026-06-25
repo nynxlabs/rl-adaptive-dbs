@@ -11,7 +11,7 @@ Install, verify, and use **rl-adaptive-dbs** day to day. For **phases** and **st
 - A shared **plant** (Kumaravelu et al., 2016; MATLAB in `reference-material/`) wrapped for RL
 - A shared **Gymnasium-style environment** (`envs/`) — Mehregan et al. API (2 s steps, $P_\beta$, Eq. (8) reward)
 - **Controllers** (`controllers/ddpg` implemented; `snn`, `sea_dbs` placeholders until Phase 5) — one implementation per paper; `ddpg` uses `envs/` directly, `snn` and `sea_dbs` use **adapters** for their paper’s RL interface
-- **Benchmarking & CLI** (Phase 4) — `benchmarks/` runner, **`rl-dbs benchmark`**, **`rl-dbs summary`**, **`rl-dbs info`**, **`rl-dbs train`/`eval`** (`ddpg`), **`rl-dbs-tui`** (Benchmarks tab); PTQ/QAT pending — [benchmarking.md](benchmarking.md), [cli.md](cli.md), [tui.md](tui.md)
+- **Benchmarking & CLI** (Phase 4) — `benchmarks/` runner, **`rl-dbs`** (`benchmark`, `summary`, `info`, `train`/`eval`), **`rl-dbs-tui`** (Benchmarks tab); Mehregan **PTQ/QAT** in `controllers/ddpg/quantization.py` — [benchmarking.md](benchmarking.md), [cli.md](cli.md), [tui.md](tui.md)
 - **Setup scripts** — **`scripts/setup.sh`** (Python + optional MATLAB); MATLAB detail in **`scripts/matlab/`** — [matlab.md](matlab.md)
 
 Packages install in editable mode so local changes are importable immediately after `uv sync`.
@@ -98,7 +98,7 @@ uv run pytest -m "not matlab"
 - Expect `ok` from the import check.
 - Expect passing tests from the fast pytest subset. Details: [development/testing.md](development/testing.md).
 
-**Phase 3 (complete):** DDPG in `controllers/ddpg/` — train, eval, replication workflow (full-precision). **Phase 4 (current):** benchmark runner, **`rl-dbs`** CLI (`benchmark`, `summary`, `info`, `train`/`eval` for `ddpg`), **`rl-dbs-tui`** Benchmarks tab (**done**); Mehregan **PTQ/QAT** and fresh-VM validation remain — [development/roadmap.md](development/roadmap.md).
+**Phase 3 (complete):** DDPG in `controllers/ddpg/` — train, eval, replication workflow (full-precision). **Phase 4 (current):** benchmark runner, CLI/TUI, **PTQ/QAT** (**done** in code); **fresh-VM validation** and full MATLAB `mehregan_eval` replication runs remain — [development/roadmap.md](development/roadmap.md).
 
 ```python
 from envs import MehreganEnv, run_baseline_rollout
