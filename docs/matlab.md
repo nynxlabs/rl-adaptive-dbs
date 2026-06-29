@@ -360,6 +360,7 @@ Requires **Statistics** (upstream `randsample`, patched here) and **Signal Proce
 |---------|------------|
 | `matlab-env: MATLAB not found` | Set `MATLAB_ROOT` (§2.1–§2.3) |
 | `Licensing Error 1` | §4; existing install: §2.4 |
+| **Linux/WSL** `Licensing Error 9` / Host ID mismatch | WSL2 often changes `eth0` MAC on restart; license binds to the MAC at activation. Run `sudo bash scripts/matlab/ensure-wsl-hostid.sh` (creates `bond0` with the licensed MAC), or reactivate at [License Center](https://www.mathworks.com/licensecenter) with `cat /sys/class/net/eth0/address`. **Persist (recommended with `systemd=true`):** `sudo bash scripts/matlab/install-wsl-hostid-persist.sh` — installs a `matlab-wsl-hostid` oneshot + passwordless sudo for login fallback. Legacy: `/etc/wsl.conf` `[boot] command=` alone is unreliable when systemd is PID 1. |
 | **Linux/WSL** segfault on first launch | `source matlab-env.sh`; writable `~/.matlab/<RELEASE>` |
 | **Linux/WSL** `Unable to launch MVM server` | Install `xvfb` (§3.1); use `matlab` from `matlab-env.sh` |
 | **Linux/WSL** `libstdc++` / GLIBCXX on Ubuntu 24.04 | [MathWorks Ubuntu 24.04 guidance](https://www.mathworks.com/matlabcentral/answers/2150489); `matlab-env.sh` sets `LD_PRELOAD` when needed |
