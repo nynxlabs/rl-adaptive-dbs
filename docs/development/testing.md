@@ -121,9 +121,12 @@ Shared fixtures (env instances, seeds, reference traces) belong in `tests/confte
 
 Automated tests do **not** replace a clean-machine run. After changing `scripts/setup.sh`, `scripts/matlab/`, or install docs:
 
-1. On a **fresh VM or host** (only git + uv; optional MATLAB), run [setup.md](../setup.md) §2 **Fresh machine validation**.
-2. Confirm `bash scripts/setup.sh --python-only --non-interactive` exits 0.
-3. If MATLAB is in scope for that platform, run `bash scripts/matlab/verify.sh`.
-4. File doc or script fixes when prompts, paths, or dependencies drift.
+1. **Linux:** Multipass Ubuntu 24.04 on a Windows host — [setup.md](../setup.md) §2 **Fresh machine validation**.
+2. **Windows (no WSL):** Windows Sandbox + Git Bash — same section.
+3. Run `bash scripts/validate-fresh.sh` (or `bash scripts/setup.sh --python-only --non-interactive --validate`) and save the printed report block.
+4. If MATLAB is in scope, run `bash scripts/matlab/verify.sh` after `source scripts/matlab/env.sh`.
+5. File doc or script fixes when prompts, paths, or dependencies drift.
 
-CI default (`pytest -m "not matlab"`) is the fast gate; fresh-VM checks are the portability gate for other devices.
+**Timing:** expect **~10–20 minutes** per environment when healthy; Multipass launch can block up to **20 minutes** before timeout. **Troubleshooting** (catalog refresh, reboot after Sandbox enable, RAM): same section in [setup.md](../setup.md).
+
+**macOS** fresh validation is deferred (no maintainer hardware). CI default (`pytest -m "not matlab"`) is the fast gate; Multipass + Sandbox are the portability gate for Linux and Windows.

@@ -9,6 +9,7 @@ cd "$repo_root"
 WITH_MATLAB=""
 SKIP_TESTS=0
 INTERACTIVE=1
+RUN_VALIDATE=0
 
 usage() {
   cat <<'EOF'
@@ -21,6 +22,7 @@ Options:
   --python-only    Skip MATLAB (default in non-interactive mode)
   --with-matlab    Run scripts/matlab/setup.sh (interactive MATLAB flow)
   --skip-tests     Skip pytest after Python setup
+  --validate       After setup, run scripts/validate-fresh.sh --checks-only
   --non-interactive
                    No prompts; implies --python-only unless --with-matlab
   -h, --help       Show this help
@@ -29,6 +31,10 @@ Examples:
   bash scripts/setup.sh
   bash scripts/setup.sh --python-only
   bash scripts/setup.sh --with-matlab
+  bash scripts/setup.sh --python-only --non-interactive --validate
+
+Fresh Multipass / Sandbox hosts: bash scripts/validate-fresh.sh
+Windows host prerequisites: pwsh -File scripts/check-windows-host.ps1
 EOF
 }
 
@@ -53,6 +59,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --skip-tests)
       SKIP_TESTS=1
+      shift
+      ;;
+    --validate)
+      RUN_VALIDATE=1
       shift
       ;;
     --non-interactive)
@@ -121,5 +131,14 @@ if [[ "$WITH_MATLAB" -eq 1 ]]; then
   say ""
 fi
 
+if [[ "$RUN_VALIDATE" -eq 1 ]]; then
+  say "=== extended validation (validate-fresh.sh) ==="
+  bash "$_script_dir/validate-fresh.sh" --checks-only
+  say ""
+fi
+
 say "=== setup complete ==="
+if [[ "$RUN_VALIDATE" -eq 0 ]]; then
+  say "Fresh-host report: bash scripts/validate-fresh.sh"
+fi
 say "Next: docs/setup.md §5 (day-to-day commands)"
