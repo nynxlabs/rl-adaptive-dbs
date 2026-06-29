@@ -24,7 +24,9 @@ def validate_train_request(controller: str, variant: str) -> None:
 
 
 def default_checkpoint_dir(controller: str, variant: str) -> Path:
-    return Path("artifacts") / controller / variant
+    """Checkpoint root — files are ``{variant}_train{seed}.pt`` (flat, per suite YAML)."""
+    del variant  # filename carries variant; dir is per-controller
+    return Path("artifacts") / controller
 
 
 def train_controller(

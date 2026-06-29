@@ -47,6 +47,26 @@ def test_train_dry_run() -> None:
     assert code == 0
 
 
+def test_train_dry_run_checkpoint_path(capsys) -> None:
+    code = main(
+        [
+            "-v",
+            "train",
+            "--controller",
+            "ddpg",
+            "--variant",
+            "paper",
+            "--seeds",
+            "0",
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+    line = capsys.readouterr().out.strip().splitlines()[-1]
+    payload = json.loads(line)
+    assert payload["checkpoint"] == "artifacts/ddpg/paper_train0.pt"
+
+
 def test_eval_baseline_dry_run_skipped() -> None:
     """Baseline eval needs env; smoke test uses benchmark runner tests instead."""
     code = main(["info", "variants", "--controller", "baseline"])

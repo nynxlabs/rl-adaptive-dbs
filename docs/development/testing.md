@@ -39,10 +39,16 @@ tests/
 ├── conftest.py              # shared fixtures; skips @pytest.mark.matlab when unlicensed
 ├── imports_test.py          # smoke: editable install
 ├── docs_test.py             # spec link / section checks
+├── fixtures/
+│   └── benchmark_results/   # TUI + summary fixture tree
 ├── benchmarks/
 │   ├── suite_test.py        # YAML load, run expansion
 │   ├── runner_test.py       # mock-plant suite execution
+│   ├── loader_test.py       # results manifest loader
 │   └── cli_test.py          # rl-dbs benchmark dry-run
+├── rl_adaptive_dbs/
+│   ├── cli_commands_test.py # train/eval/info/summary smoke
+│   └── tui_data_test.py     # Benchmarks tab data layer
 ├── envs/
 │   ├── mock_plant.py        # helper (not collected)
 │   ├── biomarkers_test.py
@@ -53,14 +59,16 @@ tests/
 │   ├── matlab_biomarkers_test.py
 │   └── matlab_mehregan_env_test.py
 └── controllers/
-    ├── ddpg/
-    │   ├── buffer_test.py
-    │   ├── checkpoint_test.py
-    │   ├── eval_test.py
-    │   ├── matlab_trainer_test.py   # train + eval on MatlabPlant (@pytest.mark.matlab)
-    │   ├── networks_test.py
-    │   ├── replication_test.py
-    │   └── trainer_test.py
+    └── ddpg/
+        ├── buffer_test.py
+        ├── checkpoint_test.py
+        ├── checklist_test.py    # Mehregan §IV replication checklist
+        ├── eval_test.py
+        ├── matlab_trainer_test.py   # train + eval on MatlabPlant (@pytest.mark.matlab)
+        ├── networks_test.py
+        ├── quantization_test.py     # PTQ/QAT stubs
+        ├── replication_test.py
+        └── trainer_test.py
 ```
 
 Mirror **`envs/`** and **`controllers/<name>/`** when adding modules (e.g. `tests/envs/gym_api_test.py`, `tests/controllers/ddpg/actor_test.py`).
