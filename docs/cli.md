@@ -28,7 +28,7 @@ Register a console script in `pyproject.toml`:
 rl-dbs = "rl_adaptive_dbs.cli:main"
 ```
 
-The implementation package name (`rl_adaptive_dbs` vs top-level `envs`/`controllers`) is **intentionally open** until the CLI module is added; the **user-facing command** is fixed: `rl-dbs`.
+The implementation lives in **`rl_adaptive_dbs.cli`** (`rl_adaptive_dbs/cli.py`); the **user-facing command** is fixed: `rl-dbs`.
 
 ### 2.2 Recommended invocation
 
@@ -69,6 +69,7 @@ rl-dbs [--verbose | --quiet] [--seed SEED] <subcommand> [subcommand options]
 | `train` | 4 (`ddpg`), 5+ (others) | Train a controller variant. |
 | `eval` | 4 (`ddpg`), 5+ (others) | Evaluate a trained checkpoint on a suite or single rollout. |
 | `benchmark` | 4 | Run a full suite from a YAML manifest → `results/`. |
+| `summary` | 4 | Print comparison table (and optional CSV) from existing `results/`. |
 | `info` | 4 | Print available controllers, variants, suites, env summary. |
 | `config` | 4 (`show`), 8+ (`set` persist) | Show or set plant/env defaults. |
 
@@ -104,7 +105,7 @@ rl-dbs train --controller NAME --variant VARIANT [options]
 | `--variant` | Yes | Slug, e.g. `paper`, `init-30hz`, `ptq-int8`. Default replication id is `paper` ([development/conventions.md](development/conventions.md)). |
 | `--seeds` | No | Comma-separated training seeds (default: global `--seed` only). |
 | `--episodes` | No | Override training episode count when spec allows (Mehregan default **10** — [environment.md](environment.md) §8). |
-| `--checkpoint-dir` | No | Directory for checkpoints (default: `artifacts/<controller>/<variant>/`). |
+| `--checkpoint-dir` | No | Directory for checkpoints (default: `artifacts/<controller>/`; files named `{variant}_train{seed}.pt`). |
 | `--resume` | No | Path to checkpoint to resume training. |
 | `--hyperparams` | No | Path to JSON/YAML hyperparameter overlay (merged over variant defaults). |
 | `--adapter` | No | For `snn` / `sea_dbs`: force adapter on (default **true** for those controllers). Ignored for `ddpg` on Mehregan `envs/`. |
@@ -126,7 +127,7 @@ uv run rl-dbs train --controller ddpg --variant init-30hz --seeds 0,1,2
 
 # PTQ variant with hyperparameter file
 uv run rl-dbs train --controller ddpg --variant ptq-int8 \
-  --hyperparams configs/ddpg/ptq-int8.yaml --checkpoint-dir artifacts/ddpg/ptq-int8
+  --hyperparams configs/ddpg/ptq-int8.yaml --checkpoint-dir artifacts/ddpg
 ```
 
 ---
@@ -157,7 +158,7 @@ rl-dbs eval --controller NAME --variant VARIANT [options]
 ```bash
 # DDPG paper checkpoint on Mehregan eval protocol, one seed
 uv run rl-dbs eval --controller ddpg --variant paper \
-  --checkpoint artifacts/ddpg/paper/best.pt --suite mehregan_eval --seeds 42
+  --checkpoint artifacts/ddpg/paper_train0.pt --suite mehregan_eval --seeds 42
 
 # Baseline: conventional 130 Hz cDBS
 uv run rl-dbs eval --controller baseline --variant cdbs-130hz \
@@ -185,7 +186,7 @@ rl-dbs benchmark --suite PATH | --suite-name NAME [options]
 | `--results-dir` | No | Default `results/`. |
 | `--controllers` | No | Filter manifest entries: comma-separated `controller:variant` pairs. |
 | `--seeds` | No | Override manifest `seeds` list. |
-| `--parallel` | No | Worker count for independent runs (**intentionally open**: default 1 until runner exists). |
+| `--parallel` | No | Worker count for independent runs (**intentionally open**: default **1**; parallel workers not implemented). |
 | `--dry-run` | No | Print planned runs without executing. |
 
 **Manifest format:** As in [benchmarking.md](benchmarking.md) §5 (`name`, `version`, `protocol`, `seeds`, `controllers`, optional `metrics`, `env_ref`). The runner must not mix protocols inside one suite without bumping `version`.
@@ -219,7 +220,31 @@ uv run rl-dbs benchmark --suite suites/mehregan_eval.yaml --dry-run -v
 
 ---
 
-### 5.4 `info`
+### 5.4 `summary`
+
+Print a comparison table from an existing `results/<suite_name>/` tree (no new plant steps). Optional CSV export.
+
+```
+rl-dbs summary [--results-dir PATH] [--suite-name NAME] [--csv PATH] [--width N]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--results-dir` | Root containing suite subdirs (default: `results/`). |
+| `--suite-name` | Suite subdir to summarize (default: latest by mtime). |
+| `--csv` | Write the same rows to a CSV file. |
+| `--width` | Terminal table width (default **100**). |
+
+**Examples:**
+
+```bash
+uv run rl-dbs summary --suite-name mehregan_eval_smoke
+uv run rl-dbs summary --results-dir results/ --csv results/summary.csv
+```
+
+---
+
+### 5.5 `info`
 
 Print repository and runtime introspection (no plant steps required beyond optional env probe).
 
@@ -245,13 +270,13 @@ rl-dbs info [--json] [topic]
 **Example:**
 
 ```bash
-uv run rl-dbs info --json topic=env
+uv run rl-dbs info env --json
 uv run rl-dbs info controllers
 ```
 
 ---
 
-### 5.5 `config`
+### 5.6 `config`
 
 Show or set **non-secret** configuration values: plant integration step, DBS waveform defaults, biomarker bands, Mehregan RL step duration, reward threshold.
 
@@ -312,7 +337,7 @@ Structured training/benchmark events should use JSON lines in log files under `r
 | Benchmark metrics | `results/<suite>/runs/.../metrics.json` | [benchmarking.md](benchmarking.md) §4 |
 | Run config | `.../config.json` | `controller`, `variant`, `run_id`, `seed`, hyperparams, checkpoint path |
 | Suite manifest | `results/<suite>/manifest.json` | Suite version, env snapshot, git hash |
-| Checkpoints | `artifacts/` or per-run dir | **intentionally open** |
+| Checkpoints | `artifacts/<controller>/` | `{variant}_train{seed}.pt` (PTQ loads FP source checkpoint per variant) |
 
 Do not commit `results/` or large checkpoints ([development/conventions.md](development/conventions.md)).
 
@@ -357,7 +382,7 @@ CI smoke tests may invoke `rl-dbs info` and `rl-dbs benchmark --dry-run` expecti
 | `train` / `eval` for `snn`, `sea_dbs` | 5 | Not started |
 | Cross-platform packaging + config persist | 8+ | Not started |
 
-Prefer a thin `rl_adaptive_dbs/cli/` (or `cli/`) module that calls into `controllers.*` and `envs` per [benchmarking.md](benchmarking.md) §7.
+Prefer thin `rl_adaptive_dbs/*.py` modules (`cli.py`, `train_cmd.py`, `eval_cmd.py`, …) that call into `controllers.*` and `envs` per [benchmarking.md](benchmarking.md) §7.
 
 ---
 
@@ -376,7 +401,7 @@ Prefer a thin `rl_adaptive_dbs/cli/` (or `cli/`) module that calls into `control
 
 ### 1. CLI Python package layout
 
-**Fixed:** command name `rl-dbs`, console script entry. **Open:** module path (`rl_adaptive_dbs.cli` vs `cli.main`). **Decide in** first implementation PR.
+**Fixed:** command name `rl-dbs`, console script `rl_adaptive_dbs.cli:main`.
 
 ### 2. Persistent config file
 
@@ -392,7 +417,7 @@ Prefer a thin `rl_adaptive_dbs/cli/` (or `cli/`) module that calls into `control
 
 ### 5. Checkpoint naming and `artifacts/` layout
 
-**Fixed:** checkpoints outside git by default. **Open:** `best.pt` vs step-indexed files. **Decide in** training implementation.
+**Fixed:** `artifacts/<controller>/{variant}_train{seed}.pt`; suite YAML `checkpoint_dir` (default `artifacts/ddpg`). PTQ variants resolve the full-precision source checkpoint automatically.
 
 ### 6. `eval` without `--suite`
 

@@ -232,8 +232,8 @@ from controllers.ddpg import DDPGConfig, evaluate, train
 from envs import MehreganEnv
 
 env = MehreganEnv()
-result = train(env, DDPGConfig(variant="paper"), checkpoint_path="artifacts/ddpg/paper.pt")
-metrics = evaluate(env, "artifacts/ddpg/paper.pt")
+result = train(env, DDPGConfig(variant="paper"), checkpoint_path="artifacts/ddpg/paper_train0.pt")
+metrics = evaluate(env, "artifacts/ddpg/paper_train0.pt")
 env.close()
 ```
 
@@ -283,13 +283,6 @@ uv run pytest -m matlab tests/envs/matlab_plant_test.py -v   # ~6 min; one share
 uv run pytest -m "not matlab"                                   # fast CI subset
 ```
 
-```bash
-source scripts/matlab/env.sh
-uv sync --group matlab
-uv run pytest -m matlab tests/envs/matlab_plant_test.py -v   # ~6 min; one shared engine
-uv run pytest -m "not matlab"                                   # fast CI subset
-```
-
 ---
 
 ## 4. Repository layout
@@ -309,6 +302,7 @@ rl-adaptive-dbs/
 ├── reference-material/      # Kumaravelu et al. (2016) MATLAB model
 ├── scripts/
 │   ├── setup.sh             # Project setup (Python + optional MATLAB)
+│   ├── validate-fresh.sh    # Fresh-host validation (Multipass / Sandbox)
 │   └── matlab/              # MATLAB install, env, verify
 ├── results/                 # Benchmark output (`rl-dbs benchmark`; gitignored)
 ├── artifacts/               # Training checkpoints (optional; gitignored)
