@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 from controllers.ddpg.buffer import ReplayBuffer
@@ -30,6 +31,7 @@ class TrainMetrics:
 @dataclass
 class TrainResult:
     actor: Actor
+    policy: nn.Module
     critic: Critic
     metrics: TrainMetrics
     config: DDPGConfig
@@ -179,6 +181,7 @@ class DDPGTrainer:
 
         return TrainResult(
             actor=unwrap_actor(self.actor),
+            policy=self.actor,
             critic=self.critic,
             metrics=metrics,
             config=self.config,

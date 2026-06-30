@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from controllers.ddpg.config import DDPGConfig
+from controllers.ddpg.quantization import is_ptq_variant
 from rl_adaptive_dbs.env_factory import build_mehregan_env
 from rl_adaptive_dbs.info import CONTROLLER_VARIANTS
 
@@ -21,6 +22,14 @@ def validate_train_request(controller: str, variant: str) -> None:
     if controller != "ddpg":
         msg = f"training for {controller!r} is not implemented (Phase 5)"
         raise NotImplementedError(msg)
+    if is_ptq_variant(variant):
+        msg = (
+            f"variant {variant!r} is PTQ (post-training quantization, eval-only); "
+            "train variant 'paper' first, then eval with "
+            f"'rl-dbs eval --controller ddpg --variant {variant}' or "
+            f"scripts/replicate_mehregan_ddpg.py --variant {variant}"
+        )
+        raise ValueError(msg)
 
 
 def default_checkpoint_dir(controller: str, variant: str) -> Path:
