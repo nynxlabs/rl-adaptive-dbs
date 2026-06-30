@@ -5,14 +5,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import torch
 import torch.nn as nn
 
 from controllers.ddpg.buffer import ReplayBuffer, Transition
-from controllers.ddpg.checkpoint import load_actor, load_checkpoint, save_checkpoint
+from controllers.ddpg.checkpoint import load_actor, load_checkpoint, qat_state_dict_from_checkpoint, save_checkpoint
 from controllers.ddpg.config import DDPGConfig, init_baseline_for_variant
 from controllers.ddpg.eval import EvalConfig, RolloutResult, run_mehregan_eval, run_policy_rollout
 from controllers.ddpg.networks import Actor, Critic, clone_module, hard_update, soft_update
-from controllers.ddpg.quantization import is_ptq_variant, prepare_actor_for_eval, unwrap_actor
+from controllers.ddpg.quantization import QATActor, is_ptq_variant, prepare_actor_for_eval, unwrap_actor
 from controllers.ddpg.replication import (
     ReplicationConfig,
     ReplicationResult,
@@ -76,6 +77,7 @@ def train(
         save_checkpoint(
             checkpoint_path,
             actor=result.actor,
+            policy=result.policy,
             config=cfg,
             state_length=int(env.observation_space.shape[0]),
             n_actions=int(env.action_space.n),
@@ -94,6 +96,7 @@ def evaluate(
     """Evaluate a trained policy (checkpoint path or ``Actor``) on ``env``."""
     device = config.device if config is not None else "cpu"
     eval_variant: str
+    qat_state: dict[str, torch.Tensor] | None = None
 
     if isinstance(checkpoint, Actor):
         actor = checkpoint
@@ -101,22 +104,31 @@ def evaluate(
     elif isinstance(checkpoint, nn.Module):
         actor = unwrap_actor(checkpoint)
         eval_variant = variant or "paper"
+        if isinstance(checkpoint, QATActor):
+            qat_state = checkpoint.state_dict()
     else:
+        ckpt_payload = load_checkpoint(checkpoint, device="cpu")
         actor, ddpg_config = load_actor(checkpoint, device="cpu")
         eval_variant = variant or ddpg_config.variant
+        qat_state = qat_state_dict_from_checkpoint(ckpt_payload)
 
-    policy = prepare_actor_for_eval(actor, eval_variant, device=device)
+    policy = prepare_actor_for_eval(
+        actor,
+        eval_variant,
+        device=device,
+        qat_state_dict=qat_state if eval_variant == "qat" else None,
+    )
     eval_device = device if eval_variant != "ptq-int8" else "cpu"
 
     if protocol == "mehregan_eval":
-        payload = run_mehregan_eval(
+        eval_payload = run_mehregan_eval(
             env,
             policy,
             config=(config or EvalConfig(device=eval_device)),
         )
         if is_ptq_variant(eval_variant):
-            payload.setdefault("metrics_extra", {})["quantization"] = eval_variant
-        return payload
+            eval_payload.setdefault("metrics_extra", {})["quantization"] = eval_variant
+        return eval_payload
     if protocol == "training_episode":
         rollout = run_policy_rollout(
             env,

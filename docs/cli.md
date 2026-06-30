@@ -127,7 +127,12 @@ uv run rl-dbs train --controller ddpg --variant paper --seeds 42
 
 # 30 Hz initialization ablation
 uv run rl-dbs train --controller ddpg --variant init-30hz --seeds 0,1,2
+
+# QAT (fake-quant stubs during training)
+uv run rl-dbs train --controller ddpg --variant qat --seeds 0
 ```
+
+**PTQ variants (`ptq-fp16`, `ptq-int8`) are eval-only** — `train` exits with an error. Train `paper` (or `init-30hz`) first, then `eval` or `benchmark` with the PTQ slug ([controllers/ddpg/replication.md](controllers/ddpg/replication.md) §6).
 
 ---
 

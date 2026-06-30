@@ -7,9 +7,20 @@ from pathlib import Path
 from typing import Any
 
 import torch
+import torch.nn as nn
 
 from controllers.ddpg.config import DDPGConfig
 from controllers.ddpg.networks import Actor
+from controllers.ddpg.quantization import QATActor
+
+
+def fp_actor_state_dict(actor: Actor) -> dict[str, torch.Tensor]:
+    """Strip QAT fake-quant buffers from an actor that was trained with ``prepare_qat``."""
+    return {
+        key: value
+        for key, value in actor.state_dict().items()
+        if ".activation_post_process" not in key and ".weight_fake_quant" not in key
+    }
 
 
 def save_checkpoint(
@@ -19,6 +30,7 @@ def save_checkpoint(
     config: DDPGConfig,
     state_length: int,
     n_actions: int,
+    policy: nn.Module | None = None,
     extra: dict[str, Any] | None = None,
 ) -> Path:
     """Persist actor weights and training config for ``evaluate`` / resume."""
@@ -27,11 +39,13 @@ def save_checkpoint(
     payload: dict[str, Any] = {
         "controller": "ddpg",
         "variant": config.variant,
-        "actor_state_dict": actor.state_dict(),
+        "actor_state_dict": fp_actor_state_dict(actor),
         "ddpg_config": asdict(config),
         "state_length": int(state_length),
         "n_actions": int(n_actions),
     }
+    if isinstance(policy, QATActor):
+        payload["qat_state_dict"] = policy.state_dict()
     if extra:
         payload["extra"] = extra
     torch.save(payload, out)
@@ -61,3 +75,11 @@ def load_actor(
     actor.to(device)
     actor.eval()
     return actor, config
+
+
+def qat_state_dict_from_checkpoint(payload: dict[str, Any]) -> dict[str, torch.Tensor] | None:
+    """Return saved QAT observer/fake-quant state when present."""
+    state = payload.get("qat_state_dict")
+    if state is None:
+        return None
+    return state
