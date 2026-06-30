@@ -34,6 +34,7 @@ Examples:
   bash scripts/setup.sh --python-only --non-interactive --validate
 
 Fresh Multipass / Sandbox hosts: bash scripts/validate-fresh.sh
+  (see docs/development/fresh-validation.md — validation only, not training)
 Windows host prerequisites: pwsh -File scripts/check-windows-host.ps1
 EOF
 }
@@ -92,8 +93,22 @@ if ! command -v uv >/dev/null 2>&1; then
   exit 1
 fi
 
-say "=== Python dependencies (uv sync --all-groups) ==="
-uv sync --all-groups
+# Resolve MATLAB intent before sync so --python-only never pulls matlabengine.
+if [[ -z "$WITH_MATLAB" ]]; then
+  if [[ "$INTERACTIVE" -eq 1 ]] && [[ -t 0 ]]; then
+    WITH_MATLAB=""   # ask after Python setup
+  else
+    WITH_MATLAB=0
+  fi
+fi
+
+if [[ "$WITH_MATLAB" -eq 1 ]]; then
+  say "=== Python dependencies (uv sync --all-groups) ==="
+  uv sync --all-groups
+else
+  say "=== Python dependencies (uv sync --group dev) ==="
+  uv sync --group dev
+fi
 say ""
 
 say "=== Import check ==="
@@ -113,12 +128,13 @@ if [[ -z "$WITH_MATLAB" ]]; then
     else
       WITH_MATLAB=0
     fi
-  else
-    WITH_MATLAB=0
   fi
 fi
 
 if [[ "$WITH_MATLAB" -eq 1 ]]; then
+  say "=== MATLAB Python engine (uv sync --group matlab) ==="
+  uv sync --group matlab
+  say ""
   say "=== MATLAB setup ==="
   if [[ "$INTERACTIVE" -eq 1 ]] && [[ -t 0 ]]; then
     bash "$_script_dir/matlab/setup.sh"

@@ -125,16 +125,14 @@ Shared fixtures (env instances, seeds, reference traces) belong in `tests/confte
 
 ---
 
-## 6. Setup scripts and fresh VMs (Phase 4)
+## 6. Fresh VMs (Phase 4 portability)
 
-Automated tests do **not** replace a clean-machine run. After changing `scripts/setup.sh`, `scripts/matlab/`, or install docs:
+Automated tests do **not** replace a clean-machine run. After changing `scripts/setup.sh`, `scripts/matlab/`, or install docs, run the Multipass / Sandbox workflow — **validation only, not training**. Full guide: [fresh-validation.md](fresh-validation.md).
 
-1. **Linux:** Multipass Ubuntu 24.04 on a Windows host — [setup.md](../setup.md) §2 **Fresh machine validation**.
-2. **Windows (no WSL):** Windows Sandbox + Git Bash — same section.
+1. **Linux:** Multipass Ubuntu 24.04 on a Windows host.
+2. **Windows (no WSL):** Windows Sandbox + Git Bash.
 3. Run `bash scripts/validate-fresh.sh` (or `bash scripts/setup.sh --python-only --non-interactive --validate`) and save the printed report block.
-4. If MATLAB is in scope, run `bash scripts/matlab/verify.sh` after `source scripts/matlab/env.sh`.
+4. MATLAB verify (`bash scripts/matlab/verify.sh`) stays on **WSL**, not in Sandbox.
 5. File doc or script fixes when prompts, paths, or dependencies drift.
-
-**Timing:** expect **~10–20 minutes** per environment when healthy; Multipass launch can block up to **20 minutes** before timeout. **Troubleshooting** (catalog refresh, reboot after Sandbox enable, RAM): same section in [setup.md](../setup.md).
 
 **macOS** fresh validation is deferred (no maintainer hardware). CI default (`pytest -m "not matlab"`) is the fast gate; Multipass + Sandbox are the portability gate for Linux and Windows.
