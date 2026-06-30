@@ -74,7 +74,7 @@ pwsh -File scripts/check-windows-host.ps1
 | `scripts/run-parallel-fresh-validation.ps1` | **Desktop:** Multipass then Sandbox in parallel (staggered launch) |
 | `scripts/validation-repo.ps1` | WSL repo path for host logs + Sandbox folder map |
 | `scripts/bootstrap-fresh-linux.sh` | Inside Multipass: apt + uv + clone + validate |
-| `scripts/bootstrap-fresh-windows.ps1` | Inside Sandbox: winget Git + uv + validate (via `.wsb`) |
+| `scripts/bootstrap-fresh-windows.ps1` | Inside Sandbox: Git (GitHub release installer) + uv + validate |
 
 ### Host logs (WSL repo, gitignored)
 
@@ -105,10 +105,10 @@ On another machine, edit the default WSL path in `scripts/validation-repo.ps1`.
 
 | Phase | Multipass | Sandbox |
 |-------|-----------|---------|
-| VM / environment boot | ~1–3 min | ~1–2 min (+ winget Git install) |
-| `uv sync` + deps | ~3–10 min | ~3–10 min |
+| VM / environment boot | ~1–3 min | ~1–2 min |
+| Git + `uv sync` + deps | ~3–10 min | ~4–12 min (GitHub installer download + `uv sync`) |
 | pytest + CLI smoke | ~2–8 min | ~2–8 min |
-| **Typical total** | **~10–20 min** | **~15–25 min** (winget slower on first run) |
+| **Typical total** | **~10–20 min** | **~12–22 min** |
 
 Launch has **no artificial timeout** in our scripts — Multipass runs until the VM is up or the hypervisor reports failure. A VM in `Starting` for a long time may still be booting under load; see Troubleshooting if it never reaches **Running**.
 
@@ -165,7 +165,7 @@ pwsh -File scripts/launch-windows-sandbox-validation.ps1 -Clone
 
 `-Clone` maps only `scripts/` (bootstrap) and `.validation-logs/` (host log) — not the full repo.
 
-Inside Sandbox, `bootstrap-fresh-windows.ps1` installs **Git for Windows** (includes Git Bash) and **uv**, then runs `validate-fresh.sh` in Git Bash. **Host log:** `.validation-logs/sandbox.log` in this repo (survives closing Sandbox). Close Sandbox when done.
+Inside Sandbox, `bootstrap-fresh-windows.ps1` installs **Git for Windows** from a **host-prefetched** pinned `.exe` under `.validation-logs/cache/` (mapped into Sandbox; launcher downloads on the Windows host before boot). Fallback: download inside Sandbox if cache missing. Then **uv** and `validate-fresh.sh` in Git Bash. Bump the pin in `scripts/validation-repo.ps1`. **Host log:** `.validation-logs/sandbox.log`.
 
 **Manual** — do **not** install or enable WSL in Sandbox. Each Sandbox session starts empty unless you use the launcher above.
 

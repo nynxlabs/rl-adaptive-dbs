@@ -2,14 +2,14 @@
 # Run on Windows desktop — Administrator PowerShell:
 #   pwsh -ExecutionPolicy Bypass -File scripts/refresh-multipass-catalog.ps1
 #
-# See docs/setup.md § Fresh machine validation — Troubleshooting.
+# See docs/development/fresh-validation.md — Troubleshooting.
 
 #Requires -RunAsAdministrator
 $ErrorActionPreference = 'Stop'
 
 $mp = 'C:\Program Files\Multipass\bin\multipass.exe'
 if (-not (Test-Path $mp)) {
-    Write-Error 'multipass not found. Install from https://multipass.run or run scripts/prepare-desktop-host.ps1'
+    Write-Error 'multipass not found. Run: pwsh -File scripts/install-fresh-validation-host.ps1 -Multipass'
 }
 
 Write-Host 'Stopping multipassd...'

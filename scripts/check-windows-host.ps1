@@ -88,15 +88,16 @@ Write-Host ("Multipass: {0}" -f $(if ($mpOk) { 'OK' } else { 'INSTALL — https:
 
 if (-not $sandboxOk) {
     Write-Host ''
-    Write-Host 'Enable Sandbox (Administrator PowerShell):'
-    Write-Host '  Enable-WindowsOptionalFeature -Online -FeatureName Containers-DisposableClientVM -All'
+    Write-Host 'Install Sandbox (Administrator PowerShell):'
+    Write-Host '  pwsh -ExecutionPolicy Bypass -File scripts/install-fresh-validation-host.ps1 -Sandbox'
 }
 
 if (-not $mpOk) {
     Write-Host ''
-    Write-Host 'Install Multipass: https://multipass.run/install (Windows)'
+    Write-Host 'Install Multipass (Administrator PowerShell):'
+    Write-Host '  pwsh -ExecutionPolicy Bypass -File scripts/install-fresh-validation-host.ps1 -Multipass'
 }
 
 Write-Host ''
-Write-Host 'Next: docs/setup.md — Fresh machine validation'
+Write-Host 'Next: docs/development/fresh-validation.md'
 Write-Host '      bash scripts/validate-fresh.sh (inside Multipass or Sandbox Git Bash)'
