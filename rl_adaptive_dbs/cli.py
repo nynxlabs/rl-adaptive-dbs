@@ -9,18 +9,21 @@ from pathlib import Path
 
 from benchmarks.runner import BenchmarkOptions, run_suite
 from benchmarks.summary import load_results_summary, render_summary_table, write_summary_csv
-from benchmarks.suite import find_repo_root, parse_controller_filter, resolve_suite_path
+from benchmarks.suite import parse_controller_filter, resolve_suite_path
+from rl_adaptive_dbs.paths import find_repo_root
 from rl_adaptive_dbs.config_show import format_config_text, show_config
 from rl_adaptive_dbs.eval_cmd import eval_controller, records_to_summary_lines
 from rl_adaptive_dbs.info import build_info_payload, format_info_text
 from rl_adaptive_dbs.train_cmd import train_controller
+from rl_adaptive_dbs.user_config import config_show_payload, persist_config_key, preview_config_key, resolve_config
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="rl-dbs", description="Adaptive DBS replication tooling")
     parser.add_argument("--verbose", "-v", action="store_true", help="Extra logging")
     parser.add_argument("--quiet", "-q", action="store_true", help="Errors only")
-    parser.add_argument("--seed", type=int, default=42, help="Default RNG seed")
+    parser.add_argument("--config", type=Path, help="Path to .rl-dbs.yaml (overrides discovery)")
+    parser.add_argument("--seed", type=int, default=None, help="Default RNG seed (overrides config file)")
     sub = parser.add_subparsers(dest="command", required=True)
 
     train = sub.add_parser("train", help="Train a learned controller")
@@ -44,14 +47,14 @@ def _build_parser() -> argparse.ArgumentParser:
     benchmark = sub.add_parser("benchmark", help="Run a benchmark suite from YAML")
     benchmark.add_argument("--suite", type=Path, help="Path to suite YAML")
     benchmark.add_argument("--suite-name", help="Load suites/<name>.yaml from the project root")
-    benchmark.add_argument("--results-dir", type=Path, default=Path("results"))
+    benchmark.add_argument("--results-dir", type=Path)
     benchmark.add_argument("--controllers", help="Filter controller:variant pairs")
     benchmark.add_argument("--seeds", help="Override manifest seeds")
     benchmark.add_argument("--dry-run", action="store_true")
     benchmark.add_argument("--no-timeseries", action="store_true")
 
     summary = sub.add_parser("summary", help="Print comparison table from results/")
-    summary.add_argument("--results-dir", type=Path, default=Path("results"))
+    summary.add_argument("--results-dir", type=Path)
     summary.add_argument("--suite-name", help="Suite subdir under results/ (default: latest)")
     summary.add_argument("--csv", type=Path, help="Write CSV to this path")
     summary.add_argument("--width", type=int, default=100, help="Terminal table width")
@@ -63,10 +66,35 @@ def _build_parser() -> argparse.ArgumentParser:
 
     config = sub.add_parser("config", help="Show configuration defaults")
     config_sub = config.add_subparsers(dest="config_command", required=True)
+    config_set = config_sub.add_parser("set", help="Set a config key (use --persist to save)")
+    config_set.add_argument("key", help="Dot key, e.g. env.beta_t or plant.dt")
+    config_set.add_argument("value", help="Scalar or JSON/list value")
+    config_set.add_argument(
+        "--persist",
+        action="store_true",
+        help="Write to .rl-dbs.yaml (project root if not discovered)",
+    )
     config_show = config_sub.add_parser("show", help="Show config keys")
     config_show.add_argument("keys", nargs="*", help="Config keys (default: all)")
 
     return parser
+
+
+def _resolved(args: argparse.Namespace):
+    return resolve_config(config_path=args.config)
+
+
+def _default_seed(args: argparse.Namespace) -> int:
+    if args.seed is not None:
+        return int(args.seed)
+    return _resolved(args).default_seed
+
+
+def _results_dir(args: argparse.Namespace) -> Path:
+    explicit = getattr(args, "results_dir", None)
+    if explicit is not None:
+        return explicit
+    return _resolved(args).results_dir
 
 
 def _parse_seeds(raw: str | None, default: int) -> tuple[int, ...]:
@@ -93,7 +121,7 @@ def _cmd_train(args: argparse.Namespace) -> int:
         summaries = train_controller(
             args.controller,
             args.variant,
-            seeds=_parse_seeds(args.seeds, args.seed),
+            seeds=_parse_seeds(args.seeds, _default_seed(args)),
             episodes=args.episodes,
             checkpoint_dir=args.checkpoint_dir,
             dry_run=args.dry_run,
@@ -119,7 +147,7 @@ def _cmd_eval(args: argparse.Namespace) -> int:
         records = eval_controller(
             args.controller,
             args.variant,
-            seeds=_parse_seeds(args.seeds, args.seed),
+            seeds=_parse_seeds(args.seeds, _default_seed(args)),
             checkpoint=args.checkpoint,
             suite_name=args.suite,
             results_dir=args.results_dir,
@@ -230,16 +258,45 @@ def _cmd_info(args: argparse.Namespace) -> int:
 
 
 def _cmd_config(args: argparse.Namespace) -> int:
-    if args.config_command != "show":
-        print("rl-dbs config: only 'show' is implemented", file=sys.stderr)
-        return 2
-    try:
-        payload = show_config(args.keys or None)
-    except KeyError as exc:
-        print(f"rl-dbs config: {exc}", file=sys.stderr)
-        return 3
-    print(format_config_text(payload))
-    return 0
+    if args.config_command == "show":
+        try:
+            resolved = _resolved(args)
+            payload = show_config(args.keys or None, config_path=resolved.config_path)
+        except (KeyError, FileNotFoundError) as exc:
+            print(f"rl-dbs config: {exc}", file=sys.stderr)
+            return 3
+        print(format_config_text(payload, config_path=resolved.config_path))
+        return 0
+
+    if args.config_command == "set":
+        if not args.persist:
+            print(
+                "rl-dbs config set: preview only (re-run with --persist to save to .rl-dbs.yaml)",
+                file=sys.stderr,
+            )
+        try:
+            if args.persist:
+                path, resolved = persist_config_key(
+                    args.key,
+                    args.value,
+                    config_path=args.config,
+                )
+                print(f"wrote {path}")
+            else:
+                resolved = preview_config_key(
+                    args.key,
+                    args.value,
+                    config_path=args.config,
+                )
+            payload = config_show_payload(resolved, [args.key])
+            print(format_config_text(payload, config_path=resolved.config_path))
+        except (KeyError, FileNotFoundError, TypeError, ValueError) as exc:
+            print(f"rl-dbs config: {exc}", file=sys.stderr)
+            return 3
+        return 0
+
+    print(f"rl-dbs config: unknown subcommand {args.config_command!r}", file=sys.stderr)
+    return 2
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -248,6 +305,9 @@ def main(argv: list[str] | None = None) -> int:
     code = _check_global_flags(args)
     if code is not None:
         return code
+
+    if args.command in {"eval", "benchmark", "summary"}:
+        args.results_dir = _results_dir(args)
 
     handlers = {
         "train": _cmd_train,

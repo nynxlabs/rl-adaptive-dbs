@@ -18,6 +18,7 @@ Contributor rules for **rl-adaptive-dbs** — layout, spec-driven workflow, and 
 | Controller | [controllers/ddpg/replication.md](../controllers/ddpg/replication.md), [controllers/snn/replication.md](../controllers/snn/replication.md), [controllers/sea_dbs/replication.md](../controllers/sea_dbs/replication.md) | `controllers/<name>/` |
 | Benchmarks | [benchmarking.md](../benchmarking.md) | `benchmarks/` + `rl-dbs benchmark` |
 | CLI | [cli.md](../cli.md) | `rl_adaptive_dbs.cli` (Phase 4 start) |
+| User config | [cli.md](../cli.md) §2.3, §5.6 | `rl_adaptive_dbs/user_config.py`, `env_factory.py` |
 | TUI | [tui.md](../tui.md) | `rl_adaptive_dbs.tui` (Phase 4 start) |
 
 ## Naming and layout
@@ -59,4 +60,5 @@ Do **not** put `snn` and `ddpg` in one suite and assume the same **reward_sum** 
 Do **not** commit:
 
 - `.venv/`, `results/`, MATLAB cache files
+- `.rl-dbs.yaml`, `.rl-dbs.yml` (local overrides; template: `.rl-dbs.example.yaml`)
 - Secrets, machine-local paths, large checkpoints (until an artifact policy exists)

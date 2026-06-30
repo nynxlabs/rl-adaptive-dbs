@@ -242,8 +242,9 @@ uv run rl-dbs eval --controller baseline --variant cdbs-130hz --seeds 0
 uv run rl-dbs-tui --results-dir results/
 uv run rl-dbs-tui --ascii --results-dir results/
 
-# Introspection
+# Introspection and user config
 uv run rl-dbs info
+cp .rl-dbs.example.yaml .rl-dbs.yaml   # optional local overrides (gitignored)
 uv run rl-dbs config show env.dt_rl env.beta_t
 ```
 

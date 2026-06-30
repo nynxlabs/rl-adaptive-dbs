@@ -13,7 +13,7 @@ from benchmarks.results import (
 from benchmarks.runner import env_snapshot, execute_planned_run, make_run_id, run_dir_name
 from benchmarks.schema import ControllerEntry, PlannedRun, RunRecord, SuiteManifest
 from benchmarks.suite import find_repo_root, load_suite
-from envs.mehregan import MehreganEnv
+from rl_adaptive_dbs.env_factory import build_mehregan_env
 from controllers.ddpg.quantization import fp_source_variant, is_ptq_variant
 from rl_adaptive_dbs.info import CONTROLLER_VARIANTS
 
@@ -86,7 +86,7 @@ def eval_controller(
             eval_steps=eval_steps,
         )
 
-    env = MehreganEnv()
+    env = build_mehregan_env()
     snapshot = env_snapshot(env)
     records: list[RunRecord] = []
     try:

@@ -86,6 +86,8 @@ cp "/mnt/c/Users/<you>/Downloads/license.lic" ~/MATLAB/licenses/
 
 **Manual activation (License Center):** OS = **Linux**; **Host ID** = `cat /sys/class/net/eth0/address`; **login name** = `whoami`.
 
+**WSL Host ID:** `source scripts/matlab/env.sh` on WSL runs `ensure-wsl-hostid.sh` when the licensed MAC drifts (see §7). For a one-time fix: `sudo bash scripts/matlab/ensure-wsl-hostid.sh`. To persist across reboots: `sudo bash scripts/matlab/install-wsl-hostid-persist.sh`.
+
 **Headless WSL:** `matlab-env.sh` wraps `xvfb-run` when `DISPLAY` is unset. Install §3.1 packages if batch mode fails.
 
 ### 2.2 macOS

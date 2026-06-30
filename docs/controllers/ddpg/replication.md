@@ -145,7 +145,9 @@ Optional for replication of §IV.A.3:
 | Mode | When | Notes |
 |------|------|------|
 | **PTQ** | After full-precision training; **inference** only | PyTorch-style **dynamic** weight quantization mentioned in the paper; activations mapped with Eqs. (9)–(11). Evaluated at **FP16** and **INT8** in §IV.A.3. |
-| **QAT** | During training | **Fake quantization** on selected layers; actor: quant stub on **input**, dequant stub on **logits** before action selection (§III.D). Paper reports **weaker** beta suppression than PTQ under **10 episodes**; longer training may be needed. |
+| **QAT** | During training | **Fake quantization** on selected layers; actor: quant stub on **input**, dequant stub on **logits** before action selection (§III.D). Implemented via PyTorch eager-mode `prepare_qat` on `Conv1d` / `Linear` plus input/output stubs (`controllers/ddpg/quantization.py`). Checkpoints store FP actor weights plus `qat_state_dict` (observer / fake-quant buffers) for eval. Paper reports **weaker** beta suppression than PTQ under **10 episodes**; longer training may be needed. |
+
+**Implementation notes:** QAT uses the platform default eager backend (`fbgemm` on x86, `qnnpack` on ARM). Training device defaults to CPU (`DDPGConfig.device`). PTQ variants never train — they load a `paper` checkpoint and quantize at eval only.
 
 **Environment contract:** Quantization changes **network weights/activations**, not plant timing or biomarker definition. The **env** step API stays as in [environment.md](../../environment.md).
 

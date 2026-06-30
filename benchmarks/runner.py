@@ -20,7 +20,6 @@ from benchmarks.results import (
 from benchmarks.schema import PlannedRun, RunRecord, SuiteManifest
 from benchmarks.suite import expand_planned_runs, find_repo_root, load_suite
 from envs.mehregan.baselines import default_baselines, run_baseline_mehregan_eval
-from envs.mehregan.config import MehreganEnvConfig
 from envs.mehregan.env import MehreganEnv
 
 
@@ -202,9 +201,9 @@ def run_suite(
     owns_env = env is None
     active_env = env
     if active_env is None:
-        from envs.mehregan import MehreganEnv
+        from rl_adaptive_dbs.env_factory import build_mehregan_env
 
-        active_env = MehreganEnv()
+        active_env = build_mehregan_env()
 
     records: list[RunRecord] = []
     try:
@@ -248,4 +247,6 @@ def run_suite(
 
 def mehregan_env_config_snapshot() -> dict[str, Any]:
     """Default Mehregan env settings for manifest ``env`` block."""
-    return asdict(MehreganEnvConfig())
+    from rl_adaptive_dbs.user_config import resolve_config
+
+    return asdict(resolve_config().env)

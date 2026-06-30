@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from controllers.ddpg.config import DDPGConfig
-from envs.mehregan import MehreganEnv
+from rl_adaptive_dbs.env_factory import build_mehregan_env
 from rl_adaptive_dbs.info import CONTROLLER_VARIANTS
 
 
@@ -58,7 +58,7 @@ def train_controller(
             summaries.append({**plan, "dry_run": True})
             continue
 
-        env = MehreganEnv()
+        env = build_mehregan_env()
         try:
             from controllers.ddpg import train
 
