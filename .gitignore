@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 results/
 artifacts/
+.validation-logs/
 
 # My own (wilzen3476) personal git ignores
 AGENTS.md

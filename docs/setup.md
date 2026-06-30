@@ -40,7 +40,7 @@ cd rl-adaptive-dbs
 bash scripts/setup.sh
 ```
 
-`scripts/setup.sh` runs `uv sync --all-groups`, import check, and fast `pytest` (`-m "not matlab"`). It can optionally delegate to **`scripts/matlab/setup.sh`** for the Kumaravelu plant bridge.
+`scripts/setup.sh` runs `uv sync --group dev` (Python + pytest tooling). With `--with-matlab` it also syncs the **matlab** group and delegates to **`scripts/matlab/setup.sh`**. Use `uv sync --all-groups` only when you want every optional group in one step on a dev machine.
 
 | Flag | Effect |
 |------|--------|
@@ -72,132 +72,11 @@ Details: activation, `uv add`, pinning Python → [development/venv.md](developm
 
 ### Fresh machine validation (Phase 4)
 
-Confirm the repo works on **other devices**, not only your daily machine. **Recommended on Windows hosts:** **Multipass** (fresh **Linux**) + **Windows Sandbox** (fresh **Windows**, Git Bash, **no WSL**). **macOS** is deferred until hardware is available.
+Periodic **portability** check on clean Linux (Multipass) and Windows (Sandbox) — **testing only**, not for DDPG training or MATLAB plant work. Full procedure, scripts, timing, and troubleshooting: [development/fresh-validation.md](development/fresh-validation.md).
 
-**Where commands run:** launchers (`run-multipass-linux-validation.ps1`, `launch-windows-sandbox-validation.ps1`, `check-windows-host.ps1`) run on the **Windows desktop** in **PowerShell** — not inside WSL. Validation itself runs **`bash scripts/validate-fresh.sh`** (Git Bash in Sandbox; bash in the Multipass guest).
+**Host install (desktop Admin):** `pwsh -File scripts/install-fresh-validation-host.ps1` (`-Sandbox` / `-Multipass` optional). From WSL: `bash scripts/install-fresh-validation-host.sh`. Logs: `.validation-logs/` (gitignored).
 
-#### One-time host setup
-
-Install **Multipass** on the Windows desktop ([multipass.run](https://multipass.run)) — not inside WSL. Enable **Windows Sandbox** (Settings → System → Optional features → **Windows Sandbox**; requires Pro/Enterprise and virtualization).
-
-```powershell
-# Windows desktop — Administrator PowerShell (first time)
-pwsh -ExecutionPolicy Bypass -File scripts/prepare-desktop-host.ps1
-# Reboot if prompted, then:
-pwsh -File scripts/check-windows-host.ps1
-```
-
-Check readiness any time:
-
-```powershell
-pwsh -File scripts/check-windows-host.ps1
-```
-
-#### Scripts
-
-| Script | Role |
-|--------|------|
-| `scripts/setup.sh` | Install deps, import check, pytest; optional MATLAB; `--validate` for report |
-| `scripts/validate-fresh.sh` | Fresh-host run: setup + CLI smoke + **report block** (Multipass / Sandbox) |
-| `scripts/check-windows-host.ps1` | Hyper-V, Sandbox, Multipass readiness on Windows |
-| `scripts/prepare-desktop-host.ps1` | **Admin:** enable Sandbox + install Multipass |
-| `scripts/refresh-multipass-catalog.ps1` | **Admin:** fix stale Multipass catalog (see Troubleshooting) |
-| `scripts/run-multipass-linux-validation.ps1` | **Desktop:** launch Multipass VM and run validation |
-| `scripts/launch-windows-sandbox-validation.ps1` | **Desktop:** open Sandbox with repo mounted + validate |
-| `scripts/bootstrap-fresh-linux.sh` | Inside Multipass (no mount): apt + uv + clone + validate |
-| `scripts/bootstrap-fresh-windows.ps1` | Inside Sandbox: winget Git + uv + validate (via `.wsb`) |
-
-**Pass (Python-only):** `bash scripts/validate-fresh.sh` exits 0 and prints a report block. Shorthand after setup on an existing clone: `bash scripts/setup.sh --python-only --non-interactive --validate`. **With MATLAB (optional):** `bash scripts/matlab/verify.sh` after `source scripts/matlab/env.sh` — [matlab.md](matlab.md).
-
-**What `validate-fresh.sh` runs:** `setup.sh --python-only --non-interactive --skip-tests`, then import check, `pytest -m "not matlab"`, and CLI smoke (`rl-dbs info`, `rl-dbs benchmark --dry-run`).
-
-#### How long it takes (when healthy)
-
-| Phase | Multipass | Sandbox |
-|-------|-----------|---------|
-| VM / environment boot | ~1–3 min | ~1–2 min (+ winget Git install) |
-| `uv sync` + deps | ~3–10 min | ~3–10 min |
-| pytest + CLI smoke | ~2–8 min | ~2–8 min |
-| **Typical total** | **~10–20 min** | **~15–25 min** (winget slower on first run) |
-
-Launch can take up to **20 minutes** before Multipass reports failure (`--timeout 1200` in `run-multipass-linux-validation.ps1`). If the VM stays in `Starting` with no IP for many minutes, see Troubleshooting — do not assume the test is still making progress.
-
-Record OS version, blockers, and doc fixes in [development/roadmap.md](development/roadmap.md) or [matlab.md](matlab.md) when something fails only on one platform.
-
-#### Linux — Multipass (Ubuntu guest)
-
-**One command (Windows desktop PowerShell)** — mounts your working tree (adjust distro/user path):
-
-```powershell
-$repo = '\\wsl.localhost\Ubuntu\home\nynxbox\neuroengineering\rl-adaptive-dbs'
-pwsh -ExecutionPolicy Bypass -File "$repo\scripts\run-multipass-linux-validation.ps1" -RepoPath $repo
-```
-
-`\\wsl$\...` may work on some hosts; prefer **`\\wsl.localhost\...`** if mount or path resolution fails.
-
-Or clone from GitHub inside the VM (no mount):
-
-```powershell
-pwsh -File scripts/run-multipass-linux-validation.ps1
-```
-
-Options: `-Memory 2G` (default; raise to `4G` only if the host has plenty of free RAM), `-KeepVm` (leave VM for debugging).
-
-**Manual** — from **PowerShell on the Windows host**:
-
-```powershell
-multipass launch 24.04 --name rl-dbs-linux --cpus 2 --memory 2G --disk 20G --timeout 1200
-multipass mount C:\path\to\rl-adaptive-dbs rl-dbs-linux:/mnt/rl-adaptive-dbs
-multipass shell rl-dbs-linux
-```
-
-Inside the Ubuntu VM (only **git** + **uv** before clone):
-
-```bash
-sudo apt update && sudo apt install -y git curl ca-certificates
-curl -LsSf https://astral.sh/uv/install.sh | sh
-source ~/.bashrc
-
-git clone https://github.com/wilzen3476/rl-adaptive-dbs.git
-cd rl-adaptive-dbs
-bash scripts/validate-fresh.sh
-```
-
-When finished: `exit`, then on the host `multipass delete rl-dbs-linux --purge` for a clean slate next time.
-
-#### Windows — Sandbox (Git Bash, no WSL)
-
-**One command (Windows desktop PowerShell)** — maps this repo into Sandbox and runs validation:
-
-```powershell
-pwsh -File scripts/launch-windows-sandbox-validation.ps1
-```
-
-Inside Sandbox, `bootstrap-fresh-windows.ps1` installs **Git for Windows** (includes Git Bash) and **uv**, then runs `validate-fresh.sh` in Git Bash. Watch **`C:\validation-log.txt`** in the Sandbox window. Close Sandbox when done.
-
-**Manual** — do **not** install or enable WSL in Sandbox. Each Sandbox session starts empty unless you use the launcher above.
-
-#### Troubleshooting
-
-| Symptom | What to try |
-|---------|-------------|
-| `launch failed: Remote "" is unknown or unreachable` | **Admin:** `pwsh -File scripts/refresh-multipass-catalog.ps1` |
-| Multipass VM stuck `Starting`, no IP | Wait up to launch timeout; close heavy apps; retry after reboot; run one validation at a time if RAM is tight |
-| `Not enough memory` starting VM | Default `-Memory 2G`; free RAM on the host (close apps). Do **not** run `wsl --shutdown` from automation — only if **you** choose to |
-| `WindowsSandbox.exe` missing after enable | Full **Windows reboot** after `prepare-desktop-host.ps1` |
-| Multipass not on PATH | Use `C:\Program Files\Multipass\bin\multipass.exe` or re-open PowerShell after winget install |
-| Sandbox window easy to miss | Check taskbar; log at `C:\validation-log.txt` inside the window |
-| Mount / `cd: /mnt/rl-adaptive-dbs` failed | Ensure `multipass mount <host-path> <vm>:/mnt/rl-adaptive-dbs` order (host path first) |
-
-#### Results template
-
-| Date | Environment | Python-only | MATLAB (optional) | Notes |
-|------|-------------|-------------|-------------------|-------|
-| | Multipass Ubuntu 24.04 | | | |
-| | Windows Sandbox + Git Bash | | | |
-| | macOS | deferred | deferred | no hardware |
-
-Paste the `=== rl-adaptive-dbs fresh validation ===` block from `validate-fresh.sh` into the Notes column or an issue.
+From **Windows desktop PowerShell**: `pwsh -File scripts/check-windows-host.ps1`, then the Multipass or Sandbox launcher in that doc. Inside the guest: `bash scripts/validate-fresh.sh`.
 
 ---
 

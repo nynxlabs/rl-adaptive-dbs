@@ -105,8 +105,8 @@ Phases 8+ are intentionally open; prioritize equivalence and replication paths b
 | `controllers/ddpg/` | Done (FP + PTQ/QAT) | Full-precision `paper` / `init-30hz`; PTQ/QAT in `quantization.py` |
 | `controllers/snn/` | Placeholder | — |
 | `controllers/sea_dbs/` | Placeholder | — |
-| [matlab.md](../matlab.md) + `scripts/matlab/` | Done (WSL) | Fresh validation: Multipass (Linux) + Sandbox (Windows); macOS deferred — [setup.md](../setup.md) § Fresh machine validation |
-| Project setup script | Done | `scripts/setup.sh`, `scripts/validate-fresh.sh`, Multipass + Sandbox scripts — Phase 4; see [setup.md](../setup.md) § Fresh machine validation |
+| [matlab.md](../matlab.md) + `scripts/matlab/` | Done (WSL) | Fresh validation: Multipass (Linux) + Sandbox (Windows); macOS deferred — [fresh-validation.md](fresh-validation.md) |
+| Project setup script | Done | `scripts/setup.sh`, `scripts/validate-fresh.sh`, Multipass + Sandbox scripts — Phase 4; see [fresh-validation.md](fresh-validation.md) |
 | MATLAB plant bridge | Done | `envs/plant/` + `envs/mehregan/`; `@pytest.mark.matlab` equivalence suite |
 | Benchmark suite runner | Done | `benchmarks/` + `suites/mehregan_eval*.yaml`; baselines + `ddpg` eval |
 | `rl-dbs` CLI | Partial | `benchmark`, `summary`, `info`, `config show`, `train`/`eval` (`ddpg`); `snn`/`sea_dbs` Phase 5 |

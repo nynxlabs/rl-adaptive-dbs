@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Bootstrap a fresh Linux host (Multipass Ubuntu) with git + uv, then validate.
-# Called by scripts/run-multipass-linux-validation.ps1 or run manually inside the VM.
+# Bootstrap a fresh Linux Multipass guest: apt + uv + git clone + validate-fresh.sh.
+# Used by scripts/run-multipass-linux-validation.ps1 (always clone from GitHub).
 set -euo pipefail
 
 REPO_URL="${RL_ADAPTIVE_DBS_REPO_URL:-https://github.com/wilzen3476/rl-adaptive-dbs.git}"

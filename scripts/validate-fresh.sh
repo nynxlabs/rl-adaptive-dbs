@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fresh-host validation for Phase 4 portability checks.
 # Run inside Multipass Ubuntu (Linux) or Windows Sandbox (Git Bash) after git clone.
-# See docs/setup.md § "Fresh machine validation".
+# See docs/development/fresh-validation.md.
 set -euo pipefail
 
 _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -9,11 +9,16 @@ repo_root="$(cd "$_script_dir/.." && pwd)"
 cd "$repo_root"
 
 RUN_SETUP=1
+LOG_FILE="${VALIDATION_LOG:-}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --checks-only)
       RUN_SETUP=0
       shift
+      ;;
+    --log-file)
+      LOG_FILE="$2"
+      shift 2
       ;;
     -h | --help)
       cat <<'EOF'
@@ -23,6 +28,7 @@ Run project setup (optional) and print a copy-paste validation report.
 
 Options:
   --checks-only   Skip scripts/setup.sh (deps already installed)
+  --log-file PATH Append all output to PATH (also printed); or set VALIDATION_LOG
   -h, --help      Show this help
 
 Typical flow (Multipass or Windows Sandbox):
@@ -34,7 +40,7 @@ Windows host prerequisites (run on desktop PowerShell):
   pwsh -File scripts/check-windows-host.ps1
   pwsh -File scripts/refresh-multipass-catalog.ps1   # if Multipass launch fails (Admin)
 
-See docs/setup.md — Fresh machine validation (timing, troubleshooting).
+See docs/development/fresh-validation.md (timing, troubleshooting).
 
 Related:
   bash scripts/setup.sh --python-only --non-interactive   # install + pytest only
@@ -49,6 +55,14 @@ EOF
   esac
 done
 
+if [[ -n "$LOG_FILE" ]]; then
+  mkdir -p "$(dirname "$LOG_FILE")"
+  {
+    printf '=== validate-fresh.sh started %s ===\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u)"
+  } >>"$LOG_FILE"
+  exec > >(tee -a "$LOG_FILE") 2>&1
+fi
+
 if ! command -v uv >/dev/null 2>&1; then
   echo "validate-fresh.sh: uv not found — install https://docs.astral.sh/uv/" >&2
   exit 1
@@ -57,7 +71,7 @@ fi
 if [[ "$RUN_SETUP" -eq 1 ]]; then
   bash "$_script_dir/setup.sh" --python-only --non-interactive --skip-tests
 else
-  uv sync --all-groups
+  uv sync --group dev
 fi
 
 say_section() { printf '\n=== %s ===\n' "$*"; }
