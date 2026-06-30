@@ -1,0 +1,15 @@
+[Unit]
+Description=MATLAB WSL stable Host ID (bond0 MAC for node-locked license)
+Documentation=file:/home/nynxbox/neuroengineering/rl-adaptive-dbs/docs/matlab.md
+After=network-pre.target
+Before=network-online.target
+DefaultDependencies=no
+ConditionPathExists=/home/nynxbox/neuroengineering/rl-adaptive-dbs/scripts/matlab/ensure-wsl-hostid.sh
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash /home/nynxbox/neuroengineering/rl-adaptive-dbs/scripts/matlab/ensure-wsl-hostid.sh
+
+[Install]
+WantedBy=multi-user.target
