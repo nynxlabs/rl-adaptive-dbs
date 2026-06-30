@@ -10,8 +10,7 @@ from typing import Any
 
 from benchmarks.git import git_commit_short
 from benchmarks.suite import default_suites_dir, find_repo_root
-from envs.mehregan.config import MehreganEnvConfig
-from envs.plant.config import PlantConfig
+from rl_adaptive_dbs.user_config import resolve_config
 
 CONTROLLER_VARIANTS: dict[str, tuple[str, ...]] = {
     "ddpg": ("paper", "init-30hz", "ptq-fp16", "ptq-int8", "qat"),
@@ -30,7 +29,8 @@ def list_suite_names(repo_root: Path | None = None) -> list[str]:
 
 
 def env_info() -> dict[str, Any]:
-    cfg = MehreganEnvConfig()
+    resolved = resolve_config()
+    cfg = resolved.env
     return {
         "step_duration_s": cfg.step_duration_s,
         "max_episode_steps": cfg.max_episode_steps,
@@ -38,12 +38,12 @@ def env_info() -> dict[str, Any]:
         "reward_scale": cfg.reward_scale,
         "observation_scale": cfg.observation_scale,
         "state_length": cfg.state_length,
-        "biomarker_band_hz": [13, 35],
+        "biomarker_band_hz": list(resolved.biomarker_band_hz),
     }
 
 
 def plant_info() -> dict[str, Any]:
-    cfg = PlantConfig()
+    cfg = resolve_config().plant
     return {
         "dt_ms": cfg.dt_ms,
         "pd": cfg.pd,

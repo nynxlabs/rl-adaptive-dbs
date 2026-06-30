@@ -47,12 +47,14 @@ Do not require users to set `PYTHONPATH` manually; editable installs from `uv sy
 
 ### 2.3 Configuration discovery
 
-The CLI resolves paths in this order (first hit wins):
+Plant, environment, and global CLI defaults merge in this order (later wins):
 
-1. Explicit flags (`--config`, `--suite`, `--checkpoint`, `--results-dir`).
-2. Environment variables prefixed `RL_DBS_` (e.g. `RL_DBS_RESULTS_DIR`).
-3. Project-local file `.rl-dbs.toml` or `.rl-dbs.yaml` in the current working directory, then parent walk up to the git root (optional—**intentionally open** whether to ship file-based config in v1).
-4. Built-in defaults documented in §7 (`config` subcommand).
+1. Built-in dataclass defaults (`envs/plant/config.py`, `envs/mehregan/config.py`).
+2. User file **`.rl-dbs.yaml`** (or `.rl-dbs.yml`): walk from the current working directory up to the git root. Template: **`.rl-dbs.example.yaml`** at the repo root (`cp .rl-dbs.example.yaml .rl-dbs.yaml`).
+3. Environment variables: `RL_DBS_CONFIG` (explicit file path), `RL_DBS_SEED`, `RL_DBS_RESULTS_DIR`.
+4. Explicit CLI flags (`--config`, `--seed`, `--results-dir`, etc.).
+
+`train`, `eval`, and `benchmark` construct `MehreganEnv` from the merged file settings when present. Copy **`.rl-dbs.example.yaml`** to **`.rl-dbs.yaml`** to customize (the latter is gitignored by default).
 
 All filesystem paths accepted on the command line are normalized with `pathlib.Path` and expanded for `~` on every platform.
 
@@ -61,7 +63,7 @@ All filesystem paths accepted on the command line are normalized with `pathlib.P
 ## 3. Command structure
 
 ```
-rl-dbs [--verbose | --quiet] [--seed SEED] <subcommand> [subcommand options]
+rl-dbs [--verbose | --quiet] [--config PATH] [--seed SEED] <subcommand> [subcommand options]
 ```
 
 | Subcommand | Phase (roadmap) | Role |
@@ -71,7 +73,7 @@ rl-dbs [--verbose | --quiet] [--seed SEED] <subcommand> [subcommand options]
 | `benchmark` | 4 | Run a full suite from a YAML manifest → `results/`. |
 | `summary` | 4 | Print comparison table (and optional CSV) from existing `results/`. |
 | `info` | 4 | Print available controllers, variants, suites, env summary. |
-| `config` | 4 (`show`), 8+ (`set` persist) | Show or set plant/env defaults. |
+| `config` | 4 (`show`, `set --persist`) | Show or persist plant/env defaults. |
 
 Global flags apply before the subcommand and affect logging only unless noted.
 
@@ -83,7 +85,8 @@ Global flags apply before the subcommand and affect logging only unless noted.
 |------|-------|--------|
 | `--verbose` | `-v` | Log level `DEBUG`; include spec/git metadata in run logs when writing `results/`. |
 | `--quiet` | `-q` | Log level `WARNING`; suppress progress bars on stderr. |
-| `--seed` | | Default RNG seed for subcommands that accept seeds but omit `--seeds` (integer, default **42**). |
+| `--config` | | Path to `.rl-dbs.yaml` (overrides discovery walk). |
+| `--seed` | | Default RNG seed when a subcommand omits `--seeds` (overrides `defaults.seed` in the config file). |
 
 `--verbose` and `--quiet` are mutually exclusive; if both are passed, exit **2** (usage error).
 
@@ -124,10 +127,6 @@ uv run rl-dbs train --controller ddpg --variant paper --seeds 42
 
 # 30 Hz initialization ablation
 uv run rl-dbs train --controller ddpg --variant init-30hz --seeds 0,1,2
-
-# PTQ variant with hyperparameter file
-uv run rl-dbs train --controller ddpg --variant ptq-int8 \
-  --hyperparams configs/ddpg/ptq-int8.yaml --checkpoint-dir artifacts/ddpg
 ```
 
 ---
@@ -289,19 +288,27 @@ rl-dbs config set KEY VALUE [--persist]
 |------------|-------------|----------|
 | `plant.dt` | [plant.md](plant.md) §5 | `0.02` (ms) Mehregan target |
 | `plant.pd` | [plant.md](plant.md) §3 | `1` (parkinsonian) |
-| `plant.dbs.*` | [plant.md](plant.md) §4 | `pulse_width_ms`, `amplitude` |
+| `plant.corstim` | [plant.md](plant.md) | `0` |
+| `plant.neurons_per_region` | [plant.md](plant.md) | `10` |
 | `env.dt_rl` | [environment.md](environment.md) §5 | `2.0` (s) |
 | `env.beta_t` | [environment.md](environment.md) §6 | `0.35` |
 | `env.biomarker.band_hz` | [environment.md](environment.md) §3 | `13`, `35` |
 | `env.episode_steps` | [environment.md](environment.md) §5 | `30` |
+| `env.reward_scale` | [environment.md](environment.md) | `10.0` |
+| `env.observation_scale` | [environment.md](environment.md) | `1000.0` |
+| `env.state_length` | [environment.md](environment.md) §4 | `1` |
+| `defaults.seed` | this document §4 | `42` |
+| `defaults.results_dir` | [benchmarking.md](benchmarking.md) | `results` |
+| `defaults.checkpoint_dir` | this document §5.1 | `artifacts/ddpg` (optional) |
 
-**Phase 4 behavior:** `config show` reads live defaults from `envs/` / `MehreganEnvConfig` where implemented; `set` without `--persist` affects in-process overrides for the current CLI invocation only. Persistent user config file format is **intentionally open** (see §2.3).
+**File format:** YAML (`.rl-dbs.yaml`). See **`.rl-dbs.example.yaml`**. `config show` prints the **effective** merged values and the discovered `config_file` path when present. `config set` without `--persist` previews one key; `--persist` writes or updates `.rl-dbs.yaml` (project root when no file is discovered).
 
 **Examples:**
 
 ```bash
+cp .rl-dbs.example.yaml .rl-dbs.yaml
 uv run rl-dbs config show plant.dt env.dt_rl env.beta_t
-uv run rl-dbs config set plant.dt 0.02 --persist
+uv run rl-dbs config set env.beta_t 0.42 --persist
 ```
 
 ---
@@ -376,11 +383,11 @@ CI smoke tests may invoke `rl-dbs info` and `rl-dbs benchmark --dry-run` expecti
 | Step | Phase | Status |
 |------|-------|--------|
 | Spec (this document) | 1 | Done |
-| Entry point + `info`, `config show`, `summary` | 4 | Done |
+| Entry point + `info`, `config show`, `config set --persist`, `summary` | 4 | Done |
 | `benchmark` suite runner | 4 | Done |
 | `train` / `eval` for `ddpg` (incl. PTQ/QAT variants) | 4 | Done |
 | `train` / `eval` for `snn`, `sea_dbs` | 5 | Not started |
-| Cross-platform packaging + config persist | 8+ | Not started |
+| Cross-platform packaging polish | 8+ | Not started |
 
 Prefer thin `rl_adaptive_dbs/*.py` modules (`cli.py`, `train_cmd.py`, `eval_cmd.py`, …) that call into `controllers.*` and `envs` per [benchmarking.md](benchmarking.md) §7.
 
@@ -405,7 +412,7 @@ Prefer thin `rl_adaptive_dbs/*.py` modules (`cli.py`, `train_cmd.py`, `eval_cmd.
 
 ### 2. Persistent config file
 
-**Fixed:** `config show` / `set` key namespace. **Open:** `.rl-dbs.toml` vs YAML, parent-directory walk. **Decide in** Phase 4 runner work.
+**Fixed:** `.rl-dbs.yaml` (see `.rl-dbs.example.yaml`), parent-directory walk to git root, `config set --persist`. **Open:** TOML variant, JSON Schema validation. **Decide in** later packaging work if needed.
 
 ### 3. Parallel benchmark workers
 

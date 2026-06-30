@@ -48,6 +48,7 @@ tests/
 │   └── cli_test.py          # rl-dbs benchmark dry-run
 ├── rl_adaptive_dbs/
 │   ├── cli_commands_test.py # train/eval/info/summary smoke
+│   ├── user_config_test.py  # .rl-dbs.yaml merge / persist
 │   └── tui_data_test.py     # Benchmarks tab data layer
 ├── envs/
 │   ├── mock_plant.py        # helper (not collected)

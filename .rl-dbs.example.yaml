@@ -1,0 +1,38 @@
+# rl-adaptive-dbs user configuration (example)
+#
+# Copy to .rl-dbs.yaml in the project root (or any directory up to the git root):
+#   cp .rl-dbs.example.yaml .rl-dbs.yaml
+#
+# Discovery order: --config PATH, RL_DBS_CONFIG, then walk parents for .rl-dbs.yaml.
+# CLI flags override file values. Keys: docs/cli.md §5.6
+#
+# Unset keys use built-in paper defaults (envs/plant/config.py, envs/mehregan/config.py).
+
+plant:
+  # Integration step in milliseconds (Kumaravelu reference default: 0.01).
+  dt_ms: 0.01
+  # 1 = parkinsonian, 0 = healthy (docs/plant.md).
+  pd: 1
+  corstim: 0
+  neurons_per_region: 10
+
+env:
+  # Mehregan RL step duration (seconds).
+  step_duration_s: 2.0
+  max_episode_steps: 30
+  beta_threshold: 0.35
+  reward_scale: 10.0
+  # Raw GPi beta power scale for observations (Mehregan Fig. 4).
+  observation_scale: 1000.0
+  state_length: 1
+  biomarker:
+    # Beta band for P_beta (Hz). Shown in config show; runtime uses envs/plant/biomarkers.py.
+    band_hz: [13, 35]
+
+defaults:
+  # Global CLI default when --seed is not passed.
+  seed: 42
+  # Default for benchmark/eval --results-dir when omitted.
+  results_dir: results
+  # Optional default checkpoint root (train still uses artifacts/<controller>/).
+  # checkpoint_dir: artifacts/ddpg

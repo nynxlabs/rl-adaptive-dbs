@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 results/
 artifacts/
+.rl-dbs.yaml
+.rl-dbs.yml
 .validation-logs/
 
 # My own (wilzen3476) personal git ignores

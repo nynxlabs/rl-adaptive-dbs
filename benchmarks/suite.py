@@ -11,15 +11,7 @@ from benchmarks.schema import ControllerEntry, PlannedRun, SuiteManifest
 from controllers.ddpg.quantization import fp_source_variant, is_ptq_variant
 
 
-def find_repo_root(start: Path | None = None) -> Path:
-    """Walk parents from ``start`` (or cwd) until ``suites/`` or ``pyproject.toml`` is found."""
-    current = (start or Path.cwd()).resolve()
-    for candidate in (current, *current.parents):
-        if (candidate / "pyproject.toml").is_file() and (candidate / "suites").is_dir():
-            return candidate
-        if (candidate / "pyproject.toml").is_file():
-            return candidate
-    return current
+from rl_adaptive_dbs.paths import find_repo_root
 
 
 def default_suites_dir(repo_root: Path | None = None) -> Path:
