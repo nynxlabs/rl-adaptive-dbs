@@ -79,6 +79,20 @@ if [ -n "$_matlab_arch" ] && [ -d "$MATLAB_ROOT/bin/$_matlab_arch" ]; then
 fi
 
 if [ "$_matlab_os" = "Linux" ]; then
+  if grep -qi microsoft /proc/version 2>/dev/null; then
+    _wsl_hostid_sh="$_script_dir/ensure-wsl-hostid.sh"
+    if [ -r "$_wsl_hostid_sh" ]; then
+      if [ "$(id -u)" -eq 0 ]; then
+        bash "$_wsl_hostid_sh" || true
+      elif ! bash "$_wsl_hostid_sh" --check 2>/dev/null; then
+        if ! sudo -n bash "$_wsl_hostid_sh" 2>/dev/null; then
+          echo "matlab/env.sh: WSL Host ID mismatch — run: sudo bash $_wsl_hostid_sh" >&2
+          echo "  (once: sudo bash $_script_dir/install-wsl-hostid-persist.sh)" >&2
+        fi
+      fi
+    fi
+    unset _wsl_hostid_sh
+  fi
   _system_libstdc="/usr/lib/x86_64-linux-gnu/libstdc++.so.6"
   if [ -f "$_system_libstdc" ] && [ -z "${LD_PRELOAD:-}" ]; then
     export LD_PRELOAD="$_system_libstdc"
