@@ -6,7 +6,7 @@ Phases and implementation status for **rl-adaptive-dbs**. Contributor rules: [co
 
 ## 1. Roadmap
 
-Work proceeds in layers: rough specs, then environment and controllers in paper order (DDPG first), then benchmarking and comparison, then fusion, then long-term modularity and a native plant.
+Work proceeds in layers: rough specs, then environment and controllers in paper order (DDPG, then SNN, then SEA-DBS), each with per-paper benchmarking, then cross-controller comparison, fusion, then long-term modularity and a native plant.
 
 ### Phase 1 — Rough specifications (complete)
 
@@ -48,38 +48,48 @@ Replicate the shared plant and Mehregan et al. Gym API before any controller wor
 - **Fresh-machine validation** — exercise the full path on VMs or clean hosts with only git + uv (+ optional MATLAB license): `bash scripts/setup.sh`, docs match prompts, `pytest -m "not matlab"` passes; document OS-specific gaps in [setup.md](../setup.md) / [matlab.md](../matlab.md).
 - **Exit criteria:** repeatable `mehregan_eval` runs across full-precision and quantized `ddpg` variants; replication checklist passable for `ddpg` (including §IV.A.3 quantization); `uv run rl-dbs benchmark` and `uv run rl-dbs-tui` usable for Phase 4 workflows; **setup scripts pass on fresh VMs** on each supported OS (or gaps documented with repro steps).
 
-### Phase 5 — Other controllers, adapters, and per-paper benchmarking
+### Phase 5 — SNN controller (`snn`), adapter, and per-paper benchmarking
 
 | Package | Paper | Notes |
 |---------|--------|--------|
 | `controllers/snn/` | Nguyen et al. | Spec: [controllers/snn/replication.md](../controllers/snn/replication.md); adapter for Nguyen I/O |
+
+- Replicate `controllers/snn/`; extend or wrap `envs/` only via the **adapter** (no duplicated CBGT dynamics).
+- Extend `rl-dbs train` / `eval` to `snn` (Phase 4 covers `ddpg` only).
+- **Per-paper suite** `nguyen_eval`; same runner and `rl-dbs` patterns as Phase 4.
+- **Exit criteria:** `snn` trains/evals on the **same plant** through its documented adapter; `nguyen_eval` runs complete.
+
+### Phase 6 — SEA-DBS controller (`sea_dbs`), adapter, and per-paper benchmarking
+
+| Package | Paper | Notes |
+|---------|--------|--------|
 | `controllers/sea_dbs/` | Ravivarapu et al. | Spec: [controllers/sea_dbs/replication.md](../controllers/sea_dbs/replication.md); adapter for SEA-DBS I/O |
 
-- Replicate each controller; extend or wrap `envs/` only via **adapters** (no duplicated CBGT dynamics).
-- Extend `rl-dbs train` / `eval` to `snn` and `sea_dbs` (Phase 4 covers `ddpg` only).
-- **Per-paper suites** for Nguyen and SEA-DBS (`nguyen_eval`, `sea_dbs_eval`); same runner and `rl-dbs` patterns as Phase 4.
-- **Exit criteria:** each controller trains/evals on the **same plant** through its documented adapter; per-paper benchmark runs complete.
+- Replicate `controllers/sea_dbs/`; extend or wrap `envs/` only via the **adapter** (no duplicated CBGT dynamics).
+- Extend `rl-dbs train` / `eval` to `sea_dbs`.
+- **Per-paper suite** `sea_dbs_eval`; same runner and `rl-dbs` patterns as Phase 4.
+- **Exit criteria:** `sea_dbs` trains/evals on the **same plant** through its documented adapter; `sea_dbs_eval` runs complete.
 
-### Phase 6 — Cross-controller comparison and benchmarkability
+### Phase 7 — Cross-controller comparison and benchmarkability
 
 - Optional **cross-paper** suite on the shared plant only (see [benchmarking.md](../benchmarking.md) §3).
 - Clarify which metrics are comparable across adapters vs plant-level only ($P_\beta$, stim duty cycle, etc.).
 - Harden the runner, manifests, and reporting so all three controllers can be compared fairly at the plant level.
 - **Exit criteria:** documented comparison protocol; cross-paper (or equivalent) runs reproducible with `adapter: true` and suite metadata logged.
 
-### Phase 7 — Fusion
+### Phase 8 — Fusion
 
 - Synthesize SEA-DBS's predictive reward model with DSQN's spiking architecture: [controllers/fusion.md](../controllers/fusion.md).
 - Hierarchical neuromorphic controller (fast gatekeeper + parameter-tuning SNN) and any fusion-specific benchmarking.
 
-### Phase 8 and beyond — Native plant, modularity, extensions
+### Phase 9 and beyond — Native plant, modularity, extensions
 
 - Native Python plant ([plant.md](../plant.md) §9); drop MATLAB dependency after equivalence checks.
 - Modular layout: swappable plant backends, controller packages, adapters, and benchmark runner; CI on smoke tests + selected suites.
 - **Expand** `rl-dbs` / `rl-dbs-tui` (all controllers, training monitor, logs)—initial shells land in Phase 4 ([cli.md](../cli.md), [tui.md](../tui.md)).
 - Optional per-controller work beyond paper replication: [controllers/ddpg/extensions.md](../controllers/ddpg/extensions.md), [controllers/snn/extensions.md](../controllers/snn/extensions.md), [controllers/sea_dbs/extensions.md](../controllers/sea_dbs/extensions.md), and broader framework ideas (other oscillatory conditions, patient-specific robustness, etc.).
 
-Phases 8+ are intentionally open; prioritize equivalence and replication paths before large refactors.
+Phases 9+ are intentionally open; prioritize equivalence and replication paths before large refactors.
 
 ---
 
@@ -103,13 +113,13 @@ Phases 8+ are intentionally open; prioritize equivalence and replication paths b
 | [tui.md](../tui.md) | Draft | Phase 4 — start `rl-dbs-tui` (Benchmarks tab over `results/`) |
 | `envs/` | Done | `MatlabPlant`, `MehreganEnv`, $P_\beta$, baselines (`run_baseline_rollout`) |
 | `controllers/ddpg/` | Done (FP + PTQ/QAT) | Full-precision `paper` / `init-30hz`; PTQ/QAT in `quantization.py` |
-| `controllers/snn/` | Placeholder | — |
-| `controllers/sea_dbs/` | Placeholder | — |
+| `controllers/snn/` | Placeholder | Phase 5 |
+| `controllers/sea_dbs/` | Placeholder | Phase 6 |
 | [matlab.md](../matlab.md) + `scripts/matlab/` | Done (WSL) | Fresh validation: Multipass (Linux) + Sandbox (Windows); macOS deferred — [fresh-validation.md](fresh-validation.md) |
 | Project setup script | Done | `scripts/setup.sh`, `scripts/validate-fresh.sh`, Multipass + Sandbox scripts — Phase 4; see [fresh-validation.md](fresh-validation.md) |
 | MATLAB plant bridge | Done | `envs/plant/` + `envs/mehregan/`; `@pytest.mark.matlab` equivalence suite |
 | Benchmark suite runner | Done | `benchmarks/` + `suites/mehregan_eval*.yaml`; baselines + `ddpg` eval |
-| `rl-dbs` CLI | Partial | `benchmark`, `summary`, `info`, `config show`, `train`/`eval` (`ddpg`); `snn`/`sea_dbs` Phase 5 |
+| `rl-dbs` CLI | Partial | `benchmark`, `summary`, `info`, `config show`, `train`/`eval` (`ddpg`); `snn` Phase 5; `sea_dbs` Phase 6 |
 | `rl-dbs-tui` | Partial | Benchmarks tab ([Textual](https://textual.textualize.io/)); Training/Eval/Logs later |
 
 **Current phase:** 4 (benchmark runner, Mehregan quantization, CLI/TUI start, setup scripts + fresh-VM validation).

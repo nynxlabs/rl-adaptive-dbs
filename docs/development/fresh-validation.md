@@ -70,7 +70,8 @@ pwsh -File scripts/check-windows-host.ps1
 | `scripts/refresh-multipass-catalog.ps1` | **Admin:** fix stale Multipass catalog (see Troubleshooting) |
 | `scripts/repair-multipass.ps1` | **Admin:** unstick hung Multipass CLI / service (`repair-multipass.sh` from WSL) |
 | `scripts/run-multipass-linux-validation.ps1` | **Desktop:** Multipass VM, **git clone**, validation |
-| `scripts/launch-windows-sandbox-validation.ps1` | **Desktop:** Sandbox validate (default: WSL map; `-Clone`: git clone) |
+| `scripts/launch-windows-sandbox-validation.ps1` | **Desktop:** Sandbox validate (default: WSL map; `-Clone`: git clone; 4:3 window resize) |
+| `scripts/sandbox-window.ps1` | **Desktop:** resize running Sandbox window (no relaunch) |
 | `scripts/run-parallel-fresh-validation.ps1` | **Desktop:** Multipass then Sandbox in parallel (staggered launch) |
 | `scripts/validation-repo.ps1` | WSL repo path for host logs + Sandbox folder map |
 | `scripts/bootstrap-fresh-linux.sh` | Inside Multipass: apt + uv + clone + validate |
@@ -157,15 +158,21 @@ When finished: `exit`, then on the host `multipass delete rl-dbs-linux --purge` 
 pwsh -File scripts/launch-windows-sandbox-validation.ps1
 ```
 
+Default launcher window size is **1280×960 (4:3)** — applied after boot by resizing the host `WindowsSandboxClient` window (not a `.wsb` setting). Override with `-WindowWidth` / `-WindowHeight`, or `-NoWindowResize`. To resize a **running** Sandbox without relaunching: `pwsh -File scripts/sandbox-window.ps1`.
+
 **Clone from GitHub** (parity with Multipass; tests published `main`, not uncommitted WSL changes):
 
 ```powershell
 pwsh -File scripts/launch-windows-sandbox-validation.ps1 -Clone
 ```
 
-`-Clone` maps only `scripts/` (bootstrap) and `.validation-logs/` (host log) — not the full repo.
+`-Clone` maps only `scripts/` (bootstrap) and `.validation-logs/` (host log + cache) — not the full repo.
 
-Inside Sandbox, `bootstrap-fresh-windows.ps1` installs **Git for Windows** from a **host-prefetched** pinned `.exe` under `.validation-logs/cache/` (mapped into Sandbox; launcher downloads on the Windows host before boot). Fallback: download inside Sandbox if cache missing. Then **uv** and `validate-fresh.sh` in Git Bash. Bump the pin in `scripts/validation-repo.ps1`. **Host log:** `.validation-logs/sandbox.log`.
+**`-Clone` flow:** launcher prefetches Git installer + **shallow `git clone`** + **`uv sync` wheel cache** into `.validation-logs/cache/` on the host. Inside Sandbox, bootstrap **tries `git clone --depth 1 --progress` first** (15 min timeout). If that fails, it copies the host repo cache. **`validate-fresh.sh`** tees to the host log (`--log-file`) and uses **`UV_CACHE_DIR`** so `uv sync` reuses host-downloaded wheels. **Mapped mode** — avoid for full validation; prefer **`-Clone`**.
+
+**Background launch (WSL):** `bash scripts/run-sandbox-validation-background.sh` — kills any prior Sandbox, runs launcher via `nohup`, tails `sandbox.log` when ready.
+
+Inside Sandbox, `bootstrap-fresh-windows.ps1` installs **Git for Windows** from a **host-prefetched** pinned `.exe` under `.validation-logs/cache/` (mapped into Sandbox). Then **uv** and `validate-fresh.sh` on native Sandbox disk (`-Clone`) or mapped WSL tree (default). Bump Git pin in `scripts/validation-repo.ps1`. **Host log:** `.validation-logs/sandbox.log`.
 
 **Manual** — do **not** install or enable WSL in Sandbox. Each Sandbox session starts empty unless you use the launcher above.
 
@@ -183,6 +190,8 @@ Inside Sandbox, `bootstrap-fresh-windows.ps1` installs **Git for Windows** from 
 | `WindowsSandbox.exe` missing after enable | Full **Windows reboot** after `install-fresh-validation-host.ps1`; rerun `-Sandbox` if needed |
 | Multipass not on PATH | Use `C:\Program Files\Multipass\bin\multipass.exe` or re-open PowerShell after winget install |
 | Sandbox window easy to miss | Check taskbar; tail **`.validation-logs/sandbox.log`** on the host |
+| `git clone` silent / hung in Sandbox | Bootstrap uses shallow `--progress` clone with timeout; host cache fallback under `.validation-logs/cache/rl-adaptive-dbs-shallow/`. Log line `git clone succeeded inside Sandbox` = live clone worked |
+| Mapped mode stuck on `validate-fresh.sh` | Use **`-Clone`** — `uv sync` over `\\wsl.localhost\...` is unreliable |
 
 ---
 

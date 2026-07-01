@@ -4,7 +4,7 @@ Replication of published **adaptive DBS** reinforcement-learning work on one sha
 
 ## Scope
 
-Work is delivered in **phases** (see [docs/development/roadmap.md](docs/development/roadmap.md)): rough specs → environment → full-precision `ddpg` → **Mehregan benchmarking** (runner, PTQ/QAT, `rl-dbs`, `rl-dbs-tui`, setup scripts) → SNN and SEA-DBS with adapters → cross-controller comparison → fusion → native Python plant and framework hardening. Architecturally, the repo has three layers:
+Work is delivered in **phases** (see [docs/development/roadmap.md](docs/development/roadmap.md)): rough specs → environment → full-precision `ddpg` → **Mehregan benchmarking** (runner, PTQ/QAT, `rl-dbs`, `rl-dbs-tui`, setup scripts) → **SNN** (`nguyen_eval`) → **SEA-DBS** (`sea_dbs_eval`) → cross-controller comparison → fusion → native Python plant and framework hardening. Architecturally, the repo has three layers:
 
 1. **Environment (single source of truth)** — Replicate the **computational RL environment** from Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning*: Kumaravelu et al. (2016) **cortex–basal ganglia–thalamus** dynamics, GPi **beta-band** biomarker, 2 s steps, reward Eq. (8), and a Gymnasium-style API that `ddpg` uses directly. Other papers connect through **adapters** on the same plant. Spec: [docs/environment.md](docs/environment.md). **Current focus:** Phase 4 — benchmark runner, **`rl-dbs`** / **`rl-dbs-tui`**, and **PTQ/QAT** (**done**); fresh-VM validation and full MATLAB replication runs remain ([docs/setup.md](docs/setup.md)).
 
@@ -14,13 +14,13 @@ Work is delivered in **phases** (see [docs/development/roadmap.md](docs/developm
    |---------|--------|-------------------------|-----------------|
    | `controllers/ddpg/` | Mehregan et al. — DDPG actor–critic with PTQ/QAT | Yes (Mehregan API) | 3 (FP), 4 (PTQ/QAT + benchmarks) |
    | `controllers/snn/` | Nguyen et al. — closed-loop neuromorphic DBS (deep spiking Q-network) | No — **adapter** (100 ms steps, spike obs, α–β) | 5 |
-   | `controllers/sea_dbs/` | Ravivarapu et al. — SEA-DBS (sample-efficient actor–critic) | No — **adapter** (2 ms steps, binary pulse, Eq. (7) reward) | 5 |
+   | `controllers/sea_dbs/` | Ravivarapu et al. — SEA-DBS (sample-efficient actor–critic) | No — **adapter** (2 ms steps, binary pulse, Eq. (7) reward) | 6 |
 
-   Per-paper specs: [docs/controllers/](docs/controllers/) (`replication.md`, `extensions.md` for post-replication ideas). **Fusion** (SEA-DBS + DSQN synthesis) is Phase 7: [docs/controllers/fusion.md](docs/controllers/fusion.md).
+   Per-paper specs: [docs/controllers/](docs/controllers/) (`replication.md`, `extensions.md` for post-replication ideas). **Fusion** (SEA-DBS + DSQN synthesis) is Phase 8: [docs/controllers/fusion.md](docs/controllers/fusion.md).
 
 3. **Benchmarking & tooling** — **Per-paper suites** first (`mehregan_eval`, then `nguyen_eval`, `sea_dbs_eval`); optional **cross-paper** comparison on **plant-level** metrics (`cross_controller_plant`). Spec: [docs/benchmarking.md](docs/benchmarking.md). The **`benchmarks/`** package loads YAML from **`suites/`**, runs baselines and controllers, and writes **`results/`** (local, gitignored). **`uv run rl-dbs benchmark`** is the primary entry point ([docs/cli.md](docs/cli.md)); **`rl-dbs-tui`** browses **`results/`** (Benchmarks tab; Training/Eval/Logs later).
 
-**Later (Phase 8+):** validated native Python plant (drop MATLAB after equivalence checks), modular plant/controller/benchmark layout, CI, and **full** CLI/TUI coverage for all controllers—see [docs/development/roadmap.md](docs/development/roadmap.md).
+**Later (Phase 9+):** validated native Python plant (drop MATLAB after equivalence checks), modular plant/controller/benchmark layout, CI, and **full** CLI/TUI coverage for all controllers—see [docs/development/roadmap.md](docs/development/roadmap.md).
 
 ## Platform support
 
@@ -31,7 +31,7 @@ This repository is intended to work on **Windows**, **macOS**, and **Linux** (in
 Python code lives at the **repository root** as two installable top-level packages (after `uv sync`, editable):
 
 - **`envs/`** — Shared Gymnasium-style RL environment (Mehregan et al. computational setup).
-- **`controllers/`** — Per-paper controllers: `ddpg` (implemented), `snn` and `sea_dbs` (placeholders until Phase 5).
+- **`controllers/`** — Per-paper controllers: `ddpg` (implemented), `snn` (Phase 5), `sea_dbs` (Phase 6).
 - **`benchmarks/`** — Suite runner: YAML manifests → `results/` ([docs/benchmarking.md](docs/benchmarking.md)).
 - **`suites/`** — Versioned eval configs (`mehregan_eval.yaml`, smoke variant for CI).
 - **`rl_adaptive_dbs/`** — CLI (`rl-dbs`) and TUI (`rl-dbs-tui`).
