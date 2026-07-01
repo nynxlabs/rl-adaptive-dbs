@@ -5,14 +5,20 @@
 # Requires: Windows Sandbox enabled (scripts/install-fresh-validation-host.ps1 -Sandbox)
 # Default: maps WSL working tree. -Clone: git clone inside Sandbox (tests GitHub main).
 # Logs -> <repo>/.validation-logs/sandbox.log (gitignored).
+# Window: default 1280x960 (4:3) via post-launch resize; -NoWindowResize to skip.
+# Resize a running instance without relaunch: pwsh -File scripts/sandbox-window.ps1
 
 param(
     [string]$RepoPath = '',
-    [switch]$Clone
+    [switch]$Clone,
+    [int]$WindowWidth = 1280,
+    [int]$WindowHeight = 960,
+    [switch]$NoWindowResize
 )
 
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'validation-repo.ps1')
+. (Join-Path $PSScriptRoot 'sandbox-window.ps1')
 
 $sandboxExe = "$env:WINDIR\System32\WindowsSandbox.exe"
 if (-not (Test-Path $sandboxExe)) {
@@ -45,6 +51,11 @@ Write-Host "Preflight OK: repo and log dir reachable from Windows."
 
 $gitCache = Ensure-SandboxGitInstallerCache -LogDir $logDir
 Write-Host "  Git cache:   $gitCache"
+
+if ($Clone) {
+    $repoCache = Ensure-SandboxRepoCache -LogDir $logDir
+    $null = Ensure-SandboxUvWheelCache -LogDir $logDir -RepoCacheDir $repoCache
+}
 
 $wsbPath = Join-Path $env:TEMP 'rl-adaptive-dbs-sandbox.wsb'
 
@@ -105,4 +116,10 @@ Write-Host "  Repo (WSL):  $repoRoot"
 Write-Host "  WSL log:     ~/neuroengineering/rl-adaptive-dbs/.validation-logs/sandbox.log"
 Write-Host "  Host log:    $hostLog"
 Write-Host "  WSB:         $wsbPath"
+if (-not $NoWindowResize) {
+    Write-Host "  Window:      ${WindowWidth}x${WindowHeight} (4:3 client area, post-launch resize)"
+}
 Start-Process -FilePath $wsbPath
+if (-not $NoWindowResize) {
+    Wait-Set-SandboxClientWindowSize -Width $WindowWidth -Height $WindowHeight | Out-Null
+}
