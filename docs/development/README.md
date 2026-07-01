@@ -9,5 +9,6 @@ Repo-specific **roadmap, conventions, tooling, and status**. Paper-aligned behav
 | [venv.md](venv.md) | Everyone | `uv`, lockfile, Python version |
 | [testing.md](testing.md) | Contributors | pytest layout, markers, what to test |
 | [fresh-validation.md](fresh-validation.md) | Maintainers | Multipass + Sandbox portability gate (not for training) |
+| [phase4-results.md](phase4-results.md) | Everyone | Phase 4 benchmark outcomes + DDPG replication checklist audit |
 
 **Day-to-day setup:** [setup.md](../setup.md). **Specs:** [plant.md](../plant.md), [environment.md](../environment.md), [benchmarking.md](../benchmarking.md), [cli.md](../cli.md), [tui.md](../tui.md). **Vendor plant patches:** [reference-material/kumaravelu_vendor_patches.md](../reference-material/kumaravelu_vendor_patches.md).

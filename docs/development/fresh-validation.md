@@ -70,7 +70,8 @@ pwsh -File scripts/check-windows-host.ps1
 | `scripts/refresh-multipass-catalog.ps1` | **Admin:** fix stale Multipass catalog (see Troubleshooting) |
 | `scripts/repair-multipass.ps1` | **Admin:** unstick hung Multipass CLI / service (`repair-multipass.sh` from WSL) |
 | `scripts/run-multipass-linux-validation.ps1` | **Desktop:** Multipass VM, **git clone**, validation |
-| `scripts/launch-windows-sandbox-validation.ps1` | **Desktop:** Sandbox validate (default: WSL map; `-Clone`: git clone; 4:3 window resize) |
+| `scripts/launch-windows-sandbox-validation.ps1` | **Desktop:** Sandbox validate (`-Clone` recommended; 4:3 window resize) |
+| `scripts/run-sandbox-validation-background.sh` | **WSL:** background `-Clone` launch + log sync (`nohup`) |
 | `scripts/sandbox-window.ps1` | **Desktop:** resize running Sandbox window (no relaunch) |
 | `scripts/run-parallel-fresh-validation.ps1` | **Desktop:** Multipass then Sandbox in parallel (staggered launch) |
 | `scripts/validation-repo.ps1` | WSL repo path for host logs + Sandbox folder map |
@@ -152,29 +153,60 @@ When finished: `exit`, then on the host `multipass delete rl-dbs-linux --purge` 
 
 ## Windows — Sandbox (Git Bash, no WSL)
 
-**One command (Windows desktop PowerShell)** — default maps this repo into Sandbox and runs validation:
+**Recommended:** **`-Clone`** mode (git clone inside Sandbox on native `C:\` disk). Mapped WSL tree mode is for quick dev only — `\\wsl.localhost\...` maps are flaky and `uv sync` over 9p is slow.
+
+### Quick start (WSL)
+
+```bash
+bash scripts/run-sandbox-validation-background.sh
+tail -f .validation-logs/sandbox.log
+```
+
+This kills any prior Sandbox, stages bootstrap scripts onto **NTFS** (`%LOCALAPPDATA%\rl-adaptive-dbs-validation` — reliable folder maps), launches **`-Clone`**, and mirrors `sandbox.log` back into the repo until Sandbox exits.
+
+### Desktop PowerShell
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File scripts/launch-windows-sandbox-validation.ps1 -Clone
+```
+
+Default launcher window size is **1280×960 (4:3)** — applied after boot by resizing the host `WindowsSandboxClient` window. Override with `-WindowWidth` / `-WindowHeight`, or `-NoWindowResize`. Running instance: `pwsh -File scripts/sandbox-window.ps1`.
+
+**Mapped WSL tree (dev only):**
 
 ```powershell
 pwsh -File scripts/launch-windows-sandbox-validation.ps1
 ```
 
-Default launcher window size is **1280×960 (4:3)** — applied after boot by resizing the host `WindowsSandboxClient` window (not a `.wsb` setting). Override with `-WindowWidth` / `-WindowHeight`, or `-NoWindowResize`. To resize a **running** Sandbox without relaunching: `pwsh -File scripts/sandbox-window.ps1`.
+From WSL mapped mode: `bash scripts/run-sandbox-validation-background.sh --mapped`. Legacy UNC paths: `--no-stage`.
 
-**Clone from GitHub** (parity with Multipass; tests published `main`, not uncommitted WSL changes):
+### `-Clone` flow
 
-```powershell
-pwsh -File scripts/launch-windows-sandbox-validation.ps1 -Clone
+| Step | Where | What |
+|------|--------|------|
+| Prefetch | Host (PowerShell) | Pinned **Git** installer, shallow **git clone** cache, **Windows** `uv` wheel cache, optional **VC++ redist** under `.validation-logs/cache/` |
+| Stage (background launcher) | `%LOCALAPPDATA%\rl-adaptive-dbs-validation` | `scripts/` + Git installer copied to NTFS when WSL UNC is unreliable |
+| Bootstrap | Inside Sandbox | Git + uv + **VC++ Redistributable** (PyTorch DLLs); shallow `git clone` (15 min timeout) or host repo-cache fallback |
+| Validate | Git Bash in Sandbox | `validate-fresh.sh` with `UV_PYTHON=3.12`, `UV_CACHE_DIR` → copied Sandbox temp cache, output teed to host log |
+
+**Host cache layout** (gitignored):
+
+```
+.validation-logs/
+  sandbox.log
+  sandbox-launcher.log
+  cache/
+    Git-2.55.0-64-bit.exe
+    vc_redist.x64.exe          # optional prefetch; bootstrap downloads if missing
+    rl-adaptive-dbs-shallow/   # shallow clone fallback
+    uv/                        # Windows wheels (prefetch via native host uv, not WSL)
 ```
 
-`-Clone` maps only `scripts/` (bootstrap) and `.validation-logs/` (host log + cache) — not the full repo.
+Bump the pinned Git release in `scripts/validation-repo.ps1` when validating against a newer Git for Windows.
 
-**`-Clone` flow:** launcher prefetches Git installer + **shallow `git clone`** + **`uv sync` wheel cache** into `.validation-logs/cache/` on the host. Inside Sandbox, bootstrap **tries `git clone --depth 1 --progress` first** (15 min timeout). If that fails, it copies the host repo cache. **`validate-fresh.sh`** tees to the host log (`--log-file`) and uses **`UV_CACHE_DIR`** so `uv sync` reuses host-downloaded wheels. **Mapped mode** — avoid for full validation; prefer **`-Clone`**.
+**Inside Sandbox:** `bootstrap-fresh-windows.ps1` installs Git from the host cache, **uv**, and **Microsoft VC++ Redistributable** (required for `torch` DLLs). Then `validate-fresh.sh` on `C:\rl-adaptive-dbs` (`-Clone`). **Host log:** `.validation-logs/sandbox.log` (or NTFS stage path when using the background launcher).
 
-**Background launch (WSL):** `bash scripts/run-sandbox-validation-background.sh` — kills any prior Sandbox, runs launcher via `nohup`, tails `sandbox.log` when ready.
-
-Inside Sandbox, `bootstrap-fresh-windows.ps1` installs **Git for Windows** from a **host-prefetched** pinned `.exe` under `.validation-logs/cache/` (mapped into Sandbox). Then **uv** and `validate-fresh.sh` on native Sandbox disk (`-Clone`) or mapped WSL tree (default). Bump Git pin in `scripts/validation-repo.ps1`. **Host log:** `.validation-logs/sandbox.log`.
-
-**Manual** — do **not** install or enable WSL in Sandbox. Each Sandbox session starts empty unless you use the launcher above.
+**Manual** — do **not** install or enable WSL in Sandbox. Each session starts empty unless you use the launcher above.
 
 ---
 
@@ -190,8 +222,13 @@ Inside Sandbox, `bootstrap-fresh-windows.ps1` installs **Git for Windows** from 
 | `WindowsSandbox.exe` missing after enable | Full **Windows reboot** after `install-fresh-validation-host.ps1`; rerun `-Sandbox` if needed |
 | Multipass not on PATH | Use `C:\Program Files\Multipass\bin\multipass.exe` or re-open PowerShell after winget install |
 | Sandbox window easy to miss | Check taskbar; tail **`.validation-logs/sandbox.log`** on the host |
-| `git clone` silent / hung in Sandbox | Bootstrap uses shallow `--progress` clone with timeout; host cache fallback under `.validation-logs/cache/rl-adaptive-dbs-shallow/`. Log line `git clone succeeded inside Sandbox` = live clone worked |
-| Mapped mode stuck on `validate-fresh.sh` | Use **`-Clone`** — `uv sync` over `\\wsl.localhost\...` is unreliable |
+| `git clone` silent / hung in Sandbox | Shallow `--progress` clone with 15 min timeout; host fallback `.validation-logs/cache/rl-adaptive-dbs-shallow/`. Log `git clone succeeded inside Sandbox` = live clone worked |
+| Mapped mode stuck / no `sandbox.log` | Use **`-Clone`** + background launcher (NTFS stage). `\\wsl.localhost\...` maps are intermittent |
+| `validate-fresh` instant exit 2, no output | Fixed in bootstrap: PowerShell must not expand `$PATH` in the bash `-lc` string (use backtick-escaped `$`) |
+| `uv sync` access denied on `C:\host-logs\cache\uv` | Host cache must be **Windows** wheels (native `uv` prefetch). Bootstrap copies cache to Sandbox `%TEMP%` before sync |
+| `matlabengine` / Python 3.14 in Sandbox | Repo `.python-version` pins 3.12; bootstrap sets `UV_PYTHON=3.12`. `--python-only` uses `uv sync --group dev` (no MATLAB group) |
+| PyTorch `c10.dll` / WinError 126 | Install **VC++ Redistributable** in bootstrap; prefetch `vc_redist.x64.exe` into `.validation-logs/cache/` |
+| `uv` / GitHub download hung in Sandbox | Host prefetch into `.validation-logs/cache/` before launch (launcher does this for `-Clone`) |
 
 ---
 
@@ -200,7 +237,7 @@ Inside Sandbox, `bootstrap-fresh-windows.ps1` installs **Git for Windows** from 
 | Date | Environment | Python-only | MATLAB (optional) | Notes |
 |------|-------------|-------------|-------------------|-------|
 | | Multipass Ubuntu 24.04 | | | |
-| | Windows Sandbox + Git Bash | | | |
+| 2026-06-30 | Windows Sandbox + Git Bash (`-Clone`) | pass (89 pytest) | n/a | `git_sha` from shallow clone; VC++ redist + Windows uv cache |
 | | macOS | deferred | deferred | no hardware |
 
 Paste the `=== rl-adaptive-dbs fresh validation ===` block from `validate-fresh.sh` into the Notes column or an issue.

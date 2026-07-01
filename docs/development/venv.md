@@ -78,4 +78,4 @@ uv sync --all-groups
 
 ## Optional: pin a Python version
 
-To fix the interpreter uv picks on your machine, add a `.python-version` file (for example `3.12`) or adjust `requires-python` in `pyproject.toml`, then run `uv sync` again.
+The repo pins **Python 3.12** via `.python-version` at the project root (fresh Windows hosts avoid uv picking 3.14). To change the interpreter uv picks, edit that file or adjust `requires-python` in `pyproject.toml`, then run `uv sync` again.
