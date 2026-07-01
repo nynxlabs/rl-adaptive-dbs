@@ -1,6 +1,6 @@
 # Command-line interface specification
 
-This document defines the **`rl-dbs`** CLI: training, evaluation, benchmarking, configuration, and repository introspection. **Phase 4** starts implementation: `benchmark` and `info` first, then Mehregan `ddpg` `train` / `eval` (including quantized variants). Broader controller coverage and packaging hardening continue in Phases 5–8 ([development/roadmap.md](development/roadmap.md)).
+This document defines the **`rl-dbs`** CLI: training, evaluation, benchmarking, configuration, and repository introspection. **Phase 4** starts implementation: `benchmark` and `info` first, then Mehregan `ddpg` `train` / `eval` (including quantized variants). Broader controller coverage and packaging hardening continue in Phases 5–9 ([development/roadmap.md](development/roadmap.md)).
 
 **Related specs:** [development/roadmap.md](development/roadmap.md) (phases), [benchmarking.md](benchmarking.md) (suites, results layout), [tui.md](tui.md) (read-only monitor), [environment.md](environment.md) (Mehregan Gym API), [plant.md](plant.md) (plant config), [controllers/](controllers/) (per-paper training). Tooling: [development/venv.md](development/venv.md) (`uv run`).
 

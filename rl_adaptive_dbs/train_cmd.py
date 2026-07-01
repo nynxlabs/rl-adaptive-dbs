@@ -12,6 +12,9 @@ from rl_adaptive_dbs.env_factory import build_mehregan_env
 from rl_adaptive_dbs.info import CONTROLLER_VARIANTS
 
 
+_CONTROLLER_PHASE: dict[str, int] = {"snn": 5, "sea_dbs": 6}
+
+
 def validate_train_request(controller: str, variant: str) -> None:
     if controller not in {"ddpg", "snn", "sea_dbs"}:
         msg = f"unknown controller {controller!r}; valid: ddpg, snn, sea_dbs"
@@ -20,7 +23,8 @@ def validate_train_request(controller: str, variant: str) -> None:
         msg = f"unknown variant {variant!r} for controller {controller!r}"
         raise KeyError(msg)
     if controller != "ddpg":
-        msg = f"training for {controller!r} is not implemented (Phase 5)"
+        phase = _CONTROLLER_PHASE[controller]
+        msg = f"training for {controller!r} is not implemented (Phase {phase})"
         raise NotImplementedError(msg)
     if is_ptq_variant(variant):
         msg = (
@@ -61,7 +65,7 @@ def train_controller(
             "variant": variant,
             "seed": seed,
             "episodes": config.num_episodes,
-            "checkpoint": str(ckpt_path),
+            "checkpoint": ckpt_path.as_posix(),
         }
         if dry_run:
             summaries.append({**plan, "dry_run": True})

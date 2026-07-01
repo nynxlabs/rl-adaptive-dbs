@@ -18,6 +18,9 @@ from controllers.ddpg.quantization import fp_source_variant, is_ptq_variant
 from rl_adaptive_dbs.info import CONTROLLER_VARIANTS
 
 
+_CONTROLLER_PHASE: dict[str, int] = {"snn": 5, "sea_dbs": 6}
+
+
 def validate_eval_request(controller: str, variant: str) -> None:
     if controller == "baseline":
         if variant not in CONTROLLER_VARIANTS["baseline"]:
@@ -31,7 +34,8 @@ def validate_eval_request(controller: str, variant: str) -> None:
         msg = f"unknown variant {variant!r} for controller {controller!r}"
         raise KeyError(msg)
     if controller != "ddpg":
-        msg = f"eval for {controller!r} is not implemented (Phase 5)"
+        phase = _CONTROLLER_PHASE[controller]
+        msg = f"eval for {controller!r} is not implemented (Phase {phase})"
         raise NotImplementedError(msg)
 
 

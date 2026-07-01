@@ -23,6 +23,9 @@ from envs.mehregan.baselines import default_baselines, run_baseline_mehregan_eva
 from envs.mehregan.env import MehreganEnv
 
 
+_CONTROLLER_PHASE: dict[str, int] = {"snn": 5, "sea_dbs": 6}
+
+
 @dataclass
 class BenchmarkOptions:
     results_dir: Path = Path("results")
@@ -93,9 +96,10 @@ def _execute_mehregan_run(
             protocol="mehregan_eval",
             variant=planned.variant,
         )
+    phase = _CONTROLLER_PHASE.get(planned.controller, "?")
     msg = (
         f"controller {planned.controller!r} is not implemented for protocol "
-        f"{suite.protocol!r} (Phase 5+)"
+        f"{suite.protocol!r} (Phase {phase})"
     )
     raise NotImplementedError(msg)
 
