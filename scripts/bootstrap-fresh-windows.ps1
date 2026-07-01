@@ -234,20 +234,6 @@ if ($Clone) {
             Copy-RepoFromHostCache -RepoDir $RepoDir -LogDir $LogDir
         }
     }
-    $hostSetup = Join-Path 'C:\rl-scripts' 'setup.sh'
-    if (Test-Path -LiteralPath $hostSetup) {
-        Log 'Overlaying scripts/setup.sh from mapped host scripts'
-        Copy-Item -LiteralPath $hostSetup -Destination (Join-Path $RepoDir 'scripts\setup.sh') -Force
-    }
-    $trainCmd = Join-Path $RepoDir 'rl_adaptive_dbs\train_cmd.py'
-    if (Test-Path -LiteralPath $trainCmd) {
-        $tc = Get-Content -LiteralPath $trainCmd -Raw
-        if ($tc -match '"checkpoint": str\(ckpt_path\)') {
-            Log 'Patching train_cmd checkpoint paths to POSIX (Windows JSON portability)'
-            $tc = $tc -replace '"checkpoint": str\(ckpt_path\)', '"checkpoint": ckpt_path.as_posix()'
-            Set-Content -LiteralPath $trainCmd -Value $tc -NoNewline
-        }
-    }
 }
 
 $bashRepo = $RepoMount -replace '\\', '/'
