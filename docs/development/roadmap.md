@@ -85,7 +85,7 @@ Replicate the shared plant and Mehregan et al. Gym API before any controller wor
 
 ### Phase 9 and beyond — Native plant, modularity, extensions
 
-- Native Python plant ([plant.md](../plant.md) §9); drop MATLAB dependency after equivalence checks.
+- Native Python plant ([plant.md](../plant.md) §9); drop MATLAB dependency after equivalence checks. **Accelerated planning:** [native-plant-port.md](native-plant-port.md) (TASK-15, 2026-07-01).
 - Modular layout: swappable plant backends, controller packages, adapters, and benchmark runner; CI on smoke tests + selected suites.
 - **Expand** `rl-dbs` / `rl-dbs-tui` (all controllers, training monitor, logs)—initial shells land in Phase 4 ([cli.md](../cli.md), [tui.md](../tui.md)).
 - Optional per-controller work beyond paper replication: [controllers/ddpg/extensions.md](../controllers/ddpg/extensions.md), [controllers/snn/extensions.md](../controllers/snn/extensions.md), [controllers/sea_dbs/extensions.md](../controllers/sea_dbs/extensions.md), and broader framework ideas (other oscillatory conditions, patient-specific robustness, etc.).

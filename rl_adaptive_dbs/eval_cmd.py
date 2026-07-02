@@ -72,6 +72,8 @@ def eval_controller(
     results_dir: Path | None = None,
     run_id: str | None = None,
     write_timeseries: bool = True,
+    parallel: int = 1,
+    config_path: Path | None = None,
 ) -> list[RunRecord]:
     validate_eval_request(controller, variant)
     repo_root = find_repo_root()
@@ -90,39 +92,74 @@ def eval_controller(
             eval_steps=eval_steps,
         )
 
-    env = build_mehregan_env()
-    snapshot = env_snapshot(env)
-    records: list[RunRecord] = []
-    try:
+    if parallel > 1 and len(seeds) > 1:
+        from rl_adaptive_dbs.parallel_workers import EvalSeedJob, eval_seed_worker, run_in_parallel
+
+        jobs: list[EvalSeedJob] = []
         for seed in seeds:
             ckpt = _resolve_checkpoint(controller, variant, checkpoint, repo_root=repo_root)
             if controller == "ddpg" and (ckpt is None or not ckpt.is_file()):
                 msg = f"checkpoint not found: {ckpt}"
                 raise FileNotFoundError(msg)
+            jobs.append(
+                EvalSeedJob(
+                    controller=controller,
+                    variant=variant,
+                    seed=int(seed),
+                    checkpoint=ckpt,
+                    suite=suite,
+                    write_timeseries=write_timeseries,
+                    run_id=run_id,
+                    config_path=config_path,
+                )
+            )
+        records = run_in_parallel(jobs, eval_seed_worker, parallel)
+        env = build_mehregan_env(config_path=config_path)
+        try:
+            snapshot = env_snapshot(env)
+        finally:
+            env.close()
+    else:
+        env = build_mehregan_env(config_path=config_path)
+        snapshot = env_snapshot(env)
+        records = []
+        try:
+            for seed in seeds:
+                ckpt = _resolve_checkpoint(controller, variant, checkpoint, repo_root=repo_root)
+                if controller == "ddpg" and (ckpt is None or not ckpt.is_file()):
+                    msg = f"checkpoint not found: {ckpt}"
+                    raise FileNotFoundError(msg)
 
+                planned = PlannedRun(
+                    controller=controller,
+                    variant=variant,
+                    seed=int(seed),
+                    entry=ControllerEntry(controller=controller, variant=variant, checkpoint=ckpt),
+                    checkpoint=ckpt,
+                )
+                rid = run_id or make_run_id()
+                record = execute_planned_run(
+                    env,
+                    planned,
+                    suite,
+                    run_id=rid,
+                    write_timeseries=write_timeseries,
+                )
+                records.append(record)
+        finally:
+            env.close()
+
+    if results_dir is not None:
+        suite_dir = results_dir / suite_label
+        for seed, record in zip(seeds, records, strict=True):
             planned = PlannedRun(
                 controller=controller,
                 variant=variant,
                 seed=int(seed),
-                entry=ControllerEntry(controller=controller, variant=variant, checkpoint=ckpt),
-                checkpoint=ckpt,
+                entry=ControllerEntry(controller=controller, variant=variant),
             )
-            rid = run_id or make_run_id()
-            record = execute_planned_run(
-                env,
-                planned,
-                suite,
-                run_id=rid,
-                write_timeseries=write_timeseries,
-            )
-            records.append(record)
-
-            if results_dir is not None:
-                suite_dir = results_dir / suite_label
-                record.run_dir = suite_dir / "runs" / run_dir_name(planned, record.run_id)
-                write_run_outputs(suite_dir, record, write_timeseries=write_timeseries)
-    finally:
-        env.close()
+            record.run_dir = suite_dir / "runs" / run_dir_name(planned, record.run_id)
+            write_run_outputs(suite_dir, record, write_timeseries=write_timeseries)
 
     if results_dir is not None and records:
         suite_dir = results_dir / suite_label

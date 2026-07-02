@@ -50,6 +50,8 @@ def train_controller(
     episodes: int | None = None,
     checkpoint_dir: Path | None = None,
     dry_run: bool = False,
+    parallel: int = 1,
+    config_path: Path | None = None,
 ) -> list[dict[str, Any]]:
     validate_train_request(controller, variant)
     out_dir = checkpoint_dir or default_checkpoint_dir(controller, variant)
@@ -71,7 +73,39 @@ def train_controller(
             summaries.append({**plan, "dry_run": True})
             continue
 
-        env = build_mehregan_env()
+    if dry_run:
+        return summaries
+
+    if parallel > 1 and len(seeds) > 1:
+        from rl_adaptive_dbs.parallel_workers import TrainSeedJob, run_in_parallel, train_seed_worker
+
+        jobs = [
+            TrainSeedJob(
+                controller=controller,
+                variant=variant,
+                seed=int(seed),
+                episodes=episodes,
+                checkpoint_dir=out_dir,
+                config_path=config_path,
+            )
+            for seed in seeds
+        ]
+        return run_in_parallel(jobs, train_seed_worker, parallel)
+
+    for seed in seeds:
+        config = DDPGConfig(variant=variant, seed=int(seed))
+        if episodes is not None:
+            config = replace(config, num_episodes=int(episodes))
+        ckpt_path = out_dir / f"{variant}_train{seed}.pt"
+        plan = {
+            "controller": controller,
+            "variant": variant,
+            "seed": seed,
+            "episodes": config.num_episodes,
+            "checkpoint": ckpt_path.as_posix(),
+        }
+
+        env = build_mehregan_env(config_path=config_path)
         try:
             from controllers.ddpg import train
 
