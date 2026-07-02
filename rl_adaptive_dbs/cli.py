@@ -33,6 +33,13 @@ def _build_parser() -> argparse.ArgumentParser:
     train.add_argument("--episodes", type=int, help="Override training episode count")
     train.add_argument("--checkpoint-dir", type=Path)
     train.add_argument("--dry-run", action="store_true")
+    train.add_argument(
+        "--parallel",
+        type=int,
+        default=1,
+        metavar="N",
+        help="Process count for independent seeds (default: 1, sequential)",
+    )
 
     eval_cmd = sub.add_parser("eval", help="Evaluate a checkpoint or baseline")
     eval_cmd.add_argument("--controller", required=True)
@@ -43,6 +50,13 @@ def _build_parser() -> argparse.ArgumentParser:
     eval_cmd.add_argument("--results-dir", type=Path)
     eval_cmd.add_argument("--run-id")
     eval_cmd.add_argument("--no-timeseries", action="store_true")
+    eval_cmd.add_argument(
+        "--parallel",
+        type=int,
+        default=1,
+        metavar="N",
+        help="Process count for independent seeds (default: 1, sequential)",
+    )
 
     benchmark = sub.add_parser("benchmark", help="Run a benchmark suite from YAML")
     benchmark.add_argument("--suite", type=Path, help="Path to suite YAML")
@@ -52,6 +66,13 @@ def _build_parser() -> argparse.ArgumentParser:
     benchmark.add_argument("--seeds", help="Override manifest seeds")
     benchmark.add_argument("--dry-run", action="store_true")
     benchmark.add_argument("--no-timeseries", action="store_true")
+    benchmark.add_argument(
+        "--parallel",
+        type=int,
+        default=1,
+        metavar="N",
+        help="Process count for independent runs (default: 1, sequential)",
+    )
 
     summary = sub.add_parser("summary", help="Print comparison table from results/")
     summary.add_argument("--results-dir", type=Path)
@@ -109,6 +130,13 @@ def _parse_seeds_optional(raw: str | None) -> tuple[int, ...] | None:
     return _parse_seeds(raw, 0)
 
 
+def _normalize_parallel(value: int) -> int:
+    if value < 1:
+        msg = f"parallel worker count must be >= 1, got {value}"
+        raise ValueError(msg)
+    return int(value)
+
+
 def _check_global_flags(args: argparse.Namespace) -> int | None:
     if args.verbose and args.quiet:
         print("rl-dbs: --verbose and --quiet are mutually exclusive", file=sys.stderr)
@@ -118,6 +146,7 @@ def _check_global_flags(args: argparse.Namespace) -> int | None:
 
 def _cmd_train(args: argparse.Namespace) -> int:
     try:
+        parallel = _normalize_parallel(args.parallel)
         summaries = train_controller(
             args.controller,
             args.variant,
@@ -125,7 +154,12 @@ def _cmd_train(args: argparse.Namespace) -> int:
             episodes=args.episodes,
             checkpoint_dir=args.checkpoint_dir,
             dry_run=args.dry_run,
+            parallel=parallel,
+            config_path=args.config,
         )
+    except ValueError as exc:
+        print(f"rl-dbs train: {exc}", file=sys.stderr)
+        return 2
     except (KeyError, NotImplementedError) as exc:
         print(f"rl-dbs train: {exc}", file=sys.stderr)
         return 3 if isinstance(exc, KeyError) else 3
@@ -144,6 +178,7 @@ def _cmd_train(args: argparse.Namespace) -> int:
 
 def _cmd_eval(args: argparse.Namespace) -> int:
     try:
+        parallel = _normalize_parallel(args.parallel)
         records = eval_controller(
             args.controller,
             args.variant,
@@ -153,7 +188,12 @@ def _cmd_eval(args: argparse.Namespace) -> int:
             results_dir=args.results_dir,
             run_id=args.run_id,
             write_timeseries=not args.no_timeseries,
+            parallel=parallel,
+            config_path=args.config,
         )
+    except ValueError as exc:
+        print(f"rl-dbs eval: {exc}", file=sys.stderr)
+        return 2
     except (KeyError, NotImplementedError) as exc:
         print(f"rl-dbs eval: {exc}", file=sys.stderr)
         return 3
@@ -184,6 +224,7 @@ def _cmd_benchmark(args: argparse.Namespace) -> int:
 
     try:
         controller_filter = parse_controller_filter(args.controllers)
+        parallel = _normalize_parallel(args.parallel)
     except ValueError as exc:
         print(f"rl-dbs benchmark: {exc}", file=sys.stderr)
         return 2
@@ -195,6 +236,8 @@ def _cmd_benchmark(args: argparse.Namespace) -> int:
         dry_run=args.dry_run,
         write_timeseries=not args.no_timeseries,
         repo_root=repo_root,
+        workers=parallel,
+        config_path=args.config,
     )
     result = run_suite(suite_path, options=options)
 

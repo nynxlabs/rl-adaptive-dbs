@@ -34,6 +34,8 @@ class BenchmarkOptions:
     dry_run: bool = False
     write_timeseries: bool = True
     repo_root: Path | None = None
+    workers: int = 1
+    config_path: Path | None = None
 
 
 @dataclass
@@ -203,42 +205,68 @@ def run_suite(
         )
 
     owns_env = env is None
-    active_env = env
-    if active_env is None:
+    use_parallel = owns_env and opts.workers > 1 and len(planned) > 1
+    records: list[RunRecord] = []
+    snapshot: dict[str, Any] | None = None
+
+    if use_parallel:
+        from rl_adaptive_dbs.parallel_workers import BenchmarkRunJob, benchmark_run_worker, run_in_parallel
+
+        jobs = [
+            BenchmarkRunJob(
+                planned=item,
+                suite=manifest,
+                write_timeseries=opts.write_timeseries,
+                config_path=opts.config_path,
+            )
+            for item in planned
+        ]
+        records = run_in_parallel(jobs, benchmark_run_worker, opts.workers)
         from rl_adaptive_dbs.env_factory import build_mehregan_env
 
-        active_env = build_mehregan_env()
-
-    records: list[RunRecord] = []
-    try:
-        snapshot = env_snapshot(active_env)
-        for item in planned:
-            record = execute_planned_run(
-                active_env,
-                item,
-                manifest,
-                write_timeseries=opts.write_timeseries,
-            )
+        probe_env = build_mehregan_env(config_path=opts.config_path)
+        try:
+            snapshot = env_snapshot(probe_env)
+        finally:
+            probe_env.close()
+        for item, record in zip(planned, records, strict=True):
             record.run_dir = suite_dir / "runs" / run_dir_name(item, record.run_id)
             write_run_outputs(suite_dir, record, write_timeseries=opts.write_timeseries)
-            records.append(record)
+    else:
+        active_env = env
+        if active_env is None:
+            from rl_adaptive_dbs.env_factory import build_mehregan_env
 
-        manifest_path = write_suite_manifest(
-            suite_dir,
-            build_suite_manifest_payload(
-                manifest,
-                results_dir=opts.results_dir.resolve(),
-                git_commit=git_commit,
-                planned_runs=len(planned),
-                completed_runs=len(records),
-                started_at=started_at,
-                finished_at=utc_now_iso(),
-                env_snapshot=snapshot,
-            ),
-        )
-    finally:
-        if owns_env and active_env is not None:
-            active_env.close()
+            active_env = build_mehregan_env(config_path=opts.config_path)
+        try:
+            snapshot = env_snapshot(active_env)
+            for item in planned:
+                record = execute_planned_run(
+                    active_env,
+                    item,
+                    manifest,
+                    write_timeseries=opts.write_timeseries,
+                )
+                record.run_dir = suite_dir / "runs" / run_dir_name(item, record.run_id)
+                write_run_outputs(suite_dir, record, write_timeseries=opts.write_timeseries)
+                records.append(record)
+        finally:
+            if owns_env and active_env is not None:
+                active_env.close()
+
+    manifest_path = write_suite_manifest(
+        suite_dir,
+        build_suite_manifest_payload(
+            manifest,
+            results_dir=opts.results_dir.resolve(),
+            git_commit=git_commit,
+            planned_runs=len(planned),
+            completed_runs=len(records),
+            started_at=started_at,
+            finished_at=utc_now_iso(),
+            env_snapshot=snapshot,
+        ),
+    )
 
     return BenchmarkResult(
         suite=manifest,

@@ -113,6 +113,7 @@ rl-dbs train --controller NAME --variant VARIANT [options]
 | `--hyperparams` | No | Path to JSON/YAML hyperparameter overlay (merged over variant defaults). |
 | `--adapter` | No | For `snn` / `sea_dbs`: force adapter on (default **true** for those controllers). Ignored for `ddpg` on Mehregan `envs/`. |
 | `--dry-run` | No | Validate config and print resolved training plan without running plant steps. |
+| `--parallel` | No | Process count for independent seeds (default **1**, sequential). Each worker owns one MATLAB engine (~1 GB RAM). |
 
 **Delegation:** Call `controllers.<name>.train(...)` (or equivalent module API) with resolved config. Training metrics (episode return, loss, wall time) go to:
 
@@ -154,6 +155,7 @@ rl-dbs eval --controller NAME --variant VARIANT [options]
 | `--results-dir` | No | Output root (default: `results/`). |
 | `--run-id` | No | Explicit `run_id`; if omitted, generate `YYYYMMDD-HHMMSS-<4char>`. |
 | `--adapter` | No | `true` / `false` for adapter use (manifest default when `--suite` set). |
+| `--parallel` | No | Process count for independent seeds (default **1**, sequential). Each worker owns one MATLAB engine (~1 GB RAM). |
 
 **Delegation:** Call `controllers.<name>.evaluate(seed, checkpoint, suite_config)` or baseline runner on `envs/` per suite protocol. Write one run directory per [benchmarking.md](benchmarking.md) §6 when `--results-dir` is set.
 
@@ -190,7 +192,7 @@ rl-dbs benchmark --suite PATH | --suite-name NAME [options]
 | `--results-dir` | No | Default `results/`. |
 | `--controllers` | No | Filter manifest entries: comma-separated `controller:variant` pairs. |
 | `--seeds` | No | Override manifest `seeds` list. |
-| `--parallel` | No | Worker count for independent runs (**intentionally open**: default **1**; parallel workers not implemented). |
+| `--parallel` | No | Process count for independent runs (default **1**, sequential). Each worker owns one MATLAB engine (~1 GB RAM); use **3–4** on ~17 GB RAM. |
 | `--dry-run` | No | Print planned runs without executing. |
 
 **Manifest format:** As in [benchmarking.md](benchmarking.md) §5 (`name`, `version`, `protocol`, `seeds`, `controllers`, optional `metrics`, `env_ref`). The runner must not mix protocols inside one suite without bumping `version`.
@@ -421,7 +423,7 @@ Prefer thin `rl_adaptive_dbs/*.py` modules (`cli.py`, `train_cmd.py`, `eval_cmd.
 
 ### 3. Parallel benchmark workers
 
-**Fixed:** `--parallel` flag exists. **Open:** default worker count, process vs thread model for MATLAB. **Decide in** benchmark runner.
+**Fixed:** `--parallel` on `train`, `eval`, and `benchmark` (default **1**). **Process pool** — each worker starts its own `matlab.engine`, runs assigned seed(s), then closes the engine. Not thread-safe for MATLAB. Injected test envs (mock plant) stay sequential. Cap workers at seed/run count automatically.
 
 ### 4. Hyperparameter file schema
 
