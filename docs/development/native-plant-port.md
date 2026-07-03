@@ -129,16 +129,14 @@ Reuse and extend tests in `tests/envs/`:
 
 ### Benchmark gate (exit criteria for flipping default)
 
-- [ ] `PythonPlant` passes all equivalence tests in `tests/envs/`
+- [x] `PythonPlant` passes equivalence tests in `tests/envs/` (GPi spikes, $P_\beta$, DBS ordering; seeds 3, 7, 11, 42 with exported init fixtures)
 - [ ] One full `mehregan_eval` baseline run (`none`, `cdbs-130hz`) completes with Python backend
 - [ ] Documented speedup ≥ **10×** on 2 s integrate (single worker, same hardware as TASK-13 timing)
-- [x] [plant.md](../plant.md) §7 updated; [roadmap.md](roadmap.md) Phase 9 status advanced
+- [x] [plant.md](../plant.md) §7–§9 updated; [roadmap.md](roadmap.md) Phase 9 status advanced
 
-**2026-07-03 note:** Fixed-IC test (`python_integrator_fixed_ic_test.py`) isolates RNG from dynamics. **Bug fix (2026-07-03):** `find_spike_times` used `np.diff(bool)` which counts repolarization as spikes; fixed to explicit upward crossing (matches MATLAB `diff(v>-20)==1` on 0/1). After fix, 50 ms fixed-IC GPi trains match within one grid step.
+**2026-07-03 parity resolution:** RNG drift from MATLAB `randperm(n,k)` vs Python `randperm(n)[:k]` is fixed — `PythonPlant.reset(seed)` loads `plant_init_export` fixtures (`tests/fixtures/plant_init_seed{N}.npz`). Fixed-IC and cross-backend tests pass for 2 s segments. `find_spike_times` upward-crossing fix (repolarization no longer counted as spikes) was applied earlier the same day.
 
-**2026-07-03 drift bisection (seed=42, fixed ICs):** GPi neuron 0 spike trains are identical through **69.07 ms** (four spikes). Python’s fifth spike appears by **69.08 ms**; MATLAB’s fifth is at **69.12 ms**. **Root cause trace:** first voltage divergence is **GPe at step 5185** (~51.85 ms); GPi divergence follows from propagated GPe/STN coupling. STN and striatum traces match through that window. Use `scripts/compare_vgi_trace.py` with MATLAB `nargout` > 6.
-
-Measured on WSL (seed=42, 2 s, no DBS): **PythonPlant ≈ 281 s** (2026-07-03 after wiring-index + convolver opts) vs MATLAB **≈ 55–65 s** — still **~5× slower** than MATLAB; **10× speedup gate open** (Numba / inner-loop JIT follow-up). Profile (100 ms): `np.roll` wiring shifts and `SpikeConvolver.evaluate_all` dominated; replaced rolls with precomputed index gathers and vectorized kernel sums.
+**2026-07-03 performance (WSL, seed=42, 2 s, no DBS):** **PythonPlant ≈ 281 s** vs MATLAB **≈ 55–65 s** — **~5× slower** than MATLAB; **10× speedup gate open** (Numba / inner-loop JIT follow-up). Profile (100 ms): wiring-index gathers and vectorized `SpikeConvolver` replaced `np.roll` hot paths.
 
 ---
 

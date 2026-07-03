@@ -8,8 +8,6 @@ import pytest
 
 from envs.plant import DbsSpec, IntegrateResult, MatlabPlant, PlantConfig, PythonPlant
 from tests.envs.plant_backends import (
-    PHASE_B_EQUIVALENCE_XFAIL_REASON,
-    P_BETA_REL_TOL,
     assert_gpi_spikes_match,
     assert_p_beta_match,
     require_matlab,
@@ -19,7 +17,6 @@ from tests.envs.plant_backends import (
 pytestmark = [
     pytest.mark.matlab,
     pytest.mark.slow,
-    pytest.mark.xfail(reason=PHASE_B_EQUIVALENCE_XFAIL_REASON, strict=False),
 ]
 
 
@@ -103,17 +100,13 @@ def test_p_beta_ordering_under_dbs(
     assert python_dbs.p_beta < python_none.p_beta, label
 
 
-def test_spike_count_drift_logged_for_reviewer(
+def test_spike_counts_match_at_seed_42(
     matlab_plant: MatlabPlant,
     python_plant: PythonPlant,
 ) -> None:
-    """Side-by-side counts at seed=42 — reviewer compares before removing xfail."""
+    """Regression guard — per-neuron GPi spike counts at seed=42 (2 s, no DBS)."""
     matlab = _integrate(matlab_plant, seed=42, duration_s=2.0, dbs_spec=DbsSpec.none())
     python = _integrate(python_plant, seed=42, duration_s=2.0, dbs_spec=DbsSpec.none())
-    matlab_counts = spike_count_vector(matlab.gpi_spikes)
-    python_counts = spike_count_vector(python.gpi_spikes)
-    # Document measured drift (2026-07-03, WSL); remove when equivalence passes.
-    assert matlab_counts != python_counts
+    assert spike_count_vector(matlab.gpi_spikes) == spike_count_vector(python.gpi_spikes)
     assert matlab.p_beta is not None and python.p_beta is not None
-    rel_err = abs(python.p_beta - matlab.p_beta) / matlab.p_beta
-    assert rel_err > P_BETA_REL_TOL
+    assert_p_beta_match(matlab.p_beta, python.p_beta)
