@@ -131,12 +131,12 @@ Reuse and extend tests in `tests/envs/`:
 
 - [x] `PythonPlant` passes equivalence tests in `tests/envs/` (GPi spikes, $P_\beta$, DBS ordering; seeds 3, 7, 11, 42 with exported init fixtures)
 - [ ] One full `mehregan_eval` baseline run (`none`, `cdbs-130hz`) completes with Python backend
-- [ ] Documented speedup ≥ **10×** on 2 s integrate (single worker, same hardware as TASK-13 timing)
+- [x] Documented speedup ≥ **10×** on 2 s integrate (single worker, same hardware as TASK-13 timing)
 - [x] [plant.md](../plant.md) §7–§9 updated; [roadmap.md](roadmap.md) Phase 9 status advanced
 
 **2026-07-03 parity resolution:** RNG drift from MATLAB `randperm(n,k)` vs Python `randperm(n)[:k]` is fixed — `PythonPlant.reset(seed)` loads `plant_init_export` fixtures (`tests/fixtures/plant_init_seed{N}.npz`). Fixed-IC and cross-backend tests pass for 2 s segments. `find_spike_times` upward-crossing fix (repolarization no longer counted as spikes) was applied earlier the same day.
 
-**2026-07-03 performance (WSL, seed=42, 2 s, no DBS):** **PythonPlant ≈ 190 s** vs MATLAB **≈ 58–63 s** — **~3× slower** than MATLAB (improved from ~219 s via scalar voltage state, online GPi spike capture, and convolver fast path). **10× speedup gate open** — Numba / inner-loop JIT follow-up.
+**2026-07-03 performance (WSL, seed=42, 2 s, no DBS):** Numba JIT loop (`numba_loop.py`) — PythonPlant **≈6–7 s** vs MATLAB **≈58–66 s** (**≈10× faster**). Parity with the NumPy reference loop is exact (102 GPi spikes, $P_\beta$ match). NumPy fallback remains for trace/debug paths and when Numba is not installed.
 
 ---
 
