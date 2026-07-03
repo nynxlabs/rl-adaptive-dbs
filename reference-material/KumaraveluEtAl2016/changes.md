@@ -36,6 +36,7 @@ Upstream: [ModelDB 206232](https://github.com/ModelDBRepository/206232). Citatio
 |-----------|--------|
 | 1 | `gpi_spike_times` — 1×10 cell of GPi spike time vectors (seconds) |
 | 2–6 | `dt_ms`, `tmax_ms`, `pd`, `pick_dbs_freq`, `dbs_freq_hz` |
+| 7–10 | Optional voltage traces (`vgi`, `vsn`, `vge`, `vstr_indr`) when `nargout` > 6 — for Python parity debugging (`scripts/compare_vgi_trace.py`) |
 
 `spikes_to_cell` packs `find_spike_times` output because nested struct arrays cannot cross the Python engine.
 
@@ -45,14 +46,24 @@ Upstream: [ModelDB 206232](https://github.com/ModelDBRepository/206232). Citatio
 
 ---
 
-## 3. Not changed
+## 3. Optional voltage traces (`dynamics_only`, `nargout` > 6)
+
+**Where:** `simulate_network_model` / `CTX_BG_TH_network` — seventh through tenth outputs when requested.
+
+**Behavior:** Returns full `vgi`, `vsn`, `vge`, `vstr_indr` matrices (neurons × time steps) for parity debugging. Default plant bridge calls use `nargout=6` (unchanged).
+
+**Why:** Localize Python vs MATLAB integrator drift (`scripts/compare_vgi_trace.py`). First GPe divergence at integrator step **5185** (~51.85 ms, seed 42, fixed ICs) as of 2026-07-03.
+
+---
+
+## 4. Not changed
 
 - Network equations, integration (`dt = 0.01` ms), DBS waveform construction, inlined multitaper code path (still runs when `dynamics_only` is false).
 - Full upstream run still needs Statistics + Signal Processing toolboxes unless further patches are added.
 
 ---
 
-## 4. `plant_band_power.m` (Python $P_\beta$ validation)
+## 5. `plant_band_power.m` (Python $P_\beta$ validation)
 
 **Where:** [`plant_band_power.m`](plant_band_power.m) — exported `plant_band_power` / `plant_p_beta` plus inlined Chronux `mtspectrumpt` helpers (copied from `simulate_network_model.m`).
 
