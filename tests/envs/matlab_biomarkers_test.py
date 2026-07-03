@@ -1,12 +1,13 @@
-"""$P_\\beta$ equivalence vs MATLAB Chronux path (needs Signal Processing Toolbox)."""
+"""$P_\\beta$ checks for MATLAB and Python plant backends."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from envs.plant import DbsSpec, MatlabPlant, p_beta
+from envs.plant import DbsSpec, MatlabPlant, PlantConfig, PythonPlant, p_beta
 from envs.plant.biomarkers import MEHREGAN_BETA_BAND_HZ
+from tests.envs.plant_backends import p_beta_from_spikes, require_matlab
 
 
 def _matlab_has_dpss(engine) -> bool:
@@ -30,18 +31,20 @@ def _spikes_to_matlab_cell(engine, gpi_spikes: list) -> object:
 
 
 @pytest.fixture(scope="module")
-def matlab_plant() -> MatlabPlant:
-    with MatlabPlant() as plant:
+def matlab_module_plant() -> MatlabPlant:
+    require_matlab()
+    with MatlabPlant(PlantConfig()) as plant:
         yield plant
 
 
 @pytest.mark.matlab
-def test_p_beta_matches_matlab_reference(matlab_plant: MatlabPlant) -> None:
-    eng = matlab_plant._get_engine()
+def test_p_beta_matches_matlab_reference(matlab_module_plant: MatlabPlant) -> None:
+    """Chronux path cross-check — MATLAB engine only."""
+    eng = matlab_module_plant._get_engine()
     if not _matlab_has_dpss(eng):
         pytest.skip("MATLAB Signal Processing Toolbox (dpss) not available")
 
-    result = matlab_plant.reset(seed=42).integrate(2.0, DbsSpec.none())
+    result = matlab_module_plant.reset(seed=42).integrate(2.0, DbsSpec.none())
     assert result.p_beta is not None
 
     py_val = p_beta(
@@ -63,9 +66,12 @@ def test_p_beta_matches_matlab_reference(matlab_plant: MatlabPlant) -> None:
     assert float(matlab_val) == pytest.approx(py_val, rel=0.05)
 
 
-@pytest.mark.matlab
-def test_integrate_populates_p_beta(matlab_plant: MatlabPlant) -> None:
-    result = matlab_plant.reset(seed=7).integrate(2.0, DbsSpec.none())
+@pytest.mark.slow
+def test_integrate_populates_p_beta(
+    module_plant: MatlabPlant | PythonPlant,
+) -> None:
+    result = module_plant.reset(seed=7).integrate(2.0, DbsSpec.none())
     assert result.p_beta is not None
     assert result.p_beta > 0.0
     assert result.info["p_beta"] == pytest.approx(result.p_beta)
+    assert p_beta_from_spikes(result) == pytest.approx(result.p_beta)

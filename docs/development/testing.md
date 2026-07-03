@@ -53,13 +53,17 @@ tests/
 │   └── tui_data_test.py     # Benchmarks tab data layer
 ├── envs/
 │   ├── mock_plant.py        # helper (not collected)
+│   ├── plant_backends.py    # MATLAB/Python comparison helpers (not collected)
+│   ├── conftest.py          # parametrized plant_backend fixtures
 │   ├── biomarkers_test.py
 │   ├── baselines_test.py
 │   ├── mehregan_reward_test.py
 │   ├── mehregan_env_test.py     # MehreganEnv (mock plant)
-│   ├── matlab_plant_test.py     # MatlabPlant bridge (@pytest.mark.matlab)
+│   ├── python_plant_test.py     # PythonPlant scaffold + DBS waveform
+│   ├── matlab_plant_test.py     # plant bridge (parametrized backends)
 │   ├── matlab_biomarkers_test.py
-│   └── matlab_mehregan_env_test.py
+│   ├── matlab_mehregan_env_test.py
+│   └── plant_backend_equivalence_test.py  # cross-backend GPi / $P_\\beta$ (@pytest.mark.matlab)
 └── controllers/
     └── ddpg/
         ├── buffer_test.py
