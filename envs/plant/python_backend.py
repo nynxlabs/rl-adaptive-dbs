@@ -5,7 +5,8 @@ from __future__ import annotations
 from envs.plant.config import PlantConfig
 from envs.plant.dbs import DbsSpec
 from envs.plant.matlab_backend import IntegrateResult
-from envs.plant.network.integrator import integrate_network
+from envs.plant.network.integrator import NetworkInitDraws, integrate_network
+from envs.plant.network.matlab_rng import load_cached_init_draws
 
 import numpy as np
 
@@ -17,6 +18,7 @@ class PythonPlant:
         self.config = config or PlantConfig()
         self._rng: np.random.Generator | None = None
         self._seed: int | None = None
+        self._init_draws: NetworkInitDraws | None = None
         self._iteration = 0
 
     @property
@@ -39,6 +41,7 @@ class PythonPlant:
     def reset(self, seed: int | None = None) -> PythonPlant:
         self._seed = seed
         self._iteration = 0
+        self._init_draws = load_cached_init_draws(seed) if seed is not None else None
         if seed is None:
             self._rng = np.random.default_rng()
         else:
@@ -71,4 +74,5 @@ class PythonPlant:
             rng=self._rng,
             iteration=self._iteration,
             seed=self._seed,
+            init_draws=self._init_draws,
         )

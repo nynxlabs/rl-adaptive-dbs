@@ -123,11 +123,11 @@ The plant lives under `envs/plant/` as a **non-Gym** service the Mehregan `Env` 
 | `DbsSpec` | `envs.plant` | `pick_dbs_freq` index; `DbsSpec.none()`, `from_frequency_hz(hz)` |
 | `IntegrateResult` | `envs.plant` | `gpi_spikes` (10 neurons, times in **seconds**), `info` |
 
-**Backend selection:** `.rl-dbs.yaml` → `plant.backend: matlab` (default) or `python`; env override `RL_DBS_PLANT_BACKEND`. `rl-dbs info plant` shows the resolved backend. Default stays **`matlab`** until the **≥10×** integrate speedup gate passes ([native-plant-port.md](development/native-plant-port.md) §5); parity gates are met (2026-07-03).
+**Backend selection:** `.rl-dbs.yaml` → `plant.backend: matlab` (default) or `python`; env override `RL_DBS_PLANT_BACKEND`. `rl-dbs info plant` shows the resolved backend. Default stays **`matlab`** until a full `mehregan_eval` baseline completes on the Python backend ([native-plant-port.md](development/native-plant-port.md) §5); parity and **≥10×** speed gates are met (2026-07-03).
 
 **Python init draws:** MATLAB’s `randperm(n, k)` for heterogeneous STN→GPe/GPi conductances is not reproducible from NumPy’s `Generator` alone. `PythonPlant.reset(seed=N)` loads `tests/fixtures/plant_init_seed{N}.npz` (or `~/.cache/rl-adaptive-dbs/plant_init/`) exported via `scripts/export_plant_init_draws.py`. With matching init draws, 2 s GPi spike trains and $P_\beta$ match MATLAB within documented tolerances (`tests/envs/python_integrator_fixed_ic_test.py`, `tests/envs/plant_backend_equivalence_test.py`).
 
-**Performance (2026-07-03, WSL):** 2 s `integrate` (no DBS, seed=42) — MATLAB **≈58–63 s**, PythonPlant **≈190 s** (~3× slower; improved from ~219 s via scalar state + convolver fast path). **≥10× gate open** — Numba inner-loop JIT is the next step before flipping the default backend.
+**Performance (2026-07-03, WSL, seed=42, 2 s, no DBS):** MATLAB **≈58–66 s**; PythonPlant **≈6–7 s** with Numba JIT (`envs/plant/network/numba_loop.py`) — **≈10× faster** than MATLAB. NumPy fallback loop remains when Numba is unavailable or trace/debug hooks are requested.
 
 ```python
 from envs.plant import DbsSpec, MatlabPlant, PythonPlant
@@ -169,7 +169,7 @@ Before trusting the Python/MATLAB bridge for training:
 3. **$\Delta t$:** if using 0.02 ms vs reference 0.01 ms, document and run (1)–(2) under the chosen step.
 4. **Band:** confirm Mehregan metrics use **13–35 Hz** even when the reference script returns **7–35 Hz**.
 
-**PythonPlant status (2026-07-03):** Gates (1)–(2) pass for seeds with exported init fixtures (`plant_init_seed{N}.npz`). Spike times match on the shared **0.01 ms** grid (0 ms atol); $P_\beta$ relative error **< 1%**. Cross-backend suite: `tests/envs/plant_backend_equivalence_test.py`. Remaining exit criterion for default-backend flip: **≥10×** speedup vs MATLAB on 2 s integrate ([native-plant-port.md](development/native-plant-port.md) §5).
+**PythonPlant status (2026-07-03):** Gates (1)–(2) pass for seeds with exported init fixtures (`plant_init_seed{N}.npz`). Spike times match on the shared **0.01 ms** grid (0 ms atol); $P_\beta$ relative error **< 1%**. Cross-backend suite: `tests/envs/plant_backend_equivalence_test.py`. **≥10×** speedup vs MATLAB on 2 s integrate is met via Numba JIT; default-backend flip awaits `mehregan_eval` baseline on Python ([native-plant-port.md](development/native-plant-port.md) §5).
 
 Mark heavy checks `@pytest.mark.matlab` ([development/testing.md](development/testing.md)). CI defaults should skip MATLAB.
 
@@ -184,8 +184,8 @@ Mark heavy checks `@pytest.mark.matlab` ([development/testing.md](development/te
 | GPi spike parity (2 s, fixed init draws) | **Pass** |
 | $P_\beta$ parity (< 1% rel error) | **Pass** |
 | DBS ordering (130 Hz / 45 Hz lowers beta vs none) | **Pass** (`plant_backend_equivalence_test.py`) |
-| ≥10× speedup vs MATLAB (2 s integrate) | **Open** (~3× slower on WSL after integrator opts; Numba inner-loop follow-up) |
-| Default backend flip to `python` | **Blocked** on speedup gate |
+| ≥10× speedup vs MATLAB (2 s integrate) | **Pass** (Numba JIT, WSL ≈6.5 s vs MATLAB ≈66 s, seed=42) |
+| Default backend flip to `python` | **Blocked** on `mehregan_eval` baseline ([native-plant-port.md](development/native-plant-port.md) §5) |
 
 Opt in via `plant.backend: python` or `RL_DBS_PLANT_BACKEND=python`. Until the speedup gate closes, treat **`reference-material/KumaraveluEtAl2016/`** as the dynamics reference for audits; Python is validated against it via exported init fixtures and parametrized `@pytest.mark.matlab` tests.
 

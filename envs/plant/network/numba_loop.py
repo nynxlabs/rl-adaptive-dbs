@@ -137,7 +137,7 @@ def _conv_step_outputs(
     return tuple(outputs)
 
 
-@njit(cache=True)
+@njit(cache=True, parallel=True)
 def run_cbgt_loop(
     n_steps: int,
     dt: float,
@@ -348,6 +348,10 @@ def run_cbgt_loop(
     S97_w = np.empty(n, dtype=np.float64)
     S98_w = np.empty(n, dtype=np.float64)
     S99_w = np.empty(n, dtype=np.float64)
+    S7_old = np.empty(n, dtype=np.float64)
+    S2a_old = np.empty(n, dtype=np.float64)
+    S2an_old = np.empty(n, dtype=np.float64)
+    S2b_old = np.empty(n, dtype=np.float64)
 
     _CM = 1.0
     _AE = 0.02
@@ -390,7 +394,7 @@ def run_cbgt_loop(
     _ECA2 = 120.0
     _EM = -100.0
     _GAHP2 = 10.0
-    _K12 = 15.0
+    _K1_GPE = 10.0
     _KCA2 = 15.0
     _GA = 5.0
     _GL_STN = 15.0
@@ -484,43 +488,38 @@ def run_cbgt_loop(
             S82r_w[i] = S8[nll[i]]
             S83r_w[i] = S8[oll[i]]
 
-        # gating (inline for n=10)
+        for i in range(n):
+            S7_old[i] = S7[i]
+            S2a_old[i] = S2a[i]
+            S2an_old[i] = S2an[i]
+            S2b_old[i] = S2b[i]
+
+        # --- Thalamus (all neurons, then conv) ---
         for i in range(n):
             V1 = v1_prev[i]
-            V2 = v2_prev[i]
-            V3 = v3_prev[i]
-            V4 = v4_prev[i]
-            V5 = v5_prev[i]
-            V6 = v6_prev[i]
-            V7 = v7_prev[i]
-            V8 = v8_prev[i]
-
             m1_i = 1.0 / (1.0 + np.exp(-(V1 + 37.0) / 7.0))
-            m3_i = 1.0 / (1.0 + np.exp(-(V3 + 37.0) / 10.0))
-            m4_i = 1.0 / (1.0 + np.exp(-(V4 + 37.0) / 10.0))
-            n3_i = 1.0 / (1.0 + np.exp(-(V3 + 50.0) / 14.0))
-            n4_i = 1.0 / (1.0 + np.exp(-(V4 + 50.0) / 14.0))
             h1_i = 1.0 / (1.0 + np.exp((V1 + 41.0) / 4.0))
-            h3_i = 1.0 / (1.0 + np.exp((V3 + 58.0) / 12.0))
-            h4_i = 1.0 / (1.0 + np.exp((V4 + 58.0) / 12.0))
             p1_i = 1.0 / (1.0 + np.exp(-(V1 + 60.0) / 6.2))
-            a3_i = 1.0 / (1.0 + np.exp(-(V3 + 57.0) / 2.0))
-            a4_i = 1.0 / (1.0 + np.exp(-(V4 + 57.0) / 2.0))
-            s3_i = 1.0 / (1.0 + np.exp(-(V3 + 35.0) / 2.0))
-            s4_i = 1.0 / (1.0 + np.exp(-(V4 + 35.0) / 2.0))
             r1_i = 1.0 / (1.0 + np.exp((V1 + 84.0) / 4.0))
-            r3_i = 1.0 / (1.0 + np.exp((V3 + 70.0) / 2.0))
-            r4_i = 1.0 / (1.0 + np.exp((V4 + 70.0) / 2.0))
-
-            tn3_i = 0.05 + 0.27 / (1.0 + np.exp(-(V3 + 40.0) / -12.0))
-            tn4_i = 0.05 + 0.27 / (1.0 + np.exp(-(V4 + 40.0) / -12.0))
             ah_i = 0.128 * np.exp(-(V1 + 46.0) / 18.0)
             bh_i = 4.0 / (1.0 + np.exp(-(V1 + 23.0) / 5.0))
             th1_i = 1.0 / (ah_i + bh_i)
-            th3_i = 0.05 + 0.27 / (1.0 + np.exp(-(V3 + 40.0) / -12.0))
-            th4_i = 0.05 + 0.27 / (1.0 + np.exp(-(V4 + 40.0) / -12.0))
             tr1_i = 0.15 * (28.0 + np.exp(-(V1 + 25.0) / 10.5))
+            il1 = _GL0 * (V1 - _EL0)
+            ina1 = _GNA0 * (m1_i**3) * H1[i] * (V1 - _ENA0)
+            ik1 = _GK0 * ((0.75 * (1.0 - H1[i])) ** 4) * (V1 - _EK0)
+            it1 = _GT0 * (p1_i**2) * R1[i] * (V1 - _ET)
+            igith = _GGITH * (V1 - _ESYN5) * S4[i]
+            vth[i] = V1 + dt * ((1.0 / _CM) * (-il1 - ik1 - ina1 - it1 - igith + _IAPPTH))
+            H1[i] = H1[i] + dt * ((h1_i - H1[i]) / th1_i)
+            R1[i] = R1[i] + dt * ((r1_i - R1[i]) / tr1_i)
+        _conv_record_crossings(CONV_TH, spike_idx, spike_n, v1_prev, vth, SPIKE_SYN_THRESHOLD)
+        _conv_eval_all(spike_idx, spike_n, CONV_TH, syn_th, S7)
+        _conv_step_one(spike_idx, spike_n, max_index, CONV_TH, n)
 
+        # --- STN ---
+        for i in range(n):
+            V2 = v2_prev[i]
             n2_i = 1.0 / (1.0 + np.exp(-(V2 + 41.0) / 14.0))
             m2_i = 1.0 / (1.0 + np.exp(-(V2 + 40.0) / 8.0))
             h2_i = 1.0 / (1.0 + np.exp((V2 + 45.5) / 6.4))
@@ -531,8 +530,7 @@ def run_cbgt_loop(
             if x_d2 >= 0.0:
                 d2_i = 1.0 / (1.0 + np.exp(-x_d2))
             else:
-                ex = np.exp(x_d2)
-                d2_i = ex / (1.0 + ex)
+                d2_i = np.exp(x_d2) / (1.0 + np.exp(x_d2))
             d1_i = 1.0 / (1.0 + np.exp((V2 + 60.0) / 7.5))
             p2_i = 1.0 / (1.0 + np.exp(-(V2 + 56.0) / 6.7))
             q2_i = 1.0 / (1.0 + np.exp((V2 + 85.0) / 5.8))
@@ -540,9 +538,7 @@ def run_cbgt_loop(
             if x_r2 >= 0.0:
                 r2_i = 1.0 / (1.0 + np.exp(-x_r2))
             else:
-                ex = np.exp(x_r2)
-                r2_i = ex / (1.0 + ex)
-
+                r2_i = np.exp(x_r2) / (1.0 + np.exp(x_r2))
             tn2_i = 11.0 / (np.exp(-(V2 + 40.0) / -40.0) + np.exp(-(V2 + 40.0) / 50.0))
             tm2_i = 0.2 + 3.0 / (1.0 + np.exp(-(V2 + 53.0) / -0.7))
             th2_i = 24.5 / (np.exp(-(V2 + 50.0) / -15.0) + np.exp(-(V2 + 50.0) / 16.0))
@@ -552,15 +548,7 @@ def run_cbgt_loop(
             td1_i = 400.0 + 500.0 / (np.exp(-(V2 + 40.0) / -15.0) + np.exp(-(V2 + 20.0) / 20.0))
             tp2_i = 5.0 + 0.33 / (np.exp(-(V2 + 27.0) / -10.0) + np.exp(-(V2 + 102.0) / 15.0))
             tq2_i = 400.0 / (np.exp(-(V2 + 50.0) / -15.0) + np.exp(-(V2 + 50.0) / 16.0))
-
             ecasn_i = _CON * np.log(_CAO / CAsn2[i])
-
-            il1 = _GL0 * (V1 - _EL0)
-            ina1 = _GNA0 * (m1_i**3) * H1[i] * (V1 - _ENA0)
-            ik1 = _GK0 * ((0.75 * (1.0 - H1[i])) ** 4) * (V1 - _EK0)
-            it1 = _GT0 * (p1_i**2) * R1[i] * (V1 - _ET)
-            igith = _GGITH * (V1 - _ESYN5) * S4[i]
-
             ina2 = _GNA1 * (M2[i] ** 3) * H2[i] * (V2 - _ENA1)
             ik2 = _GK1 * (N2[i] ** 4) * (V2 - _EK1)
             ia2 = _GA * (A2[i] ** 2) * B2[i] * (V2 - _EK1)
@@ -571,67 +559,7 @@ def run_cbgt_loop(
             igesn = _GGESN * ((V2 - _ESYN0) * (S3a[i] + S31a_w[i]))
             icorsnampa = gcorsna[i] * (V2 - _ESYN1) * (S6b[i] + S61b_w[i])
             icorsnnmda = gcorsnn[i] * (V2 - _ESYN1) * (S6bn[i] + S61bn_w[i])
-
-            il3 = _GL2 * (V3 - _EL2)
-            ik3 = _GK2 * (n3_i**4) * (V3 - _EK2)
-            ina3 = _GNA2 * (m3_i**3) * H3[i] * (V3 - _ENA2)
-            it3 = _GT2 * (a3_i**3) * R3[i] * (V3 - _ECA2)
-            ica3 = _GCA2 * (s3_i**2) * (V3 - _ECA2)
-            iahp3 = _GAHP2 * (V3 - _EK2) * (CA3[i] / (CA3[i] + _K12))
-            isngeampa = gsngea[i] * ((V3 - _ESYN1) * (S2a[i] + S21a_w[i]))
-            isngenmda = gsngen[i] * ((V3 - _ESYN1) * (S2an[i] + S21an_w[i]))
-            igege = (0.25 * (pd * 3 + 1)) * ggege[i] * ((V3 - _ESYN2) * (S31c_w[i] + S32c_w[i]))
-            istrgpe = _GSTRGPE * (V3 - _ESYN5) * (
-                S5[i] + S51_w[i] + S52_w[i] + S53_w[i] + S54_w[i]
-                + S55_w[i] + S56_w[i] + S57_w[i] + S58_w[i] + S59_w[i]
-            )
-
-            il4 = _GL2 * (V4 - _EL2)
-            ik4 = _GK2 * (n4_i**4) * (V4 - _EK2)
-            ina4 = _GNA2 * (m4_i**3) * H4[i] * (V4 - _ENA2)
-            it4 = _GT2 * (a4_i**3) * R4[i] * (V4 - _ECA2)
-            ica4 = _GCA2 * (s4_i**2) * (V4 - _ECA2)
-            iahp4 = _GAHP2 * (V4 - _EK2) * (CA4[i] / (CA4[i] + _K12))
-            isngi = gsngi[i] * ((V4 - _ESYN3) * (S2b[i] + S21b_w[i]))
-            igigi = _GGIGI * ((V4 - _ESYN4) * (S31b_w[i] + S32b_w[i]))
-            istrgpi = _GSTRGPI * (V4 - _ESYN5) * (
-                S9[i] + S91_w[i] + S92_w[i] + S93_w[i] + S94_w[i]
-                + S95_w[i] + S96_w[i] + S97_w[i] + S98_w[i] + S99_w[i]
-            )
-
-            ina5 = _GNA3 * (m5[i] ** 3) * h5[i] * (V5 - _ENA3)
-            ik5 = _GK3 * (n5[i] ** 4) * (V5 - _EK3)
-            il5 = _GL3 * (V5 - _EL3)
-            im5 = (2.6 - 1.1 * pd) * _GM * p5[i] * (V5 - _EM)
-            igaba5 = (_GGABA / 4.0) * (V5 - _ESYN6) * (
-                S11cr_w[i] + S12cr_w[i] + S13cr_w[i] + S14cr_w[i]
-            )
-            icorstr5 = _GCORINDRSTR * (V5 - _ESYN1) * S6a[i]
-
-            ina6 = _GNA3 * (m6[i] ** 3) * h6[i] * (V6 - _ENA3)
-            ik6 = _GK3 * (n6[i] ** 4) * (V6 - _EK3)
-            il6 = _GL3 * (V6 - _EL3)
-            im6 = (2.6 - 1.1 * pd) * _GM * p6[i] * (V6 - _EM)
-            igaba6 = (_GGABA / 3.0) * (V6 - _ESYN6) * (S81r_w[i] + S82r_w[i] + S83r_w[i])
-            icorstr6 = gcordrstr[i] * (V6 - _ESYN1) * S6a[i]
-
-            iie = _GIE * (V7 - _ESYN0) * (S11br_w[i] + S12br_w[i] + S13br_w[i] + S14br_w[i])
-            ithcor = _GTHCOR * (V7 - _ESYN1) * S7[i]
-            iei = _GEi * (V8 - _ESYN1) * (S11ar_w[i] + S12ar_w[i] + S13ar_w[i] + S14ar_w[i])
-
-            # thalamus
-            vth[i] = V1 + dt * ((1.0 / _CM) * (-il1 - ik1 - ina1 - it1 - igith + _IAPPTH))
-            H1[i] = H1[i] + dt * ((h1_i - H1[i]) / th1_i)
-            R1[i] = R1[i] + dt * ((r1_i - R1[i]) / tr1_i)
-
-            # STN
-            vsn[i] = V2 + dt * (
-                (1.0 / _CM)
-                * (
-                    -ina2 - ik2 - ia2 - il2_stn - it2 - icak2 - il2
-                    - igesn - icorsnampa - icorsnnmda + idbs[step]
-                )
-            )
+            vsn[i] = V2 + dt * ((1.0 / _CM) * (-ina2 - ik2 - ia2 - il2_stn - it2 - icak2 - il2 - igesn - icorsnampa - icorsnnmda + idbs[step]))
             N2[i] = N2[i] + dt * ((n2_i - N2[i]) / tn2_i)
             H2[i] = H2[i] + dt * ((h2_i - H2[i]) / th2_i)
             M2[i] = M2[i] + dt * ((m2_i - M2[i]) / tm2_i)
@@ -644,34 +572,87 @@ def run_cbgt_loop(
             Q2[i] = Q2[i] + dt * ((q2_i - Q2[i]) / tq2_i)
             R2[i] = R2[i] + dt * ((r2_i - R2[i]) / _STN_TR2)
             CAsn2[i] = CAsn2[i] + dt * ((-_ALP * (il2_stn + it2)) - (_KCA_STN * CAsn2[i]))
+        _conv_record_crossings(CONV_STN, spike_idx, spike_n, v2_prev, vsn, SPIKE_SYN_THRESHOLD)
+        _conv_eval_all(spike_idx, spike_n, CONV_STN, syn_stn_gpea, S2a)
+        _conv_eval_all(spike_idx, spike_n, CONV_STN, syn_stn_gpen, S2an)
+        _conv_eval_all(spike_idx, spike_n, CONV_STN, syn_stn_gpi, S2b)
+        _conv_step_one(spike_idx, spike_n, max_index, CONV_STN, n)
 
-            # GPe
-            vge[i] = V3 + dt * (
-                (1.0 / _CM)
-                * (-il3 - ik3 - ina3 - it3 - ica3 - iahp3 - isngeampa - isngenmda - igege - istrgpe + iappgpe)
-            )
+        # --- GPe ---
+        for i in range(n):
+            V3 = v3_prev[i]
+            m3_i = 1.0 / (1.0 + np.exp(-(V3 + 37.0) / 10.0))
+            n3_i = 1.0 / (1.0 + np.exp(-(V3 + 50.0) / 14.0))
+            h3_i = 1.0 / (1.0 + np.exp((V3 + 58.0) / 12.0))
+            a3_i = 1.0 / (1.0 + np.exp(-(V3 + 57.0) / 2.0))
+            s3_i = 1.0 / (1.0 + np.exp(-(V3 + 35.0) / 2.0))
+            r3_i = 1.0 / (1.0 + np.exp((V3 + 70.0) / 2.0))
+            tn3_i = 0.05 + 0.27 / (1.0 + np.exp(-(V3 + 40.0) / -12.0))
+            th3_i = 0.05 + 0.27 / (1.0 + np.exp(-(V3 + 40.0) / -12.0))
+            il3 = _GL2 * (V3 - _EL2)
+            ik3 = _GK2 * (N3[i] ** 4) * (V3 - _EK2)
+            ina3 = _GNA2 * (m3_i**3) * H3[i] * (V3 - _ENA2)
+            it3 = _GT2 * (a3_i**3) * R3[i] * (V3 - _ECA2)
+            ica3 = _GCA2 * (s3_i**2) * (V3 - _ECA2)
+            iahp3 = _GAHP2 * (V3 - _EK2) * (CA3[i] / (CA3[i] + _K1_GPE))
+            isngeampa = gsngea[i] * ((V3 - _ESYN1) * (S2a_old[i] + S21a_w[i]))
+            isngenmda = gsngen[i] * ((V3 - _ESYN1) * (S2an_old[i] + S21an_w[i]))
+            igege = (0.25 * (pd * 3 + 1)) * ggege[i] * ((V3 - _ESYN2) * (S31c_w[i] + S32c_w[i]))
+            istrgpe = _GSTRGPE * (V3 - _ESYN5) * (S5[i] + S51_w[i] + S52_w[i] + S53_w[i] + S54_w[i] + S55_w[i] + S56_w[i] + S57_w[i] + S58_w[i] + S59_w[i])
+            vge[i] = V3 + dt * ((1.0 / _CM) * (-il3 - ik3 - ina3 - it3 - ica3 - iahp3 - isngeampa - isngenmda - igege - istrgpe + iappgpe))
             N3[i] = N3[i] + dt * (0.1 * (n3_i - N3[i]) / tn3_i)
             H3[i] = H3[i] + dt * (0.05 * (h3_i - H3[i]) / th3_i)
             R3[i] = R3[i] + dt * (1.0 * (r3_i - R3[i]) / _GPE_TR)
             CA3[i] = CA3[i] + dt * (1e-4 * (-ica3 - it3 - _KCA2 * CA3[i]))
+        _conv_record_crossings(CONV_GPE, spike_idx, spike_n, v3_prev, vge, SPIKE_SYN_THRESHOLD)
+        _conv_eval_all(spike_idx, spike_n, CONV_GPE, syn_gpe_stn, S3a)
+        _conv_eval_all(spike_idx, spike_n, CONV_GPE, syn_gpe_gpi, S3b)
+        _conv_eval_all(spike_idx, spike_n, CONV_GPE, syn_gpe_gpe, S3c)
+        _conv_step_one(spike_idx, spike_n, max_index, CONV_GPE, n)
 
-            # GPi
-            vgi_curr[i] = V4 + dt * (
-                (1.0 / _CM)
-                * (-il4 - ik4 - ina4 - it4 - ica4 - iahp4 - isngi - igigi - istrgpi + _IAPPGPI)
-            )
+        # --- GPi ---
+        for i in range(n):
+            V4 = v4_prev[i]
+            m4_i = 1.0 / (1.0 + np.exp(-(V4 + 37.0) / 10.0))
+            n4_i = 1.0 / (1.0 + np.exp(-(V4 + 50.0) / 14.0))
+            h4_i = 1.0 / (1.0 + np.exp((V4 + 58.0) / 12.0))
+            a4_i = 1.0 / (1.0 + np.exp(-(V4 + 57.0) / 2.0))
+            s4_i = 1.0 / (1.0 + np.exp(-(V4 + 35.0) / 2.0))
+            r4_i = 1.0 / (1.0 + np.exp((V4 + 70.0) / 2.0))
+            tn4_i = 0.05 + 0.27 / (1.0 + np.exp(-(V4 + 40.0) / -12.0))
+            th4_i = 0.05 + 0.27 / (1.0 + np.exp(-(V4 + 40.0) / -12.0))
+            il4 = _GL2 * (V4 - _EL2)
+            ik4 = _GK2 * (N4[i] ** 4) * (V4 - _EK2)
+            ina4 = _GNA2 * (m4_i**3) * H4[i] * (V4 - _ENA2)
+            it4 = _GT2 * (a4_i**3) * R4[i] * (V4 - _ECA2)
+            ica4 = _GCA2 * (s4_i**2) * (V4 - _ECA2)
+            iahp4 = _GAHP2 * (V4 - _EK2) * (CA4[i] / (CA4[i] + _K1_GPE))
+            isngi = gsngi[i] * ((V4 - _ESYN3) * (S2b_old[i] + S21b_w[i]))
+            igigi = _GGIGI * ((V4 - _ESYN4) * (S31b_w[i] + S32b_w[i]))
+            istrgpi = _GSTRGPI * (V4 - _ESYN5) * (S9[i] + S91_w[i] + S92_w[i] + S93_w[i] + S94_w[i] + S95_w[i] + S96_w[i] + S97_w[i] + S98_w[i] + S99_w[i])
+            vgi_curr[i] = V4 + dt * ((1.0 / _CM) * (-il4 - ik4 - ina4 - it4 - ica4 - iahp4 - isngi - igigi - istrgpi + _IAPPGPI))
             if V4 <= GPI_SPIKE_THRESHOLD and vgi_curr[i] > GPI_SPIKE_THRESHOLD:
                 cnt = gpi_spike_n[i]
                 if cnt < gpi_spike_buf.shape[1]:
                     gpi_spike_buf[i, cnt] = t_ms[step - 1] / 1000.0
                     gpi_spike_n[i] = cnt + 1
-
             N4[i] = N4[i] + dt * (0.1 * (n4_i - N4[i]) / tn4_i)
             H4[i] = H4[i] + dt * (0.05 * (h4_i - H4[i]) / th4_i)
             R4[i] = R4[i] + dt * (1.0 * (r4_i - R4[i]) / _GPE_TR)
             CA4[i] = CA4[i] + dt * (1e-4 * (-ica4 - it4 - _KCA2 * CA4[i]))
+        _conv_record_crossings(CONV_GPI, spike_idx, spike_n, v4_prev, vgi_curr, SPIKE_SYN_THRESHOLD)
+        _conv_eval_all(spike_idx, spike_n, CONV_GPI, syn_gpi_th, S4)
+        _conv_step_one(spike_idx, spike_n, max_index, CONV_GPI, n)
 
-            # striatum D2
+        # --- Striatum D2 ---
+        for i in range(n):
+            V5 = v5_prev[i]
+            ina5 = _GNA3 * (m5[i] ** 3) * h5[i] * (V5 - _ENA3)
+            ik5 = _GK3 * (n5[i] ** 4) * (V5 - _EK3)
+            il5 = _GL3 * (V5 - _EL3)
+            im5 = (2.6 - 1.1 * pd) * _GM * p5[i] * (V5 - _EM)
+            igaba5 = (_GGABA / 4.0) * (V5 - _ESYN6) * (S11cr_w[i] + S12cr_w[i] + S13cr_w[i] + S14cr_w[i])
+            icorstr5 = _GCORINDRSTR * (V5 - _ESYN1) * S6a[i]
             vstr_indr[i] = V5 + (dt / _CM) * (-ina5 - ik5 - il5 - im5 - igaba5 - icorstr5)
             am5 = (0.32 * (54.0 + V5)) / (1.0 - np.exp((-54.0 - V5) / 4.0))
             bm5 = 0.28 * (V5 + 27.0) / (np.exp((27.0 + V5) / 5.0) - 1.0)
@@ -687,8 +668,19 @@ def run_cbgt_loop(
             p5[i] = p5[i] + dt * (ap5 * (1.0 - p5[i]) - bp5 * p5[i])
             gg5 = 2.0 * (1.0 + np.tanh(V5 / 4.0))
             S1c[i] = S1c[i] + dt * ((gg5 * (1.0 - S1c[i])) - (S1c[i] / _TAU_I))
+        _conv_record_crossings(CONV_STR_INDR, spike_idx, spike_n, v5_prev, vstr_indr, SPIKE_SYN_THRESHOLD)
+        _conv_eval_all(spike_idx, spike_n, CONV_STR_INDR, syn_str_indr, S5)
+        _conv_step_one(spike_idx, spike_n, max_index, CONV_STR_INDR, n)
 
-            # striatum D1
+        # --- Striatum D1 ---
+        for i in range(n):
+            V6 = v6_prev[i]
+            ina6 = _GNA3 * (m6[i] ** 3) * h6[i] * (V6 - _ENA3)
+            ik6 = _GK3 * (n6[i] ** 4) * (V6 - _EK3)
+            il6 = _GL3 * (V6 - _EL3)
+            im6 = (2.6 - 1.1 * pd) * _GM * p6[i] * (V6 - _EM)
+            igaba6 = (_GGABA / 3.0) * (V6 - _ESYN6) * (S81r_w[i] + S82r_w[i] + S83r_w[i])
+            icorstr6 = gcordrstr[i] * (V6 - _ESYN1) * S6a[i]
             vstr_dr[i] = V6 + (dt / _CM) * (-ina6 - ik6 - il6 - im6 - igaba6 - icorstr6)
             am6 = (0.32 * (54.0 + V6)) / (1.0 - np.exp((-54.0 - V6) / 4.0))
             bm6 = 0.28 * (V6 + 27.0) / (np.exp((27.0 + V6) / 5.0) - 1.0)
@@ -704,8 +696,15 @@ def run_cbgt_loop(
             p6[i] = p6[i] + dt * (ap6 * (1.0 - p6[i]) - bp6 * p6[i])
             gg6 = 2.0 * (1.0 + np.tanh(V6 / 4.0))
             S8[i] = S8[i] + dt * ((gg6 * (1.0 - S8[i])) - (S8[i] / _TAU_I))
+        _conv_record_crossings(CONV_STR_DR, spike_idx, spike_n, v6_prev, vstr_dr, SPIKE_SYN_THRESHOLD)
+        _conv_eval_all(spike_idx, spike_n, CONV_STR_DR, syn_str_dr, S9)
+        _conv_step_one(spike_idx, spike_n, max_index, CONV_STR_DR, n)
 
-            # cortex exc
+        # --- Cortex exc (currents from prev-step S7) ---
+        for i in range(n):
+            V7 = v7_prev[i]
+            iie = _GIE * (V7 - _ESYN0) * (S11br_w[i] + S12br_w[i] + S13br_w[i] + S14br_w[i])
+            ithcor = _GTHCOR * (V7 - _ESYN1) * S7_old[i]
             ve_i = V7 + dt * ((0.04 * (V7**2)) + (5.0 * V7) + 140.0 - ue[i] - iie - ithcor + iappco[step])
             ue_i = ue[i] + dt * (_AE * ((_BE * V7) - ue[i]))
             if V7 >= 30.0:
@@ -714,8 +713,16 @@ def run_cbgt_loop(
                 _conv_record_spike(CONV_COR, spike_idx, spike_n, i)
             ve[i] = ve_i
             ue[i] = ue_i
+        _conv_eval_all(spike_idx, spike_n, CONV_COR, syn_cor_d2, S6a)
+        _conv_eval_all(spike_idx, spike_n, CONV_COR, syn_cor_stn_a, S6b)
+        _conv_eval_all(spike_idx, spike_n, CONV_COR, syn_cor_stn_n, S6bn)
+        _conv_step_one(spike_idx, spike_n, max_index, CONV_COR, n)
 
-            # cortex inh
+        # --- Cortex inh + syn filters ---
+        for i in range(n):
+            V7 = v7_prev[i]
+            V8 = v8_prev[i]
+            iei = _GEi * (V8 - _ESYN1) * (S11ar_w[i] + S12ar_w[i] + S13ar_w[i] + S14ar_w[i])
             vi_i = V8 + dt * ((0.04 * (V8**2)) + (5.0 * V8) + 140.0 - ui[i] - iei + iappco[step])
             ui_i = ui[i] + dt * (_AI * ((_BI * V8) - ui[i]))
             if V8 >= 30.0:
@@ -723,7 +730,6 @@ def run_cbgt_loop(
                 ui_i = ui[i] + _DI
             vi[i] = vi_i
             ui[i] = ui_i
-
             if V7 < SPIKE_SYN_THRESHOLD and ve[i] > SPIKE_SYN_THRESHOLD:
                 uce[i] = uce_scale
             else:
@@ -731,7 +737,6 @@ def run_cbgt_loop(
             S1a[i] = S1a[i] + dt * Z1a[i]
             z1adot = uce[i] - (2.0 / _TAU) * Z1a[i] - (1.0 / (_TAU**2)) * S1a[i]
             Z1a[i] = Z1a[i] + dt * z1adot
-
             if V8 < SPIKE_SYN_THRESHOLD and vi[i] > SPIKE_SYN_THRESHOLD:
                 uci[i] = uce_scale
             else:
@@ -740,39 +745,6 @@ def run_cbgt_loop(
             z1bdot = uci[i] - (2.0 / _TAU) * Z1b[i] - (1.0 / (_TAU**2)) * S1b[i]
             Z1b[i] = Z1b[i] + dt * z1bdot
 
-        # vector convolver steps after per-neuron updates
-        _conv_record_crossings(CONV_TH, spike_idx, spike_n, v1_prev, vth, SPIKE_SYN_THRESHOLD)
-        _conv_eval_all(spike_idx, spike_n, CONV_TH, syn_th, S7)
-        _conv_step_one(spike_idx, spike_n, max_index, CONV_TH, n)
-
-        _conv_record_crossings(CONV_STN, spike_idx, spike_n, v2_prev, vsn, SPIKE_SYN_THRESHOLD)
-        _conv_eval_all(spike_idx, spike_n, CONV_STN, syn_stn_gpea, S2a)
-        _conv_eval_all(spike_idx, spike_n, CONV_STN, syn_stn_gpen, S2an)
-        _conv_eval_all(spike_idx, spike_n, CONV_STN, syn_stn_gpi, S2b)
-        _conv_step_one(spike_idx, spike_n, max_index, CONV_STN, n)
-
-        _conv_record_crossings(CONV_GPE, spike_idx, spike_n, v3_prev, vge, SPIKE_SYN_THRESHOLD)
-        _conv_eval_all(spike_idx, spike_n, CONV_GPE, syn_gpe_stn, S3a)
-        _conv_eval_all(spike_idx, spike_n, CONV_GPE, syn_gpe_gpi, S3b)
-        _conv_eval_all(spike_idx, spike_n, CONV_GPE, syn_gpe_gpe, S3c)
-        _conv_step_one(spike_idx, spike_n, max_index, CONV_GPE, n)
-
-        _conv_record_crossings(CONV_GPI, spike_idx, spike_n, v4_prev, vgi_curr, SPIKE_SYN_THRESHOLD)
-        _conv_eval_all(spike_idx, spike_n, CONV_GPI, syn_gpi_th, S4)
-        _conv_step_one(spike_idx, spike_n, max_index, CONV_GPI, n)
-
-        _conv_record_crossings(CONV_STR_INDR, spike_idx, spike_n, v5_prev, vstr_indr, SPIKE_SYN_THRESHOLD)
-        _conv_eval_all(spike_idx, spike_n, CONV_STR_INDR, syn_str_indr, S5)
-        _conv_step_one(spike_idx, spike_n, max_index, CONV_STR_INDR, n)
-
-        _conv_record_crossings(CONV_STR_DR, spike_idx, spike_n, v6_prev, vstr_dr, SPIKE_SYN_THRESHOLD)
-        _conv_eval_all(spike_idx, spike_n, CONV_STR_DR, syn_str_dr, S9)
-        _conv_step_one(spike_idx, spike_n, max_index, CONV_STR_DR, n)
-
-        _conv_eval_all(spike_idx, spike_n, CONV_COR, syn_cor_d2, S6a)
-        _conv_eval_all(spike_idx, spike_n, CONV_COR, syn_cor_stn_a, S6b)
-        _conv_eval_all(spike_idx, spike_n, CONV_COR, syn_cor_stn_n, S6bn)
-        _conv_step_one(spike_idx, spike_n, max_index, CONV_COR, n)
 
 
 def numba_loop_available() -> bool:

@@ -466,8 +466,7 @@ def integrate_network(
     debug_step_set = frozenset(debug_steps)
 
     use_numba = (
-        False  # TODO(TASK-17): re-enable after numba_loop parity hardening
-        and numba_loop_available()
+        numba_loop_available()
         and not debug_steps
         and not return_traces
         and trace_vgi is None
