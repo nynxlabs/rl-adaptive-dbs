@@ -85,7 +85,7 @@ Replicate the shared plant and Mehregan et al. Gym API before any controller wor
 
 ### Phase 9 and beyond — Native plant, modularity, extensions
 
-- Native Python plant ([plant.md](../plant.md) §9); drop MATLAB dependency after equivalence checks. **Accelerated planning:** [native-plant-port.md](native-plant-port.md) (TASK-15, 2026-07-01).
+- Native Python plant ([plant.md](../plant.md) §9); drop MATLAB dependency after equivalence **and speedup** gates. **In progress (TASK-17):** parity pass; ~5× slower than MATLAB on WSL — [native-plant-port.md](native-plant-port.md).
 - Modular layout: swappable plant backends, controller packages, adapters, and benchmark runner; CI on smoke tests + selected suites.
 - **Expand** `rl-dbs` / `rl-dbs-tui` (all controllers, training monitor, logs)—initial shells land in Phase 4 ([cli.md](../cli.md), [tui.md](../tui.md)).
 - Optional per-controller work beyond paper replication: [controllers/ddpg/extensions.md](../controllers/ddpg/extensions.md), [controllers/snn/extensions.md](../controllers/snn/extensions.md), [controllers/sea_dbs/extensions.md](../controllers/sea_dbs/extensions.md), and broader framework ideas (other oscillatory conditions, patient-specific robustness, etc.).
@@ -119,6 +119,7 @@ Phases 9+ are intentionally open; prioritize equivalence and replication paths b
 | [matlab.md](../matlab.md) + `scripts/matlab/` | Done (WSL) | Fresh validation: Multipass (Linux) pending; **Sandbox (Windows) passed** 2026-06-30 — [fresh-validation.md](fresh-validation.md) |
 | Project setup script | Done | `scripts/setup.sh`, `scripts/validate-fresh.sh`, Multipass + Sandbox scripts — Phase 4; see [fresh-validation.md](fresh-validation.md) |
 | MATLAB plant bridge | Done | `envs/plant/` + `envs/mehregan/`; `@pytest.mark.matlab` equivalence suite |
+| `PythonPlant` (native port) | In progress | GPi / $P_\beta$ parity **pass** (2026-07-03); default flip **blocked** on ≥10× speedup — [native-plant-port.md](native-plant-port.md) |
 | Benchmark suite runner | Done | `benchmarks/` + `suites/mehregan_eval*.yaml`; baselines + `ddpg` eval |
 | `rl-dbs` CLI | Partial | `benchmark`, `summary`, `info`, `config show`, `train`/`eval` (`ddpg`); `snn` Phase 5; `sea_dbs` Phase 6 |
 | `rl-dbs-tui` | Partial | Benchmarks tab ([Textual](https://textual.textualize.io/)); Training/Eval/Logs later |

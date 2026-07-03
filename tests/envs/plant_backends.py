@@ -25,12 +25,9 @@ SPIKE_TIME_ATOL_S: float = 1e-5
 P_BETA_REL_TOL: float = 0.01
 P_BETA_ABS_TOL: float = 0.01
 
-# Phase B parity (2026-07-03): fixed-IC fixture must come from MATLAB ``plant_init_export``
-# (``randperm(n,k)`` for heterogeneous gsngen/gsngea/gsngi — not ``randperm(n)[:k]``).
-# With corrected ``tests/fixtures/plant_init_seed42.npz``, GPi trains match through 2 s.
-PHASE_B_EQUIVALENCE_XFAIL_REASON = (
-    "Legacy note only — 2 s fixed-IC GPi parity passes after plant_init_export fixture (2026-07-03)"
-)
+# Phase B parity (2026-07-03): ``PythonPlant.reset(seed)`` loads ``plant_init_seed{seed}.npz``
+# from ``tests/fixtures/`` (MATLAB ``plant_init_export`` — ``randperm(n,k)`` for gsngen/gsngea/gsngi).
+# Export missing seeds: ``uv run python scripts/export_plant_init_draws.py --seed N``.
 
 
 def matlab_available() -> bool:

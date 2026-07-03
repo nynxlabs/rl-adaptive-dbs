@@ -118,17 +118,26 @@ The plant lives under `envs/plant/` as a **non-Gym** service the Mehregan `Env` 
 | Symbol | Module | Notes |
 |--------|--------|--------|
 | `MatlabPlant` | `envs.plant` | `matlab.engine` bridge to `simulate_network_model(..., dynamics_only=true)` |
-| `PythonPlant` | `envs.plant` | Native NumPy port of Kumaravelu CBGT network ([native-plant-port.md](development/native-plant-port.md)) |
+| `PythonPlant` | `envs.plant` | Native NumPy port of Kumaravelu CBGT network ([native-plant-port.md](development/native-plant-port.md)); **GPi / $P_\beta$ parity with MATLAB** when init draws come from `plant_init_export` fixtures (see below) |
 | `PlantConfig` | `envs.plant` | `pd`, `dt_ms` (reference **0.01 ms**), `corstim` |
 | `DbsSpec` | `envs.plant` | `pick_dbs_freq` index; `DbsSpec.none()`, `from_frequency_hz(hz)` |
 | `IntegrateResult` | `envs.plant` | `gpi_spikes` (10 neurons, times in **seconds**), `info` |
 
-**Backend selection:** `.rl-dbs.yaml` → `plant.backend: matlab` (default) or `python`; env override `RL_DBS_PLANT_BACKEND`. `rl-dbs info plant` shows the resolved backend. Equivalence gate for flipping the default: [native-plant-port.md](development/native-plant-port.md) §5.
+**Backend selection:** `.rl-dbs.yaml` → `plant.backend: matlab` (default) or `python`; env override `RL_DBS_PLANT_BACKEND`. `rl-dbs info plant` shows the resolved backend. Default stays **`matlab`** until the **≥10×** integrate speedup gate passes ([native-plant-port.md](development/native-plant-port.md) §5); parity gates are met (2026-07-03).
+
+**Python init draws:** MATLAB’s `randperm(n, k)` for heterogeneous STN→GPe/GPi conductances is not reproducible from NumPy’s `Generator` alone. `PythonPlant.reset(seed=N)` loads `tests/fixtures/plant_init_seed{N}.npz` (or `~/.cache/rl-adaptive-dbs/plant_init/`) exported via `scripts/export_plant_init_draws.py`. With matching init draws, 2 s GPi spike trains and $P_\beta$ match MATLAB within documented tolerances (`tests/envs/python_integrator_fixed_ic_test.py`, `tests/envs/plant_backend_equivalence_test.py`).
+
+**Performance (2026-07-03, WSL):** 2 s `integrate` (no DBS, seed=42) — MATLAB **≈55–65 s**, PythonPlant **≈280 s** (~5× slower). Inner-loop JIT (Numba) is the planned follow-up before flipping the default backend.
 
 ```python
-from envs.plant import DbsSpec, MatlabPlant
+from envs.plant import DbsSpec, MatlabPlant, PythonPlant
 
+# MATLAB backend (default)
 with MatlabPlant() as plant:
+    result = plant.reset(seed=42).integrate(2.0, DbsSpec.none())
+
+# Native Python (opt-in via config or explicit construction)
+with PythonPlant() as plant:
     result = plant.reset(seed=42).integrate(2.0, DbsSpec.none())
     # result.gpi_spikes[i] — spike times for GPi neuron i
 ```
@@ -160,15 +169,25 @@ Before trusting the Python/MATLAB bridge for training:
 3. **$\Delta t$:** if using 0.02 ms vs reference 0.01 ms, document and run (1)–(2) under the chosen step.
 4. **Band:** confirm Mehregan metrics use **13–35 Hz** even when the reference script returns **7–35 Hz**.
 
+**PythonPlant status (2026-07-03):** Gates (1)–(2) pass for seeds with exported init fixtures (`plant_init_seed{N}.npz`). Spike times match on the shared **0.01 ms** grid (0 ms atol); $P_\beta$ relative error **< 1%**. Cross-backend suite: `tests/envs/plant_backend_equivalence_test.py`. Remaining exit criterion for default-backend flip: **≥10×** speedup vs MATLAB on 2 s integrate ([native-plant-port.md](development/native-plant-port.md) §5).
+
 Mark heavy checks `@pytest.mark.matlab` ([development/testing.md](development/testing.md)). CI defaults should skip MATLAB.
 
 ---
 
-## 9. Future direction: native Python plant
+## 9. Native Python plant (`PythonPlant`)
 
-**In progress (TASK-17):** `PythonPlant` implements the same `integrate` / `reset` contract as `MatlabPlant`. Parametrized equivalence tests run in `tests/envs/plant_backend_equivalence_test.py` (`@pytest.mark.matlab`). Default backend remains **`matlab`** until GPi spike and $P_\beta$ gates pass ([native-plant-port.md](development/native-plant-port.md)).
+**Status (TASK-17, 2026-07-03):** Implemented in `envs/plant/python_backend.py` with the same `integrate` / `reset` contract as `MatlabPlant`. Dynamics port: `envs/plant/network/` ([native-plant-port.md](development/native-plant-port.md)).
 
-Until equivalence passes, treat **`reference-material/KumaraveluEtAl2016/`** as source of truth for dynamics and default biomarker pipelines.
+| Gate | Status |
+|------|--------|
+| GPi spike parity (2 s, fixed init draws) | **Pass** |
+| $P_\beta$ parity (< 1% rel error) | **Pass** |
+| DBS ordering (130 Hz / 45 Hz lowers beta vs none) | **Pass** (`plant_backend_equivalence_test.py`) |
+| ≥10× speedup vs MATLAB (2 s integrate) | **Open** (~5× slower on WSL; Numba inner-loop follow-up) |
+| Default backend flip to `python` | **Blocked** on speedup gate |
+
+Opt in via `plant.backend: python` or `RL_DBS_PLANT_BACKEND=python`. Until the speedup gate closes, treat **`reference-material/KumaraveluEtAl2016/`** as the dynamics reference for audits; Python is validated against it via exported init fixtures and parametrized `@pytest.mark.matlab` tests.
 
 ---
 
@@ -202,6 +221,7 @@ Reference uses specific `Fs`, `fpass`, and tapers. **Open:** whether adapters ma
 - [x] Mehregan metrics: GPi **13–35 Hz** $P_\beta$ (`envs.plant.biomarkers`); Nguyen **7–35 Hz** deferred to adapter.
 - [x] $\Delta t$ **0.01 ms** (reference default) documented in `PlantConfig`; Mehregan **0.02 ms** target noted in §10.
 - [x] Equivalence tests: GPi spike reproducibility, $P_\beta$, `MehreganEnv` rollouts (`tests/envs/*_test.py`, `@pytest.mark.matlab`).
+- [x] `PythonPlant` GPi / $P_\beta$ parity vs MATLAB (init fixtures; default backend still `matlab` pending speedup).
 
 ---
 
