@@ -49,10 +49,14 @@ else
 end
 
 % Run CTX-BG-TH Network Model
-if nargout > 9
+if nargout > 10
+    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace gpe_debug_snapshot] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco);
+elseif nargout > 9
     [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco);
 elseif nargout > 8
     [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco);
+elseif nargout > 7
+    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco);
 elseif nargout > 6
     [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco);
 else
@@ -81,6 +85,9 @@ if dynamics_only
   end
   if nargout > 9
     varargout{10} = vstr_indr_trace;
+  end
+  if nargout > 10
+    varargout{11} = gpe_debug_snapshot;
   end
   return
 end
@@ -129,7 +136,9 @@ end
 
 
 
-function [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco)
+function [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace gpe_debug_snapshot] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco)
+    
+    gpe_debug_snapshot = struct();
    
     %time step
     t=0:dt:tmax;
@@ -691,6 +700,38 @@ end
    end
 end
     
+    if i == 5186
+        stn_times = cell(n, 1);
+        gpe_times = cell(n, 1);
+        for j = 1:n
+            stn_times{j} = t_list_stn(j).times;
+            gpe_times{j} = t_list_gpe(j).times;
+        end
+        gpe_debug_snapshot = struct( ...
+            'step', i, ...
+            'V2', V2, ...
+            'V3', V3, ...
+            'S2a', S2a, ...
+            'S21a', S21a, ...
+            'S2an', S2an, ...
+            'S21an', S21an, ...
+            'S3c', S3c, ...
+            'S31c', S31c, ...
+            'S32c', S32c, ...
+            'N3', N3, ...
+            'H3', H3, ...
+            'R3', R3, ...
+            'CA3', CA3, ...
+            'Isngeampa', Isngeampa, ...
+            'Isngenmda', Isngenmda, ...
+            'Igege', Igege, ...
+            'Istrgpe', Istrgpe, ...
+            'Ik3', Ik3, ...
+            'Ina3', Ina3, ...
+            'stn_times', {stn_times}, ...
+            'gpe_times', {gpe_times});
+    end
+
     %GPe
     vge(:,i)=V3+dt*(1/Cm*(-Il3-Ik3-Ina3-It3-Ica3-Iahp3-Isngeampa-Isngenmda-Igege-Istrgpe+Iappgpe));
     N3=N3+dt*(0.1*(n3-N3)./tn3);

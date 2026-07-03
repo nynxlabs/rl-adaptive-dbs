@@ -208,6 +208,7 @@ def integrate_network(
     seed: int | None = None,
     init_draws: NetworkInitDraws | None = None,
     return_traces: tuple[str, ...] = (),
+    debug_steps: tuple[int, ...] = (),
 ) -> IntegrateResult:
     """Advance the CBGT network for one segment (``CTX_BG_TH_network`` port)."""
 
@@ -439,6 +440,9 @@ def integrate_network(
     else:
         vgi_trace = None
 
+    debug_snapshots: dict[int, dict[str, Any]] = {}
+    debug_step_set = frozenset(debug_steps)
+
     # --- Main Euler loop: Python step=1..n_steps-1 ↔ MATLAB i=2:length(t) ---
     for step in range(1, n_steps):
         V1 = vth[:, step - 1]
@@ -579,6 +583,35 @@ def integrate_network(
         istrgpe = _GSTRGPE * (V3 - _ESYN[5]) * (
             S5 + S51 + S52 + S53 + S54 + S55 + S56 + S57 + S58 + S59
         )
+
+        if step in debug_step_set:
+            debug_snapshots[step] = {
+                "V2": V2.copy(),
+                "V3": V3.copy(),
+                "S2a": S2a.copy(),
+                "S21a": S21a.copy(),
+                "S2an": S2an.copy(),
+                "S21an": S21an.copy(),
+                "S3c": S3c.copy(),
+                "S31c": S31c.copy(),
+                "S32c": S32c.copy(),
+                "N3": N3.copy(),
+                "H3": H3.copy(),
+                "R3": R3.copy(),
+                "CA3": CA3.copy(),
+                "isngeampa": isngeampa.copy(),
+                "isngenmda": isngenmda.copy(),
+                "igege": igege.copy(),
+                "istrgpe": istrgpe.copy(),
+                "ik3": ik3.copy(),
+                "ina3": ina3.copy(),
+                "il3": il3.copy(),
+                "it3": it3.copy(),
+                "ica3": ica3.copy(),
+                "iahp3": iahp3.copy(),
+                "stn_spike_times": [list(t) for t in conv_stn._times],
+                "gpe_spike_times": [list(t) for t in conv_gpe._times],
+            }
 
         # --- GPi currents ---
         il4 = _GL[2] * (V4 - _EL[2])
@@ -796,6 +829,8 @@ def integrate_network(
     }
     if p_beta_val is not None:
         info["p_beta"] = p_beta_val
+    if debug_snapshots:
+        info["debug_snapshots"] = debug_snapshots
 
     traces: dict[str, np.ndarray] = {}
     if return_traces:
