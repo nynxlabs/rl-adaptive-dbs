@@ -60,6 +60,7 @@ tests/
 │   ├── mehregan_reward_test.py
 │   ├── mehregan_env_test.py     # MehreganEnv (mock plant)
 │   ├── python_plant_test.py     # PythonPlant scaffold + DBS waveform
+│   ├── python_integrator_fixed_ic_test.py  # integrator parity with MATLAB IC fixture
 │   ├── matlab_plant_test.py     # plant bridge (parametrized backends)
 │   ├── matlab_biomarkers_test.py
 │   ├── matlab_mehregan_env_test.py

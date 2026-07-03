@@ -6,7 +6,7 @@ import json
 import os
 from dataclasses import dataclass, fields, replace
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 
@@ -14,10 +14,14 @@ from rl_adaptive_dbs.paths import find_repo_root
 from envs.mehregan.config import MehreganEnvConfig
 from envs.plant.config import PlantConfig
 
+PlantBackendName = Literal["matlab", "python"]
+DEFAULT_PLANT_BACKEND: PlantBackendName = "matlab"
+
 CONFIG_FILENAMES: tuple[str, ...] = (".rl-dbs.yaml", ".rl-dbs.yml")
 
 # Dot keys accepted by ``rl-dbs config show`` / ``config set`` → nested YAML path.
 DOT_KEY_PATHS: dict[str, tuple[str, ...]] = {
+    "plant.backend": ("plant", "backend"),
     "plant.dt": ("plant", "dt_ms"),
     "plant.pd": ("plant", "pd"),
     "plant.corstim": ("plant", "corstim"),
@@ -37,11 +41,22 @@ DOT_KEY_PATHS: dict[str, tuple[str, ...]] = {
 DEFAULT_BIOMARKER_BAND_HZ: tuple[float, float] = (13.0, 35.0)
 
 
+def _parse_plant_backend(raw: Any) -> PlantBackendName:
+    if raw is None:
+        return DEFAULT_PLANT_BACKEND
+    value = str(raw).strip().lower()
+    if value in ("matlab", "python"):
+        return value  # type: ignore[return-value]
+    msg = f"plant.backend must be 'matlab' or 'python', got {raw!r}"
+    raise ValueError(msg)
+
+
 @dataclass(frozen=True)
 class ResolvedConfig:
     """Effective settings after defaults, file, and environment overlays."""
 
     plant: PlantConfig
+    plant_backend: PlantBackendName
     env: MehreganEnvConfig
     biomarker_band_hz: tuple[float, float]
     default_seed: int
@@ -158,7 +173,9 @@ def _parse_scalar(value: str) -> Any:
         parts = [part.strip() for part in stripped.split(",") if part.strip()]
         if parts and all(_looks_numeric(part) for part in parts):
             return [_coerce_number(part) for part in parts]
-    return _coerce_number(stripped)
+    if _looks_numeric(stripped):
+        return _coerce_number(stripped)
+    return stripped
 
 
 def _looks_numeric(text: str) -> bool:
@@ -194,7 +211,11 @@ def resolve_config(
     path = config_path if config_path is not None else resolve_config_path()
     data = _deep_merge(load_yaml_file(path), file_data or {})
 
-    plant = _dataclass_overlay(PlantConfig, data.get("plant"))
+    plant_section = data.get("plant") if isinstance(data.get("plant"), dict) else {}
+    plant = _dataclass_overlay(PlantConfig, plant_section)
+    plant_backend = _parse_plant_backend(plant_section.get("backend"))
+    if "RL_DBS_PLANT_BACKEND" in os.environ:
+        plant_backend = _parse_plant_backend(os.environ["RL_DBS_PLANT_BACKEND"])
     env = _dataclass_overlay(MehreganEnvConfig, data.get("env"))
 
     defaults = data.get("defaults") if isinstance(data.get("defaults"), dict) else {}
@@ -214,6 +235,7 @@ def resolve_config(
 
     return ResolvedConfig(
         plant=plant,
+        plant_backend=plant_backend,
         env=env,
         biomarker_band_hz=band,
         default_seed=default_seed,
@@ -235,7 +257,9 @@ def config_show_payload(
         if key not in DOT_KEY_PATHS:
             msg = f"unknown config key {key!r}"
             raise KeyError(msg)
-        if key == "plant.dt":
+        if key == "plant.backend":
+            out["plant.backend"] = resolved.plant_backend
+        elif key == "plant.dt":
             out["plant.dt_ms"] = resolved.plant.dt_ms
         elif key == "plant.pd":
             out["plant.pd"] = resolved.plant.pd
