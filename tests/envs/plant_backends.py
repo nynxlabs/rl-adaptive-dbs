@@ -25,13 +25,14 @@ SPIKE_TIME_ATOL_S: float = 1e-5
 P_BETA_REL_TOL: float = 0.01
 P_BETA_ABS_TOL: float = 0.01
 
-# Known Phase B drift (2026-07-03): Python uses numpy.random.Generator (PCG64) while
-# MATLAB rng(seed) uses the legacy twister; integrator parity is still open. Reviewer
-# should log measured drift here until gates pass — do not relax SPIKE_TIME_ATOL_MS
-# without a documented detection-threshold exception in native-plant-port.md.
+# Phase B drift (2026-07-03 bisection, seed=42, fixed MATLAB ICs):
+# - GPi trains match through 69.07 ms (4 spikes, neuron 0).
+# - Python 5th spike at 69.07 ms by 69.08 ms; MATLAB 5th at 69.12 ms — dynamics drift
+#   at integrator step ~6907, not RNG (uniform MT19937 matches; randn needs fixtures).
+# - 2 s: mat counts [102,…] vs py [100,…]; p_beta rel err ≫ 1%.
+# PythonPlant.reset loads tests/fixtures/plant_init_seed{seed}.npz when present.
 PHASE_B_EQUIVALENCE_XFAIL_REASON = (
-    "PythonPlant MATLAB RNG parity pending for arbitrary seeds; "
-    "verify 2 s fixed-IC / cross-backend equivalence after find_spike_times fix"
+    "Integrator dynamics drift from ~69 ms (fixed ICs); 2 s / cross-backend open"
 )
 
 

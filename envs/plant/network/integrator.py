@@ -415,6 +415,20 @@ def integrate_network(
     conv_str_dr = SpikeConvolver(n, dt_ms)
     conv_cor = SpikeConvolver(n, dt_ms)
 
+    # Precomputed circular shifts (same as np.roll on length-n wiring vectors).
+    _ar = np.arange(n, dtype=np.intp)
+    _roll_m1 = (_ar + 1) % n
+    _roll_p1 = (_ar - 1) % n
+    _roll_m2 = (_ar + 2) % n
+    _roll_p2 = (_ar - 2) % n
+    _roll_m3 = (_ar + 3) % n
+    _roll_m4 = (_ar + 4) % n
+    _roll_m5 = (_ar + 5) % n
+    _roll_m6 = (_ar + 6) % n
+    _roll_m7 = (_ar + 7) % n
+    _roll_m8 = (_ar + 8) % n
+    _roll_m9 = (_ar + 9) % n
+
     iappgpe = 3.0 - 2.0 * corstim * (1 - pd)
     uce_scale = _GPEAK / (_TAU * np.exp(-1.0)) / dt
 
@@ -437,14 +451,14 @@ def integrate_network(
         V8 = vi[:, step - 1]
 
         # Synaptic delay / wiring shifts
-        S21a = np.roll(S2a, 1)
-        S21an = np.roll(S2an, 1)
-        S21b = np.roll(S2b, 1)
-        S31a = np.roll(S3a, -1)
-        S31b = np.roll(S3b, -1)
-        S31c = np.roll(S3c, -1)
-        S32c = np.roll(S3c, 2)
-        S32b = np.roll(S3b, 2)
+        S21a = S2a[_roll_p1]
+        S21an = S2an[_roll_p1]
+        S21b = S2b[_roll_p1]
+        S31a = S3a[_roll_m1]
+        S31b = S3b[_roll_m1]
+        S31c = S3c[_roll_m1]
+        S32c = S3c[_roll_p2]
+        S32b = S3b[_roll_p2]
 
         S11cr = S1c[all_idx]
         S12cr = S1c[bll]
@@ -462,27 +476,27 @@ def integrate_network(
         S82r = S8[nll]
         S83r = S8[oll]
 
-        S51 = np.roll(S5, -1)
-        S52 = np.roll(S5, -2)
-        S53 = np.roll(S5, -3)
-        S54 = np.roll(S5, -4)
-        S55 = np.roll(S5, -5)
-        S56 = np.roll(S5, -6)
-        S57 = np.roll(S5, -7)
-        S58 = np.roll(S5, -8)
-        S59 = np.roll(S5, -9)
+        S51 = S5[_roll_m1]
+        S52 = S5[_roll_m2]
+        S53 = S5[_roll_m3]
+        S54 = S5[_roll_m4]
+        S55 = S5[_roll_m5]
+        S56 = S5[_roll_m6]
+        S57 = S5[_roll_m7]
+        S58 = S5[_roll_m8]
+        S59 = S5[_roll_m9]
 
-        S61b = np.roll(S6b, -1)
-        S61bn = np.roll(S6bn, -1)
-        S91 = np.roll(S9, -1)
-        S92 = np.roll(S9, -2)
-        S93 = np.roll(S9, -3)
-        S94 = np.roll(S9, -4)
-        S95 = np.roll(S9, -5)
-        S96 = np.roll(S9, -6)
-        S97 = np.roll(S9, -7)
-        S98 = np.roll(S9, -8)
-        S99 = np.roll(S9, -9)
+        S61b = S6b[_roll_m1]
+        S61bn = S6bn[_roll_m1]
+        S91 = S9[_roll_m1]
+        S92 = S9[_roll_m2]
+        S93 = S9[_roll_m3]
+        S94 = S9[_roll_m4]
+        S95 = S9[_roll_m5]
+        S96 = S9[_roll_m6]
+        S97 = S9[_roll_m7]
+        S98 = S9[_roll_m8]
+        S99 = S9[_roll_m9]
 
         # Instantaneous gating
         m1 = g.th_minf(V1)

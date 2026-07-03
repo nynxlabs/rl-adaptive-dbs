@@ -134,7 +134,11 @@ Reuse and extend tests in `tests/envs/`:
 - [ ] Documented speedup ≥ **10×** on 2 s integrate (single worker, same hardware as TASK-13 timing)
 - [x] [plant.md](../plant.md) §7 updated; [roadmap.md](roadmap.md) Phase 9 status advanced
 
-**2026-07-03 note:** Fixed-IC test (`python_integrator_fixed_ic_test.py`) isolates RNG from dynamics. **Bug fix (2026-07-03):** `find_spike_times` used `np.diff(bool)` which counts repolarization as spikes; fixed to explicit upward crossing (matches MATLAB `diff(v>-20)==1` on 0/1). After fix, 50 ms fixed-IC GPi trains match within one grid step. Measured on WSL (seed=42, 2 s, no DBS): **PythonPlant ≈ 379 s** vs MATLAB **≈ 55–65 s** — pure NumPy still **~6× slower**; profile/Numba follow-up required for the 10× gate.
+**2026-07-03 note:** Fixed-IC test (`python_integrator_fixed_ic_test.py`) isolates RNG from dynamics. **Bug fix (2026-07-03):** `find_spike_times` used `np.diff(bool)` which counts repolarization as spikes; fixed to explicit upward crossing (matches MATLAB `diff(v>-20)==1` on 0/1). After fix, 50 ms fixed-IC GPi trains match within one grid step.
+
+**2026-07-03 drift bisection (seed=42, fixed ICs):** GPi neuron 0 spike trains are identical through **69.07 ms** (four spikes). Python’s fifth spike appears by **69.08 ms**; MATLAB’s fifth is at **69.12 ms** — **integrator dynamics** divergence at step ~6907, not RNG. Uniform `rand` matches legacy MT19937; `randn`/`randperm` need MATLAB-exported fixtures (`envs/plant/network/matlab_rng.py`, `plant_init_seed{seed}.npz`). `scripts/quantify_plant_drift.py` logs 2 s counts and $P_\beta$ error.
+
+Measured on WSL (seed=42, 2 s, no DBS): **PythonPlant ≈ 281 s** (2026-07-03 after wiring-index + convolver opts) vs MATLAB **≈ 55–65 s** — still **~5× slower** than MATLAB; **10× speedup gate open** (Numba / inner-loop JIT follow-up). Profile (100 ms): `np.roll` wiring shifts and `SpikeConvolver.evaluate_all` dominated; replaced rolls with precomputed index gathers and vectorized kernel sums.
 
 ---
 

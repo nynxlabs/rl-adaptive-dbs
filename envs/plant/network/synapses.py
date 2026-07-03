@@ -263,11 +263,18 @@ class SpikeConvolver:
 
     def evaluate(self, neuron_index: int, syn_func: np.ndarray) -> float:
         """Sum kernel samples for all active spikes on one neuron."""
-        return float(sum(syn_func[t - 1] for t in self._times[neuron_index]))
+        times = self._times[neuron_index]
+        if not times:
+            return 0.0
+        idx = np.asarray(times, dtype=np.intp) - 1
+        return float(syn_func[idx].sum())
 
     def evaluate_all(self, syn_func: np.ndarray) -> np.ndarray:
         """Vectorized kernel sum for every neuron (one synaptic kernel)."""
-        out = np.empty(self.n_neurons, dtype=np.float64)
+        out = np.zeros(self.n_neurons, dtype=np.float64)
         for j in range(self.n_neurons):
-            out[j] = self.evaluate(j, syn_func)
+            times = self._times[j]
+            if times:
+                idx = np.asarray(times, dtype=np.intp) - 1
+                out[j] = syn_func[idx].sum()
         return out

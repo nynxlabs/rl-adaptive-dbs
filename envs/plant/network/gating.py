@@ -61,6 +61,17 @@ def _f64(V: np.ndarray) -> np.ndarray:
     return np.asarray(V, dtype=np.float64)
 
 
+def _logistic(x: np.ndarray) -> np.ndarray:
+    """Stable sigmoid (avoids exp overflow on extreme voltages)."""
+    x = _f64(x)
+    out = np.empty_like(x)
+    pos = x >= 0.0
+    out[pos] = 1.0 / (1.0 + np.exp(-x[pos]))
+    exp_x = np.exp(x[~pos])
+    out[~pos] = exp_x / (1.0 + exp_x)
+    return out
+
+
 def gpe_ainf(V: np.ndarray) -> np.ndarray:
     V = _f64(V)
     return 1.0 / (1.0 + np.exp(-(V + 57.0) / 2.0))
@@ -209,8 +220,7 @@ def stn_d1inf(V: np.ndarray) -> np.ndarray:
 
 
 def stn_d2inf(V: np.ndarray) -> np.ndarray:
-    V = _f64(V)
-    return 1.0 / (1.0 + np.exp((V - 0.1) / 0.02))
+    return _logistic(-(V - 0.1) / 0.02)
 
 
 def stn_hinf(V: np.ndarray) -> np.ndarray:
@@ -239,8 +249,7 @@ def stn_qinf(V: np.ndarray) -> np.ndarray:
 
 
 def stn_rinf(V: np.ndarray) -> np.ndarray:
-    V = _f64(V)
-    return 1.0 / (1.0 + np.exp(-(V - 0.17) / 0.08))
+    return _logistic((V - 0.17) / 0.08)
 
 
 def stn_taua(V: np.ndarray) -> np.ndarray:
