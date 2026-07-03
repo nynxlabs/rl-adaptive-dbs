@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from envs.plant.config import PlantConfig
-from envs.plant.dbs import DbsSpec, create_dbs_current
+from envs.plant.dbs import DbsSpec
 from envs.plant.matlab_backend import IntegrateResult
+from envs.plant.network.integrator import integrate_network
 
 import numpy as np
 
@@ -62,14 +63,12 @@ class PythonPlant:
         if self._rng is None:
             self.reset(seed=self._seed)
 
-        _ = create_dbs_current(
-            spec.frequency_hz,
-            tmax_ms=tmax_ms,
-            dt_ms=self.config.dt_ms,
+        return integrate_network(
+            config=self.config,
+            duration_s=duration_s,
+            dbs_spec=spec,
+            record_spikes=record_spikes,
+            rng=self._rng,
+            iteration=self._iteration,
+            seed=self._seed,
         )
-
-        msg = (
-            "PythonPlant network integrator not yet implemented "
-            "(Phase B — see docs/development/native-plant-port.md)"
-        )
-        raise NotImplementedError(msg)

@@ -9,6 +9,7 @@ import pytest
 
 from envs.plant import PythonPlant, create_dbs_current
 from envs.plant.dbs import DBS_AMPLITUDE_NA_PER_CM2, DBS_PULSE_WIDTH_MS, DbsSpec
+from envs.plant.matlab_backend import IntegrateResult
 from rl_adaptive_dbs.env_factory import build_mehregan_env
 
 
@@ -71,10 +72,21 @@ def test_python_plant_reset_and_close() -> None:
     plant.close()
 
 
-def test_python_plant_integrate_not_implemented() -> None:
+def test_python_plant_integrate_short_segment() -> None:
     plant = PythonPlant().reset(seed=1)
-    with pytest.raises(NotImplementedError, match="network integrator"):
-        plant.integrate(0.1, DbsSpec.none())
+    result = plant.integrate(0.01, DbsSpec.none())
+    assert isinstance(result, IntegrateResult)
+    assert len(result.gpi_spikes) == 10
+    assert all(isinstance(times, np.ndarray) for times in result.gpi_spikes)
+    assert isinstance(result.p_beta, float)
+
+
+def test_python_plant_integrate_reproducible_with_seed() -> None:
+    first = PythonPlant().reset(seed=99).integrate(0.01, DbsSpec.none())
+    second = PythonPlant().reset(seed=99).integrate(0.01, DbsSpec.none())
+    assert first.p_beta == pytest.approx(second.p_beta)
+    for a, b in zip(first.gpi_spikes, second.gpi_spikes):
+        np.testing.assert_array_equal(a, b)
 
 
 def test_build_mehregan_env_python_backend() -> None:

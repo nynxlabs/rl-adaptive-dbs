@@ -48,3 +48,26 @@ def spikes_from_matlab_struct(
 
 def spike_counts(spikes: list[np.ndarray]) -> np.ndarray:
     return np.array([len(times) for times in spikes], dtype=int)
+
+
+def find_spike_times(
+    v: np.ndarray,
+    t_ms: np.ndarray,
+    n_neurons: int,
+) -> list[np.ndarray]:
+    """Port of Kumaravelu ``find_spike_times`` (upward crossing of -20 mV).
+
+    ``v`` is shape ``(n_neurons, n_steps)``; ``t_ms`` is the simulation grid in ms.
+    Returned spike times are in **seconds**, matching the MATLAB reference.
+    """
+    if v.shape[0] < n_neurons:
+        msg = f"v has {v.shape[0]} rows, expected at least {n_neurons}"
+        raise ValueError(msg)
+
+    t_s = np.asarray(t_ms, dtype=np.float64) / 1000.0
+    t_aligned = t_s[:-1]
+    spikes: list[np.ndarray] = []
+    for k in range(n_neurons):
+        crossed = np.diff(v[k, :] > -20.0) == 1
+        spikes.append(t_aligned[crossed].copy())
+    return spikes
