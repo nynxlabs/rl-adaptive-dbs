@@ -43,8 +43,10 @@ def env_info() -> dict[str, Any]:
 
 
 def plant_info() -> dict[str, Any]:
-    cfg = resolve_config().plant
+    resolved = resolve_config()
+    cfg = resolved.plant
     return {
+        "backend": resolved.plant_backend,
         "dt_ms": cfg.dt_ms,
         "pd": cfg.pd,
         "corstim": cfg.corstim,

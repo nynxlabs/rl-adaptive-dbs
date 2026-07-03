@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Mapping
 
 import numpy as np
@@ -103,6 +104,47 @@ class NetworkState:
     time_ms: float
 
 
+@dataclass(frozen=True)
+class NetworkInitDraws:
+    """Fixed initialization draws exported from MATLAB for equivalence tests."""
+
+    v1: np.ndarray
+    v2: np.ndarray
+    v3: np.ndarray
+    v4: np.ndarray
+    v5: np.ndarray
+    v6: np.ndarray
+    perms: tuple[np.ndarray, ...]
+    gcorsna: np.ndarray
+    gcorsnn: np.ndarray
+    gcordrstr: np.ndarray
+    ggege: np.ndarray
+    gsngen: np.ndarray
+    gsngea: np.ndarray
+    gsngi: np.ndarray
+
+    @classmethod
+    def from_npz(cls, path: str | Path) -> NetworkInitDraws:
+        data = np.load(path)
+        perms = tuple(data[f"perm_{index}"] for index in range(15))
+        return cls(
+            v1=data["v1"],
+            v2=data["v2"],
+            v3=data["v3"],
+            v4=data["v4"],
+            v5=data["v5"],
+            v6=data["v6"],
+            perms=perms,
+            gcorsna=data["gcorsna"],
+            gcorsnn=data["gcorsnn"],
+            gcordrstr=data["gcordrstr"],
+            ggege=data["ggege"],
+            gsngen=data["gsngen"],
+            gsngea=data["gsngea"],
+            gsngi=data["gsngi"],
+        )
+
+
 def _create_cortical_stimulus(tmax_ms: float, dt_ms: float) -> np.ndarray:
     """Port of ``Iappco`` pulse when ``corstim==1`` (simulate_network_model.m)."""
     n_steps = int(round(tmax_ms / dt_ms)) + 1
@@ -164,6 +206,7 @@ def integrate_network(
     rng: np.random.Generator,
     iteration: int,
     seed: int | None = None,
+    init_draws: NetworkInitDraws | None = None,
 ) -> IntegrateResult:
     """Advance the CBGT network for one segment (``CTX_BG_TH_network`` port)."""
 
@@ -190,12 +233,22 @@ def integrate_network(
         iappco = np.zeros(n_steps, dtype=np.float64)
 
     # --- Initial voltages (MATLAB draw order: v1..v6) ---
-    v1 = rng.normal(DEFAULT_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
-    v2 = rng.normal(DEFAULT_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
-    v3 = rng.normal(DEFAULT_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
-    v4 = rng.normal(DEFAULT_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
-    v5 = rng.normal(STR_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
-    v6 = rng.normal(STR_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
+    if init_draws is not None:
+        v1, v2, v3, v4, v5, v6 = (
+            init_draws.v1,
+            init_draws.v2,
+            init_draws.v3,
+            init_draws.v4,
+            init_draws.v5,
+            init_draws.v6,
+        )
+    else:
+        v1 = rng.normal(DEFAULT_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
+        v2 = rng.normal(DEFAULT_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
+        v3 = rng.normal(DEFAULT_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
+        v4 = rng.normal(DEFAULT_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
+        v5 = rng.normal(STR_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
+        v6 = rng.normal(STR_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
 
     vth = np.empty((n, n_steps), dtype=np.float64)
     vsn = np.empty((n, n_steps), dtype=np.float64)
@@ -221,7 +274,10 @@ def integrate_network(
     ui[:, 0] = _BI * vi[0, 0]
 
     # --- Wiring permutations (15 randperm draws) ---
-    perm = [rng.permutation(n) for _ in range(15)]
+    if init_draws is not None:
+        perm = list(init_draws.perms)
+    else:
+        perm = [rng.permutation(n) for _ in range(15)]
     (
         all_idx,
         bll,
@@ -241,17 +297,26 @@ def integrate_network(
     ) = perm
 
     # --- Heterogeneous conductances ---
-    gcorsna = 0.3 * rng.random(n)
-    gcorsnn = 0.003 * rng.random(n)
-    gcordrstr = (0.07 - 0.044 * pd) + 0.001 * rng.random(n)
-    ggege = rng.random(n)
+    if init_draws is not None:
+        gcorsna = init_draws.gcorsna
+        gcorsnn = init_draws.gcorsnn
+        gcordrstr = init_draws.gcordrstr
+        ggege = init_draws.ggege
+        gsngen = init_draws.gsngen
+        gsngea = init_draws.gsngea
+        gsngi = init_draws.gsngi
+    else:
+        gcorsna = 0.3 * rng.random(n)
+        gcorsnn = 0.003 * rng.random(n)
+        gcordrstr = (0.07 - 0.044 * pd) + 0.001 * rng.random(n)
+        ggege = rng.random(n)
 
-    gsngen = np.zeros(n, dtype=np.float64)
-    gsngen[rng.permutation(n)[:2]] = 0.002 * rng.random(2)
-    gsngea = np.zeros(n, dtype=np.float64)
-    gsngea[rng.permutation(n)[:2]] = 0.3 * rng.random(2)
-    gsngi = np.zeros(n, dtype=np.float64)
-    gsngi[rng.permutation(n)[:5]] = 0.15
+        gsngen = np.zeros(n, dtype=np.float64)
+        gsngen[rng.permutation(n)[:2]] = 0.002 * rng.random(2)
+        gsngea = np.zeros(n, dtype=np.float64)
+        gsngea[rng.permutation(n)[:2]] = 0.3 * rng.random(2)
+        gsngi = np.zeros(n, dtype=np.float64)
+        gsngi[rng.permutation(n)[:5]] = 0.15
 
     # --- Gating / channel state at t=0 ---
     N3 = g.gpe_ninf(vge[:, 0])

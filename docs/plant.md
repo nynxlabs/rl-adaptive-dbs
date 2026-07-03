@@ -118,9 +118,12 @@ The plant lives under `envs/plant/` as a **non-Gym** service the Mehregan `Env` 
 | Symbol | Module | Notes |
 |--------|--------|--------|
 | `MatlabPlant` | `envs.plant` | `matlab.engine` bridge to `simulate_network_model(..., dynamics_only=true)` |
+| `PythonPlant` | `envs.plant` | Native NumPy port of Kumaravelu CBGT network ([native-plant-port.md](development/native-plant-port.md)) |
 | `PlantConfig` | `envs.plant` | `pd`, `dt_ms` (reference **0.01 ms**), `corstim` |
 | `DbsSpec` | `envs.plant` | `pick_dbs_freq` index; `DbsSpec.none()`, `from_frequency_hz(hz)` |
 | `IntegrateResult` | `envs.plant` | `gpi_spikes` (10 neurons, times in **seconds**), `info` |
+
+**Backend selection:** `.rl-dbs.yaml` → `plant.backend: matlab` (default) or `python`; env override `RL_DBS_PLANT_BACKEND`. `rl-dbs info plant` shows the resolved backend. Equivalence gate for flipping the default: [native-plant-port.md](development/native-plant-port.md) §5.
 
 ```python
 from envs.plant import DbsSpec, MatlabPlant
@@ -163,7 +166,9 @@ Mark heavy checks `@pytest.mark.matlab` ([development/testing.md](development/te
 
 ## 9. Future direction: native Python plant
 
-The project may **replace the MATLAB bridge** with a **native Python** reimplementation of the same network validated against the reference ([development/roadmap.md](development/roadmap.md) Phase 9+). Until equivalence passes, treat **`reference-material/KumaraveluEtAl2016/`** as source of truth for dynamics and default biomarker pipelines.
+**In progress (TASK-17):** `PythonPlant` implements the same `integrate` / `reset` contract as `MatlabPlant`. Parametrized equivalence tests run in `tests/envs/plant_backend_equivalence_test.py` (`@pytest.mark.matlab`). Default backend remains **`matlab`** until GPi spike and $P_\beta$ gates pass ([native-plant-port.md](development/native-plant-port.md)).
+
+Until equivalence passes, treat **`reference-material/KumaraveluEtAl2016/`** as source of truth for dynamics and default biomarker pipelines.
 
 ---
 

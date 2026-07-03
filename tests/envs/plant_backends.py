@@ -28,7 +28,8 @@ P_BETA_ABS_TOL: float = 0.01
 # should log measured drift here until gates pass — do not relax SPIKE_TIME_ATOL_MS
 # without a documented detection-threshold exception in native-plant-port.md.
 PHASE_B_EQUIVALENCE_XFAIL_REASON = (
-    "PythonPlant numerics pending RNG + integrator parity with MATLAB reference"
+    "PythonPlant integrator + MATLAB RNG parity pending "
+    "(fixed-IC test still drifts GPi spikes; see python_integrator_fixed_ic_test.py)"
 )
 
 

@@ -34,7 +34,7 @@ def test_resolve_config_merges_yaml(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     path.write_text(
         yaml.safe_dump(
             {
-                "plant": {"dt_ms": 0.02},
+                "plant": {"dt_ms": 0.02, "backend": "python"},
                 "env": {"beta_threshold": 0.4, "biomarker": {"band_hz": [12, 30]}},
                 "defaults": {"seed": 7, "results_dir": "out"},
             }
@@ -44,6 +44,7 @@ def test_resolve_config_merges_yaml(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 
     resolved = resolve_config(config_path=path)
     assert resolved.plant.dt_ms == 0.02
+    assert resolved.plant_backend == "python"
     assert resolved.env.beta_threshold == 0.4
     assert resolved.biomarker_band_hz == (12.0, 30.0)
     assert resolved.default_seed == 7
@@ -58,6 +59,28 @@ def test_env_overrides_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
 
     resolved = resolve_config(config_path=path)
     assert resolved.default_seed == 99
+
+
+def test_plant_backend_env_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    path = tmp_path / ".rl-dbs.yaml"
+    path.write_text("plant:\n  backend: matlab\n", encoding="utf-8")
+    monkeypatch.setenv("RL_DBS_PLANT_BACKEND", "python")
+
+    resolved = resolve_config(config_path=path)
+    assert resolved.plant_backend == "python"
+
+
+def test_persist_plant_backend(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    write_path = tmp_path / ".rl-dbs.yaml"
+
+    path, resolved = persist_config_key("plant.backend", "python", config_path=write_path)
+    assert path == write_path
+    assert resolved.plant_backend == "python"
+
+    payload = show_config(["plant.backend"], config_path=path)
+    assert payload["plant.backend"] == "python"
 
 
 def test_persist_and_show_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
