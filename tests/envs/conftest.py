@@ -10,7 +10,7 @@ from envs.plant import MatlabPlant, PlantConfig, PythonPlant
 from tests.envs.plant_backends import BACKEND_NAMES, PlantBackendName, matlab_available
 
 
-@pytest.fixture(params=BACKEND_NAMES, ids=list(BACKEND_NAMES))
+@pytest.fixture(scope="module", params=BACKEND_NAMES, ids=list(BACKEND_NAMES))
 def plant_backend(request: pytest.FixtureRequest) -> PlantBackendName:
     backend: PlantBackendName = request.param
     if backend == "matlab" and not matlab_available():
@@ -20,7 +20,6 @@ def plant_backend(request: pytest.FixtureRequest) -> PlantBackendName:
 
 @pytest.fixture(scope="module")
 def module_plant(
-    request: pytest.FixtureRequest,
     plant_backend: PlantBackendName,
 ) -> Iterator[MatlabPlant | PythonPlant]:
     if plant_backend == "matlab":
