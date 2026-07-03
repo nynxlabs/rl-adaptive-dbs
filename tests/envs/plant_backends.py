@@ -19,6 +19,8 @@ BACKEND_NAMES: tuple[PlantBackendName, ...] = ("matlab", "python")
 # Equivalence gates (docs/plant.md §8, native-plant-port.md §5).
 # Spike times are on the shared 0.01 ms grid — target exact match (0 ms atol).
 SPIKE_TIME_ATOL_MS: float = 0.0
+# float64 accumulation can differ at ~1e-9 s (~0.001 ns); use sub-grid atol in tests.
+SPIKE_TIME_ATOL_S: float = 1e-9
 # Normalized Mehregan-scale P_beta (same multitaper path for both backends).
 P_BETA_REL_TOL: float = 0.01
 P_BETA_ABS_TOL: float = 0.01
@@ -76,6 +78,7 @@ def assert_gpi_spikes_match(
     atol_ms: float = SPIKE_TIME_ATOL_MS,
 ) -> None:
     """Assert per-neuron GPi spike trains match (same integration grid)."""
+    atol_s = max(atol_ms / 1000.0, SPIKE_TIME_ATOL_S) if atol_ms == 0.0 else atol_ms / 1000.0
     assert len(reference) == len(candidate)
     for neuron_index, (ref_times, cand_times) in enumerate(
         zip(reference, candidate, strict=True)
@@ -84,7 +87,7 @@ def assert_gpi_spikes_match(
             ref_times,
             cand_times,
             rtol=0.0,
-            atol=atol_ms,
+            atol=atol_s,
             err_msg=f"GPi neuron {neuron_index} spike times differ",
         )
 
