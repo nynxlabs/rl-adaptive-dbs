@@ -19,3 +19,15 @@ def test_load_cached_init_draws_seed42() -> None:
     draws = load_cached_init_draws(42)
     assert draws is not None
     assert draws.v1.shape == (10,)
+
+
+def test_cached_init_draws_gsngen_matches_matlab_export() -> None:
+    """Fixture gsngen must match live CTX_BG_TH_network (plant_init_export)."""
+    from scripts.export_plant_init_draws import export_matlab_init_draws
+
+    draws = load_cached_init_draws(42)
+    assert draws is not None
+    fresh = export_matlab_init_draws(seed=42)
+    np.testing.assert_allclose(draws.gsngen, fresh["gsngen"])
+    np.testing.assert_allclose(draws.gsngea, fresh["gsngea"])
+    np.testing.assert_allclose(draws.gsngi, fresh["gsngi"])

@@ -56,6 +56,8 @@ Upstream: [ModelDB 206232](https://github.com/ModelDBRepository/206232). Citatio
 
 **`nargout` 11:** optional `gpe_debug_snapshot` struct at MATLAB `i == step + 1` (pre–GPe-update synaptic state for parity scripts).
 
+**`nargout` 12:** `plant_init_export` — voltages, wiring permutations, and heterogeneous conductances captured after the init block (for `scripts/export_plant_init_draws.py`). Must use this path for fixtures; replaying RNG by hand diverges on `randperm(n,k)` vs `randperm(n)[:k]`.
+
 ---
 
 ## 4. Not changed

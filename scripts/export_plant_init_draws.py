@@ -4,76 +4,90 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 
 import numpy as np
 
 
+def _repo_model_dir() -> Path:
+    env = os.environ.get("RL_ADAPTIVE_DBS_MATLAB_MODEL")
+    if env:
+        return Path(env).resolve()
+    root = os.environ.get("RL_ADAPTIVE_DBS_ROOT")
+    if root:
+        return Path(root).resolve() / "reference-material" / "KumaraveluEtAl2016"
+    return Path(__file__).resolve().parents[1] / "reference-material" / "KumaraveluEtAl2016"
+
+
+def _matlab_vec(raw: object) -> np.ndarray:
+    return np.array(raw, dtype=np.float64).reshape(-1)
+
+
+def _matlab_perm(raw: object) -> np.ndarray:
+    return np.array(raw, dtype=np.int64).reshape(-1) - 1
+
+
 def export_matlab_init_draws(*, seed: int, n: int = 10, pd: int = 1) -> dict[str, np.ndarray]:
+    """Read init draws from a short MATLAB run (``plant_init_export`` struct)."""
     import matlab.engine
 
     eng = matlab.engine.start_matlab()
     try:
-        eng.rng(float(seed), nargout=0)
-
-        def randn_vec() -> np.ndarray:
-            return np.array(eng.randn(float(n), 1.0), dtype=np.float64).reshape(-1)
-
-        def rand_vec() -> np.ndarray:
-            return np.array(eng.rand(float(n), 1.0), dtype=np.float64).reshape(-1)
-
-        def randperm_vec() -> np.ndarray:
-            return np.array(eng.randperm(float(n)), dtype=np.int64).reshape(-1) - 1
-
-        v1 = -62.0 + randn_vec() * 5.0
-        v2 = -62.0 + randn_vec() * 5.0
-        v3 = -62.0 + randn_vec() * 5.0
-        v4 = -62.0 + randn_vec() * 5.0
-        v5 = -63.8 + randn_vec() * 5.0
-        v6 = -63.8 + randn_vec() * 5.0
-
-        perms = [randperm_vec() for _ in range(15)]
-
-        gcorsna = 0.3 * rand_vec()
-        gcorsnn = 0.003 * rand_vec()
-        gcordrstr = (0.07 - 0.044 * pd) + 0.001 * rand_vec()
-        ggege = rand_vec()
-
-        gsngen = np.zeros(n, dtype=np.float64)
-        gsngen_idx = randperm_vec()[:2]
-        gsngen[gsngen_idx] = 0.002 * np.array(
-            eng.rand(2.0, 1.0), dtype=np.float64
-        ).reshape(-1)
-
-        gsngea = np.zeros(n, dtype=np.float64)
-        gsngea_idx = randperm_vec()[:2]
-        gsngea[gsngea_idx] = 0.3 * np.array(eng.rand(2.0, 1.0), dtype=np.float64).reshape(-1)
-
-        gsngi = np.zeros(n, dtype=np.float64)
-        gsngi_idx = randperm_vec()[:5]
-        gsngi[gsngi_idx] = 0.15
+        eng.cd(str(_repo_model_dir()), nargout=0)
+        raw = eng.simulate_network_model(
+            1.0,
+            float(pd),
+            0.0,
+            1.0,
+            True,
+            float(seed),
+            0.01,
+            2.0,
+            nargout=12,
+        )
+        init = raw[11]
+        perm_names = (
+            "all",
+            "bll",
+            "cll",
+            "dll",
+            "ell",
+            "fll",
+            "gll",
+            "hll",
+            "ill",
+            "jll",
+            "kll",
+            "lll",
+            "mll",
+            "nll",
+            "oll",
+        )
+        payload: dict[str, np.ndarray] = {
+            "seed": np.array([seed], dtype=np.int64),
+            "v1": _matlab_vec(init["v1"]),
+            "v2": _matlab_vec(init["v2"]),
+            "v3": _matlab_vec(init["v3"]),
+            "v4": _matlab_vec(init["v4"]),
+            "v5": _matlab_vec(init["v5"]),
+            "v6": _matlab_vec(init["v6"]),
+            "gcorsna": _matlab_vec(init["gcorsna"]),
+            "gcorsnn": _matlab_vec(init["gcorsnn"]),
+            "gcordrstr": _matlab_vec(init["gcordrstr"]),
+            "ggege": _matlab_vec(init["ggege"]),
+            "gsngen": _matlab_vec(init["gsngen"]),
+            "gsngea": _matlab_vec(init["gsngea"]),
+            "gsngi": _matlab_vec(init["gsngi"]),
+        }
+        for index, name in enumerate(perm_names):
+            payload[f"perm_{index}"] = _matlab_perm(init[name])
+        if n != 10:
+            msg = "only n=10 Kumaravelu network is supported"
+            raise ValueError(msg)
+        return payload
     finally:
         eng.quit()
-
-    payload: dict[str, np.ndarray] = {
-        "seed": np.array([seed], dtype=np.int64),
-        "v1": v1,
-        "v2": v2,
-        "v3": v3,
-        "v4": v4,
-        "v5": v5,
-        "v6": v6,
-        "gcorsna": gcorsna,
-        "gcorsnn": gcorsnn,
-        "gcordrstr": gcordrstr,
-        "ggege": ggege,
-        "gsngen": gsngen,
-        "gsngea": gsngea,
-        "gsngi": gsngi,
-    }
-    for index, perm in enumerate(perms):
-        payload[f"perm_{index}"] = perm
-    return payload
 
 
 def main() -> None:

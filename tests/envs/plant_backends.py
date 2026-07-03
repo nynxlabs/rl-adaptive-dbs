@@ -25,15 +25,11 @@ SPIKE_TIME_ATOL_S: float = 1e-5
 P_BETA_REL_TOL: float = 0.01
 P_BETA_ABS_TOL: float = 0.01
 
-# Phase B drift (2026-07-03 bisection, seed=42, fixed MATLAB ICs):
-# - GPi trains match through 69.07 ms (neuron 0); spike divergence by 69.08 ms is late-stage.
-# - First voltage divergence (neuron 0): GPe step 5185 (~51.85 ms) via Igege / S31c←S3c on peers.
-# - GPe intrinsic drift begins ~3.6 ms (neuron 1); GPe spike-train mismatch follows (~33 steps on 2nd spike).
-# - STN/striatum traces match through the neuron-0 GPe window; convolver timers match at step 5185.
-# - 2 s: mat counts [102,…] vs py [100,…]; p_beta rel err ≫ 1%.
-# PythonPlant.reset loads tests/fixtures/plant_init_seed{seed}.npz when present.
+# Phase B parity (2026-07-03): fixed-IC fixture must come from MATLAB ``plant_init_export``
+# (``randperm(n,k)`` for heterogeneous gsngen/gsngea/gsngi — not ``randperm(n)[:k]``).
+# With corrected ``tests/fixtures/plant_init_seed42.npz``, GPi trains match through 2 s.
 PHASE_B_EQUIVALENCE_XFAIL_REASON = (
-    "Integrator dynamics drift from ~69 ms (fixed ICs); 2 s / cross-backend open"
+    "Legacy note only — 2 s fixed-IC GPi parity passes after plant_init_export fixture (2026-07-03)"
 )
 
 
