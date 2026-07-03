@@ -27,7 +27,9 @@ P_BETA_ABS_TOL: float = 0.01
 
 # Phase B drift (2026-07-03 bisection, seed=42, fixed MATLAB ICs):
 # - GPi trains match through 69.07 ms (neuron 0); spike divergence by 69.08 ms is late-stage.
-# - First voltage divergence: GPe step 5185 (~51.85 ms); STN/striatum traces match there.
+# - First voltage divergence (neuron 0): GPe step 5185 (~51.85 ms) via Igege / S31c←S3c on peers.
+# - GPe intrinsic drift begins ~3.6 ms (neuron 1); GPe spike-train mismatch follows (~33 steps on 2nd spike).
+# - STN/striatum traces match through the neuron-0 GPe window; convolver timers match at step 5185.
 # - 2 s: mat counts [102,…] vs py [100,…]; p_beta rel err ≫ 1%.
 # PythonPlant.reset loads tests/fixtures/plant_init_seed{seed}.npz when present.
 PHASE_B_EQUIVALENCE_XFAIL_REASON = (

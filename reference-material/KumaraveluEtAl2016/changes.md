@@ -52,7 +52,9 @@ Upstream: [ModelDB 206232](https://github.com/ModelDBRepository/206232). Citatio
 
 **Behavior:** Returns full `vgi`, `vsn`, `vge`, `vstr_indr` matrices (neurons × time steps) for parity debugging. Default plant bridge calls use `nargout=6` (unchanged).
 
-**Why:** Localize Python vs MATLAB integrator drift (`scripts/compare_vgi_trace.py`). First GPe divergence at integrator step **5185** (~51.85 ms, seed 42, fixed ICs) as of 2026-07-03.
+**Why:** Localize Python vs MATLAB integrator drift (`scripts/compare_vgi_trace.py`, `scripts/compare_gpe_step5185.py`). Neuron-0 GPe ``Igege`` divergence at step **5185** (~51.85 ms) traces to peer ``S3c`` / GPe spike history (not STN convolver timing); intrinsic GPe drift begins ~3.6 ms on other neurons (2026-07-03).
+
+**`nargout` 11:** optional `gpe_debug_snapshot` struct at MATLAB `i == step + 1` (pre–GPe-update synaptic state for parity scripts).
 
 ---
 
