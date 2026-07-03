@@ -207,6 +207,7 @@ def integrate_network(
     iteration: int,
     seed: int | None = None,
     init_draws: NetworkInitDraws | None = None,
+    return_traces: tuple[str, ...] = (),
 ) -> IntegrateResult:
     """Advance the CBGT network for one segment (``CTX_BG_TH_network`` port)."""
 
@@ -418,7 +419,8 @@ def integrate_network(
     uce_scale = _GPEAK / (_TAU * np.exp(-1.0)) / dt
 
     vgi_curr = v4.copy()
-    if record_spikes:
+    need_vgi_trace = record_spikes or ("vgi" in return_traces)
+    if need_vgi_trace:
         vgi_trace = vgi
     else:
         vgi_trace = None
@@ -780,6 +782,11 @@ def integrate_network(
     }
     if p_beta_val is not None:
         info["p_beta"] = p_beta_val
+
+    traces: dict[str, np.ndarray] = {}
+    if return_traces and vgi_trace is not None and "vgi" in return_traces:
+        traces["vgi"] = vgi_trace.copy()
+        info["traces"] = traces
 
     return IntegrateResult(
         gpi_spikes=gpi_spikes,

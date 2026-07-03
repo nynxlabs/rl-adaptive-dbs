@@ -67,7 +67,12 @@ def find_spike_times(
     t_s = np.asarray(t_ms, dtype=np.float64) / 1000.0
     t_aligned = t_s[:-1]
     spikes: list[np.ndarray] = []
+    threshold = -20.0
     for k in range(n_neurons):
-        crossed = np.diff(v[k, :] > -20.0) == 1
+        # MATLAB: diff(v>-20)==1 on doubles (logical promotes to 0/1).
+        # np.diff(bool) is not equivalent — True→False repolarization yields True.
+        below = v[k, :-1] <= threshold
+        above = v[k, 1:] > threshold
+        crossed = below & above
         spikes.append(t_aligned[crossed].copy())
     return spikes

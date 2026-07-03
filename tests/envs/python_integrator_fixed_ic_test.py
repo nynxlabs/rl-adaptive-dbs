@@ -11,7 +11,6 @@ import pytest
 from envs.plant import DbsSpec, MatlabPlant, PlantConfig
 from envs.plant.network.integrator import NetworkInitDraws, integrate_network
 from tests.envs.plant_backends import (
-    PHASE_B_EQUIVALENCE_XFAIL_REASON,
     assert_gpi_spikes_match,
     assert_p_beta_match,
     require_matlab,
@@ -19,7 +18,11 @@ from tests.envs.plant_backends import (
 
 FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "plant_init_seed42.npz"
 
-pytestmark = [pytest.mark.matlab, pytest.mark.slow]
+pytestmark = [
+    pytest.mark.matlab,
+    pytest.mark.slow,
+    pytest.mark.xfail(reason="2 s fixed-IC parity pending verification after find_spike_times fix", strict=False),
+]
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -44,9 +47,7 @@ def test_integrator_matches_matlab_with_fixed_init_draws(
     matlab_plant: MatlabPlant,
     matlab_init_draws: NetworkInitDraws,
 ) -> None:
-    """Same ICs/wiring as MATLAB seed=42 — failures indicate integrator drift, not RNG."""
-    pytest.xfail(PHASE_B_EQUIVALENCE_XFAIL_REASON)
-
+    """Same ICs/wiring as MATLAB seed=42 — full GPi train parity gate."""
     seed = 42
     duration_s = 2.0
     dbs_spec = DbsSpec.none()
