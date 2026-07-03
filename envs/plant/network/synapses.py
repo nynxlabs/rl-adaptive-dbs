@@ -6,6 +6,8 @@ Precomputed ``syn_func_*`` arrays and ``SpikeConvolver`` mirror ``simulate_netwo
 
 from __future__ import annotations
 
+from collections import deque
+
 import numpy as np
 
 T_A_MS: float = 1000.0
@@ -245,7 +247,7 @@ class SpikeConvolver:
         self.dt_ms = float(dt_ms)
         self.t_a_ms = float(t_a_ms)
         self.max_index = int(t_a_ms / self.dt_ms)
-        self._times: list[list[int]] = [[] for _ in range(n_neurons)]
+        self._times: list[deque[int]] = [deque() for _ in range(n_neurons)]
 
     def on_spike(self, neuron_index: int) -> None:
         """Record a spike for ``neuron_index`` (0-based neuron id)."""
@@ -253,13 +255,14 @@ class SpikeConvolver:
 
     def step(self) -> None:
         """Advance all spike indices by one and trim expired entries."""
+        max_idx = self.max_index
         for times in self._times:
             if not times:
                 continue
             for i in range(len(times)):
                 times[i] += 1
-            if times[0] == self.max_index:
-                del times[0]
+            if times[0] == max_idx:
+                times.popleft()
 
     def evaluate(self, neuron_index: int, syn_func: np.ndarray) -> float:
         """Sum kernel samples for all active spikes on one neuron."""

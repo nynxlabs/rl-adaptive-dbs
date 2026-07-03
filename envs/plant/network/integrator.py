@@ -798,9 +798,19 @@ def integrate_network(
         info["p_beta"] = p_beta_val
 
     traces: dict[str, np.ndarray] = {}
-    if return_traces and vgi_trace is not None and "vgi" in return_traces:
-        traces["vgi"] = vgi_trace.copy()
-        info["traces"] = traces
+    if return_traces:
+        if vgi_trace is not None and "vgi" in return_traces:
+            traces["vgi"] = vgi_trace.copy()
+        if "vsn" in return_traces:
+            traces["vsn"] = vsn.copy()
+        if "vge" in return_traces:
+            traces["vge"] = vge.copy()
+        if "vth" in return_traces:
+            traces["vth"] = vth.copy()
+        if "vstr_indr" in return_traces:
+            traces["vstr_indr"] = vstr_indr.copy()
+        if traces:
+            info["traces"] = traces
 
     return IntegrateResult(
         gpi_spikes=gpi_spikes,

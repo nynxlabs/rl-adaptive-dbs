@@ -49,7 +49,15 @@ else
 end
 
 % Run CTX-BG-TH Network Model
-[TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco);
+if nargout > 9
+    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco);
+elseif nargout > 8
+    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco);
+elseif nargout > 6
+    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco);
+else
+    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco);
+end
 
 if dynamics_only
   if nargout > 0
@@ -61,6 +69,18 @@ if dynamics_only
     varargout{4} = pd;
     varargout{5} = pick_dbs_freq;
     varargout{6} = pattern;
+  end
+  if nargout > 6
+    varargout{7} = vgi_trace;
+  end
+  if nargout > 7
+    varargout{8} = vsn_trace;
+  end
+  if nargout > 8
+    varargout{9} = vge_trace;
+  end
+  if nargout > 9
+    varargout{10} = vstr_indr_trace;
   end
   return
 end
@@ -109,7 +129,7 @@ end
 
 
 
-function [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco)
+function [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco)
    
     %time step
     t=0:dt:tmax;
@@ -827,6 +847,10 @@ end
 
     end
 
+    vgi_trace = vgi;
+    vsn_trace = vsn;
+    vge_trace = vge;
+    vstr_indr_trace = vstr_indr;
     
     [TH_APs]  = find_spike_times(vth,t,n);
     [STN_APs] = find_spike_times(vsn,t,n);
