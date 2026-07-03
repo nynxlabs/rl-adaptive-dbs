@@ -16,6 +16,16 @@ from envs.plant.network import gating as g
 from envs.plant.network.synapses import SpikeConvolver, build_synaptic_kernels
 from envs.plant.spikes import find_spike_times, spike_counts
 
+try:
+    from envs.plant.network.numba_loop import (
+        N_CONV,
+        gpi_spikes_from_buffer,
+        numba_loop_available,
+        run_cbgt_loop,
+    )
+except ImportError:  # pragma: no cover
+    numba_loop_available = lambda: False  # type: ignore[assignment,misc]
+
 POPULATION_NAMES = (
     "ctx_exc",
     "ctx_inh",
@@ -455,403 +465,576 @@ def integrate_network(
     debug_snapshots: dict[int, dict[str, Any]] = {}
     debug_step_set = frozenset(debug_steps)
 
-    # --- Main Euler loop: Python step=1..n_steps-1 ↔ MATLAB i=2:length(t) ---
-    for step in range(1, n_steps):
-        np.copyto(v1_prev, vth)
-        np.copyto(v2_prev, vsn)
-        np.copyto(v3_prev, vge)
-        np.copyto(v4_prev, vgi_curr)
-        np.copyto(v5_prev, vstr_indr)
-        np.copyto(v6_prev, vstr_dr)
-        np.copyto(v7_prev, ve)
-        np.copyto(v8_prev, vi)
-        V1 = v1_prev
-        V2 = v2_prev
-        V3 = v3_prev
-        V4 = v4_prev
-        V5 = v5_prev
-        V6 = v6_prev
-        V7 = v7_prev
-        V8 = v8_prev
+    use_numba = (
+        False  # TODO(TASK-17): re-enable after numba_loop parity hardening
+        and numba_loop_available()
+        and not debug_steps
+        and not return_traces
+        and trace_vgi is None
+    )
+    numba_gpi_buf: np.ndarray | None = None
+    numba_gpi_counts: np.ndarray | None = None
 
-        # Synaptic delay / wiring shifts
-        S21a = S2a[_roll_p1]
-        S21an = S2an[_roll_p1]
-        S21b = S2b[_roll_p1]
-        S31a = S3a[_roll_m1]
-        S31b = S3b[_roll_m1]
-        S31c = S3c[_roll_m1]
-        S32c = S3c[_roll_p2]
-        S32b = S3b[_roll_p2]
-
-        S11cr = S1c[all_idx]
-        S12cr = S1c[bll]
-        S13cr = S1c[cll]
-        S14cr = S1c[dll]
-        S11br = S1b[ell]
-        S12br = S1b[fll]
-        S13br = S1b[gll]
-        S14br = S1b[hll]
-        S11ar = S1a[ill]
-        S12ar = S1a[jll]
-        S13ar = S1a[kll]
-        S14ar = S1a[lll]
-        S81r = S8[mll]
-        S82r = S8[nll]
-        S83r = S8[oll]
-
-        S51 = S5[_roll_m1]
-        S52 = S5[_roll_m2]
-        S53 = S5[_roll_m3]
-        S54 = S5[_roll_m4]
-        S55 = S5[_roll_m5]
-        S56 = S5[_roll_m6]
-        S57 = S5[_roll_m7]
-        S58 = S5[_roll_m8]
-        S59 = S5[_roll_m9]
-
-        S61b = S6b[_roll_m1]
-        S61bn = S6bn[_roll_m1]
-        S91 = S9[_roll_m1]
-        S92 = S9[_roll_m2]
-        S93 = S9[_roll_m3]
-        S94 = S9[_roll_m4]
-        S95 = S9[_roll_m5]
-        S96 = S9[_roll_m6]
-        S97 = S9[_roll_m7]
-        S98 = S9[_roll_m8]
-        S99 = S9[_roll_m9]
-
-        # Instantaneous gating
-        m1 = g.th_minf(V1)
-        m3 = g.gpe_minf(V3)
-        m4 = g.gpe_minf(V4)
-        n3 = g.gpe_ninf(V3)
-        n4 = g.gpe_ninf(V4)
-        h1 = g.th_hinf(V1)
-        h3 = g.gpe_hinf(V3)
-        h4 = g.gpe_hinf(V4)
-        p1 = g.th_pinf(V1)
-        a3 = g.gpe_ainf(V3)
-        a4 = g.gpe_ainf(V4)
-        s3 = g.gpe_sinf(V3)
-        s4 = g.gpe_sinf(V4)
-        r1 = g.th_rinf(V1)
-        r3 = g.gpe_rinf(V3)
-        r4 = g.gpe_rinf(V4)
-
-        tn3 = g.gpe_taun(V3)
-        tn4 = g.gpe_taun(V4)
-        th1 = g.th_tauh(V1)
-        th3 = g.gpe_tauh(V3)
-        th4 = g.gpe_tauh(V4)
-        tr1 = g.th_taur(V1)
-
-        n2 = g.stn_ninf(V2)
-        m2 = g.stn_minf(V2)
-        h2 = g.stn_hinf(V2)
-        a2 = g.stn_ainf(V2)
-        b2 = g.stn_binf(V2)
-        c2 = g.stn_cinf(V2)
-        d2 = g.stn_d2inf(V2)
-        d1 = g.stn_d1inf(V2)
-        p2 = g.stn_pinf(V2)
-        q2 = g.stn_qinf(V2)
-        r2 = g.stn_rinf(V2)
-
-        tn2 = g.stn_taun(V2)
-        tm2 = g.stn_taum(V2)
-        th2 = g.stn_tauh(V2)
-        ta2 = g.stn_taua(V2)
-        tb2 = g.stn_taub(V2)
-        tc2 = g.stn_tauc(V2)
-        td1 = g.stn_taud1(V2)
-        tp2 = g.stn_taup(V2)
-        tq2 = g.stn_tauq(V2)
-
-        ecasn = _CON * np.log(_CAO / CAsn2)
-
-        # --- Thalamic currents ---
-        il1 = _GL[0] * (V1 - _EL[0])
-        ina1 = _GNA[0] * (m1**3) * H1 * (V1 - _ENA[0])
-        ik1 = _GK[0] * ((0.75 * (1.0 - H1)) ** 4) * (V1 - _EK[0])
-        it1 = _GT[0] * (p1**2) * R1 * (V1 - _ET)
-        igith = _GGITH * (V1 - _ESYN[5]) * S4
-
-        # --- STN currents ---
-        ina2 = _GNA[1] * (M2**3) * H2 * (V2 - _ENA[1])
-        ik2 = _GK[1] * (N2**4) * (V2 - _EK[1])
-        ia2 = _GA * (A2**2) * B2 * (V2 - _EK[1])
-        il2_stn = _GL_STN * (C2**2) * D1 * D2 * (V2 - ecasn)
-        it2 = _GT[1] * (P2**2) * Q2 * (V2 - ecasn)
-        icak2 = _GCAK * (R2**2) * (V2 - _EK[1])
-        il2 = _GL[1] * (V2 - _EL[1])
-        igesn = _GGESN * ((V2 - _ESYN[0]) * (S3a + S31a))
-        icorsnampa = gcorsna * (V2 - _ESYN[1]) * (S6b + S61b)
-        icorsnnmda = gcorsnn * (V2 - _ESYN[1]) * (S6bn + S61bn)
-
-        # --- GPe currents ---
-        il3 = _GL[2] * (V3 - _EL[2])
-        ik3 = _GK[2] * (N3**4) * (V3 - _EK[2])
-        ina3 = _GNA[2] * (m3**3) * H3 * (V3 - _ENA[2])
-        it3 = _GT[2] * (a3**3) * R3 * (V3 - _ECA[2])
-        ica3 = _GCA[2] * (s3**2) * (V3 - _ECA[2])
-        iahp3 = _GAHP[2] * (V3 - _EK[2]) * (CA3 / (CA3 + _K1[2]))
-        isngeampa = gsngea * ((V3 - _ESYN[1]) * (S2a + S21a))
-        isngenmda = gsngen * ((V3 - _ESYN[1]) * (S2an + S21an))
-        igege = (0.25 * (pd * 3 + 1)) * ggege * ((V3 - _ESYN[2]) * (S31c + S32c))
-        istrgpe = _GSTRGPE * (V3 - _ESYN[5]) * (
-            S5 + S51 + S52 + S53 + S54 + S55 + S56 + S57 + S58 + S59
-        )
-
-        if step in debug_step_set:
-            debug_snapshots[step] = {
-                "V2": V2.copy(),
-                "V3": V3.copy(),
-                "S2a": S2a.copy(),
-                "S21a": S21a.copy(),
-                "S2an": S2an.copy(),
-                "S21an": S21an.copy(),
-                "S3c": S3c.copy(),
-                "S31c": S31c.copy(),
-                "S32c": S32c.copy(),
-                "N3": N3.copy(),
-                "H3": H3.copy(),
-                "R3": R3.copy(),
-                "CA3": CA3.copy(),
-                "isngeampa": isngeampa.copy(),
-                "isngenmda": isngenmda.copy(),
-                "igege": igege.copy(),
-                "istrgpe": istrgpe.copy(),
-                "ik3": ik3.copy(),
-                "ina3": ina3.copy(),
-                "il3": il3.copy(),
-                "it3": it3.copy(),
-                "ica3": ica3.copy(),
-                "iahp3": iahp3.copy(),
-                "stn_spike_times": [list(t) for t in conv_stn._times],
-                "gpe_spike_times": [list(t) for t in conv_gpe._times],
-            }
-
-        # --- GPi currents ---
-        il4 = _GL[2] * (V4 - _EL[2])
-        ik4 = _GK[2] * (N4**4) * (V4 - _EK[2])
-        ina4 = _GNA[2] * (m4**3) * H4 * (V4 - _ENA[2])
-        it4 = _GT[2] * (a4**3) * R4 * (V4 - _ECA[2])
-        ica4 = _GCA[2] * (s4**2) * (V4 - _ECA[2])
-        iahp4 = _GAHP[2] * (V4 - _EK[2]) * (CA4 / (CA4 + _K1[2]))
-        isngi = gsngi * ((V4 - _ESYN[3]) * (S2b + S21b))
-        igigi = _GGIGI * ((V4 - _ESYN[4]) * (S31b + S32b))
-        istrgpi = _GSTRGPI * (V4 - _ESYN[5]) * (
-            S9 + S91 + S92 + S93 + S94 + S95 + S96 + S97 + S98 + S99
-        )
-
-        # --- Striatum D2 ---
-        ina5 = _GNA[3] * (m5**3) * h5 * (V5 - _ENA[3])
-        ik5 = _GK[3] * (n5**4) * (V5 - _EK[3])
-        il5 = _GL[3] * (V5 - _EL[3])
-        im5 = (2.6 - 1.1 * pd) * _GM * p5 * (V5 - _EM)
-        igaba5 = (_GGABA / 4.0) * (V5 - _ESYN[6]) * (S11cr + S12cr + S13cr + S14cr)
-        icorstr5 = _GCORINDRSTR * (V5 - _ESYN[1]) * S6a
-
-        # --- Striatum D1 ---
-        ina6 = _GNA[3] * (m6**3) * h6 * (V6 - _ENA[3])
-        ik6 = _GK[3] * (n6**4) * (V6 - _EK[3])
-        il6 = _GL[3] * (V6 - _EL[3])
-        im6 = (2.6 - 1.1 * pd) * _GM * p6 * (V6 - _EM)
-        igaba6 = (_GGABA / 3.0) * (V6 - _ESYN[6]) * (S81r + S82r + S83r)
-        icorstr6 = gcordrstr * (V6 - _ESYN[1]) * S6a
-
-        # --- Cortex ---
-        iie = _GIE * (V7 - _ESYN[0]) * (S11br + S12br + S13br + S14br)
-        ithcor = _GTHCOR * (V7 - _ESYN[1]) * S7
-        iei = _GEi * (V8 - _ESYN[1]) * (S11ar + S12ar + S13ar + S14ar)
-
-        # --- Thalamus update ---
-        vth[:] = V1 + dt * (
-            (1.0 / _CM) * (-il1 - ik1 - ina1 - it1 - igith + _IAPPTH)
-        )
-        H1 = H1 + dt * ((h1 - H1) / th1)
-        R1 = R1 + dt * ((r1 - R1) / tr1)
-
-        (S7,) = _spike_convolver_step(
-            conv_th,
-            V1,
+    if use_numba:
+        spike_idx = np.zeros((N_CONV, n, 512), dtype=np.int32)
+        spike_n = np.zeros((N_CONV, n), dtype=np.int32)
+        numba_gpi_buf = np.zeros((n, 512), dtype=np.float64)
+        numba_gpi_counts = np.zeros(n, dtype=np.int32)
+        ca3_state = np.full(n, float(CA3), dtype=np.float64)
+        ca4_state = np.full(n, float(CA4), dtype=np.float64)
+        run_cbgt_loop(
+            n_steps,
+            dt,
+            n,
+            pd,
+            corstim,
+            conv_th.max_index,
+            idbs,
+            iappco,
+            t_ms,
+            all_idx,
+            bll,
+            cll,
+            dll,
+            ell,
+            fll,
+            gll,
+            hll,
+            ill,
+            jll,
+            kll,
+            lll,
+            mll,
+            nll,
+            oll,
+            _roll_m1,
+            _roll_p1,
+            _roll_m2,
+            _roll_p2,
+            _roll_m3,
+            _roll_m4,
+            _roll_m5,
+            _roll_m6,
+            _roll_m7,
+            _roll_m8,
+            _roll_m9,
+            gcorsna,
+            gcorsnn,
+            gcordrstr,
+            ggege,
+            gsngen,
+            gsngea,
+            gsngi,
+            kernels["syn_func_th"],
+            kernels["syn_func_stn_gpea"],
+            kernels["syn_func_stn_gpen"],
+            kernels["syn_func_stn_gpi"],
+            kernels["syn_func_gpe_stn"],
+            kernels["syn_func_gpe_gpi"],
+            kernels["syn_func_gpe_gpe"],
+            kernels["syn_func_gpi_th"],
+            kernels["syn_func_str_indr"],
+            kernels["syn_func_str_dr"],
+            kernels["syn_func_cor_d2"],
+            kernels["syn_func_cor_stn_a"],
+            kernels["syn_func_cor_stn_n"],
             vth,
-            (kernels["syn_func_th"],),
-        )
-
-        # --- STN update ---
-        vsn[:] = V2 + dt * (
-            (1.0 / _CM)
-            * (
-                -ina2
-                - ik2
-                - ia2
-                - il2_stn
-                - it2
-                - icak2
-                - il2
-                - igesn
-                - icorsnampa
-                - icorsnnmda
-                + idbs[step]
-            )
-        )
-        N2 = N2 + dt * ((n2 - N2) / tn2)
-        H2 = H2 + dt * ((h2 - H2) / th2)
-        M2 = M2 + dt * ((m2 - M2) / tm2)
-        A2 = A2 + dt * ((a2 - A2) / ta2)
-        B2 = B2 + dt * ((b2 - B2) / tb2)
-        C2 = C2 + dt * ((c2 - C2) / tc2)
-        D2 = D2 + dt * ((d2 - D2) / _STN_TD2)
-        D1 = D1 + dt * ((d1 - D1) / td1)
-        P2 = P2 + dt * ((p2 - P2) / tp2)
-        Q2 = Q2 + dt * ((q2 - Q2) / tq2)
-        R2 = R2 + dt * ((r2 - R2) / _STN_TR2)
-        CAsn2 = CAsn2 + dt * ((-_ALP * (il2_stn + it2)) - (_KCA_STN * CAsn2))
-
-        S2a, S2an, S2b = _spike_convolver_step(
-            conv_stn,
-            V2,
             vsn,
-            (
-                kernels["syn_func_stn_gpea"],
-                kernels["syn_func_stn_gpen"],
-                kernels["syn_func_stn_gpi"],
-            ),
-        )
-
-        # --- GPe update ---
-        vge[:] = V3 + dt * (
-            (1.0 / _CM)
-            * (-il3 - ik3 - ina3 - it3 - ica3 - iahp3 - isngeampa - isngenmda - igege - istrgpe + iappgpe)
-        )
-        N3 = N3 + dt * (0.1 * (n3 - N3) / tn3)
-        H3 = H3 + dt * (0.05 * (h3 - H3) / th3)
-        R3 = R3 + dt * (1.0 * (r3 - R3) / _GPE_TR)
-        CA3 = CA3 + dt * (1e-4 * (-ica3 - it3 - _KCA[2] * CA3))
-
-        S3a, S3b, S3c = _spike_convolver_step(
-            conv_gpe,
-            V3,
             vge,
-            (
-                kernels["syn_func_gpe_stn"],
-                kernels["syn_func_gpe_gpi"],
-                kernels["syn_func_gpe_gpe"],
-            ),
-        )
-
-        # --- GPi update ---
-        vgi_curr[:] = V4 + dt * (
-            (1.0 / _CM)
-            * (-il4 - ik4 - ina4 - it4 - ica4 - iahp4 - isngi - igigi - istrgpi + _IAPPGPI)
-        )
-        if trace_vgi is not None:
-            trace_vgi[:, step] = vgi_curr
-        if gpi_spike_lists is not None:
-            cross = (V4 <= gpi_spike_threshold) & (vgi_curr > gpi_spike_threshold)
-            if cross.any():
-                t_spike_s = t_ms[step - 1] / 1000.0
-                for neuron_index in np.flatnonzero(cross):
-                    gpi_spike_lists[neuron_index].append(t_spike_s)
-
-        N4 = N4 + dt * (0.1 * (n4 - N4) / tn4)
-        H4 = H4 + dt * (0.05 * (h4 - H4) / th4)
-        R4 = R4 + dt * (1.0 * (r4 - R4) / _GPE_TR)
-        CA4 = CA4 + dt * (1e-4 * (-ica4 - it4 - _KCA[2] * CA4))
-
-        (S4,) = _spike_convolver_step(
-            conv_gpi,
-            V4,
             vgi_curr,
-            (kernels["syn_func_gpi_th"],),
-        )
-
-        # --- Striatum D2 ---
-        vstr_indr[:] = V5 + (dt / _CM) * (-ina5 - ik5 - il5 - im5 - igaba5 - icorstr5)
-        m5 = m5 + dt * (g.alpham(V5) * (1.0 - m5) - g.betam(V5) * m5)
-        h5 = h5 + dt * (g.alphah(V5) * (1.0 - h5) - g.betah(V5) * h5)
-        n5 = n5 + dt * (g.alphan(V5) * (1.0 - n5) - g.betan(V5) * n5)
-        p5 = p5 + dt * (g.alphap(V5) * (1.0 - p5) - g.betap(V5) * p5)
-        S1c = S1c + dt * ((g.Ggaba(V5) * (1.0 - S1c)) - (S1c / _TAU_I))
-
-        (S5,) = _spike_convolver_step(
-            conv_str_indr,
-            V5,
             vstr_indr,
-            (kernels["syn_func_str_indr"],),
-        )
-
-        # --- Striatum D1 ---
-        vstr_dr[:] = V6 + (dt / _CM) * (-ina6 - ik6 - il6 - im6 - igaba6 - icorstr6)
-        m6 = m6 + dt * (g.alpham(V6) * (1.0 - m6) - g.betam(V6) * m6)
-        h6 = h6 + dt * (g.alphah(V6) * (1.0 - h6) - g.betah(V6) * h6)
-        n6 = n6 + dt * (g.alphan(V6) * (1.0 - n6) - g.betan(V6) * n6)
-        p6 = p6 + dt * (g.alphap(V6) * (1.0 - p6) - g.betap(V6) * p6)
-        S8 = S8 + dt * ((g.Ggaba(V6) * (1.0 - S8)) - (S8 / _TAU_I))
-
-        (S9,) = _spike_convolver_step(
-            conv_str_dr,
-            V6,
             vstr_dr,
-            (kernels["syn_func_str_dr"],),
+            ve,
+            vi,
+            ue,
+            ui,
+            H1,
+            R1,
+            N2,
+            H2,
+            M2,
+            A2,
+            B2,
+            C2,
+            D2,
+            D1,
+            P2,
+            Q2,
+            R2,
+            CAsn2,
+            N3,
+            H3,
+            R3,
+            ca3_state,
+            N4,
+            H4,
+            R4,
+            ca4_state,
+            m5,
+            h5,
+            n5,
+            p5,
+            m6,
+            h6,
+            n6,
+            p6,
+            S2a,
+            S21a,
+            S2b,
+            S2an,
+            S21an,
+            S3a,
+            S31a,
+            S3b,
+            S31b,
+            S32b,
+            S3c,
+            S31c,
+            S32c,
+            S4,
+            S5,
+            S51,
+            S52,
+            S53,
+            S54,
+            S55,
+            S56,
+            S57,
+            S58,
+            S59,
+            S9,
+            S6a,
+            S6b,
+            S6bn,
+            S61b,
+            S61bn,
+            S91,
+            S92,
+            S93,
+            S94,
+            S95,
+            S96,
+            S97,
+            S98,
+            S99,
+            S7,
+            S8,
+            S1a,
+            S1b,
+            S1c,
+            Z1a,
+            Z1b,
+            spike_idx,
+            spike_n,
+            numba_gpi_buf,
+            numba_gpi_counts,
+            iappgpe,
+            uce_scale,
         )
 
-        # --- Excitatory cortex (Izhikevich) ---
-        ve_new = V7 + dt * ((0.04 * (V7**2)) + (5.0 * V7) + 140.0 - ue - iie - ithcor + iappco[step])
-        ue_new = ue + dt * (_AE * ((_BE * V7) - ue))
-        for j in range(n):
-            if V7[j] >= 30.0:
-                ve_new[j] = _CE
-                ue_new[j] = ue[j] + _DE
-                conv_cor.on_spike(j)
-        ve[:] = ve_new
-        ue[:] = ue_new
+    # --- Main Euler loop: Python step=1..n_steps-1 ↔ MATLAB i=2:length(t) ---
+    if not use_numba:
+        for step in range(1, n_steps):
+            np.copyto(v1_prev, vth)
+            np.copyto(v2_prev, vsn)
+            np.copyto(v3_prev, vge)
+            np.copyto(v4_prev, vgi_curr)
+            np.copyto(v5_prev, vstr_indr)
+            np.copyto(v6_prev, vstr_dr)
+            np.copyto(v7_prev, ve)
+            np.copyto(v8_prev, vi)
+            V1 = v1_prev
+            V2 = v2_prev
+            V3 = v3_prev
+            V4 = v4_prev
+            V5 = v5_prev
+            V6 = v6_prev
+            V7 = v7_prev
+            V8 = v8_prev
 
-        S6a = conv_cor.evaluate_all(kernels["syn_func_cor_d2"])
-        S6b = conv_cor.evaluate_all(kernels["syn_func_cor_stn_a"])
-        S6bn = conv_cor.evaluate_all(kernels["syn_func_cor_stn_n"])
-        conv_cor.step()
+            # Synaptic delay / wiring shifts
+            S21a = S2a[_roll_p1]
+            S21an = S2an[_roll_p1]
+            S21b = S2b[_roll_p1]
+            S31a = S3a[_roll_m1]
+            S31b = S3b[_roll_m1]
+            S31c = S3c[_roll_m1]
+            S32c = S3c[_roll_p2]
+            S32b = S3b[_roll_p2]
 
-        ace = (V7 < SPIKE_SYN_THRESHOLD_MV) & (ve > SPIKE_SYN_THRESHOLD_MV)
-        uce = np.zeros(n, dtype=np.float64)
-        uce[ace] = uce_scale
-        S1a = S1a + dt * Z1a
-        z1adot = uce - (2.0 / _TAU) * Z1a - (1.0 / (_TAU**2)) * S1a
-        Z1a = Z1a + dt * z1adot
+            S11cr = S1c[all_idx]
+            S12cr = S1c[bll]
+            S13cr = S1c[cll]
+            S14cr = S1c[dll]
+            S11br = S1b[ell]
+            S12br = S1b[fll]
+            S13br = S1b[gll]
+            S14br = S1b[hll]
+            S11ar = S1a[ill]
+            S12ar = S1a[jll]
+            S13ar = S1a[kll]
+            S14ar = S1a[lll]
+            S81r = S8[mll]
+            S82r = S8[nll]
+            S83r = S8[oll]
 
-        # --- Inhibitory cortex ---
-        vi_new = V8 + dt * ((0.04 * (V8**2)) + (5.0 * V8) + 140.0 - ui - iei + iappco[step])
-        ui_new = ui + dt * (_AI * ((_BI * V8) - ui))
-        for j in range(n):
-            if V8[j] >= 30.0:
-                vi_new[j] = _CI
-                ui_new[j] = ui[j] + _DI
-        vi[:] = vi_new
-        ui[:] = ui_new
+            S51 = S5[_roll_m1]
+            S52 = S5[_roll_m2]
+            S53 = S5[_roll_m3]
+            S54 = S5[_roll_m4]
+            S55 = S5[_roll_m5]
+            S56 = S5[_roll_m6]
+            S57 = S5[_roll_m7]
+            S58 = S5[_roll_m8]
+            S59 = S5[_roll_m9]
 
-        aci = (V8 < SPIKE_SYN_THRESHOLD_MV) & (vi > SPIKE_SYN_THRESHOLD_MV)
-        uci = np.zeros(n, dtype=np.float64)
-        uci[aci] = uce_scale
-        S1b = S1b + dt * Z1b
-        z1bdot = uci - (2.0 / _TAU) * Z1b - (1.0 / (_TAU**2)) * S1b
-        Z1b = Z1b + dt * z1bdot
+            S61b = S6b[_roll_m1]
+            S61bn = S6bn[_roll_m1]
+            S91 = S9[_roll_m1]
+            S92 = S9[_roll_m2]
+            S93 = S9[_roll_m3]
+            S94 = S9[_roll_m4]
+            S95 = S9[_roll_m5]
+            S96 = S9[_roll_m6]
+            S97 = S9[_roll_m7]
+            S98 = S9[_roll_m8]
+            S99 = S9[_roll_m9]
 
-        if trace_vth is not None:
-            trace_vth[:, step] = vth
-        if trace_vsn is not None:
-            trace_vsn[:, step] = vsn
-        if trace_vge is not None:
-            trace_vge[:, step] = vge
-        if trace_vstr_indr is not None:
-            trace_vstr_indr[:, step] = vstr_indr
+            # Instantaneous gating
+            m1 = g.th_minf(V1)
+            m3 = g.gpe_minf(V3)
+            m4 = g.gpe_minf(V4)
+            n3 = g.gpe_ninf(V3)
+            n4 = g.gpe_ninf(V4)
+            h1 = g.th_hinf(V1)
+            h3 = g.gpe_hinf(V3)
+            h4 = g.gpe_hinf(V4)
+            p1 = g.th_pinf(V1)
+            a3 = g.gpe_ainf(V3)
+            a4 = g.gpe_ainf(V4)
+            s3 = g.gpe_sinf(V3)
+            s4 = g.gpe_sinf(V4)
+            r1 = g.th_rinf(V1)
+            r3 = g.gpe_rinf(V3)
+            r4 = g.gpe_rinf(V4)
+
+            tn3 = g.gpe_taun(V3)
+            tn4 = g.gpe_taun(V4)
+            th1 = g.th_tauh(V1)
+            th3 = g.gpe_tauh(V3)
+            th4 = g.gpe_tauh(V4)
+            tr1 = g.th_taur(V1)
+
+            n2 = g.stn_ninf(V2)
+            m2 = g.stn_minf(V2)
+            h2 = g.stn_hinf(V2)
+            a2 = g.stn_ainf(V2)
+            b2 = g.stn_binf(V2)
+            c2 = g.stn_cinf(V2)
+            d2 = g.stn_d2inf(V2)
+            d1 = g.stn_d1inf(V2)
+            p2 = g.stn_pinf(V2)
+            q2 = g.stn_qinf(V2)
+            r2 = g.stn_rinf(V2)
+
+            tn2 = g.stn_taun(V2)
+            tm2 = g.stn_taum(V2)
+            th2 = g.stn_tauh(V2)
+            ta2 = g.stn_taua(V2)
+            tb2 = g.stn_taub(V2)
+            tc2 = g.stn_tauc(V2)
+            td1 = g.stn_taud1(V2)
+            tp2 = g.stn_taup(V2)
+            tq2 = g.stn_tauq(V2)
+
+            ecasn = _CON * np.log(_CAO / CAsn2)
+
+            # --- Thalamic currents ---
+            il1 = _GL[0] * (V1 - _EL[0])
+            ina1 = _GNA[0] * (m1**3) * H1 * (V1 - _ENA[0])
+            ik1 = _GK[0] * ((0.75 * (1.0 - H1)) ** 4) * (V1 - _EK[0])
+            it1 = _GT[0] * (p1**2) * R1 * (V1 - _ET)
+            igith = _GGITH * (V1 - _ESYN[5]) * S4
+
+            # --- STN currents ---
+            ina2 = _GNA[1] * (M2**3) * H2 * (V2 - _ENA[1])
+            ik2 = _GK[1] * (N2**4) * (V2 - _EK[1])
+            ia2 = _GA * (A2**2) * B2 * (V2 - _EK[1])
+            il2_stn = _GL_STN * (C2**2) * D1 * D2 * (V2 - ecasn)
+            it2 = _GT[1] * (P2**2) * Q2 * (V2 - ecasn)
+            icak2 = _GCAK * (R2**2) * (V2 - _EK[1])
+            il2 = _GL[1] * (V2 - _EL[1])
+            igesn = _GGESN * ((V2 - _ESYN[0]) * (S3a + S31a))
+            icorsnampa = gcorsna * (V2 - _ESYN[1]) * (S6b + S61b)
+            icorsnnmda = gcorsnn * (V2 - _ESYN[1]) * (S6bn + S61bn)
+
+            # --- GPe currents ---
+            il3 = _GL[2] * (V3 - _EL[2])
+            ik3 = _GK[2] * (N3**4) * (V3 - _EK[2])
+            ina3 = _GNA[2] * (m3**3) * H3 * (V3 - _ENA[2])
+            it3 = _GT[2] * (a3**3) * R3 * (V3 - _ECA[2])
+            ica3 = _GCA[2] * (s3**2) * (V3 - _ECA[2])
+            iahp3 = _GAHP[2] * (V3 - _EK[2]) * (CA3 / (CA3 + _K1[2]))
+            isngeampa = gsngea * ((V3 - _ESYN[1]) * (S2a + S21a))
+            isngenmda = gsngen * ((V3 - _ESYN[1]) * (S2an + S21an))
+            igege = (0.25 * (pd * 3 + 1)) * ggege * ((V3 - _ESYN[2]) * (S31c + S32c))
+            istrgpe = _GSTRGPE * (V3 - _ESYN[5]) * (
+                S5 + S51 + S52 + S53 + S54 + S55 + S56 + S57 + S58 + S59
+            )
+
+            if step in debug_step_set:
+                debug_snapshots[step] = {
+                    "V2": V2.copy(),
+                    "V3": V3.copy(),
+                    "S2a": S2a.copy(),
+                    "S21a": S21a.copy(),
+                    "S2an": S2an.copy(),
+                    "S21an": S21an.copy(),
+                    "S3c": S3c.copy(),
+                    "S31c": S31c.copy(),
+                    "S32c": S32c.copy(),
+                    "N3": N3.copy(),
+                    "H3": H3.copy(),
+                    "R3": R3.copy(),
+                    "CA3": CA3.copy(),
+                    "isngeampa": isngeampa.copy(),
+                    "isngenmda": isngenmda.copy(),
+                    "igege": igege.copy(),
+                    "istrgpe": istrgpe.copy(),
+                    "ik3": ik3.copy(),
+                    "ina3": ina3.copy(),
+                    "il3": il3.copy(),
+                    "it3": it3.copy(),
+                    "ica3": ica3.copy(),
+                    "iahp3": iahp3.copy(),
+                    "stn_spike_times": [list(t) for t in conv_stn._times],
+                    "gpe_spike_times": [list(t) for t in conv_gpe._times],
+                }
+
+            # --- GPi currents ---
+            il4 = _GL[2] * (V4 - _EL[2])
+            ik4 = _GK[2] * (N4**4) * (V4 - _EK[2])
+            ina4 = _GNA[2] * (m4**3) * H4 * (V4 - _ENA[2])
+            it4 = _GT[2] * (a4**3) * R4 * (V4 - _ECA[2])
+            ica4 = _GCA[2] * (s4**2) * (V4 - _ECA[2])
+            iahp4 = _GAHP[2] * (V4 - _EK[2]) * (CA4 / (CA4 + _K1[2]))
+            isngi = gsngi * ((V4 - _ESYN[3]) * (S2b + S21b))
+            igigi = _GGIGI * ((V4 - _ESYN[4]) * (S31b + S32b))
+            istrgpi = _GSTRGPI * (V4 - _ESYN[5]) * (
+                S9 + S91 + S92 + S93 + S94 + S95 + S96 + S97 + S98 + S99
+            )
+
+            # --- Striatum D2 ---
+            ina5 = _GNA[3] * (m5**3) * h5 * (V5 - _ENA[3])
+            ik5 = _GK[3] * (n5**4) * (V5 - _EK[3])
+            il5 = _GL[3] * (V5 - _EL[3])
+            im5 = (2.6 - 1.1 * pd) * _GM * p5 * (V5 - _EM)
+            igaba5 = (_GGABA / 4.0) * (V5 - _ESYN[6]) * (S11cr + S12cr + S13cr + S14cr)
+            icorstr5 = _GCORINDRSTR * (V5 - _ESYN[1]) * S6a
+
+            # --- Striatum D1 ---
+            ina6 = _GNA[3] * (m6**3) * h6 * (V6 - _ENA[3])
+            ik6 = _GK[3] * (n6**4) * (V6 - _EK[3])
+            il6 = _GL[3] * (V6 - _EL[3])
+            im6 = (2.6 - 1.1 * pd) * _GM * p6 * (V6 - _EM)
+            igaba6 = (_GGABA / 3.0) * (V6 - _ESYN[6]) * (S81r + S82r + S83r)
+            icorstr6 = gcordrstr * (V6 - _ESYN[1]) * S6a
+
+            # --- Cortex ---
+            iie = _GIE * (V7 - _ESYN[0]) * (S11br + S12br + S13br + S14br)
+            ithcor = _GTHCOR * (V7 - _ESYN[1]) * S7
+            iei = _GEi * (V8 - _ESYN[1]) * (S11ar + S12ar + S13ar + S14ar)
+
+            # --- Thalamus update ---
+            vth[:] = V1 + dt * (
+                (1.0 / _CM) * (-il1 - ik1 - ina1 - it1 - igith + _IAPPTH)
+            )
+            H1 = H1 + dt * ((h1 - H1) / th1)
+            R1 = R1 + dt * ((r1 - R1) / tr1)
+
+            (S7,) = _spike_convolver_step(
+                conv_th,
+                V1,
+                vth,
+                (kernels["syn_func_th"],),
+            )
+
+            # --- STN update ---
+            vsn[:] = V2 + dt * (
+                (1.0 / _CM)
+                * (
+                    -ina2
+                    - ik2
+                    - ia2
+                    - il2_stn
+                    - it2
+                    - icak2
+                    - il2
+                    - igesn
+                    - icorsnampa
+                    - icorsnnmda
+                    + idbs[step]
+                )
+            )
+            N2 = N2 + dt * ((n2 - N2) / tn2)
+            H2 = H2 + dt * ((h2 - H2) / th2)
+            M2 = M2 + dt * ((m2 - M2) / tm2)
+            A2 = A2 + dt * ((a2 - A2) / ta2)
+            B2 = B2 + dt * ((b2 - B2) / tb2)
+            C2 = C2 + dt * ((c2 - C2) / tc2)
+            D2 = D2 + dt * ((d2 - D2) / _STN_TD2)
+            D1 = D1 + dt * ((d1 - D1) / td1)
+            P2 = P2 + dt * ((p2 - P2) / tp2)
+            Q2 = Q2 + dt * ((q2 - Q2) / tq2)
+            R2 = R2 + dt * ((r2 - R2) / _STN_TR2)
+            CAsn2 = CAsn2 + dt * ((-_ALP * (il2_stn + it2)) - (_KCA_STN * CAsn2))
+
+            S2a, S2an, S2b = _spike_convolver_step(
+                conv_stn,
+                V2,
+                vsn,
+                (
+                    kernels["syn_func_stn_gpea"],
+                    kernels["syn_func_stn_gpen"],
+                    kernels["syn_func_stn_gpi"],
+                ),
+            )
+
+            # --- GPe update ---
+            vge[:] = V3 + dt * (
+                (1.0 / _CM)
+                * (-il3 - ik3 - ina3 - it3 - ica3 - iahp3 - isngeampa - isngenmda - igege - istrgpe + iappgpe)
+            )
+            N3 = N3 + dt * (0.1 * (n3 - N3) / tn3)
+            H3 = H3 + dt * (0.05 * (h3 - H3) / th3)
+            R3 = R3 + dt * (1.0 * (r3 - R3) / _GPE_TR)
+            CA3 = CA3 + dt * (1e-4 * (-ica3 - it3 - _KCA[2] * CA3))
+
+            S3a, S3b, S3c = _spike_convolver_step(
+                conv_gpe,
+                V3,
+                vge,
+                (
+                    kernels["syn_func_gpe_stn"],
+                    kernels["syn_func_gpe_gpi"],
+                    kernels["syn_func_gpe_gpe"],
+                ),
+            )
+
+            # --- GPi update ---
+            vgi_curr[:] = V4 + dt * (
+                (1.0 / _CM)
+                * (-il4 - ik4 - ina4 - it4 - ica4 - iahp4 - isngi - igigi - istrgpi + _IAPPGPI)
+            )
+            if trace_vgi is not None:
+                trace_vgi[:, step] = vgi_curr
+            if gpi_spike_lists is not None:
+                cross = (V4 <= gpi_spike_threshold) & (vgi_curr > gpi_spike_threshold)
+                if cross.any():
+                    t_spike_s = t_ms[step - 1] / 1000.0
+                    for neuron_index in np.flatnonzero(cross):
+                        gpi_spike_lists[neuron_index].append(t_spike_s)
+
+            N4 = N4 + dt * (0.1 * (n4 - N4) / tn4)
+            H4 = H4 + dt * (0.05 * (h4 - H4) / th4)
+            R4 = R4 + dt * (1.0 * (r4 - R4) / _GPE_TR)
+            CA4 = CA4 + dt * (1e-4 * (-ica4 - it4 - _KCA[2] * CA4))
+
+            (S4,) = _spike_convolver_step(
+                conv_gpi,
+                V4,
+                vgi_curr,
+                (kernels["syn_func_gpi_th"],),
+            )
+
+            # --- Striatum D2 ---
+            vstr_indr[:] = V5 + (dt / _CM) * (-ina5 - ik5 - il5 - im5 - igaba5 - icorstr5)
+            m5 = m5 + dt * (g.alpham(V5) * (1.0 - m5) - g.betam(V5) * m5)
+            h5 = h5 + dt * (g.alphah(V5) * (1.0 - h5) - g.betah(V5) * h5)
+            n5 = n5 + dt * (g.alphan(V5) * (1.0 - n5) - g.betan(V5) * n5)
+            p5 = p5 + dt * (g.alphap(V5) * (1.0 - p5) - g.betap(V5) * p5)
+            S1c = S1c + dt * ((g.Ggaba(V5) * (1.0 - S1c)) - (S1c / _TAU_I))
+
+            (S5,) = _spike_convolver_step(
+                conv_str_indr,
+                V5,
+                vstr_indr,
+                (kernels["syn_func_str_indr"],),
+            )
+
+            # --- Striatum D1 ---
+            vstr_dr[:] = V6 + (dt / _CM) * (-ina6 - ik6 - il6 - im6 - igaba6 - icorstr6)
+            m6 = m6 + dt * (g.alpham(V6) * (1.0 - m6) - g.betam(V6) * m6)
+            h6 = h6 + dt * (g.alphah(V6) * (1.0 - h6) - g.betah(V6) * h6)
+            n6 = n6 + dt * (g.alphan(V6) * (1.0 - n6) - g.betan(V6) * n6)
+            p6 = p6 + dt * (g.alphap(V6) * (1.0 - p6) - g.betap(V6) * p6)
+            S8 = S8 + dt * ((g.Ggaba(V6) * (1.0 - S8)) - (S8 / _TAU_I))
+
+            (S9,) = _spike_convolver_step(
+                conv_str_dr,
+                V6,
+                vstr_dr,
+                (kernels["syn_func_str_dr"],),
+            )
+
+            # --- Excitatory cortex (Izhikevich) ---
+            ve_new = V7 + dt * ((0.04 * (V7**2)) + (5.0 * V7) + 140.0 - ue - iie - ithcor + iappco[step])
+            ue_new = ue + dt * (_AE * ((_BE * V7) - ue))
+            for j in range(n):
+                if V7[j] >= 30.0:
+                    ve_new[j] = _CE
+                    ue_new[j] = ue[j] + _DE
+                    conv_cor.on_spike(j)
+            ve[:] = ve_new
+            ue[:] = ue_new
+
+            S6a = conv_cor.evaluate_all(kernels["syn_func_cor_d2"])
+            S6b = conv_cor.evaluate_all(kernels["syn_func_cor_stn_a"])
+            S6bn = conv_cor.evaluate_all(kernels["syn_func_cor_stn_n"])
+            conv_cor.step()
+
+            ace = (V7 < SPIKE_SYN_THRESHOLD_MV) & (ve > SPIKE_SYN_THRESHOLD_MV)
+            uce = np.zeros(n, dtype=np.float64)
+            uce[ace] = uce_scale
+            S1a = S1a + dt * Z1a
+            z1adot = uce - (2.0 / _TAU) * Z1a - (1.0 / (_TAU**2)) * S1a
+            Z1a = Z1a + dt * z1adot
+
+            # --- Inhibitory cortex ---
+            vi_new = V8 + dt * ((0.04 * (V8**2)) + (5.0 * V8) + 140.0 - ui - iei + iappco[step])
+            ui_new = ui + dt * (_AI * ((_BI * V8) - ui))
+            for j in range(n):
+                if V8[j] >= 30.0:
+                    vi_new[j] = _CI
+                    ui_new[j] = ui[j] + _DI
+            vi[:] = vi_new
+            ui[:] = ui_new
+
+            aci = (V8 < SPIKE_SYN_THRESHOLD_MV) & (vi > SPIKE_SYN_THRESHOLD_MV)
+            uci = np.zeros(n, dtype=np.float64)
+            uci[aci] = uce_scale
+            S1b = S1b + dt * Z1b
+            z1bdot = uci - (2.0 / _TAU) * Z1b - (1.0 / (_TAU**2)) * S1b
+            Z1b = Z1b + dt * z1bdot
+
+            if trace_vth is not None:
+                trace_vth[:, step] = vth
+            if trace_vsn is not None:
+                trace_vsn[:, step] = vsn
+            if trace_vge is not None:
+                trace_vge[:, step] = vge
+            if trace_vstr_indr is not None:
+                trace_vstr_indr[:, step] = vstr_indr
+
+            if trace_vstr_indr is not None:
+                trace_vstr_indr[:, step] = vstr_indr
 
     gpi_spikes: list[np.ndarray] = []
     p_beta_val: float | None = None
     if record_spikes:
-        if gpi_spike_lists is not None:
+        if use_numba and numba_gpi_buf is not None and numba_gpi_counts is not None:
+            gpi_spikes = gpi_spikes_from_buffer(numba_gpi_buf, numba_gpi_counts)
+        elif gpi_spike_lists is not None:
             gpi_spikes = [
                 np.asarray(times, dtype=np.float64) for times in gpi_spike_lists
             ]
