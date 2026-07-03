@@ -252,28 +252,40 @@ def integrate_network(
         v5 = rng.normal(STR_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
         v6 = rng.normal(STR_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
 
-    vth = np.empty((n, n_steps), dtype=np.float64)
-    vsn = np.empty((n, n_steps), dtype=np.float64)
-    vge = np.empty((n, n_steps), dtype=np.float64)
-    vgi = np.empty((n, n_steps), dtype=np.float64)
-    vstr_indr = np.empty((n, n_steps), dtype=np.float64)
-    vstr_dr = np.empty((n, n_steps), dtype=np.float64)
-    ve = np.empty((n, n_steps), dtype=np.float64)
-    vi = np.empty((n, n_steps), dtype=np.float64)
+    vth = np.asarray(v1, dtype=np.float64).copy()
+    vsn = np.asarray(v2, dtype=np.float64).copy()
+    vge = np.asarray(v3, dtype=np.float64).copy()
+    vgi_curr = np.asarray(v4, dtype=np.float64).copy()
+    vstr_indr = np.asarray(v5, dtype=np.float64).copy()
+    vstr_dr = np.asarray(v6, dtype=np.float64).copy()
+    ve = np.full(n, _CE, dtype=np.float64)
+    vi = np.full(n, _CI, dtype=np.float64)
 
-    vth[:, 0] = v1
-    vsn[:, 0] = v2
-    vge[:, 0] = v3
-    vgi[:, 0] = v4
-    vstr_indr[:, 0] = v5
-    vstr_dr[:, 0] = v6
-    ve[:, 0] = _CE
-    vi[:, 0] = _CI
+    ue = np.full(n, _BE * _CE, dtype=np.float64)
+    ui = np.full(n, _BI * _CI, dtype=np.float64)
 
-    ue = np.empty((n, n_steps), dtype=np.float64)
-    ui = np.empty((n, n_steps), dtype=np.float64)
-    ue[:, 0] = _BE * ve[0, 0]
-    ui[:, 0] = _BI * vi[0, 0]
+    trace_names = frozenset(return_traces)
+    trace_vth = np.empty((n, n_steps), dtype=np.float64) if "vth" in trace_names else None
+    trace_vsn = np.empty((n, n_steps), dtype=np.float64) if "vsn" in trace_names else None
+    trace_vge = np.empty((n, n_steps), dtype=np.float64) if "vge" in trace_names else None
+    trace_vgi = np.empty((n, n_steps), dtype=np.float64) if "vgi" in trace_names else None
+    trace_vstr_indr = (
+        np.empty((n, n_steps), dtype=np.float64) if "vstr_indr" in trace_names else None
+    )
+    if trace_vth is not None:
+        trace_vth[:, 0] = vth
+    if trace_vsn is not None:
+        trace_vsn[:, 0] = vsn
+    if trace_vge is not None:
+        trace_vge[:, 0] = vge
+    if trace_vgi is not None:
+        trace_vgi[:, 0] = vgi_curr
+    if trace_vstr_indr is not None:
+        trace_vstr_indr[:, 0] = vstr_indr
+
+    gpi_spike_lists: list[list[float]] | None = None
+    if record_spikes and trace_vgi is None:
+        gpi_spike_lists = [[] for _ in range(n)]
 
     # --- Wiring permutations (15 randperm draws) ---
     if init_draws is not None:
@@ -321,42 +333,40 @@ def integrate_network(
         gsngi[rng.permutation(n)[:5]] = 0.15
 
     # --- Gating / channel state at t=0 ---
-    N3 = g.gpe_ninf(vge[:, 0])
-    N4 = g.gpe_ninf(vgi[:, 0])
-    H1 = g.th_hinf(vth[:, 0])
-    H3 = g.gpe_hinf(vge[:, 0])
-    H4 = g.gpe_hinf(vgi[:, 0])
-    R1 = g.th_rinf(vth[:, 0])
-    R3 = g.gpe_rinf(vge[:, 0])
-    R4 = g.gpe_rinf(vgi[:, 0])
+    N3 = g.gpe_ninf(vge)
+    N4 = g.gpe_ninf(vgi_curr)
+    H1 = g.th_hinf(vth)
+    H3 = g.gpe_hinf(vge)
+    H4 = g.gpe_hinf(vgi_curr)
+    R1 = g.th_rinf(vth)
+    R3 = g.gpe_rinf(vge)
+    R4 = g.gpe_rinf(vgi_curr)
     CA2 = 0.1
     CA3 = CA2
     CA4 = CA2
 
-    N2 = g.stn_ninf(vsn[:, 0])
-    H2 = g.stn_hinf(vsn[:, 0])
-    M2 = g.stn_minf(vsn[:, 0])
-    A2 = g.stn_ainf(vsn[:, 0])
-    B2 = g.stn_binf(vsn[:, 0])
-    C2 = g.stn_cinf(vsn[:, 0])
-    D2 = g.stn_d2inf(vsn[:, 0])
-    D1 = g.stn_d1inf(vsn[:, 0])
-    P2 = g.stn_pinf(vsn[:, 0])
-    Q2 = g.stn_qinf(vsn[:, 0])
-    R2 = g.stn_rinf(vsn[:, 0])
+    N2 = g.stn_ninf(vsn)
+    H2 = g.stn_hinf(vsn)
+    M2 = g.stn_minf(vsn)
+    A2 = g.stn_ainf(vsn)
+    B2 = g.stn_binf(vsn)
+    C2 = g.stn_cinf(vsn)
+    D2 = g.stn_d2inf(vsn)
+    D1 = g.stn_d1inf(vsn)
+    P2 = g.stn_pinf(vsn)
+    Q2 = g.stn_qinf(vsn)
+    R2 = g.stn_rinf(vsn)
     CAsn2 = np.full(n, 0.005, dtype=np.float64)
 
-    v5_0 = vstr_indr[:, 0]
-    m5 = g.alpham(v5_0) / (g.alpham(v5_0) + g.betam(v5_0))
-    h5 = g.alphah(v5_0) / (g.alphah(v5_0) + g.betah(v5_0))
-    n5 = g.alphan(v5_0) / (g.alphan(v5_0) + g.betan(v5_0))
-    p5 = g.alphap(v5_0) / (g.alphap(v5_0) + g.betap(v5_0))
+    m5 = g.alpham(vstr_indr) / (g.alpham(vstr_indr) + g.betam(vstr_indr))
+    h5 = g.alphah(vstr_indr) / (g.alphah(vstr_indr) + g.betah(vstr_indr))
+    n5 = g.alphan(vstr_indr) / (g.alphan(vstr_indr) + g.betan(vstr_indr))
+    p5 = g.alphap(vstr_indr) / (g.alphap(vstr_indr) + g.betap(vstr_indr))
 
-    v6_0 = vstr_dr[:, 0]
-    m6 = g.alpham(v6_0) / (g.alpham(v6_0) + g.betam(v6_0))
-    h6 = g.alphah(v6_0) / (g.alphah(v6_0) + g.betah(v6_0))
-    n6 = g.alphan(v6_0) / (g.alphan(v6_0) + g.betan(v6_0))
-    p6 = g.alphap(v6_0) / (g.alphap(v6_0) + g.betap(v6_0))
+    m6 = g.alpham(vstr_dr) / (g.alpham(vstr_dr) + g.betam(vstr_dr))
+    h6 = g.alphah(vstr_dr) / (g.alphah(vstr_dr) + g.betah(vstr_dr))
+    n6 = g.alphan(vstr_dr) / (g.alphan(vstr_dr) + g.betan(vstr_dr))
+    p6 = g.alphap(vstr_dr) / (g.alphap(vstr_dr) + g.betap(vstr_dr))
 
     # --- Synaptic filter states ---
     S2a = np.zeros(n, dtype=np.float64)
@@ -432,27 +442,37 @@ def integrate_network(
 
     iappgpe = 3.0 - 2.0 * corstim * (1 - pd)
     uce_scale = _GPEAK / (_TAU * np.exp(-1.0)) / dt
-
-    vgi_curr = v4.copy()
-    need_vgi_trace = record_spikes or ("vgi" in return_traces)
-    if need_vgi_trace:
-        vgi_trace = vgi
-    else:
-        vgi_trace = None
+    gpi_spike_threshold = -20.0
+    v1_prev = np.empty(n, dtype=np.float64)
+    v2_prev = np.empty(n, dtype=np.float64)
+    v3_prev = np.empty(n, dtype=np.float64)
+    v4_prev = np.empty(n, dtype=np.float64)
+    v5_prev = np.empty(n, dtype=np.float64)
+    v6_prev = np.empty(n, dtype=np.float64)
+    v7_prev = np.empty(n, dtype=np.float64)
+    v8_prev = np.empty(n, dtype=np.float64)
 
     debug_snapshots: dict[int, dict[str, Any]] = {}
     debug_step_set = frozenset(debug_steps)
 
     # --- Main Euler loop: Python step=1..n_steps-1 ↔ MATLAB i=2:length(t) ---
     for step in range(1, n_steps):
-        V1 = vth[:, step - 1]
-        V2 = vsn[:, step - 1]
-        V3 = vge[:, step - 1]
-        V4 = vgi_curr
-        V5 = vstr_indr[:, step - 1]
-        V6 = vstr_dr[:, step - 1]
-        V7 = ve[:, step - 1]
-        V8 = vi[:, step - 1]
+        np.copyto(v1_prev, vth)
+        np.copyto(v2_prev, vsn)
+        np.copyto(v3_prev, vge)
+        np.copyto(v4_prev, vgi_curr)
+        np.copyto(v5_prev, vstr_indr)
+        np.copyto(v6_prev, vstr_dr)
+        np.copyto(v7_prev, ve)
+        np.copyto(v8_prev, vi)
+        V1 = v1_prev
+        V2 = v2_prev
+        V3 = v3_prev
+        V4 = v4_prev
+        V5 = v5_prev
+        V6 = v6_prev
+        V7 = v7_prev
+        V8 = v8_prev
 
         # Synaptic delay / wiring shifts
         S21a = S2a[_roll_p1]
@@ -648,7 +668,7 @@ def integrate_network(
         iei = _GEi * (V8 - _ESYN[1]) * (S11ar + S12ar + S13ar + S14ar)
 
         # --- Thalamus update ---
-        vth[:, step] = V1 + dt * (
+        vth[:] = V1 + dt * (
             (1.0 / _CM) * (-il1 - ik1 - ina1 - it1 - igith + _IAPPTH)
         )
         H1 = H1 + dt * ((h1 - H1) / th1)
@@ -657,12 +677,12 @@ def integrate_network(
         (S7,) = _spike_convolver_step(
             conv_th,
             V1,
-            vth[:, step],
+            vth,
             (kernels["syn_func_th"],),
         )
 
         # --- STN update ---
-        vsn[:, step] = V2 + dt * (
+        vsn[:] = V2 + dt * (
             (1.0 / _CM)
             * (
                 -ina2
@@ -694,7 +714,7 @@ def integrate_network(
         S2a, S2an, S2b = _spike_convolver_step(
             conv_stn,
             V2,
-            vsn[:, step],
+            vsn,
             (
                 kernels["syn_func_stn_gpea"],
                 kernels["syn_func_stn_gpen"],
@@ -703,7 +723,7 @@ def integrate_network(
         )
 
         # --- GPe update ---
-        vge[:, step] = V3 + dt * (
+        vge[:] = V3 + dt * (
             (1.0 / _CM)
             * (-il3 - ik3 - ina3 - it3 - ica3 - iahp3 - isngeampa - isngenmda - igege - istrgpe + iappgpe)
         )
@@ -715,7 +735,7 @@ def integrate_network(
         S3a, S3b, S3c = _spike_convolver_step(
             conv_gpe,
             V3,
-            vge[:, step],
+            vge,
             (
                 kernels["syn_func_gpe_stn"],
                 kernels["syn_func_gpe_gpi"],
@@ -724,12 +744,18 @@ def integrate_network(
         )
 
         # --- GPi update ---
-        vgi_curr = V4 + dt * (
+        vgi_curr[:] = V4 + dt * (
             (1.0 / _CM)
             * (-il4 - ik4 - ina4 - it4 - ica4 - iahp4 - isngi - igigi - istrgpi + _IAPPGPI)
         )
-        if vgi_trace is not None:
-            vgi_trace[:, step] = vgi_curr
+        if trace_vgi is not None:
+            trace_vgi[:, step] = vgi_curr
+        if gpi_spike_lists is not None:
+            cross = (V4 <= gpi_spike_threshold) & (vgi_curr > gpi_spike_threshold)
+            if cross.any():
+                t_spike_s = t_ms[step - 1] / 1000.0
+                for neuron_index in np.flatnonzero(cross):
+                    gpi_spike_lists[neuron_index].append(t_spike_s)
 
         N4 = N4 + dt * (0.1 * (n4 - N4) / tn4)
         H4 = H4 + dt * (0.05 * (h4 - H4) / th4)
@@ -744,7 +770,7 @@ def integrate_network(
         )
 
         # --- Striatum D2 ---
-        vstr_indr[:, step] = V5 + (dt / _CM) * (-ina5 - ik5 - il5 - im5 - igaba5 - icorstr5)
+        vstr_indr[:] = V5 + (dt / _CM) * (-ina5 - ik5 - il5 - im5 - igaba5 - icorstr5)
         m5 = m5 + dt * (g.alpham(V5) * (1.0 - m5) - g.betam(V5) * m5)
         h5 = h5 + dt * (g.alphah(V5) * (1.0 - h5) - g.betah(V5) * h5)
         n5 = n5 + dt * (g.alphan(V5) * (1.0 - n5) - g.betan(V5) * n5)
@@ -754,12 +780,12 @@ def integrate_network(
         (S5,) = _spike_convolver_step(
             conv_str_indr,
             V5,
-            vstr_indr[:, step],
+            vstr_indr,
             (kernels["syn_func_str_indr"],),
         )
 
         # --- Striatum D1 ---
-        vstr_dr[:, step] = V6 + (dt / _CM) * (-ina6 - ik6 - il6 - im6 - igaba6 - icorstr6)
+        vstr_dr[:] = V6 + (dt / _CM) * (-ina6 - ik6 - il6 - im6 - igaba6 - icorstr6)
         m6 = m6 + dt * (g.alpham(V6) * (1.0 - m6) - g.betam(V6) * m6)
         h6 = h6 + dt * (g.alphah(V6) * (1.0 - h6) - g.betah(V6) * h6)
         n6 = n6 + dt * (g.alphan(V6) * (1.0 - n6) - g.betan(V6) * n6)
@@ -769,26 +795,27 @@ def integrate_network(
         (S9,) = _spike_convolver_step(
             conv_str_dr,
             V6,
-            vstr_dr[:, step],
+            vstr_dr,
             (kernels["syn_func_str_dr"],),
         )
 
         # --- Excitatory cortex (Izhikevich) ---
-        ve[:, step] = V7 + dt * ((0.04 * (V7**2)) + (5.0 * V7) + 140.0 - ue[:, step - 1] - iie - ithcor + iappco[step])
-        ue[:, step] = ue[:, step - 1] + dt * (_AE * ((_BE * V7) - ue[:, step - 1]))
-
+        ve_new = V7 + dt * ((0.04 * (V7**2)) + (5.0 * V7) + 140.0 - ue - iie - ithcor + iappco[step])
+        ue_new = ue + dt * (_AE * ((_BE * V7) - ue))
         for j in range(n):
             if V7[j] >= 30.0:
-                ve[j, step] = _CE
-                ue[j, step] = ue[j, step - 1] + _DE
+                ve_new[j] = _CE
+                ue_new[j] = ue[j] + _DE
                 conv_cor.on_spike(j)
+        ve[:] = ve_new
+        ue[:] = ue_new
 
         S6a = conv_cor.evaluate_all(kernels["syn_func_cor_d2"])
         S6b = conv_cor.evaluate_all(kernels["syn_func_cor_stn_a"])
         S6bn = conv_cor.evaluate_all(kernels["syn_func_cor_stn_n"])
         conv_cor.step()
 
-        ace = (V7 < SPIKE_SYN_THRESHOLD_MV) & (ve[:, step] > SPIKE_SYN_THRESHOLD_MV)
+        ace = (V7 < SPIKE_SYN_THRESHOLD_MV) & (ve > SPIKE_SYN_THRESHOLD_MV)
         uce = np.zeros(n, dtype=np.float64)
         uce[ace] = uce_scale
         S1a = S1a + dt * Z1a
@@ -796,25 +823,40 @@ def integrate_network(
         Z1a = Z1a + dt * z1adot
 
         # --- Inhibitory cortex ---
-        vi[:, step] = V8 + dt * ((0.04 * (V8**2)) + (5.0 * V8) + 140.0 - ui[:, step - 1] - iei + iappco[step])
-        ui[:, step] = ui[:, step - 1] + dt * (_AI * ((_BI * V8) - ui[:, step - 1]))
+        vi_new = V8 + dt * ((0.04 * (V8**2)) + (5.0 * V8) + 140.0 - ui - iei + iappco[step])
+        ui_new = ui + dt * (_AI * ((_BI * V8) - ui))
         for j in range(n):
             if V8[j] >= 30.0:
-                vi[j, step] = _CI
-                ui[j, step] = ui[j, step - 1] + _DI
+                vi_new[j] = _CI
+                ui_new[j] = ui[j] + _DI
+        vi[:] = vi_new
+        ui[:] = ui_new
 
-        aci = (V8 < SPIKE_SYN_THRESHOLD_MV) & (vi[:, step] > SPIKE_SYN_THRESHOLD_MV)
+        aci = (V8 < SPIKE_SYN_THRESHOLD_MV) & (vi > SPIKE_SYN_THRESHOLD_MV)
         uci = np.zeros(n, dtype=np.float64)
         uci[aci] = uce_scale
         S1b = S1b + dt * Z1b
         z1bdot = uci - (2.0 / _TAU) * Z1b - (1.0 / (_TAU**2)) * S1b
         Z1b = Z1b + dt * z1bdot
 
+        if trace_vth is not None:
+            trace_vth[:, step] = vth
+        if trace_vsn is not None:
+            trace_vsn[:, step] = vsn
+        if trace_vge is not None:
+            trace_vge[:, step] = vge
+        if trace_vstr_indr is not None:
+            trace_vstr_indr[:, step] = vstr_indr
+
     gpi_spikes: list[np.ndarray] = []
     p_beta_val: float | None = None
     if record_spikes:
-        assert vgi_trace is not None
-        gpi_spikes = find_spike_times(vgi_trace, t_ms, n)
+        if gpi_spike_lists is not None:
+            gpi_spikes = [
+                np.asarray(times, dtype=np.float64) for times in gpi_spike_lists
+            ]
+        elif trace_vgi is not None:
+            gpi_spikes = find_spike_times(trace_vgi, t_ms, n)
         p_beta_val = p_beta(
             gpi_spikes,
             dt_ms=dt_ms,
@@ -834,16 +876,16 @@ def integrate_network(
 
     traces: dict[str, np.ndarray] = {}
     if return_traces:
-        if vgi_trace is not None and "vgi" in return_traces:
-            traces["vgi"] = vgi_trace.copy()
-        if "vsn" in return_traces:
-            traces["vsn"] = vsn.copy()
-        if "vge" in return_traces:
-            traces["vge"] = vge.copy()
-        if "vth" in return_traces:
-            traces["vth"] = vth.copy()
-        if "vstr_indr" in return_traces:
-            traces["vstr_indr"] = vstr_indr.copy()
+        if trace_vgi is not None and "vgi" in trace_names:
+            traces["vgi"] = trace_vgi.copy()
+        if trace_vsn is not None and "vsn" in trace_names:
+            traces["vsn"] = trace_vsn.copy()
+        if trace_vge is not None and "vge" in trace_names:
+            traces["vge"] = trace_vge.copy()
+        if trace_vth is not None and "vth" in trace_names:
+            traces["vth"] = trace_vth.copy()
+        if trace_vstr_indr is not None and "vstr_indr" in trace_names:
+            traces["vstr_indr"] = trace_vstr_indr.copy()
         if traces:
             info["traces"] = traces
 

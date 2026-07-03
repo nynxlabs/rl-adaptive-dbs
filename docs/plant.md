@@ -127,7 +127,7 @@ The plant lives under `envs/plant/` as a **non-Gym** service the Mehregan `Env` 
 
 **Python init draws:** MATLAB’s `randperm(n, k)` for heterogeneous STN→GPe/GPi conductances is not reproducible from NumPy’s `Generator` alone. `PythonPlant.reset(seed=N)` loads `tests/fixtures/plant_init_seed{N}.npz` (or `~/.cache/rl-adaptive-dbs/plant_init/`) exported via `scripts/export_plant_init_draws.py`. With matching init draws, 2 s GPi spike trains and $P_\beta$ match MATLAB within documented tolerances (`tests/envs/python_integrator_fixed_ic_test.py`, `tests/envs/plant_backend_equivalence_test.py`).
 
-**Performance (2026-07-03, WSL):** 2 s `integrate` (no DBS, seed=42) — MATLAB **≈55–65 s**, PythonPlant **≈280 s** (~5× slower). Inner-loop JIT (Numba) is the planned follow-up before flipping the default backend.
+**Performance (2026-07-03, WSL):** 2 s `integrate` (no DBS, seed=42) — MATLAB **≈58–63 s**, PythonPlant **≈190 s** (~3× slower; improved from ~219 s via scalar state + convolver fast path). **≥10× gate open** — Numba inner-loop JIT is the next step before flipping the default backend.
 
 ```python
 from envs.plant import DbsSpec, MatlabPlant, PythonPlant
@@ -184,7 +184,7 @@ Mark heavy checks `@pytest.mark.matlab` ([development/testing.md](development/te
 | GPi spike parity (2 s, fixed init draws) | **Pass** |
 | $P_\beta$ parity (< 1% rel error) | **Pass** |
 | DBS ordering (130 Hz / 45 Hz lowers beta vs none) | **Pass** (`plant_backend_equivalence_test.py`) |
-| ≥10× speedup vs MATLAB (2 s integrate) | **Open** (~5× slower on WSL; Numba inner-loop follow-up) |
+| ≥10× speedup vs MATLAB (2 s integrate) | **Open** (~3× slower on WSL after integrator opts; Numba inner-loop follow-up) |
 | Default backend flip to `python` | **Blocked** on speedup gate |
 
 Opt in via `plant.backend: python` or `RL_DBS_PLANT_BACKEND=python`. Until the speedup gate closes, treat **`reference-material/KumaraveluEtAl2016/`** as the dynamics reference for audits; Python is validated against it via exported init fixtures and parametrized `@pytest.mark.matlab` tests.

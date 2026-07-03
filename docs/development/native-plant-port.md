@@ -136,7 +136,7 @@ Reuse and extend tests in `tests/envs/`:
 
 **2026-07-03 parity resolution:** RNG drift from MATLAB `randperm(n,k)` vs Python `randperm(n)[:k]` is fixed — `PythonPlant.reset(seed)` loads `plant_init_export` fixtures (`tests/fixtures/plant_init_seed{N}.npz`). Fixed-IC and cross-backend tests pass for 2 s segments. `find_spike_times` upward-crossing fix (repolarization no longer counted as spikes) was applied earlier the same day.
 
-**2026-07-03 performance (WSL, seed=42, 2 s, no DBS):** **PythonPlant ≈ 281 s** vs MATLAB **≈ 55–65 s** — **~5× slower** than MATLAB; **10× speedup gate open** (Numba / inner-loop JIT follow-up). Profile (100 ms): wiring-index gathers and vectorized `SpikeConvolver` replaced `np.roll` hot paths.
+**2026-07-03 performance (WSL, seed=42, 2 s, no DBS):** **PythonPlant ≈ 190 s** vs MATLAB **≈ 58–63 s** — **~3× slower** than MATLAB (improved from ~219 s via scalar voltage state, online GPi spike capture, and convolver fast path). **10× speedup gate open** — Numba / inner-loop JIT follow-up.
 
 ---
 
