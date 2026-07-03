@@ -2,10 +2,9 @@
 
 MATLAB ``rng(seed)`` uses the legacy Mersenne Twister (``mt19937ar``). Uniform
 ``rand`` draws match :class:`numpy.random.RandomState` bit-for-bit (verified vs
-Engine for seeds 1–200). ``randperm(n)`` is ``argsort(rand(1,n))`` (0-based in
-Python). ``randn`` uses MATLAB's ziggurat path on the **same** stream — NumPy's
-``RandomState.randn`` does **not** match; use exported IC fixtures or
-:func:`load_cached_init_draws` instead.
+Engine for seeds 1–200). ``randperm(n)`` is ``argsort(rand(1,n))`` (0-based in Python).
+``randperm(n, k)`` (MATLAB's k-subset draw) is **not** ``randperm(n)[:k]`` — use
+:func:`load_cached_init_draws` / ``plant_init_export`` instead.
 """
 
 from __future__ import annotations

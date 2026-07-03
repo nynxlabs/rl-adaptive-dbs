@@ -21,7 +21,6 @@ FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "plant_init_seed42.
 pytestmark = [
     pytest.mark.matlab,
     pytest.mark.slow,
-    pytest.mark.xfail(reason="2 s fixed-IC parity pending verification after find_spike_times fix", strict=False),
 ]
 
 

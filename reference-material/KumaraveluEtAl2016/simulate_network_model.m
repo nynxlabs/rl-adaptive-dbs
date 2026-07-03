@@ -1,4 +1,4 @@
-function varargout = simulate_network_model(IT,pd,corstim,pick_dbs_freq,dynamics_only,seed,tmax_ms)
+function varargout = simulate_network_model(IT,pd,corstim,pick_dbs_freq,dynamics_only,seed,tmax_ms,gpe_debug_i)
 
 %IT - iteration number (trial no)
 %pd - 0(normal/healthy condition), 1(Parkinson's disease(PD) condition)
@@ -7,9 +7,11 @@ function varargout = simulate_network_model(IT,pd,corstim,pick_dbs_freq,dynamics
 %dynamics_only (optional) - if true, return after CTX_BG_TH_network (plant bridge)
 %seed (optional) - RNG seed for reproducible ICs; default rng('shuffle')
 %tmax_ms (optional) - segment duration in ms; default 2000
+%gpe_debug_i (optional) - MATLAB loop index i for gpe_debug_snapshot; default 5186
 if nargin < 5, dynamics_only = false; end
 if nargin < 6 || isempty(seed), rng('shuffle'); else, rng(seed); end
 if nargin < 7 || isempty(tmax_ms), tmax = 2000; else, tmax = double(tmax_ms); end
+if nargin < 8 || isempty(gpe_debug_i), gpe_debug_i = 5186; else, gpe_debug_i = double(gpe_debug_i); end
 
 n = 10;             % number of neurons in each nucleus
 dt = 0.01;          % ms
@@ -49,18 +51,20 @@ else
 end
 
 % Run CTX-BG-TH Network Model
-if nargout > 10
-    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace gpe_debug_snapshot] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco);
+if nargout > 11
+    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace gpe_debug_snapshot plant_init_export] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i);
+elseif nargout > 10
+    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace gpe_debug_snapshot] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i);
 elseif nargout > 9
-    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco);
+    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i);
 elseif nargout > 8
-    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco);
+    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i);
 elseif nargout > 7
-    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco);
+    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i);
 elseif nargout > 6
-    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco);
+    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i);
 else
-    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco);
+    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i);
 end
 
 if dynamics_only
@@ -88,6 +92,9 @@ if dynamics_only
   end
   if nargout > 10
     varargout{11} = gpe_debug_snapshot;
+  end
+  if nargout > 11
+    varargout{12} = plant_init_export;
   end
   return
 end
@@ -136,9 +143,11 @@ end
 
 
 
-function [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace gpe_debug_snapshot] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco)
+function [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace gpe_debug_snapshot plant_init_export] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i)
     
+    if nargin < 8 || isempty(gpe_debug_i), gpe_debug_i = 5186; end
     gpe_debug_snapshot = struct();
+    plant_init_export = struct();
    
     %time step
     t=0:dt:tmax;
@@ -413,6 +422,15 @@ gsngea(randperm(10,2)')=0.3*rand(2,1);
 gsngi=zeros(n,1);
 gsngi(randperm(10,5)')=0.15;
 ggith=0.112;
+
+plant_init_export = struct( ...
+    'v1', v1, 'v2', v2, 'v3', v3, 'v4', v4, 'v5', v5, 'v6', v6, ...
+    'all', all, 'bll', bll, 'cll', cll, 'dll', dll, 'ell', ell, ...
+    'fll', fll, 'gll', gll, 'hll', hll, 'ill', ill, 'jll', jll, ...
+    'kll', kll, 'lll', lll, 'mll', mll, 'nll', nll, 'oll', oll, ...
+    'gcorsna', gcorsna, 'gcorsnn', gcorsnn, 'gcordrstr', gcordrstr, ...
+    'ggege', ggege, 'gsngen', gsngen, 'gsngea', gsngea, 'gsngi', gsngi);
+
 ggesn=0.5;
 gstrgpe=0.5;
 gstrgpi=0.5;
@@ -700,7 +718,7 @@ end
    end
 end
     
-    if i == 5186
+    if i == gpe_debug_i
         stn_times = cell(n, 1);
         gpe_times = cell(n, 1);
         for j = 1:n
@@ -728,6 +746,12 @@ end
             'Istrgpe', Istrgpe, ...
             'Ik3', Ik3, ...
             'Ina3', Ina3, ...
+            'It3', It3, ...
+            'Ica3', Ica3, ...
+            'Iahp3', Iahp3, ...
+            'Il3', Il3, ...
+            'gsngen', gsngen, ...
+            'gsngea', gsngea, ...
             'stn_times', {stn_times}, ...
             'gpe_times', {gpe_times});
     end

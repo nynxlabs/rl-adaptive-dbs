@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""Compare MATLAB vs Python GPe pre-update state at integrator step 5185.
+"""Compare MATLAB vs Python GPe pre-update state at a chosen integrator step.
 
 Python ``step`` maps to MATLAB ``i = step + 1`` (see integrator loop comment).
 Snapshots are taken immediately before the GPe voltage update, using synaptic
-state from the prior convolver step. At step 5185 neuron 0, ``Igege`` drift is
-driven by ``S31c[0] = S3c[1]`` (peer GPe self-inhibition), not STN ``S2a``.
+state from the prior convolver step.
+
+Examples:
+  uv run python scripts/compare_gpe_step5185.py --step 362 --neuron 1
+  uv run python scripts/compare_gpe_step5185.py --step 5185 --neuron 0
 """
 
 from __future__ import annotations
@@ -18,13 +21,11 @@ from envs.plant import DbsSpec, PlantConfig
 from envs.plant.network.integrator import NetworkInitDraws, integrate_network
 from scripts.compare_vgi_trace import _repo_model_dir
 
-DEBUG_STEP = 5185
-MATLAB_I = DEBUG_STEP + 1
 
-
-def matlab_snapshot(*, seed: int, duration_ms: float) -> dict:
+def matlab_snapshot(*, seed: int, duration_ms: float, debug_step: int) -> dict:
     import matlab.engine
 
+    matlab_i = debug_step + 1
     eng = matlab.engine.start_matlab()
     try:
         eng.cd(str(_repo_model_dir()), nargout=0)
@@ -36,6 +37,7 @@ def matlab_snapshot(*, seed: int, duration_ms: float) -> dict:
             True,
             float(seed),
             float(duration_ms),
+            float(matlab_i),
             nargout=11,
         )
         snap = raw[10]
@@ -54,6 +56,8 @@ def matlab_snapshot(*, seed: int, duration_ms: float) -> dict:
             "V3": np.array(snap["V3"], dtype=np.float64).reshape(-1),
             "S2a": np.array(snap["S2a"], dtype=np.float64).reshape(-1),
             "S21a": np.array(snap["S21a"], dtype=np.float64).reshape(-1),
+            "S2an": np.array(snap["S2an"], dtype=np.float64).reshape(-1),
+            "S21an": np.array(snap["S21an"], dtype=np.float64).reshape(-1),
             "S3c": np.array(snap["S3c"], dtype=np.float64).reshape(-1),
             "S31c": np.array(snap["S31c"], dtype=np.float64).reshape(-1),
             "S32c": np.array(snap["S32c"], dtype=np.float64).reshape(-1),
@@ -67,6 +71,10 @@ def matlab_snapshot(*, seed: int, duration_ms: float) -> dict:
             "istrgpe": np.array(snap["Istrgpe"], dtype=np.float64).reshape(-1),
             "ik3": np.array(snap["Ik3"], dtype=np.float64).reshape(-1),
             "ina3": np.array(snap["Ina3"], dtype=np.float64).reshape(-1),
+            "it3": np.array(snap["It3"], dtype=np.float64).reshape(-1),
+            "ica3": np.array(snap["Ica3"], dtype=np.float64).reshape(-1),
+            "iahp3": np.array(snap["Iahp3"], dtype=np.float64).reshape(-1),
+            "il3": np.array(snap["Il3"], dtype=np.float64).reshape(-1),
             "stn_spike_times": [
                 np.array(stn_lists[j], dtype=np.int64).reshape(-1)
                 for j in range(len(stn_lists))
@@ -80,7 +88,9 @@ def matlab_snapshot(*, seed: int, duration_ms: float) -> dict:
         eng.quit()
 
 
-def python_snapshot(*, seed: int, duration_s: float, draws: NetworkInitDraws) -> dict:
+def python_snapshot(
+    *, seed: int, duration_s: float, draws: NetworkInitDraws, debug_step: int
+) -> dict:
     result = integrate_network(
         config=PlantConfig(),
         duration_s=duration_s,
@@ -90,13 +100,13 @@ def python_snapshot(*, seed: int, duration_s: float, draws: NetworkInitDraws) ->
         iteration=1,
         seed=seed,
         init_draws=draws,
-        debug_steps=(DEBUG_STEP,),
+        debug_steps=(debug_step,),
     )
     snaps = result.info.get("debug_snapshots", {})
-    if DEBUG_STEP not in snaps:
-        msg = f"debug snapshot missing for step {DEBUG_STEP}"
+    if debug_step not in snaps:
+        msg = f"debug snapshot missing for step {debug_step}"
         raise KeyError(msg)
-    return snaps[DEBUG_STEP]
+    return snaps[debug_step]
 
 
 def _compare_field(name: str, mat: np.ndarray, py: np.ndarray, neuron: int) -> None:
@@ -108,6 +118,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--neuron", type=int, default=0)
+    parser.add_argument("--step", type=int, default=5185)
     parser.add_argument(
         "--fixture",
         type=Path,
@@ -115,13 +126,20 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    debug_step = args.step
+    matlab_i = debug_step + 1
     draws = NetworkInitDraws.from_npz(args.fixture)
-    duration_ms = 52.0
-    mat = matlab_snapshot(seed=args.seed, duration_ms=duration_ms)
-    py = python_snapshot(seed=args.seed, duration_s=duration_ms / 1000.0, draws=draws)
+    duration_ms = max(52.0, (debug_step + 2) * 0.01)
+    mat = matlab_snapshot(seed=args.seed, duration_ms=duration_ms, debug_step=debug_step)
+    py = python_snapshot(
+        seed=args.seed,
+        duration_s=duration_ms / 1000.0,
+        draws=draws,
+        debug_step=debug_step,
+    )
 
     n = args.neuron
-    print(f"GPe pre-update snapshot (py step {DEBUG_STEP}, mat i {MATLAB_I}), neuron {n}")
+    print(f"GPe pre-update snapshot (py step {debug_step}, mat i {matlab_i}), neuron {n}")
     print(f"mat step field: {mat['step']}")
 
     for key in (
@@ -129,6 +147,8 @@ def main() -> None:
         "V3",
         "S2a",
         "S21a",
+        "S2an",
+        "S21an",
         "S3c",
         "S31c",
         "S32c",
@@ -136,12 +156,16 @@ def main() -> None:
         "H3",
         "R3",
         "CA3",
+        "il3",
+        "ik3",
+        "ina3",
+        "it3",
+        "ica3",
+        "iahp3",
         "isngeampa",
         "isngenmda",
         "igege",
         "istrgpe",
-        "ik3",
-        "ina3",
     ):
         _compare_field(key, mat[key], py[key], n)
 

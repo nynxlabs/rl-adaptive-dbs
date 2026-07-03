@@ -1,4 +1,4 @@
-"""Integrator drift onset — fixed ICs, GPi neuron 0 (2026-07-03 bisection)."""
+"""Integrator parity checkpoints — fixed ICs, GPi neuron 0 (seed 42)."""
 
 from __future__ import annotations
 
@@ -13,10 +13,7 @@ from tests.envs.plant_backends import assert_gpi_spikes_match, require_matlab
 
 FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "plant_init_seed42.npz"
 
-# Bisected 2026-07-03: trains match through 69.07 ms; Python 5th spike appears by 69.08 ms
-# while MATLAB still has four spikes until ~69.12 ms (integrator dynamics, not RNG).
-DRIFT_ONSET_MS: float = 69.08
-MATCH_UNTIL_MS: float = 69.07
+MATCH_CHECKPOINTS_MS: tuple[float, ...] = (69.07, 69.08)
 
 pytestmark = [pytest.mark.matlab, pytest.mark.slow]
 
@@ -36,7 +33,7 @@ def matlab_init_draws() -> NetworkInitDraws:
 def _integrate_python(
     draws: NetworkInitDraws,
     duration_s: float,
-) -> list[np.ndarray]:
+) -> list:
     result = integrate_network(
         config=PlantConfig(),
         duration_s=duration_s,
@@ -50,9 +47,13 @@ def _integrate_python(
     return result.gpi_spikes
 
 
-def test_gpi_trains_match_through_69_07ms(matlab_init_draws: NetworkInitDraws) -> None:
-    """GPi neuron 0 — last matched segment before fifth-spike divergence."""
-    duration_s = MATCH_UNTIL_MS / 1000.0
+@pytest.mark.parametrize("duration_ms", MATCH_CHECKPOINTS_MS)
+def test_gpi_trains_match_matlab_checkpoint(
+    matlab_init_draws: NetworkInitDraws,
+    duration_ms: float,
+) -> None:
+    """GPi neuron 0 — regression gates around the old ~69 ms drift window."""
+    duration_s = duration_ms / 1000.0
     neuron = 0
     with MatlabPlant(PlantConfig()) as plant:
         matlab = plant.reset(seed=42).integrate(duration_s, DbsSpec.none())
@@ -61,13 +62,3 @@ def test_gpi_trains_match_through_69_07ms(matlab_init_draws: NetworkInitDraws) -
         [matlab.gpi_spikes[neuron]],
         [python_spikes[neuron]],
     )
-
-
-def test_gpi_train_diverges_by_69_08ms(matlab_init_draws: NetworkInitDraws) -> None:
-    duration_s = DRIFT_ONSET_MS / 1000.0
-    with MatlabPlant(PlantConfig()) as plant:
-        matlab = plant.reset(seed=42).integrate(duration_s, DbsSpec.none())
-    python_spikes = _integrate_python(matlab_init_draws, duration_s)
-    assert len(matlab.gpi_spikes[0]) == 4
-    assert len(python_spikes[0]) == 5
-    assert python_spikes[0][4] == pytest.approx(0.06907, abs=1e-5)
