@@ -134,7 +134,7 @@ Reuse and extend tests in `tests/envs/`:
 - [ ] Documented speedup ≥ **10×** on 2 s integrate (single worker, same hardware as TASK-13 timing)
 - [x] [plant.md](../plant.md) §7 updated; [roadmap.md](roadmap.md) Phase 9 status advanced
 
-**2026-07-03 note:** Fixed-IC test (`python_integrator_fixed_ic_test.py`) isolates RNG from dynamics — GPi spikes still diverge with MATLAB-exported initialization, so integrator loop parity remains open before RNG matching. Measured on WSL (seed=42, 2 s, no DBS): **PythonPlant ≈ 379 s** vs MATLAB **≈ 55–65 s** per step — pure NumPy is currently **~6× slower**, not faster; profile/Numba follow-up required for the 10× gate.
+**2026-07-03 note:** Fixed-IC test (`python_integrator_fixed_ic_test.py`) isolates RNG from dynamics. **Bug fix (2026-07-03):** `find_spike_times` used `np.diff(bool)` which counts repolarization as spikes; fixed to explicit upward crossing (matches MATLAB `diff(v>-20)==1` on 0/1). After fix, 50 ms fixed-IC GPi trains match within one grid step. Measured on WSL (seed=42, 2 s, no DBS): **PythonPlant ≈ 379 s** vs MATLAB **≈ 55–65 s** — pure NumPy still **~6× slower**; profile/Numba follow-up required for the 10× gate.
 
 ---
 

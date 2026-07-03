@@ -61,7 +61,9 @@ tests/
 │   ├── mehregan_env_test.py     # MehreganEnv (mock plant)
 │   ├── python_plant_test.py     # PythonPlant scaffold + DBS waveform
 │   ├── python_integrator_fixed_ic_test.py  # integrator parity with MATLAB IC fixture
+│   ├── python_integrator_fixed_ic_50ms_test.py  # fast fixed-IC GPi gate (50 ms)
 │   ├── python_integrator_first_spike_test.py  # fast first-spike check (fixed ICs, 50 ms)
+│   ├── spikes_test.py           # find_spike_times upward-crossing only
 │   ├── matlab_plant_test.py     # plant bridge (parametrized backends)
 │   ├── matlab_biomarkers_test.py
 │   ├── matlab_mehregan_env_test.py
