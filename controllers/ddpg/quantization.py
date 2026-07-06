@@ -72,8 +72,8 @@ class QATActor(nn.Module):
         logits = self.actor(x)
         return self.dequant(logits)
 
-    def init_toward_action(self, action_index: int) -> None:
-        self.actor.init_toward_action(action_index)
+    def init_toward_action(self, action_index: int, *, bias_scale: float = 2.0) -> None:
+        self.actor.init_toward_action(action_index, bias_scale=bias_scale)
 
 
 def unwrap_actor(module: nn.Module) -> Actor:

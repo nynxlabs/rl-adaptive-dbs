@@ -65,12 +65,12 @@ class Actor(nn.Module):
         action = torch.argmax(logits, dim=-1)
         return action, logits
 
-    def init_toward_action(self, action_index: int) -> None:
+    def init_toward_action(self, action_index: int, *, bias_scale: float = 2.0) -> None:
         """Bias logits toward ``action_index`` (45 Hz / 30 Hz init experiments)."""
         with torch.no_grad():
             self.head.bias.zero_()
             self.head.weight.zero_()
-            self.head.bias[action_index] = 2.0
+            self.head.bias[action_index] = bias_scale
 
 
 class Critic(nn.Module):

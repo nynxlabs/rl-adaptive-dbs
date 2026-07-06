@@ -130,7 +130,7 @@ Reuse and extend tests in `tests/envs/`:
 ### Benchmark gate (exit criteria for flipping default)
 
 - [x] `PythonPlant` passes equivalence tests in `tests/envs/` (GPi spikes, $P_\beta$, DBS ordering; seeds 3, 7, 11, 42 with exported init fixtures)
-- [ ] One full `mehregan_eval` baseline run (`none`, `cdbs-130hz`) completes with Python backend
+- [x] One full `mehregan_eval` baseline run (`none`, `cdbs-130hz`) completes with Python backend — **10/10 seeds pass vs MATLAB `summary.csv` (TASK-63, 2026-07-06); default flipped to `python`**
 - [x] Documented speedup ≥ **10×** on 2 s integrate (single worker, same hardware as TASK-13 timing)
 - [x] [plant.md](../plant.md) §7–§9 updated; [roadmap.md](roadmap.md) Phase 9 status advanced
 

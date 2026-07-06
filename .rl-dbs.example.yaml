@@ -24,7 +24,7 @@ env:
   reward_scale: 10.0
   # Raw GPi beta power scale for observations (Mehregan Fig. 4).
   observation_scale: 1000.0
-  state_length: 1
+  state_length: 15
   biomarker:
     # Beta band for P_beta (Hz). Shown in config show; runtime uses envs/plant/biomarkers.py.
     band_hz: [13, 35]

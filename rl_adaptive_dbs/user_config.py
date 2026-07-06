@@ -15,7 +15,7 @@ from envs.mehregan.config import MehreganEnvConfig
 from envs.plant.config import PlantConfig
 
 PlantBackendName = Literal["matlab", "python"]
-DEFAULT_PLANT_BACKEND: PlantBackendName = "matlab"
+DEFAULT_PLANT_BACKEND: PlantBackendName = "python"
 
 CONFIG_FILENAMES: tuple[str, ...] = (".rl-dbs.yaml", ".rl-dbs.yml")
 
