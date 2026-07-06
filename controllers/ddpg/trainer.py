@@ -79,7 +79,7 @@ class DDPGTrainer:
         self.critic_target.to(self.device)
 
         init_action = baseline_action(config.init_baseline, env.alphabet)
-        self.actor.init_toward_action(init_action)
+        self.actor.init_toward_action(init_action, bias_scale=config.init_bias_scale)
 
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=config.actor_lr)
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=config.critic_lr)

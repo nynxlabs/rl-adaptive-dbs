@@ -15,4 +15,4 @@ class MehreganEnvConfig:
     reward_scale: float = 10.0
     # Raw $P_\beta$ is ~400–500 without stimulation (Mehregan Fig. 4); Fig. 3c uses $\beta_t=0.35$.
     observation_scale: float = 1000.0
-    state_length: int = 1
+    state_length: int = 15

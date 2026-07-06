@@ -51,6 +51,10 @@ class DDPGConfig:
     exploration_temperature_start: float = 2.0
     exploration_temperature_end: float = 0.5
 
+    # Periodic init bias on actor head (§IV.A.1). Default 2.0 matches benchmark checkpoints;
+    # lower values (e.g. 0.5) for learning_v1 experiments — see phase4-results.md §10.4.
+    init_bias_scale: float = 2.0
+
     @property
     def init_baseline(self) -> str:
         return init_baseline_for_variant(self.variant)
