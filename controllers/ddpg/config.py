@@ -43,6 +43,14 @@ class DDPGConfig:
     seed: int = 0
     device: str = "cpu"
 
+    # Exploration during training (paper uses greedy argmax at deploy; not specified for
+    # online interaction — see replication.md §4.2). Linear decay over total env steps.
+    exploration_mode: str = "epsilon"  # epsilon | softmax
+    exploration_epsilon_start: float = 0.5
+    exploration_epsilon_end: float = 0.1
+    exploration_temperature_start: float = 2.0
+    exploration_temperature_end: float = 0.5
+
     @property
     def init_baseline(self) -> str:
         return init_baseline_for_variant(self.variant)

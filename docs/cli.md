@@ -303,7 +303,7 @@ rl-dbs config set KEY VALUE [--persist]
 | `env.episode_steps` | [environment.md](environment.md) §5 | `30` |
 | `env.reward_scale` | [environment.md](environment.md) | `10.0` |
 | `env.observation_scale` | [environment.md](environment.md) | `1000.0` |
-| `env.state_length` | [environment.md](environment.md) §4 | `1` |
+| `env.state_length` | [environment.md](environment.md) §4 | `15` |
 | `defaults.seed` | this document §4 | `42` |
 | `defaults.results_dir` | [benchmarking.md](benchmarking.md) | `results` |
 | `defaults.checkpoint_dir` | this document §5.1 | `artifacts/ddpg` (optional) |

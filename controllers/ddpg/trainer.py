@@ -95,13 +95,40 @@ class DDPGTrainer:
     def _to_tensor(self, array: np.ndarray) -> torch.Tensor:
         return torch.as_tensor(array, device=self.device, dtype=torch.float32)
 
-    def _select_action(self, state: np.ndarray) -> tuple[int, np.ndarray]:
+    def _exploration_fraction(self, env_step: int) -> float:
+        total_steps = self.config.num_episodes * self.env.config.max_episode_steps
+        if total_steps <= 1:
+            return 1.0
+        return min(1.0, env_step / total_steps)
+
+    def _exploration_epsilon(self, env_step: int) -> float:
+        frac = self._exploration_fraction(env_step)
+        start = self.config.exploration_epsilon_start
+        end = self.config.exploration_epsilon_end
+        return start + frac * (end - start)
+
+    def _exploration_temperature(self, env_step: int) -> float:
+        frac = self._exploration_fraction(env_step)
+        start = self.config.exploration_temperature_start
+        end = self.config.exploration_temperature_end
+        return start + frac * (end - start)
+
+    def _select_action(self, state: np.ndarray, *, env_step: int) -> tuple[int, np.ndarray]:
         with torch.no_grad():
             state_t = self._to_tensor(state).unsqueeze(0)
             logits = self.actor(state_t)
-            action_t, _ = Actor.select_action(logits)
-            action = int(action_t.item())
             logits_np = logits.squeeze(0).cpu().numpy()
+            if self.config.exploration_mode == "softmax":
+                temp = self._exploration_temperature(env_step)
+                probs = F.softmax(logits / temp, dim=-1)
+                action = int(torch.multinomial(probs, 1).item())
+            else:
+                epsilon = self._exploration_epsilon(env_step)
+                if np.random.random() < epsilon:
+                    action = int(self.env.action_space.sample())
+                else:
+                    action_t, _ = Actor.select_action(logits)
+                    action = int(action_t.item())
         return action, logits_np
 
     def _update_step(self) -> tuple[float, float]:
@@ -146,6 +173,8 @@ class DDPGTrainer:
         torch.manual_seed(self.config.seed)
         np.random.seed(self.config.seed)
 
+        env_step = 0
+
         for episode in range(self.config.num_episodes):
             state, _info = self.env.reset(seed=self.config.seed + episode)
             episode_reward = float(_info.get("reward", 0.0))
@@ -154,7 +183,8 @@ class DDPGTrainer:
             terminated = False
             truncated = False
             while not (terminated or truncated):
-                action, logits = self._select_action(state)
+                action, logits = self._select_action(state, env_step=env_step)
+                env_step += 1
                 next_state, reward, terminated, truncated, info = self.env.step(action)
                 dw = float(info.get("dw", 1.0 if truncated else 0.0))
 
