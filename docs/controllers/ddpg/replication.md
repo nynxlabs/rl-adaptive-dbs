@@ -67,7 +67,10 @@ Initialize:
 
 For each environment step of duration $l$:
 
-1. **Select action:** $u \leftarrow \mu(s \mid \theta_\mu)$ (forward pass yields logits; argmax selects discrete pattern $a$ applied to STN).
+1. **Select action:** $u \leftarrow \mu(s \mid \theta_\mu)$ (forward pass yields logits; **greedy** softmax + argmax selects discrete pattern $a$ applied to STN at **evaluation**). During **training**, the implementation supports two exploration modes (`DDPGConfig.exploration_mode`):
+   - **`epsilon` (default):** $\epsilon$-greedy — with probability $\epsilon_t$ sample a uniform random pattern, else argmax on logits. $\epsilon_t$ linearly decays from **0.5** to **0.1** over the full training schedule.
+   - **`softmax`:** sample from $\mathrm{Categorical}(\mathrm{softmax}(\mathrm{logits}/\tau_t))$ with temperature $\tau_t$ linearly annealed from **2.0** to **0.5**.
+   Replay stores the actor logits $a_{\mathrm{logit}}$ from the forward pass (not the random/sampled override). The paper does not specify online exploration; these conventions break constant-policy collapse when `state_length > 1` (TASK-67).
 2. **Step environment:** obtain next state $s'$, reward $R$, and episode-done flag $dw \in \{0,1\}$ ($dw=1$ iff the episode finished after this transition, for $Q$ targets; see [environment.md](../../environment.md) §7).
 3. **Store transition** in $B$. Algorithm 1 lists the tuple as $(s', a, a_{\mathrm{logit}}, R, s, dw)$; a practical layout is equivalent if it preserves $(s, a, a_{\mathrm{logit}}, R, s', dw)$ for standard replay sampling. Store the discrete pattern index $a$ alongside $a_{\mathrm{logit}}$ (derivable from argmax but included in the paper tuple) for paper-aligned replay dumps.
 
