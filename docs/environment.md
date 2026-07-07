@@ -37,7 +37,9 @@ where $P_j^{\mathrm{GPi}}$ is the **power spectral density** of the **action pot
 
 - The **actor** uses a **temporal window** of biomarker samples (paper §III.B: CNN over time; “Brain” class with **state length** / window parameters).
 - **Algorithm 1** in the paper: at each RL step, form state **s** from **$P_\beta$** (after running the plant for the step duration).
-- For the **computational experiments** in §IV.A.1, the **biomarker window** for $P_\beta$ is described as spanning the **full length of the simulation segment** used for that step (see §5).
+- For the **computational experiments** in §IV.A.1, the **biomarker window** for $P_\\beta$ is described as spanning the **full length of the simulation segment** used for that step (see §5).
+
+**Implementation (Jul 2026, TASK-67):** The paper's "window spanning the full simulation segment" means **`state_length=1`** — a single $P_\\beta$ value computed over the 2 s step. This is **not** a multi-step history window. With `state_length > 1` (e.g. 15), only the most recent element changes per step while the rest are stale history, causing the CNN to see near-identical states and collapse to a constant policy. **Use `state_length=1` as default.**
 
 **Optional context (not used as the main RL input in this study):** **Error index (EI)** for thalamic reliability (paper Equation (2)) appears in §II.B for background and comparison with prior work; the **stated RL objective** uses **$P_\beta$ alone**.
 
