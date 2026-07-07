@@ -75,3 +75,10 @@ class ReplayBuffer:
             next_state=self._next_states[indices],
             dw=self._dw[indices],
         )
+
+    def action_counts(self) -> np.ndarray:
+        """Per-action transition counts currently in the buffer."""
+        n_actions = int(self._logits.shape[1])
+        if self._size == 0:
+            return np.zeros(n_actions, dtype=np.int64)
+        return np.bincount(self._actions[: self._size], minlength=n_actions)
