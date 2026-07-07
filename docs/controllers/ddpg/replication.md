@@ -144,6 +144,8 @@ Repo **variant** slugs for `controller: ddpg` map to Mehregan et al. §IV experi
 
 The **instantaneous reward** $R$ is defined in paper Eq. (8) from the averaged observation ([environment.md](../../environment.md) §6). The **critic** predicts discounted return under that reward; **normalization** of $s(i)$ must be **shared** between the observation pipeline and $R$ so that $\beta_t = 0.35$ remains meaningful ([environment.md](../../environment.md) §6 implementation note).
 
+**Reward sign bug (found 2026-07-07, TASK-67):** The paper's Eq. (8) as printed yields a **negative** value in the below-threshold branch ($\delta < 0$ when $s(i) < \beta_t$), but the prose and Figure 3c specify **positive reward below threshold**. The original code (`return delta`) penalized the agent for keeping the biomarker suppressed — the opposite of training intent. Fix: `return -delta` in the below-threshold branch. This bug caused all DDPG training runs (epsilon-greedy, softmax, greedy argmax, all state lengths) to collapse to constant actions, because the reward signal was inverted. After the fix, episode-1 reward jumps from ~-26 to ~-1.7 at sl=1.
+
 ---
 
 ## 6. Quantization (§III.D)
