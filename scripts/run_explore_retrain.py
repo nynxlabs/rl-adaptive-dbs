@@ -41,12 +41,6 @@ def main() -> int:
     plant = PythonPlant(config=resolved.plant)
     env = MehreganEnv(plant=plant, config=env_cfg)
     try:
-        config = DDPGConfig(
-            variant="paper",
-            seed=args.seed,
-            num_episodes=args.episodes,
-            exploration_mode=args.exploration_mode,
-        )
         if args.learning_v1:
             config = DDPGConfig(
                 variant="paper",
@@ -59,6 +53,15 @@ def main() -> int:
                 shrink_dim=8,
                 init_bias_scale=0.5,
                 critic_action_input="one_hot",
+                log_episodes=True,
+            )
+        else:
+            config = DDPGConfig(
+                variant="paper",
+                seed=args.seed,
+                num_episodes=args.episodes,
+                exploration_mode=args.exploration_mode,
+                log_episodes=True,
             )
         result = train(env, config, checkpoint_path=args.checkpoint)
         offline = _analyze_policy(result.actor, args.state_length)

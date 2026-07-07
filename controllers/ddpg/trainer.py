@@ -252,6 +252,12 @@ class DDPGTrainer:
 
             metrics.episode_rewards.append(episode_reward)
             metrics.episode_steps.append(steps)
+            if self.config.log_episodes:
+                print(
+                    f"episode {episode + 1}/{self.config.num_episodes} "
+                    f"reward={episode_reward:.2f} steps={steps}",
+                    flush=True,
+                )
 
         return TrainResult(
             actor=unwrap_actor(self.actor),
