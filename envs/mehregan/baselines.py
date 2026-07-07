@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from envs.mehregan.patterns import PatternAlphabet
+from envs.mehregan.fixed_mean_patterns import FixedMeanPatternAlphabet
 from envs.plant.dbs import DbsSpec
 
 if TYPE_CHECKING:

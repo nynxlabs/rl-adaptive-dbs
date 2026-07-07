@@ -198,7 +198,14 @@ Hyperparameters with **fixed** values in §IV.A.1 should be **defaults**; open v
 
 ### 1. Discrete pattern alphabet size and encoding
 
-The actor outputs logits over a finite STN pattern set, but the paper does not fix **cardinality** or per-pattern waveform semantics. **Fixed:** discrete control via softmax + argmax; replay stores pattern index $a$ and logits $a_{\mathrm{logit}}$. **Open:** alphabet definition. **Decide in** shared env / Brain config and keep fixed across train, eval, and quantization (see [environment.md](../../environment.md) §4).
+The actor outputs logits over a finite STN pattern set, but the paper does not fix **cardinality** or per-pattern waveform semantics. **Fixed:** discrete control via softmax + argmax; replay stores pattern index $a$ and logits $a_{\mathrm{logit}}$. **Decided (TASK-83, Option C):** two action-space modes via `MehreganEnvConfig.action_space_mode`:
+
+| Mode | Alphabet | Default |
+|------|----------|---------|
+| `scalar_frequency` | `PatternAlphabet` — Kumaravelu `0:5:200` Hz grid (41 actions) | yes (backward-compatible benchmarks) |
+| `fixed_mean_pattern` | `FixedMeanPatternAlphabet` — 41 irregular pulse trains at fixed `pattern_mean_hz` (45 Hz paper / 30 Hz ablation) | Option C faithful to Mehregan §IV.A.2 |
+
+Pattern mode is **Python-plant only** (`DbsSpec.idbs` precomputed trace). Scalar mode remains for cDBS / no-stim baselines and legacy checkpoints. See [environment.md](../../environment.md) §4.2 for alphabet construction and paper-silent choices. **Train factory:** `DDPGConfig.action_space_mode` + `pattern_mean_hz`; `init_baseline_for_variant` maps to pattern 0 (regular train at mean Hz) in pattern mode.
 
 ### 2. CNN actor–critic topology
 
