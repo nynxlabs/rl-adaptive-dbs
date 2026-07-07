@@ -293,12 +293,46 @@ class DDPGTrainer:
 
         return float(critic_loss.item()), float(actor_loss.item())
 
+    def _random_warmup(self) -> int:
+        """Fill replay buffer with random transitions before training starts."""
+        steps = self.config.random_warmup_steps
+        if steps <= 0:
+            return 0
+        state, _info = self.env.reset(seed=self.config.seed)
+        self._update_obs_stats(state)
+        for i in range(steps):
+            action = int(self.env.action_space.sample())
+            next_state, reward, terminated, truncated, info = self.env.step(action)
+            self._update_obs_stats(next_state)
+            dw = float(info.get("dw", 1.0 if truncated else 0.0))
+            normalized_reward = self._normalize_reward(reward)
+            # Use zero logits for random actions (not from actor)
+            dummy_logits = np.zeros(self._n_actions, dtype=np.float32)
+            self.buffer.add(
+                state=state,
+                action=action,
+                action_logits=dummy_logits,
+                reward=normalized_reward,
+                next_state=next_state,
+                dw=dw,
+            )
+            if terminated or truncated:
+                state, _info = self.env.reset(seed=self.config.seed + 10000 + i)
+                self._update_obs_stats(state)
+            else:
+                state = next_state
+            if self.config.log_episodes and (i + 1) % 50 == 0:
+                print(f"warmup step {i + 1}/{steps}", flush=True)
+        return steps
+
     def train(self) -> TrainResult:
         metrics = TrainMetrics()
         torch.manual_seed(self.config.seed)
         np.random.seed(self.config.seed)
 
-        env_step = 0
+        # Phase 1: random warmup to fill buffer with diverse transitions
+        warmup_steps = self._random_warmup()
+        env_step = warmup_steps
 
         for episode in range(self.config.num_episodes):
             state, _info = self.env.reset(seed=self.config.seed + episode)
