@@ -252,6 +252,7 @@ Artifacts: `artifacts/ddpg/explore_sl15_seed0.json`, `artifacts/ddpg/state_lengt
 - **Policy head still collapses.** Despite varying encoder outputs, **offline argmax is unique=1** for both checkpoints. Explore training *increased* logit margin (mean **1.47** vs **0.013** for original `paper`) — the actor became *more* decisive, not more state-dependent.
 - **Critic checkpoints are not saved**, so post-hoc $Q(s,a)$ variance across actions could not be measured on trained critics. Actor loss is $-\mathbb{E}[Q(s, \pi(s))]$; if the critic assigns similar $Q$ across logits for a given $s$, the actor receives no pressure to differentiate actions. **Likely bottleneck:** critic does not learn action-discriminative values, not encoder saturation.
 - **Replay stores behavior logits** while actor update uses fresh $\pi(s)$ logits — standard for this paper-aligned formulation, but means critic must generalize across logit vectors, not discrete action indices.
+- **TASK-67 fix (2026-07-07):** default `DDPGConfig.critic_action_input = one_hot` — critic trains on executed action index; actor maximizes $\sum_a \mathrm{softmax}(\mu(s))_a Q(s,a)$. Legacy `logits` mode retained for paper-tuple replay dumps. Retrain probe: tmux `task67-onehot` (`run_explore_retrain.py --learning-v1 --episodes 10`).
 
 #### 2. CNN capacity
 

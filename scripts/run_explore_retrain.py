@@ -23,6 +23,11 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--episodes", type=int, default=30)
     parser.add_argument("--exploration-mode", choices=("epsilon", "softmax"), default="softmax")
+    parser.add_argument(
+        "--learning-v1",
+        action="store_true",
+        help="phase4-results.md §10.4 profile (softmax 3→1, init_bias_scale=0.5, wider CNN)",
+    )
     parser.add_argument("--out", type=Path, default=Path("artifacts/ddpg/explore_retrain.json"))
     parser.add_argument(
         "--checkpoint",
@@ -42,13 +47,28 @@ def main() -> int:
             num_episodes=args.episodes,
             exploration_mode=args.exploration_mode,
         )
+        if args.learning_v1:
+            config = DDPGConfig(
+                variant="paper",
+                seed=args.seed,
+                num_episodes=args.episodes,
+                exploration_mode="softmax",
+                exploration_temperature_start=3.0,
+                exploration_temperature_end=1.0,
+                conv_channels=32,
+                shrink_dim=8,
+                init_bias_scale=0.5,
+                critic_action_input="one_hot",
+            )
         result = train(env, config, checkpoint_path=args.checkpoint)
         offline = _analyze_policy(result.actor, args.state_length)
         rollout = _rollout_actions(env, result.actor, seed=args.seed + 1000)
         out = {
             "state_length": args.state_length,
             "episodes": args.episodes,
-            "exploration_mode": args.exploration_mode,
+            "exploration_mode": config.exploration_mode,
+            "critic_action_input": config.critic_action_input,
+            "learning_v1": args.learning_v1,
             "final_reward": float(result.metrics.episode_rewards[-1]),
             "unique_actions_offline": int(offline["unique_actions_offline"]),
             "dominant_action": int(offline["dominant_action"]),

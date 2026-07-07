@@ -98,9 +98,10 @@ class Critic(nn.Module):
         )
         self.n_actions = n_actions
 
-    def forward(self, state: Tensor, action_logits: Tensor) -> Tensor:
+    def forward(self, state: Tensor, action_features: Tensor) -> Tensor:
+        """``action_features`` is either actor logits or a one-hot action vector (n_actions)."""
         encoded = self.encoder(state)
-        fused = torch.cat([encoded, action_logits], dim=-1)
+        fused = torch.cat([encoded, action_features], dim=-1)
         return self.head(fused).squeeze(-1)
 
 

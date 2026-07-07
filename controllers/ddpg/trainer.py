@@ -91,6 +91,7 @@ class DDPGTrainer:
             n_actions=n_actions,
             seed=config.seed,
         )
+        self._n_actions = n_actions
 
     def _to_tensor(self, array: np.ndarray) -> torch.Tensor:
         return torch.as_tensor(array, device=self.device, dtype=torch.float32)
@@ -131,21 +132,64 @@ class DDPGTrainer:
                     action = int(action_t.item())
         return action, logits_np
 
+    def _action_features(
+        self,
+        *,
+        states: torch.Tensor,
+        actions: torch.Tensor,
+        stored_logits: torch.Tensor,
+    ) -> torch.Tensor:
+        if self.config.critic_action_input == "logits":
+            return stored_logits
+        return F.one_hot(actions, num_classes=self._n_actions).to(dtype=torch.float32)
+
+    def _q_all_actions(self, critic: Critic, states: torch.Tensor) -> torch.Tensor:
+        """Q(s, a) for every discrete action; shape (batch, n_actions)."""
+        batch = states.shape[0]
+        n_actions = self._n_actions
+        states_exp = states.unsqueeze(1).expand(-1, n_actions, -1).reshape(batch * n_actions, -1)
+        eye = torch.eye(n_actions, device=states.device, dtype=torch.float32)
+        action_features = eye.unsqueeze(0).expand(batch, -1, -1).reshape(batch * n_actions, n_actions)
+        q_values = critic(states_exp, action_features)
+        return q_values.reshape(batch, n_actions)
+
+    def _actor_q_expectation(self, states: torch.Tensor, logits: torch.Tensor) -> torch.Tensor:
+        if self.config.critic_action_input == "logits":
+            return self.critic(states, logits)
+        q_all = self._q_all_actions(self.critic, states)
+        probs = F.softmax(logits, dim=-1)
+        return (probs * q_all).sum(dim=-1)
+
     def _update_step(self) -> tuple[float, float]:
         batch = self.buffer.sample(self.config.batch_size)
 
         states = self._to_tensor(batch.state)
         next_states = self._to_tensor(batch.next_state)
+        actions = torch.as_tensor(batch.action, device=self.device, dtype=torch.long)
         stored_logits = self._to_tensor(batch.action_logits)
         rewards = self._to_tensor(batch.reward)
         dw = self._to_tensor(batch.dw)
 
+        action_features = self._action_features(
+            states=states,
+            actions=actions,
+            stored_logits=stored_logits,
+        )
+
         with torch.no_grad():
-            next_logits = self.actor_target(next_states)
-            next_q = self.critic_target(next_states, next_logits)
+            if self.config.critic_action_input == "logits":
+                next_logits = self.actor_target(next_states)
+                next_q = self.critic_target(next_states, next_logits)
+            else:
+                next_logits = self.actor_target(next_states)
+                next_actions = torch.argmax(next_logits, dim=-1)
+                next_features = F.one_hot(next_actions, num_classes=self._n_actions).to(
+                    dtype=torch.float32,
+                )
+                next_q = self.critic_target(next_states, next_features)
             q_target = rewards + self.config.gamma * (1.0 - dw) * next_q
 
-        q_pred = self.critic(states, stored_logits)
+        q_pred = self.critic(states, action_features)
         critic_loss = F.mse_loss(q_pred, q_target)
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
@@ -155,7 +199,7 @@ class DDPGTrainer:
             param.requires_grad_(False)
 
         actor_logits = self.actor(states)
-        actor_loss = -self.critic(states, actor_logits).mean()
+        actor_loss = -self._actor_q_expectation(states, actor_logits).mean()
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         self.actor_optimizer.step()
