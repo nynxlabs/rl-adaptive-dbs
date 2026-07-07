@@ -67,23 +67,29 @@ def canonical_action_logits(n_actions: int, action: int, *, peak: float = 3.0) -
     return logits
 
 
-def measure_q_std_onehot(
-    critic: Critic,
+def measure_q_std_across_actions(
+    trainer: DDPGTrainer,
     states: torch.Tensor,
     *,
     n_actions: int,
     peak: float = 3.0,
 ) -> float:
-    """Std of Q(s, canonical_logits_a) across actions, averaged over states."""
+    """Std of Q(s, a) across discrete actions, averaged over states."""
+    critic = trainer.critic
     critic.eval()
     stds: list[float] = []
     with torch.no_grad():
-        for state in states:
-            q_vals = []
-            for action in range(n_actions):
-                logits = canonical_action_logits(n_actions, action, peak=peak).to(states.device)
-                q_vals.append(float(critic(state.unsqueeze(0), logits.unsqueeze(0)).item()))
-            stds.append(float(np.std(q_vals)))
+        if trainer.config.critic_action_input == "one_hot":
+            q_all = trainer._q_all_actions(critic, states)
+            for row in q_all:
+                stds.append(float(row.std().item()))
+        else:
+            for state in states:
+                q_vals = []
+                for action in range(n_actions):
+                    logits = canonical_action_logits(n_actions, action, peak=peak).to(states.device)
+                    q_vals.append(float(critic(state.unsqueeze(0), logits.unsqueeze(0)).item()))
+                stds.append(float(np.std(q_vals)))
     return float(np.mean(stds)) if stds else 0.0
 
 
@@ -121,16 +127,31 @@ class InstrumentedDDPGTrainer(DDPGTrainer):
 
         states = self._to_tensor(batch.state)
         next_states = self._to_tensor(batch.next_state)
+        actions = torch.as_tensor(batch.action, device=self.device, dtype=torch.long)
         stored_logits = self._to_tensor(batch.action_logits)
         rewards = self._to_tensor(batch.reward)
         dw = self._to_tensor(batch.dw)
 
+        action_features = self._action_features(
+            states=states,
+            actions=actions,
+            stored_logits=stored_logits,
+        )
+
         with torch.no_grad():
-            next_logits = self.actor_target(next_states)
-            next_q = self.critic_target(next_states, next_logits)
+            if self.config.critic_action_input == "logits":
+                next_logits = self.actor_target(next_states)
+                next_q = self.critic_target(next_states, next_logits)
+            else:
+                next_logits = self.actor_target(next_states)
+                next_actions = torch.argmax(next_logits, dim=-1)
+                next_features = F.one_hot(next_actions, num_classes=self._n_actions).to(
+                    dtype=torch.float32,
+                )
+                next_q = self.critic_target(next_states, next_features)
             q_target = rewards + self.config.gamma * (1.0 - dw) * next_q
 
-        q_pred = self.critic(states, stored_logits)
+        q_pred = self.critic(states, action_features)
         critic_loss = F.mse_loss(q_pred, q_target)
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
@@ -145,7 +166,7 @@ class InstrumentedDDPGTrainer(DDPGTrainer):
             param.requires_grad_(False)
 
         actor_logits = self.actor(states)
-        actor_loss = -self.critic(states, actor_logits).mean()
+        actor_loss = -self._actor_q_expectation(states, actor_logits).mean()
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         enc_grad = float(
@@ -173,9 +194,10 @@ class InstrumentedDDPGTrainer(DDPGTrainer):
         self._update_count += 1
         if self._update_count % self.log_every == 0:
             n_actions = int(self.env.action_space.n)
-            q_std_onehot = measure_q_std_onehot(
-                self.critic,
-                states[: min(8, len(states))],
+            probe_states = states[: min(8, len(states))]
+            q_std_actions = measure_q_std_across_actions(
+                self,
+                probe_states,
                 n_actions=n_actions,
             )
             with torch.no_grad():
@@ -190,7 +212,7 @@ class InstrumentedDDPGTrainer(DDPGTrainer):
                     q_pred_mean=float(q_pred.mean().item()),
                     q_pred_std=float(q_pred.std().item()),
                     q_target_mean=float(q_target.mean().item()),
-                    q_std_onehot_actions=q_std_onehot,
+                    q_std_onehot_actions=q_std_actions,
                     q_std_stored_logits=q_std_stored,
                     actor_grad_encoder_norm=enc_grad,
                     actor_grad_head_norm=head_grad,
@@ -309,6 +331,7 @@ def run_probe(
     mock: bool,
     exploration_mode: str,
     log_every: int,
+    critic_action_input: str,
 ) -> dict[str, Any]:
     if mock:
         env = MehreganEnv(
@@ -334,6 +357,7 @@ def run_probe(
         min_buffer_size=8 if mock else 16,
         batch_size=8 if mock else 16,
         max_episode_steps=5 if mock else 30,
+        critic_action_input=critic_action_input,
     )
 
     try:
@@ -348,6 +372,7 @@ def run_probe(
                 "mock": mock,
                 "exploration_mode": exploration_mode,
                 "log_every": log_every,
+                "critic_action_input": critic_action_input,
             },
             "reward_q_scale_reference": reward_q_scale_reference(),
             "summary": summary,
@@ -380,6 +405,12 @@ def main() -> int:
     parser.add_argument("--exploration-mode", choices=("epsilon", "softmax"), default="softmax")
     parser.add_argument("--log-every", type=int, default=20, help="Log diagnostics every N updates")
     parser.add_argument(
+        "--critic-action-input",
+        choices=("one_hot", "logits"),
+        default="one_hot",
+        help="Critic action encoding (DDPGConfig.critic_action_input)",
+    )
+    parser.add_argument(
         "--out",
         type=Path,
         default=Path("artifacts/ddpg/learning_dynamics_task72.json"),
@@ -393,6 +424,7 @@ def main() -> int:
         mock=args.mock,
         exploration_mode=args.exploration_mode,
         log_every=args.log_every,
+        critic_action_input=args.critic_action_input,
     )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(out, indent=2) + "\n")

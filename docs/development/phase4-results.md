@@ -240,7 +240,9 @@ Parallel short DDPG training (`paper` variant, seed 0, 10 episodes, PythonPlant)
 |-----|----------|-------------|------------------|----------------------|-------------:|
 | state_length sweep (§8) | 10 | none (greedy) | 1 | varies by `state_length` | best −18.17 @ sl=15 |
 | TASK-67 ε-greedy | 10 | 0.3→0.05 | 1 | 23 (115) | −36.38 |
-| TASK-67 softmax 30-ep | 30 | 2.0→0.5 | *pending* | — | — |
+| TASK-67 softmax 10-ep | 10 | 2.0→0.5 | 1 | 3 (15) | −61.00 |
+| TASK-67 softmax 30-ep | 30 | 2.0→0.5 | *not run* | — | — |
+| TASK-73 learning_v1 one_hot | 10 | softmax 3→1 | 1 | 37 (185) | *n/a* |
 
 Artifacts: `artifacts/ddpg/explore_sl15_seed0.json`, `artifacts/ddpg/state_length_sweep.json`, offline probe `artifacts/ddpg/task71_offline_probe.json`. Script: `scripts/ddpg_diagnose.py`.
 
@@ -315,8 +317,8 @@ DDPGConfig(
 ### 10.5 Follow-up tasks
 
 - [x] `init_bias_scale` on `DDPGConfig` / `Actor.init_toward_action` (default 2.0; `learning_v1` uses 0.5).
-- [ ] Complete TASK-67 softmax 30-ep; append row to §10.1 table.
-- [ ] Run `learning_v1` retrain when CPU budget available; re-benchmark if acceptance passes.
+- [x] Complete TASK-67 softmax 10-ep; append row to §10.1 table (30-ep not run).
+- [x] Run `learning_v1` one_hot retrain (TASK-73); **failed** acceptance — see §11.4.
 
 ---
 
@@ -356,3 +358,41 @@ Do **not** rerun exploration-only retrains until one of these is implemented:
 4. **`learning_v1` retrain** only **after** (1) or (3) — longer training alone is unlikely to help (§10, §11.1).
 
 **Acceptance unchanged:** `rollout_unique > 1` AND `offline_unique > 1` via `scripts/ddpg_diagnose.py` / `scripts/run_explore_retrain.py`.
+
+### 11.4 `learning_v1` + one_hot retrain (TASK-73, 2026-07-07)
+
+**Config:** `critic_action_input=one_hot`, softmax 3→1, `init_bias_scale=0.5`, `conv_channels=32`, `shrink_dim=8`, 10 episodes, `state_length=15`, seed 0. Artifact: `artifacts/ddpg/explore_onehot_10ep.json`, checkpoint `paper_train0_onehot_10ep.pt`.
+
+| Metric | Value | Acceptance |
+|--------|------:|:----------:|
+| `rollout_unique` | 1 | **fail** |
+| `offline_unique` | 1 | **fail** |
+| Dominant action | 37 (185 Hz) | — |
+| Logit margin (offline) | 8.20 | collapse *increased* vs logits-mode explore (1.47) |
+
+**Verdict:** Discrete one-hot critic input (§11.3 item 1) **did not** break constant-policy collapse. Policy shifted from action 29 (145 Hz, logits `learning_v1`) to action 37 (185 Hz) but remains **state-independent**.
+
+**Next fixes (§11.3 items 2–3):**
+
+1. **Save critic in checkpoints** — enable post-hoc Q(s,a) probes on completed retrains without re-running 40-min training.
+2. **Critic warmup / reward–Q scale** — initial Q spread should match observed reward span (~2–3 per plant sweep); current `q_std_onehot` ≈ 0.07 vs reward std ≈ 0.4 (§11.1).
+3. Do **not** rerun exploration-only or `learning_v1` retrains until (1) or (2) is implemented.
+
+Dynamics follow-up: `scripts/ddpg_learning_dynamics.py --critic-action-input one_hot` (artifact `learning_dynamics_task74_onehot.json`).
+
+### 11.5 Paired Q-discrimination probe (TASK-74, 2026-07-07)
+
+**Goal:** Verify `critic_action_input=one_hot` implementation (0b6653d8) and compare Q spread vs legacy `logits` before further retrains.
+
+**Script:** `scripts/run_task74_q_probe.sh` — 3-ep PythonPlant, softmax 2.0→0.5, `state_length=15`, seed 0, paired modes. Artifacts: `learning_dynamics_task74_onehot.json`, `learning_dynamics_task74_logits.json`, `learning_dynamics_task74_verdict.json`.
+
+| Mode | `q_std_onehot_actions_mean` | `q_pred_std_mean` | `actor_grad_head_norm_mean` |
+|------|----------------------------:|------------------:|----------------------------:|
+| `one_hot` | **0.033** | 0.037 | 0.026 |
+| `logits` | **0.079** | 0.046 | 0.353 |
+
+**Acceptance gate** (one_hot > 2× logits OR > 0.15): **fail** (ratio 0.42). `tests/controllers/ddpg/critic_action_test.py`: **pass** (5/5).
+
+**Code verification:** `trainer.py` `_action_features` / `_q_all_actions` / `_actor_q_expectation`, `buffer.py` stores executed `action` index, `DDPGConfig.critic_action_input` default `one_hot`, `replication.md` §4.3 — all aligned. `ddpg_learning_dynamics.py` updated to respect `critic_action_input` (was still on legacy logits-only update path).
+
+**Verdict:** Implementation is correct; one_hot does **not** improve Q discrimination in a 3-ep probe (worse than logits). Skipped 5-ep policy probe per COO directive. TASK-67 unblock should pursue §11.3 items 2–3 (critic checkpointing, warmup/scale), not longer one_hot retrains.
