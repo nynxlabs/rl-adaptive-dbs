@@ -5,8 +5,19 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
-def init_baseline_for_variant(variant: str) -> str:
-    """Map benchmark variant slug to periodic init frequency."""
+def init_baseline_for_variant(
+    variant: str,
+    *,
+    action_space_mode: str = "scalar_frequency",
+    pattern_mean_hz: float = 45.0,
+) -> str:
+    """Map benchmark variant slug to periodic init frequency.
+
+    In ``fixed_mean_pattern`` mode the init baseline is always the regular
+    train at ``pattern_mean_hz`` (pattern 0), regardless of variant.
+    """
+    if action_space_mode == "fixed_mean_pattern":
+        return f"periodic-{int(pattern_mean_hz)}hz"
     if variant == "init-30hz":
         return "periodic-30hz"
     if variant in ("ptq-fp16", "ptq-int8", "qat", "paper"):
@@ -37,6 +48,11 @@ class DDPGConfig:
 
     # Benchmark variant (`paper`, `init-30hz`, …)
     variant: str = "paper"
+
+    # Option C (TASK-83/84): ``fixed_mean_pattern`` trains on irregular pulse patterns at a
+    # fixed mean rate; ``scalar_frequency`` keeps the Kumaravelu 0:5:200 Hz grid (default).
+    action_space_mode: str = "scalar_frequency"  # scalar_frequency | fixed_mean_pattern
+    pattern_mean_hz: float = 45.0
 
     # Training control
     min_buffer_size: int = 32
@@ -98,4 +114,8 @@ class DDPGConfig:
 
     @property
     def init_baseline(self) -> str:
-        return init_baseline_for_variant(self.variant)
+        return init_baseline_for_variant(
+            self.variant,
+            action_space_mode=self.action_space_mode,
+            pattern_mean_hz=self.pattern_mean_hz,
+        )

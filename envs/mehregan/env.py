@@ -10,6 +10,7 @@ import numpy as np
 from gymnasium import spaces
 
 from envs.mehregan.config import MehreganEnvConfig
+from envs.mehregan.config import make_alphabet
 from envs.mehregan.patterns import PatternAlphabet
 from envs.mehregan.reward import mehregan_reward
 from envs.plant.dbs import DbsSpec
@@ -40,12 +41,12 @@ class MehreganEnv(gym.Env):
         *,
         plant: PlantBackend | None = None,
         config: MehreganEnvConfig | None = None,
-        alphabet: PatternAlphabet | None = None,
+        alphabet: PatternAlphabet | None = None,  # or FixedMeanPatternAlphabet
         render_mode: str | None = None,
     ) -> None:
         super().__init__()
         self.config = config or MehreganEnvConfig()
-        self.alphabet = alphabet or PatternAlphabet()
+        self.alphabet = alphabet if alphabet is not None else make_alphabet(self.config)
         self._owns_plant = plant is None
         self._plant: PlantBackend = plant if plant is not None else MatlabPlant()
         self.render_mode = render_mode

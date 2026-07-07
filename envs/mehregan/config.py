@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from dataclasses import dataclass
+
+if TYPE_CHECKING:
+    import numpy as np
+    from envs.mehregan.fixed_mean_patterns import FixedMeanPatternAlphabet
+    from envs.mehregan.patterns import PatternAlphabet
 
 
 @dataclass(frozen=True)
@@ -13,6 +20,27 @@ class MehreganEnvConfig:
     max_episode_steps: int = 30
     beta_threshold: float = 0.35
     reward_scale: float = 10.0
-    # Raw $P_\beta$ is ~400–500 without stimulation (Mehregan Fig. 4); Fig. 3c uses $\beta_t=0.35$.
+    # Raw $P_\\beta$ is ~400–500 without stimulation (Mehregan Fig. 4); Fig. 3c uses $\\beta_t=0.35$.
     observation_scale: float = 1000.0
     state_length: int = 1  # paper original; state_length > 1 requires obs preprocessing (TASK-67)
+    action_space_mode: str = "scalar_frequency"  # scalar_frequency | fixed_mean_pattern
+    pattern_mean_hz: float = 45.0  # mean stimulation rate for fixed_mean_pattern mode
+
+
+def make_alphabet(
+    config: MehreganEnvConfig,
+) -> "PatternAlphabet | FixedMeanPatternAlphabet":
+    """Create the action-space alphabet from the env config.
+
+    Returns :class:`PatternAlphabet` (scalar-frequency, default) or
+    :class:`FixedMeanPatternAlphabet` (Option C) depending on
+    ``config.action_space_mode``.
+    """
+    if config.action_space_mode == "fixed_mean_pattern":
+        from envs.mehregan.fixed_mean_patterns import FixedMeanPatternAlphabet
+        return FixedMeanPatternAlphabet(
+            mean_hz=config.pattern_mean_hz,
+            step_duration_s=config.step_duration_s,
+        )
+    from envs.mehregan.patterns import PatternAlphabet
+    return PatternAlphabet()
