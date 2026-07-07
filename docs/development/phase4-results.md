@@ -317,3 +317,42 @@ DDPGConfig(
 - [x] `init_bias_scale` on `DDPGConfig` / `Actor.init_toward_action` (default 2.0; `learning_v1` uses 0.5).
 - [ ] Complete TASK-67 softmax 30-ep; append row to §10.1 table.
 - [ ] Run `learning_v1` retrain when CPU budget available; re-benchmark if acceptance passes.
+
+---
+
+## 11. Learning-dynamics instrumentation (TASK-72, 2026-07-07)
+
+**Trigger:** TASK-67 exploration retraining (ε-greedy, softmax, `learning_v1`) all failed acceptance despite plant responding to actions (5-step sweep: $P_\beta$ norm span **0.558**, reward span **2.74**). COO directive: stop retrying exploration; instrument learning dynamics.
+
+**Script:** `scripts/ddpg_learning_dynamics.py` — logs per-minibatch Q discrimination, actor/critic gradient norms, replay action counts, and logit-collapse probes. Artifacts: `artifacts/ddpg/learning_dynamics_task72.json`, `learning_dynamics_task72.log`.
+
+**Probe config:** 2 episodes, `state_length=15`, softmax exploration (2.0→0.5), PythonPlant, seed 0, `min_buffer_size=16`, `batch_size=16`, diagnostics every 10 updates.
+
+### 11.1 Findings
+
+| Check | Result | Verdict |
+|-------|--------|---------|
+| **1. Critic Q discrimination** | `q_std_onehot_actions` mean **0.067** (range 0.045–0.078 across logged updates); `q_pred_std` mean **0.041** | **Flat** — critic barely separates Q across 41 canonical action logits |
+| **2. Actor gradient flow** | Encoder grad norm mean **0.12**; head grad norm mean **0.30**; critic grad norm mean **1.23** | **Non-zero** — gradients reach CNN and logit head; not a dead-graph issue |
+| **3. Replay diversity** | Ep1 **21** unique actions; ep2 **32** unique actions (of 41) in replay | **Sufficient** — softmax exploration fills buffer with diverse behavior actions |
+| **4. Reward vs Q scale** | Batch `reward_std` mean **0.40** vs `q_pred_std` mean **0.041**; plant per-action reward span **2.74** vs Q one-hot std **0.067** | **Mismatched** — rewards vary ~10× more than Q predictions; critic under-expresses action value differences |
+| **5. Logit evolution** | Ep1 margin mean **1.80** → ep2 **0.66** (`logit_margin_delta` **−1.15**); `logit_unique_argmax` **1** both episodes | **Collapse from init** — starts decisive (init bias 2.0), narrows to single argmax without ever becoming state-dependent |
+
+### 11.2 Root-cause update (supersedes §10.3 partial)
+
+Exploration and replay diversity are **ruled out** as primary blockers. The failure mode is:
+
+1. **Critic does not learn action-discriminative $Q(s, a_{\mathrm{logit}})$** even when batch rewards differ by action and replay contains 32/41 actions after 2 episodes.
+2. **Actor receives weak directional signal** — actor loss is $-\mathbb{E}[Q(s,\pi(s))]$; with flat Q across logits, actor updates can sharpen one action (margin collapse) without coupling to biomarker state.
+3. **Constant-policy local optimum** (§10.3) remains plausible at convergence, but the **mechanism** is now pinned to **critic insensitivity to action logits**, not missing exploration.
+
+### 11.3 Recommended next experiments (TASK-67 unblock path)
+
+Do **not** rerun exploration-only retrains until one of these is implemented:
+
+1. **Discrete-action critic input** — feed one-hot action index (or scalar action) instead of full 41-dim logit vector; document deviation in `replication.md` §9 if adopted.
+2. **Save critic in checkpoints** — extend `save_checkpoint` with optional critic weights for post-hoc Q probes on failed runs.
+3. **Critic warmup / scale** — optional linear critic head init or reward scaling so initial Q spread matches observed reward span (~2–3).
+4. **`learning_v1` retrain** only **after** (1) or (3) — longer training alone is unlikely to help (§10, §11.1).
+
+**Acceptance unchanged:** `rollout_unique > 1` AND `offline_unique > 1` via `scripts/ddpg_diagnose.py` / `scripts/run_explore_retrain.py`.
