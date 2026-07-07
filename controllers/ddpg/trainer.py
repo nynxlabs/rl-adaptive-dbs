@@ -93,6 +93,15 @@ class DDPGTrainer:
         )
         self._n_actions = n_actions
 
+        # Reward normalization state (running mean/variance via Welford)
+        self._reward_running_mean = 0.0
+        self._reward_running_var = 1.0
+        self._reward_count = 0
+        self._reward_momentum = 0.01
+
+        # Critic warmup step counter
+        self._warmup_steps_done = 0
+
     def _to_tensor(self, array: np.ndarray) -> torch.Tensor:
         return torch.as_tensor(array, device=self.device, dtype=torch.float32)
 
@@ -114,10 +123,29 @@ class DDPGTrainer:
         end = self.config.exploration_temperature_end
         return start + frac * (end - start)
 
+    def _normalize_reward(self, reward: float) -> float:
+        """Update running stats and return normalized reward."""
+        if not self.config.reward_normalize:
+            return reward
+        self._reward_count += 1
+        delta = reward - self._reward_running_mean
+        self._reward_running_mean += self._reward_momentum * delta
+        delta2 = reward - self._reward_running_mean
+        self._reward_running_var = (
+            (1 - self._reward_momentum) * self._reward_running_var
+            + self._reward_momentum * delta * delta2
+        )
+        std = max(self._reward_running_var**0.5, 1e-8)
+        return (reward - self._reward_running_mean) / std
+
     def _select_action(self, state: np.ndarray, *, env_step: int) -> tuple[int, np.ndarray]:
         with torch.no_grad():
             state_t = self._to_tensor(state).unsqueeze(0)
             logits = self.actor(state_t)
+            # Add logit noise during training to prevent margin collapse
+            if self.config.logit_noise_std > 0:
+                noise = torch.randn_like(logits) * self.config.logit_noise_std
+                logits = logits + noise
             logits_np = logits.squeeze(0).cpu().numpy()
             if self.config.exploration_mode == "softmax":
                 temp = self._exploration_temperature(env_step)
@@ -190,10 +218,19 @@ class DDPGTrainer:
             q_target = rewards + self.config.gamma * (1.0 - dw) * next_q
 
         q_pred = self.critic(states, action_features)
-        critic_loss = F.mse_loss(q_pred, q_target)
+        if self.config.critic_loss_fn == "huber":
+            critic_loss = F.smooth_l1_loss(q_pred, q_target)
+        else:
+            critic_loss = F.mse_loss(q_pred, q_target)
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         self.critic_optimizer.step()
+
+        # During critic warmup, skip actor update entirely
+        if self._warmup_steps_done < self.config.critic_warmup_steps:
+            self._warmup_steps_done += 1
+            soft_update(self.critic_target, self.critic, self.config.tau)
+            return float(critic_loss.item()), 0.0
 
         for param in self.critic.parameters():
             param.requires_grad_(False)
@@ -231,12 +268,13 @@ class DDPGTrainer:
                 env_step += 1
                 next_state, reward, terminated, truncated, info = self.env.step(action)
                 dw = float(info.get("dw", 1.0 if truncated else 0.0))
+                normalized_reward = self._normalize_reward(reward)
 
                 self.buffer.add(
                     state=state,
                     action=action,
                     action_logits=logits,
-                    reward=reward,
+                    reward=normalized_reward,
                     next_state=next_state,
                     dw=dw,
                 )
