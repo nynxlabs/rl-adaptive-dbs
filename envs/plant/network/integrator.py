@@ -234,11 +234,22 @@ def integrate_network(
     t_ms = np.arange(n_steps, dtype=np.float64) * dt_ms
     dt = dt_ms
 
-    idbs = create_dbs_current(
-        dbs_spec.frequency_hz,
-        tmax_ms=tmax_ms,
-        dt_ms=dt_ms,
-    )
+    if dbs_spec.idbs is not None:
+        # Option C: precomputed fixed-mean pattern trace (TASK-84). Must sit on
+        # the same 0:dt_ms:tmax_ms grid the integrator uses for this segment.
+        idbs = np.asarray(dbs_spec.idbs, dtype=np.float64)
+        if idbs.shape != (n_steps,):
+            msg = (
+                f"dbs_spec.idbs length {idbs.shape} != expected ({n_steps},) "
+                f"for duration_s={duration_s}, dt_ms={dt_ms}"
+            )
+            raise ValueError(msg)
+    else:
+        idbs = create_dbs_current(
+            dbs_spec.frequency_hz,
+            tmax_ms=tmax_ms,
+            dt_ms=dt_ms,
+        )
     if corstim == 1:
         iappco = _create_cortical_stimulus(tmax_ms, dt_ms)
     else:

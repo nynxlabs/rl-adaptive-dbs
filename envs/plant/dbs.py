@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
@@ -55,9 +55,21 @@ class DbsSpec:
     """Index into freqs = 0:5:200 Hz in simulate_network_model.m.
 
     pick_dbs_freq == 1 forces zero DBS current (reference convention).
+
+    Option C (fixed-mean pattern action space, TASK-84): ``idbs`` optionally
+    carries a **precomputed** STN drive trace on the plant time grid. When set,
+    the Python integrator applies it directly instead of synthesizing a regular
+    train from ``frequency_hz`` (see envs/plant/network/integrator.py and
+    envs/mehregan/fixed_mean_patterns.py). ``mean_hz`` records the constant mean
+    stimulation rate for logging/metrics; ``frequency_hz`` reports it. ``idbs``
+    is excluded from equality/hash so specs stay hashable and comparable by
+    ``(pick_dbs_freq, mean_hz)``. The MATLAB backend ignores ``idbs`` — pattern
+    mode is Python-plant only.
     """
 
     pick_dbs_freq: int = 1
+    idbs: np.ndarray | None = field(default=None, compare=False)
+    mean_hz: float | None = None
 
     @classmethod
     def none(cls) -> DbsSpec:
@@ -73,6 +85,8 @@ class DbsSpec:
 
     @property
     def frequency_hz(self) -> float:
+        if self.mean_hz is not None:
+            return float(self.mean_hz)
         if self.pick_dbs_freq <= 1:
             return 0.0
         return float((self.pick_dbs_freq - 1) * 5)
