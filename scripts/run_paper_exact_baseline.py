@@ -83,7 +83,8 @@ def main() -> int:
         out_path = Path("artifacts/ddpg/paper_exact_baseline.json")
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(json.dumps(out, indent=2) + "\n")
-        summary = {k: v for k in out.items() if k != "rollout_actions"}
+        summary = dict(out)
+        summary.pop("rollout_actions", None)
         print(json.dumps(summary, indent=2))
         print(
             f"\nrollout_unique={out['unique_actions_rollout']} "
