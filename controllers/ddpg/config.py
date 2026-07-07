@@ -43,6 +43,11 @@ class DDPGConfig:
     seed: int = 0
     device: str = "cpu"
 
+    # Critic action encoding: ``one_hot`` uses the executed discrete action index (required
+    # for correct Q targets under exploration); ``logits`` uses stored actor logits (paper
+    # tuple layout; breaks when executed action != argmax(logits)).
+    critic_action_input: str = "one_hot"  # one_hot | logits
+
     # Exploration during training (paper uses greedy argmax at deploy; not specified for
     # online interaction — see replication.md §4.2). Linear decay over total env steps.
     exploration_mode: str = "epsilon"  # epsilon | softmax

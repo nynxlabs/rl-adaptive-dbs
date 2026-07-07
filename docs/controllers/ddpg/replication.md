@@ -94,13 +94,15 @@ $$
 
 Optimize $J_{\mathrm{critic}}$ with **Adam** (critic learning rate **$10^{-3}$** in §IV.A.1).
 
+**Critic action input (`DDPGConfig.critic_action_input`):** The paper tuple stores actor logits $a_{\mathrm{logit}}$, but when **training exploration** overrides argmax (§4.2), reward $R$ depends on the **executed** discrete index $a$, not on $\arg\max a_{\mathrm{logit}}$. Default **`one_hot`** feeds the critic a one-hot vector for the executed $a$ from replay; bootstrap uses $\arg\max \mu_{\mathrm{target}}(s')$ as a one-hot vector. Legacy **`logits`** mode uses stored $a_{\mathrm{logit}}$ for both critic and bootstrap (paper tuple layout; valid only when interaction is greedy).
+
 **Actor update (paper §III.B, Eq. (5)):**
 
 $$
 J_{\mathrm{Actor}} = \frac{1}{|\tilde{B}|} \sum_{t \in \tilde{B}} Q\bigl(s(t), a_{\mathrm{logit}}(t)\bigr)
 $$
 
-Maximize $J_{\mathrm{Actor}}$ (implementation: minimize $-J_{\mathrm{Actor}}$) with **Adam** (actor learning rate **$5 \times 10^{-4}$** in §IV.A.1).
+Maximize $J_{\mathrm{Actor}}$ (implementation: minimize $-J_{\mathrm{Actor}}$) with **Adam** (actor learning rate **$5 \times 10^{-4}$** in §IV.A.1). With **`one_hot`** critic input, the implementation maximizes the **softmax expectation** $\sum_a \mathrm{softmax}(\mu(s))_a\, Q(s, a)$ over discrete actions (differentiable discrete policy improvement). With **`logits`**, the actor maximizes $Q(s, \mu(s))$ on fresh logits.
 
 **Critic freeze during actor step:** The paper’s Algorithm 1 **freezes the critic** while updating the actor, then **unfreezes** before the next micro-batch iteration. Mirror that ordering to match the described compute-saving behavior.
 
