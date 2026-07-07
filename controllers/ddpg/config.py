@@ -87,6 +87,12 @@ class DDPGConfig:
     # Fixes constant-policy collapse when state_length > 1 (TASK-67).
     obs_normalize: bool = False
 
+    # Random warmup: run N random-action steps to fill replay buffer before
+    # any policy training. Prevents mode collapse by ensuring the critic sees
+    # diverse state-action-reward transitions before the actor starts exploiting.
+    # 0 = disabled. 200–500 recommended for state_length > 1.
+    random_warmup_steps: int = 0
+
     # Print episode reward after each episode (long PythonPlant runs).
     log_episodes: bool = False
 
