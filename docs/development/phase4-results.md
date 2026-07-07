@@ -396,3 +396,5 @@ Dynamics follow-up: `scripts/ddpg_learning_dynamics.py --critic-action-input one
 **Code verification:** `trainer.py` `_action_features` / `_q_all_actions` / `_actor_q_expectation`, `buffer.py` stores executed `action` index, `DDPGConfig.critic_action_input` default `one_hot`, `replication.md` §4.3 — all aligned. `ddpg_learning_dynamics.py` updated to respect `critic_action_input` (was still on legacy logits-only update path).
 
 **Verdict:** Implementation is correct; one_hot does **not** improve Q discrimination in a 3-ep probe (worse than logits). Skipped 5-ep policy probe per COO directive. TASK-67 unblock should pursue §11.3 items 2–3 (critic checkpointing, warmup/scale), not longer one_hot retrains.
+
+**Board review (2026-07-07):** Both modes fail the 0.15 Q-discrimination gate; logits is ~2.4× better on Q spread and ~13× better on actor gradients (still constant-argmax). **Use `logits` critic for further training experiments** until architectural fixes land; escalated to TASK-67 for 30-ep retrain vs deeper investigation.

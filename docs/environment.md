@@ -51,6 +51,15 @@ where $P_j^{\mathrm{GPi}}$ is the **power spectral density** of the **action pot
 - **Initialization:** Policy / pattern family is initialized from **regular pulses** at a target **mean frequency** (e.g. **45 Hz** or **30 Hz** in §IV) to speed learning.
 - **Baselines for comparison:** Periodic **45 Hz** stimulation and conventional **130 Hz** cDBS, same random seed where applicable.
 
+### 4.1 Implementation vs paper: scalar frequency vs fixed-budget pattern (TASK-81)
+
+**Finding (TASK-81, root-cause of the TASK-67 constant-policy collapse):** the current action space (`envs/mehregan/patterns.py`) maps each discrete action to a **single STN pulse frequency** on the Kumaravelu grid (`freqs = 0:5:200`, action `a` → `a × 5` Hz). This diverges from Mehregan et al.'s action space in a way that fully explains the collapse:
+
+- **Paper:** the action is a **temporal pulse pattern at a fixed mean frequency** — "average frequency of action $f$" is an **input** to Algorithm 1, and the action space is **initialized with regular pulses at 45 Hz (or 30 Hz)**. Mean stimulation rate (energy) is **held constant by construction**; the agent optimizes only the **temporal arrangement** of pulses within that budget. The learned policy is an **irregular / aperiodic** pattern at the fixed mean rate (§IV.A.2, Fig. 5b; "RL-designed temporal pattern", Fig. 8), **not** a state-dependent frequency schedule.
+- **This repo:** the action is a **scalar frequency** the agent may set freely (0–200 Hz). Because reward Eq. (8) has **no stimulation-cost term** (faithful to the paper), an action's value is essentially state-independent and monotone in beta suppression, so the optimal scalar action is a **single fixed frequency**. **Constant policy is the expected, correct optimum for this action space** — not an exploration or plant-response bug.
+
+**Consequence:** a scalar frequency has no room to be an "irregular pattern," so the paper's *adaptive temporal pattern* cannot be expressed in the current action space. Resolving this requires a **design decision** (see [replication.md](controllers/ddpg/replication.md) §5, TASK-81): **(A)** accept a fixed scalar policy (diverges from the paper's pattern claim); **(B)** add an explicit energy/cost term to the reward (an **extension** — the paper has none); or **(C)** redesign the action space as a **fixed-mean-frequency pulse pattern** to match the paper (faithful, but a larger change to the pattern alphabet and the plant DBS drive).
+
 ---
 
 ## 5. Timing and transitions
