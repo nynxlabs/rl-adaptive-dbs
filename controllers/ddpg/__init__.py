@@ -67,9 +67,19 @@ def train(
 ) -> TrainResult:
     """Train DDPG on ``env`` (default: ``MehreganEnv()``) and optionally save a checkpoint."""
     if env is None:
-        from envs.mehregan import MehreganEnv
+        from envs.mehregan import MehreganEnv, MehreganEnvConfig
 
-        env = MehreganEnv()
+        cfg = config or DDPGConfig()
+        env = MehreganEnv(
+            config=MehreganEnvConfig(
+                max_episode_steps=cfg.max_episode_steps,
+                state_length=1,
+                action_space_mode=cfg.action_space_mode,  # type: ignore[arg-type]
+                pattern_mean_hz=(
+                    30.0 if cfg.variant == "init-30hz" else cfg.pattern_mean_hz
+                ),
+            ),
+        )
 
     result = train_ddpg(env, config, **kwargs)
     if checkpoint_path is not None:

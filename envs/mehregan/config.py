@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 from dataclasses import dataclass
 
 if TYPE_CHECKING:
-    import numpy as np
     from envs.mehregan.fixed_mean_patterns import FixedMeanPatternAlphabet
     from envs.mehregan.patterns import PatternAlphabet
 
@@ -42,5 +41,8 @@ def make_alphabet(
             mean_hz=config.pattern_mean_hz,
             step_duration_s=config.step_duration_s,
         )
-    from envs.mehregan.patterns import PatternAlphabet
-    return PatternAlphabet()
+    if config.action_space_mode == "scalar_frequency":
+        from envs.mehregan.patterns import PatternAlphabet
+        return PatternAlphabet()
+    msg = f"unknown action_space_mode {config.action_space_mode!r}"
+    raise ValueError(msg)
