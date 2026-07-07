@@ -77,6 +77,16 @@ class DDPGConfig:
     # 0 = disabled. Try 0.1–0.3.
     logit_noise_std: float = 0.0
 
+    # Entropy regularization coefficient for the actor loss.
+    # Prevents logit collapse by penalizing low-entropy action distributions.
+    # 0 = disabled. Try 0.01–0.1.
+    entropy_coeff: float = 0.0
+
+    # Observation normalization: running per-element z-score so the CNN sees
+    # amplified differences even when the raw P_beta window changes slowly.
+    # Fixes constant-policy collapse when state_length > 1 (TASK-67).
+    obs_normalize: bool = False
+
     # Print episode reward after each episode (long PythonPlant runs).
     log_episodes: bool = False
 
