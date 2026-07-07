@@ -8,6 +8,7 @@ Covers:
 - baseline_action in pattern mode.
 - init_baseline_for_variant in pattern mode.
 - Env smoke with MockPlant in pattern mode.
+- PythonPlant integration (DbsSpec.idbs integrator dispatch).
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from envs.mehregan.config import MehreganEnvConfig, make_alphabet
 from envs.mehregan.env import MehreganEnv
 from envs.mehregan.fixed_mean_patterns import FixedMeanPatternAlphabet
 from envs.mehregan.patterns import PatternAlphabet
+from envs.plant import PythonPlant
 from envs.plant.dbs import DbsSpec, create_dbs_current
 from controllers.ddpg.config import DDPGConfig, init_baseline_for_variant
 from tests.envs.mock_plant import MockPlant
@@ -162,6 +164,11 @@ class TestMakeAlphabet:
         alpha = make_alphabet(config)
         assert isinstance(alpha, FixedMeanPatternAlphabet)
         assert alpha.step_duration_s == 1.6
+
+    def test_unknown_action_space_mode_raises(self) -> None:
+        config = MehreganEnvConfig(action_space_mode="bogus")
+        with pytest.raises(ValueError, match="unknown action_space_mode"):
+            make_alphabet(config)
 
 
 # ---------------------------------------------------------------------------
@@ -315,6 +322,44 @@ class TestMehreganEnvPatternMode:
             assert result["action"] == 0  # pattern 0 = regular at 45 Hz
         finally:
             env.close()
+
+
+# ---------------------------------------------------------------------------
+# PythonPlant integration (idbs dispatch path)
+# ---------------------------------------------------------------------------
+
+
+class TestMehreganEnvPatternModePythonPlant:
+    """Pattern-mode env steps through PythonPlant with precomputed idbs traces."""
+
+    @pytest.mark.slow
+    def test_step_pattern0_and_irregular_on_python_plant(self) -> None:
+        config = MehreganEnvConfig(
+            action_space_mode="fixed_mean_pattern",
+            pattern_mean_hz=45.0,
+            max_episode_steps=2,
+        )
+        with PythonPlant() as plant:
+            env = MehreganEnv(plant=plant, config=config)
+            try:
+                assert isinstance(env.alphabet, FixedMeanPatternAlphabet)
+                obs, info = env.reset(seed=42)
+                assert obs.shape == (1,)
+                assert info["p_beta_raw"] > 0.0
+
+                _, reward0, terminated, truncated, step0 = env.step(0)
+                assert isinstance(reward0, float)
+                assert step0["p_beta_raw"] > 0.0
+                assert not terminated
+                assert not truncated
+
+                _, reward5, terminated2, truncated2, step5 = env.step(5)
+                assert isinstance(reward5, float)
+                assert step5["p_beta_raw"] > 0.0
+                assert step5["action"] == 5
+                assert terminated2 or truncated2
+            finally:
+                env.close()
 
 
 # ---------------------------------------------------------------------------
