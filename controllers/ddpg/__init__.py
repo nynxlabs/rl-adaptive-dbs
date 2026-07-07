@@ -81,6 +81,7 @@ def train(
             config=cfg,
             state_length=int(env.observation_space.shape[0]),
             n_actions=int(env.action_space.n),
+            critic=result.critic,
         )
     return result
 

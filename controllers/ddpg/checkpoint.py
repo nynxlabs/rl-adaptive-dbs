@@ -31,6 +31,7 @@ def save_checkpoint(
     state_length: int,
     n_actions: int,
     policy: nn.Module | None = None,
+    critic: nn.Module | None = None,
     extra: dict[str, Any] | None = None,
 ) -> Path:
     """Persist actor weights and training config for ``evaluate`` / resume."""
@@ -46,6 +47,8 @@ def save_checkpoint(
     }
     if isinstance(policy, QATActor):
         payload["qat_state_dict"] = policy.state_dict()
+    if critic is not None:
+        payload["critic_state_dict"] = critic.state_dict()
     if extra:
         payload["extra"] = extra
     torch.save(payload, out)

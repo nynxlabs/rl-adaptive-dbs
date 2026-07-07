@@ -60,6 +60,23 @@ class DDPGConfig:
     # lower values (e.g. 0.5) for learning_v1 experiments — see phase4-results.md §10.4.
     init_bias_scale: float = 2.0
 
+    # Critic warmup: train critic for N gradient steps before actor starts updating.
+    # Standard DDPG practice — lets Q-values stabilize before the actor exploits them.
+    critic_warmup_steps: int = 0  # 0 = disabled; 100 is a good starting point
+
+    # Reward normalization: running z-score on rewards so Q-values learn at the
+    # right scale (fixes q_pred_std << reward_std mismatch observed in TASK-72/74).
+    reward_normalize: bool = False
+
+    # Loss function for critic: "mse" (original) or "huber" (smooth L1, more robust
+    # to reward outliers and can help Q-learning converge faster).
+    critic_loss_fn: str = "mse"  # mse | huber
+
+    # Gaussian noise std added to actor logits during training action selection.
+    # Prevents logit margin collapse by maintaining diversity in the actor's output.
+    # 0 = disabled. Try 0.1–0.3.
+    logit_noise_std: float = 0.0
+
     # Print episode reward after each episode (long PythonPlant runs).
     log_episodes: bool = False
 
