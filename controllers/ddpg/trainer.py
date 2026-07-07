@@ -99,6 +99,11 @@ class DDPGTrainer:
         self._reward_count = 0
         self._reward_momentum = 0.01
 
+        # Observation normalization state (running per-element mean/std)
+        self._obs_count = 0
+        self._obs_mean = np.zeros(state_length, dtype=np.float64)
+        self._obs_m2 = np.zeros(state_length, dtype=np.float64)
+
         # Critic warmup step counter
         self._warmup_steps_done = 0
 
@@ -138,9 +143,42 @@ class DDPGTrainer:
         std = max(self._reward_running_var**0.5, 1e-8)
         return (reward - self._reward_running_mean) / std
 
+    def _update_obs_stats(self, state: np.ndarray) -> None:
+        """Welford online update of per-element observation mean/variance."""
+        self._obs_count += 1
+        delta = state - self._obs_mean
+        self._obs_mean += delta / self._obs_count
+        delta2 = state - self._obs_mean
+        self._obs_m2 += delta * delta2
+
+    def _normalize_obs(self, state: np.ndarray) -> np.ndarray:
+        """Z-score normalize observation using running stats. No-op when disabled."""
+        if not self.config.obs_normalize:
+            return state
+        if self._obs_count < 2:
+            return state
+        var = self._obs_m2 / self._obs_count  # population variance
+        std = np.sqrt(np.maximum(var, 1e-8))
+        return ((state - self._obs_mean) / std).astype(np.float32)
+
+    def _normalized_state_tensor(self, state: np.ndarray) -> torch.Tensor:
+        """Normalize obs (if enabled) then convert to tensor for the network."""
+        return self._to_tensor(self._normalize_obs(state))
+
+    def _normalize_obs_batch(self, states: torch.Tensor) -> torch.Tensor:
+        """Z-score normalize a batch of observations. No-op when disabled."""
+        if not self.config.obs_normalize:
+            return states
+        if self._obs_count < 2:
+            return states
+        var = torch.as_tensor(self._obs_m2 / self._obs_count, device=states.device, dtype=torch.float32)
+        std = torch.sqrt(torch.clamp(var, min=1e-8))
+        mean = torch.as_tensor(self._obs_mean, device=states.device, dtype=torch.float32)
+        return (states - mean) / std
+
     def _select_action(self, state: np.ndarray, *, env_step: int) -> tuple[int, np.ndarray]:
         with torch.no_grad():
-            state_t = self._to_tensor(state).unsqueeze(0)
+            state_t = self._normalized_state_tensor(state).unsqueeze(0)
             logits = self.actor(state_t)
             # Add logit noise during training to prevent margin collapse
             if self.config.logit_noise_std > 0:
@@ -191,8 +229,8 @@ class DDPGTrainer:
     def _update_step(self) -> tuple[float, float]:
         batch = self.buffer.sample(self.config.batch_size)
 
-        states = self._to_tensor(batch.state)
-        next_states = self._to_tensor(batch.next_state)
+        states = self._normalize_obs_batch(self._to_tensor(batch.state))
+        next_states = self._normalize_obs_batch(self._to_tensor(batch.next_state))
         actions = torch.as_tensor(batch.action, device=self.device, dtype=torch.long)
         stored_logits = self._to_tensor(batch.action_logits)
         rewards = self._to_tensor(batch.reward)
@@ -237,6 +275,12 @@ class DDPGTrainer:
 
         actor_logits = self.actor(states)
         actor_loss = -self._actor_q_expectation(states, actor_logits).mean()
+        # Entropy regularization: penalize low-entropy (collapsed) distributions
+        if self.config.entropy_coeff > 0:
+            log_probs = F.log_softmax(actor_logits, dim=-1)
+            probs = log_probs.exp()
+            entropy = -(probs * log_probs).sum(dim=-1).mean()
+            actor_loss = actor_loss - self.config.entropy_coeff * entropy
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         self.actor_optimizer.step()
@@ -258,6 +302,7 @@ class DDPGTrainer:
 
         for episode in range(self.config.num_episodes):
             state, _info = self.env.reset(seed=self.config.seed + episode)
+            self._update_obs_stats(state)
             episode_reward = float(_info.get("reward", 0.0))
             steps = 0
 
@@ -267,6 +312,7 @@ class DDPGTrainer:
                 action, logits = self._select_action(state, env_step=env_step)
                 env_step += 1
                 next_state, reward, terminated, truncated, info = self.env.step(action)
+                self._update_obs_stats(next_state)
                 dw = float(info.get("dw", 1.0 if truncated else 0.0))
                 normalized_reward = self._normalize_reward(reward)
 
