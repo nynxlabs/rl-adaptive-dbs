@@ -5,8 +5,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
+
+# Long PythonPlant runs must flush episode lines immediately.
+os.environ.setdefault("PYTHONUNBUFFERED", "1")
 
 from controllers.ddpg import train
 from controllers.ddpg.config import DDPGConfig
