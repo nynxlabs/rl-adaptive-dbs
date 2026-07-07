@@ -19,5 +19,7 @@ def mehregan_reward(
     s_sum = float(np.mean(obs))
     delta = (s_sum - beta_threshold) * reward_scale
     if s_sum < beta_threshold:
-        return delta
+        # Paper §III.C / Fig. 3c: positive reward below beta_t. Eq. (8) as printed
+        # yields negative delta here; negate to match prose and training intent.
+        return -delta
     return -(delta**2)
