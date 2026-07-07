@@ -60,6 +60,9 @@ class DDPGConfig:
     # lower values (e.g. 0.5) for learning_v1 experiments — see phase4-results.md §10.4.
     init_bias_scale: float = 2.0
 
+    # Print episode reward after each episode (long PythonPlant runs).
+    log_episodes: bool = False
+
     @property
     def init_baseline(self) -> str:
         return init_baseline_for_variant(self.variant)
