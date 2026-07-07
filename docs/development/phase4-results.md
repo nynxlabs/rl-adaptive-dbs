@@ -263,8 +263,8 @@ Artifacts: `artifacts/ddpg/explore_sl15_seed0.json`, `artifacts/ddpg/state_lengt
 
 #### 3. Reward signal / normalization
 
-- **Normalization is internally consistent:** observation $s(i) = P_\beta / 1000$; reward Eq. (8) uses `beta_threshold=0.35`, `reward_scale=10` (`envs/mehregan/reward.py`, `environment.md` §6).
-- Synthetic reward range across $s_{\mathrm{sum}} \in [0.2, 0.6]$ is **6.25** (max **0** at $s_{\mathrm{sum}}=0.35$; all rewards $\leq 0$). The signal is non-flat in biomarker space.
+- **Normalization is internally consistent:** observation $s(i) = P_\beta / 1000$; reward Eq. (8) uses `beta_threshold=0.35`, `reward_scale=10` (`envs/mehregan/reward.py`, `environment.md` §6). **TASK-78 fix:** below-threshold linear branch now returns $(\beta_t - s_{\mathrm{sum}}) \cdot 10 > 0$, matching paper §III.C / Fig. 3c.
+- Synthetic reward range across $s_{\mathrm{sum}} \in [0.2, 0.6]$ spans positive (below $\beta_t$) and negative (quadratic penalty above). The signal is non-flat in biomarker space.
 - **Constant-frequency policies can still “win”.** Benchmark §1.1: constant **115 Hz** (action 27) lowers mean $P_\beta$ vs `none` and beats cDBS on mean — so RL can converge to a **frequency-constant** local optimum without state dependence. The reward does not penalize stimulation energy; there is no incentive to modulate frequency once a good constant is found.
 
 #### 4. Actor initialization
