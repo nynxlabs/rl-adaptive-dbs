@@ -60,6 +60,34 @@ where $P_j^{\mathrm{GPi}}$ is the **power spectral density** of the **action pot
 
 **Consequence:** a scalar frequency has no room to be an "irregular pattern," so the paper's *adaptive temporal pattern* cannot be expressed in the current action space. Resolving this requires a **design decision** (see [replication.md](controllers/ddpg/replication.md) §5, TASK-81): **(A)** accept a fixed scalar policy (diverges from the paper's pattern claim); **(B)** add an explicit energy/cost term to the reward (an **extension** — the paper has none); or **(C)** redesign the action space as a **fixed-mean-frequency pulse pattern** to match the paper (faithful, but a larger change to the pattern alphabet and the plant DBS drive).
 
+### 4.2 Fixed-mean-frequency pattern alphabet (Option C, TASK-83)
+
+**Decision (master-approved, jul 7 2026):** Option C — redesign the action space to match Mehregan et al.'s fixed-mean-frequency pulse pattern formulation. Implemented in `envs/mehregan/fixed_mean_patterns.py`.
+
+**What changes:** The actor no longer selects a stimulation *frequency* (0–200 Hz). Instead, it selects a *temporal pulse pattern* from a discrete alphabet, all sharing the same mean stimulation rate (45 Hz default, 30 Hz for ablation). Mean frequency is an **input** to Algorithm 1, not an output — the agent shapes *when* pulses occur, not *how many*.
+
+**Pattern alphabet:**
+
+| Property | Value | Rationale |
+|----------|-------|-----------|
+| `n_patterns` | **41** | Matches the scalar-frequency alphabet size / actor head, so no DDPG topology change needed |
+| Pattern 0 | Regular periodic train at `mean_hz` | Byte-identical to `create_dbs_current(mean_hz)` — the paper's initialization target |
+| Patterns 1–40 | Deterministic irregular trains | Same pulse count as pattern 0 (mean rate preserved exactly). Interior onsets jittered by ±1/3 ISI; first/last onsets pinned so total span is unchanged |
+| Jitter PRNG | Seeded by `(mean_hz, pattern_index)` | Reproducible across training, evaluation, and quantization |
+| Resolution | Plant time grid (`dt_ms = 0.01`) | Same grid as the integrator; precomputed traces cached via `lru_cache` |
+
+**Paper-silent choices (documented here per repo convention):**
+
+- Alphabet size 41 is an implementation convenience, not paper-specified. The paper does not state the cardinality of the pattern set.
+- Jitter fraction 1/3 is chosen to keep consecutive pulses well separated (≫ pulse width) while producing visibly irregular trains.
+- First/last onset pinning preserves the total temporal span (and thus the sum of inter-spike intervals) across all patterns in the alphabet.
+
+**Plant integration:** `DbsSpec` carries an optional `idbs` field — a precomputed STN drive trace on the plant time grid. When set, `integrate_network` applies it directly instead of synthesizing a regular train from `frequency_hz`. The MATLAB backend ignores `idbs`; pattern mode is Python-plant only.
+
+**Usage:** Instantiate `MehreganEnv(alphabet=FixedMeanPatternAlphabet(mean_hz=45.0))`. The env's `action_space` and `step()` are unchanged — only the alphabet-to-DbsSpec mapping differs.
+
+**Baselines in pattern mode:** Pattern 0 (regular train at `mean_hz`) replaces the old periodic-45Hz baseline. The 130 Hz cDBS and no-stimulation baselines are not representable in pattern mode (different mean frequency); use the scalar-frequency alphabet for those comparisons.
+
 ---
 
 ## 5. Timing and transitions
@@ -163,9 +191,11 @@ See [plant.md](plant.md) §5, §10. **Decide in** plant config; validate biomark
 
 ### 3. Discrete pattern alphabet
 
-The actor emits logits over a discrete STN pattern set, but §IV.A.1 does not state **cardinality** or **waveform encoding**. **Fixed:** discrete patterns via softmax + argmax. **Open:** alphabet size and per-pattern STN drive semantics. **Decide in** code and keep stable across training, evaluation, and quantization comparisons.
+The actor emits logits over a discrete STN pattern set, but §IV.A.1 does not state **cardinality** or **waveform encoding**. **Fixed:** discrete patterns via softmax + argmax. Alphabet size and per-pattern STN drive semantics are now **decided** (TASK-83, Option C).
 
-**Implemented (`envs/mehregan/patterns.py`):** 41 actions → Kumaravelu `pick_dbs_freq` 1…41 (`freqs = 0:5:200`); action `0` is no DBS (`pick_dbs_freq == 1`).
+**Scalar mode (`envs/mehregan/patterns.py`):** 41 actions → Kumaravelu `pick_dbs_freq` 1…41 (`freqs = 0:5:200`); action `0` is no DBS (`pick_dbs_freq == 1`).
+
+**Pattern mode (`envs/mehregan/fixed_mean_patterns.py`):** 41 irregular pulse patterns at fixed mean frequency (45 Hz / 30 Hz). See §4.2 for full specification.
 
 ### 4. Observation normalization for reward Eq. (8)
 
