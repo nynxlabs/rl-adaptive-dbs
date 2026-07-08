@@ -1,12 +1,12 @@
 # Phase 4 results — Mehregan DDPG benchmarking
 
-Status snapshot for Phase 4 exit criteria ([roadmap.md](roadmap.md) §2). **Implementation checklist:** verified in TASK-10 (2026-07-01). **Benchmark numbers:** full `mehregan_eval` suite complete (TASK-9, 2026-07-03).
+Status snapshot for Phase 4 exit criteria ([roadmap.md](roadmap.md) §2). **Implementation checklist:** verified in TASK-10 (2026-07-01). **Benchmark numbers:** full scalar-frequency `mehregan_eval` suite complete (TASK-9, 2026-07-03); tables below refreshed in TASK-94 (2026-07-08). Post–pattern-action-space re-benchmark deferred to TASK-70 (blocked on TASK-86 acceptance).
 
 ---
 
 ## 1. Benchmark outcomes
 
-Full suite: `suites/mehregan_eval.yaml` — 8 controllers × 5 eval seeds (40 planned runs) plus `baseline:periodic-30hz` (5 seeds, TASK-62, 2026-07-05). Train seed fixed at 0. **Delivered:** 46 run directories in `results/mehregan_eval/runs/` (one duplicate `ddpg:qat` seed 2 retained; metrics deduped by seed for tables below). Manifest `completed_runs` field is stale (shows 1); per-run `metrics.json` files are authoritative.
+Full suite: `suites/mehregan_eval.yaml` — 8 controller variants × 5 eval seeds (40 planned runs) plus `baseline:periodic-30hz` (5 seeds, TASK-62, 2026-07-05). Train seed fixed at 0. **Action space:** scalar frequency (pre–TASK-83 pattern redesign). **Delivered:** 47 run directories in `results/mehregan_eval/runs/`; **45 unique** `(controller, variant, seed)` tuples after dedup (`ddpg:qat` seeds 3 and 4 each have two runs — tables use the **later** `run_id`). Manifest `completed_runs` field is stale (shows 1); per-run `metrics.json` files are authoritative. Regenerate: `uv run rl-dbs summary --suite-name mehregan_eval` → `results/mehregan_eval/summary.csv`.
 
 | Artifact | Path | Status |
 |----------|------|--------|
@@ -16,27 +16,118 @@ Full suite: `suites/mehregan_eval.yaml` — 8 controllers × 5 eval seeds (40 pl
 
 **Variants:** `paper`, `init-30hz`, `ptq-fp16`, `ptq-int8`, `qat` (+ baselines `none`, `cdbs-130hz`, `periodic-45hz`, `periodic-30hz`).
 
-### 1.1 Core metrics (mean over eval seeds, deduped)
+### 1.1a Aggregate core metrics (mean ± std, n = 5 eval seeds)
+
+Per [benchmarking.md](../benchmarking.md) §4 core metrics; deduped from `results/mehregan_eval/runs/*/metrics.json`.
 
 | Controller | Variant | P_β mean | P_β final | Reward sum | Stim freq (Hz) |
 |------------|---------|----------|-----------|------------|----------------|
-| ddpg | paper | 191.8 | 138.5 | −11.83 | 112.5 |
-| ddpg | init-30hz | 217.8 | 160.5 | −11.41 | 112.5 |
-| ddpg | ptq-fp16 | 191.8 | 138.5 | −11.83 | 112.5 |
-| ddpg | ptq-int8 | 191.8 | 138.5 | −11.83 | 112.5 |
-| ddpg | qat | 205.8 | 167.5 | −10.82 | 108.8 |
-| baseline | none | 458.2 | 458.2 | −7.50 | 0.0 |
-| baseline | cdbs-130hz | 197.4 | 145.2 | −11.49 | 108.3 |
-| baseline | periodic-45hz | 301.2 | 269.8 | −5.26 | 37.5 |
-| baseline | periodic-30hz | 583.2 | 607.9 | −34.60 | 25.0 |
+| baseline | none | 458.2 ± 31.7 | 458.2 ± 31.7 | −7.5 ± 4.8 | 0.0 ± 0.0 |
+| baseline | cdbs-130hz | 197.4 ± 46.8 | 145.2 ± 54.8 | −11.5 ± 2.8 | 108.3 ± 0.0 |
+| baseline | periodic-45hz | 301.2 ± 43.0 | 269.8 ± 48.5 | −5.3 ± 2.2 | 37.5 ± 0.0 |
+| baseline | periodic-30hz | 583.0 ± 16.6 | 607.9 ± 14.8 | −34.6 ± 4.5 | 25.0 ± 0.0 |
+| ddpg | paper | 191.8 ± 40.1 | 138.5 ± 47.0 | −11.8 ± 2.4 | 112.5 ± 0.0 |
+| ddpg | init-30hz | 217.8 ± 16.1 | 160.5 ± 34.1 | −11.4 ± 1.7 | 112.5 ± 0.0 |
+| ddpg | ptq-fp16 | 191.8 ± 40.1 | 138.5 ± 47.0 | −11.8 ± 2.4 | 112.5 ± 0.0 |
+| ddpg | ptq-int8 | 191.8 ± 40.1 | 138.5 ± 47.0 | −11.8 ± 2.4 | 112.5 ± 0.0 |
+| ddpg | qat | 241.4 ± 12.4 | 189.4 ± 39.0 | −9.6 ± 0.8 | 101.5 ± 7.7 |
 
-PTQ variants match full-precision `paper` on all reported metrics (expected — post-training quantize of the same checkpoint).
+PTQ variants match full-precision `paper` on all reported metrics (expected — post-training quantize of the same checkpoint). `qat` underperforms `paper` on mean $P_\beta$ (241.4 vs 191.8) and beats cDBS on only 1/5 seeds (see §1.2).
 
 `periodic-30hz` is the Mehregan **30 Hz init ablation** baseline (not a therapeutic target — 30 Hz periodic STN drive **increases** $P_\beta$ vs `none` and `periodic-45hz`, as expected for sub-therapeutic frequency).
 
-### 1.2 §IV qualitative checklist (per DDPG variant)
+### 1.1b Baselines — per eval seed
 
-Per-seed pass counts from `results/mehregan_eval/` (same logic as `controllers/ddpg/checklist.py`; deduped by seed). Aggregate mean-level pass/fail in parentheses.
+| Variant | Seed | P_β mean | P_β final | Reward sum | Stim freq (Hz) |
+|---------|------|----------|-----------|------------|----------------|
+| none | 0 | 513.0 | 513.0 | −15.94 | 0.0 |
+| none | 1 | 442.7 | 442.7 | −5.16 | 0.0 |
+| none | 2 | 457.1 | 457.1 | −6.88 | 0.0 |
+| none | 3 | 434.3 | 434.3 | −4.26 | 0.0 |
+| none | 4 | 443.8 | 443.8 | −5.27 | 0.0 |
+| cdbs-130hz | 0 | 202.7 | 140.6 | −13.13 | 108.3 |
+| cdbs-130hz | 1 | 218.4 | 173.5 | −9.68 | 108.3 |
+| cdbs-130hz | 2 | 231.7 | 186.6 | −9.32 | 108.3 |
+| cdbs-130hz | 3 | 115.7 | 52.0 | −15.61 | 108.3 |
+| cdbs-130hz | 4 | 218.3 | 173.2 | −9.72 | 108.3 |
+| periodic-45hz | 0 | 330.9 | 294.4 | −5.43 | 37.5 |
+| periodic-45hz | 1 | 246.7 | 207.5 | −7.99 | 37.5 |
+| periodic-45hz | 2 | 332.2 | 307.2 | −3.29 | 37.5 |
+| periodic-45hz | 3 | 262.4 | 228.0 | −6.81 | 37.5 |
+| periodic-45hz | 4 | 334.0 | 312.0 | −2.78 | 37.5 |
+| periodic-30hz | 0 | 608.4 | 627.5 | −41.15 | 25.0 |
+| periodic-30hz | 1 | 590.2 | 619.7 | −37.22 | 25.0 |
+| periodic-30hz | 2 | 577.4 | 601.5 | −32.77 | 25.0 |
+| periodic-30hz | 3 | 568.1 | 594.9 | −30.69 | 25.0 |
+| periodic-30hz | 4 | 570.7 | 596.1 | −31.17 | 25.0 |
+
+### 1.1c DDPG variants — per eval seed
+
+| Variant | Seed | P_β mean | P_β final | Reward sum | Stim freq (Hz) |
+|---------|------|----------|-----------|------------|----------------|
+| paper | 0 | 194.4 | 130.6 | −13.62 | 112.5 |
+| paper | 1 | 206.4 | 159.1 | −10.40 | 112.5 |
+| paper | 2 | 220.0 | 172.6 | −10.02 | 112.5 |
+| paper | 3 | 122.3 | 59.9 | −15.22 | 112.5 |
+| paper | 4 | 215.7 | 170.1 | −9.87 | 112.5 |
+| init-30hz | 0 | 194.4 | 130.6 | −13.62 | 112.5 |
+| init-30hz | 1 | 208.7 | 159.8 | −11.55 | 112.5 |
+| init-30hz | 2 | 231.4 | 189.4 | −12.47 | 112.5 |
+| init-30hz | 3 | 222.7 | 123.2 | −9.51 | 112.5 |
+| init-30hz | 4 | 231.7 | 199.5 | −9.91 | 112.5 |
+| ptq-fp16 | 0 | 194.4 | 130.6 | −13.62 | 112.5 |
+| ptq-fp16 | 1 | 206.4 | 159.1 | −10.40 | 112.5 |
+| ptq-fp16 | 2 | 220.0 | 172.6 | −10.02 | 112.5 |
+| ptq-fp16 | 3 | 122.3 | 59.9 | −15.22 | 112.5 |
+| ptq-fp16 | 4 | 215.7 | 170.1 | −9.87 | 112.5 |
+| ptq-int8 | 0 | 194.4 | 130.6 | −13.62 | 112.5 |
+| ptq-int8 | 1 | 206.4 | 159.1 | −10.40 | 112.5 |
+| ptq-int8 | 2 | 220.0 | 172.6 | −10.02 | 112.5 |
+| ptq-int8 | 3 | 122.3 | 59.9 | −15.22 | 112.5 |
+| ptq-int8 | 4 | 215.7 | 170.1 | −9.87 | 112.5 |
+| qat | 0 | 244.9 | 216.3 | −9.78 | 112.5 |
+| qat | 1 | 226.3 | 218.8 | −9.21 | 94.2 |
+| qat | 2 | 260.1 | 189.4 | −10.75 | 94.2 |
+| qat | 3 | 237.5 | 123.2 | −8.62 | 103.3 |
+| qat | 4 | 238.4 | 199.5 | −9.50 | 103.3 |
+
+### 1.2 §IV qualitative checklist
+
+#### Per-seed detail (DDPG variants)
+
+Same-seed comparison vs `baseline:none` and `baseline:cdbs-130hz`; logic matches `controllers/ddpg/checklist.py`.
+
+| Variant | Seed | lowers vs none | beats cdbs (5% slack) | protocol |
+|---------|------|----------------|----------------------|----------|
+| paper | 0 | pass | pass | pass |
+| paper | 1 | pass | pass | pass |
+| paper | 2 | pass | pass | pass |
+| paper | 3 | pass | fail | pass |
+| paper | 4 | pass | pass | pass |
+| init-30hz | 0 | pass | pass | pass |
+| init-30hz | 1 | pass | pass | pass |
+| init-30hz | 2 | pass | pass | pass |
+| init-30hz | 3 | pass | fail | pass |
+| init-30hz | 4 | pass | fail | pass |
+| ptq-fp16 | 0 | pass | pass | pass |
+| ptq-fp16 | 1 | pass | pass | pass |
+| ptq-fp16 | 2 | pass | pass | pass |
+| ptq-fp16 | 3 | pass | fail | pass |
+| ptq-fp16 | 4 | pass | pass | pass |
+| ptq-int8 | 0 | pass | pass | pass |
+| ptq-int8 | 1 | pass | pass | pass |
+| ptq-int8 | 2 | pass | pass | pass |
+| ptq-int8 | 3 | pass | fail | pass |
+| ptq-int8 | 4 | pass | pass | pass |
+| qat | 0 | pass | fail | pass |
+| qat | 1 | pass | pass | pass |
+| qat | 2 | pass | fail | pass |
+| qat | 3 | pass | fail | pass |
+| qat | 4 | pass | fail | pass |
+
+Seed 3 is the hardest plant draw for all DDPG variants (`cdbs-130hz` $P_\beta$ mean = 115.7 — unusually low unstimulated baseline on that IC).
+
+#### Aggregate pass counts (per variant)
 
 | Variant | lowers vs none | beats cdbs (5% slack) | mehregan_eval protocol | quantization_tagged |
 |---------|----------------|----------------------|------------------------|---------------------|
@@ -44,7 +135,7 @@ Per-seed pass counts from `results/mehregan_eval/` (same logic as `controllers/d
 | init-30hz | 5/5 (pass) | 3/5 (fail mean) | 5/5 | n/a |
 | ptq-fp16 | 5/5 (pass) | 4/5 (pass mean) | 5/5 | pass (matches FP) |
 | ptq-int8 | 5/5 (pass) | 4/5 (pass mean) | 5/5 | pass (matches FP) |
-| qat | 5/5 (pass) | 3/5 (borderline mean) | 5/5 | n/a |
+| qat | 5/5 (pass) | 1/5 (fail mean) | 5/5 | n/a |
 
 ### 1.3 Deviations from paper claims
 
@@ -127,7 +218,7 @@ CLI: `uv run python scripts/check_mehregan_replication.py <summary.json>`
 
 | Criterion | Status |
 |-----------|--------|
-| Repeatable `mehregan_eval` across FP + quantized variants | **Done** — 40/40 planned evals + checkpoints (2026-07-03) |
+| Repeatable `mehregan_eval` across FP + quantized variants | **Done** — 45/45 unique evals + checkpoints (TASK-9; tables TASK-94, 2026-07-08) |
 | Replication checklist passable for `ddpg` | **Done** — code verified (TASK-10); plant-scale: all variants lower P_β vs none; `paper`/PTQ beat cdbs on mean; `init-30hz`/`qat` mixed on per-seed cdbs slack (documented §1.2) |
 | `rl-dbs benchmark` / `rl-dbs-tui` usable | **Done** (see [benchmarking.md](../benchmarking.md)) |
 | Fresh-VM setup scripts | **Windows Sandbox passed** (2026-06-30, `-Clone`); Multipass Linux pending — [fresh-validation.md](fresh-validation.md) |
@@ -158,7 +249,7 @@ The `paper` checkpoint (`artifacts/ddpg/paper_train0.pt`) implements a **state-c
 |---------|--------------|--------------------------|
 | `paper` / PTQ | Constant action 27 | 191.8 |
 | `init-30hz` | Also constant action 27 (init bias overwritten) | 217.8 |
-| `qat` | Mixed actions 27 / 16; lower margins (mean 0.007, ties at 0) | 205.8 |
+| `qat` | Mixed actions 27 / 16; lower margins (mean 0.007, ties at 0) | 241.4 |
 
 QAT fake-quant stubs perturb logits enough to tie-break between actions, so plant trajectories diverge. `init-30hz` uses the same collapsed policy but a different training run (partial retrain visible in logs).
 
