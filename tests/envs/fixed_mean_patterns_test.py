@@ -252,6 +252,17 @@ class TestDDPGConfigPatternMode:
         )
         assert cfg.init_baseline == "periodic-30hz"
 
+    def test_init_30hz_variant_syncs_pattern_mean_hz(self) -> None:
+        """TASK-85 B2: variant slug implies 30 Hz even when pattern_mean_hz defaults to 45."""
+        cfg = DDPGConfig(
+            variant="init-30hz",
+            action_space_mode="fixed_mean_pattern",
+        )
+        assert cfg.effective_pattern_mean_hz == 30.0
+        assert cfg.init_baseline == "periodic-30hz"
+        synced = cfg.with_variant_defaults()
+        assert synced.pattern_mean_hz == 30.0
+
 
 # ---------------------------------------------------------------------------
 # Env smoke test with pattern mode
@@ -360,6 +371,58 @@ class TestMehreganEnvPatternModePythonPlant:
                 assert terminated2 or truncated2
             finally:
                 env.close()
+
+
+# ---------------------------------------------------------------------------
+# train() default env (TASK-85 B1)
+# ---------------------------------------------------------------------------
+
+
+class TestTrainDefaultEnv:
+    """``default_train_env`` must use PythonPlant in pattern mode."""
+
+    def test_pattern_mode_uses_python_plant(self) -> None:
+        from controllers.ddpg import default_train_env
+        from controllers.ddpg.config import DDPGConfig
+        from envs.plant.python_backend import PythonPlant
+
+        env = default_train_env(
+            DDPGConfig(action_space_mode="fixed_mean_pattern", pattern_mean_hz=45.0),
+        )
+        try:
+            assert isinstance(env._plant, PythonPlant)
+            assert isinstance(env.alphabet, FixedMeanPatternAlphabet)
+        finally:
+            env.close()
+
+    def test_scalar_mode_default_plant(self) -> None:
+        from controllers.ddpg import default_train_env
+        from controllers.ddpg.config import DDPGConfig
+        from envs.plant.matlab_backend import MatlabPlant
+
+        env = default_train_env(DDPGConfig())
+        try:
+            assert isinstance(env._plant, MatlabPlant)
+        finally:
+            env.close()
+
+    def test_init_30hz_pattern_mode_env_and_baseline(self) -> None:
+        """TASK-85 B2: default_train_env + init_baseline stay at 30 Hz for init-30hz."""
+        from controllers.ddpg import default_train_env
+        from controllers.ddpg.config import DDPGConfig
+
+        cfg = DDPGConfig(
+            variant="init-30hz",
+            action_space_mode="fixed_mean_pattern",
+        )
+        assert cfg.init_baseline == "periodic-30hz"
+        env = default_train_env(cfg)
+        try:
+            assert env.config.pattern_mean_hz == 30.0
+            assert isinstance(env.alphabet, FixedMeanPatternAlphabet)
+            assert env.alphabet.mean_hz == 30.0
+        finally:
+            env.close()
 
 
 # ---------------------------------------------------------------------------

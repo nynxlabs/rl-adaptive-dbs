@@ -42,6 +42,7 @@ __all__ = [
     "Transition",
     "baseline_names_for_variant",
     "clone_module",
+    "default_train_env",
     "evaluate",
     "hard_update",
     "init_baseline_for_variant",
@@ -58,6 +59,26 @@ __all__ = [
 ]
 
 
+def default_train_env(config: DDPGConfig | None = None) -> MehreganEnv:
+    """Build the default ``MehreganEnv`` for :func:`train` when ``env`` is omitted."""
+    from envs.mehregan import MehreganEnv, MehreganEnvConfig
+
+    cfg = (config or DDPGConfig()).with_variant_defaults()
+    env_cfg = MehreganEnvConfig(
+        max_episode_steps=cfg.max_episode_steps,
+        state_length=1,
+        action_space_mode=cfg.action_space_mode,  # type: ignore[arg-type]
+        pattern_mean_hz=cfg.effective_pattern_mean_hz,
+    )
+    if cfg.action_space_mode == "fixed_mean_pattern":
+        from envs.plant.python_backend import PythonPlant
+        from rl_adaptive_dbs.user_config import resolve_config
+
+        plant = PythonPlant(config=resolve_config().plant)
+        return MehreganEnv(plant=plant, config=env_cfg)
+    return MehreganEnv(config=env_cfg)
+
+
 def train(
     env: MehreganEnv | None = None,
     config: DDPGConfig | None = None,
@@ -65,23 +86,12 @@ def train(
     checkpoint_path: str | Path | None = None,
     **kwargs: Any,
 ) -> TrainResult:
-    """Train DDPG on ``env`` (default: ``MehreganEnv()``) and optionally save a checkpoint."""
+    """Train DDPG on ``env`` (default: :func:`default_train_env`) and optionally save a checkpoint."""
+    cfg = (config or DDPGConfig()).with_variant_defaults()
     if env is None:
-        from envs.mehregan import MehreganEnv, MehreganEnvConfig
+        env = default_train_env(cfg)
 
-        cfg = config or DDPGConfig()
-        env = MehreganEnv(
-            config=MehreganEnvConfig(
-                max_episode_steps=cfg.max_episode_steps,
-                state_length=1,
-                action_space_mode=cfg.action_space_mode,  # type: ignore[arg-type]
-                pattern_mean_hz=(
-                    30.0 if cfg.variant == "init-30hz" else cfg.pattern_mean_hz
-                ),
-            ),
-        )
-
-    result = train_ddpg(env, config, **kwargs)
+    result = train_ddpg(env, cfg, **kwargs)
     if checkpoint_path is not None:
         cfg = result.config
         save_checkpoint(
