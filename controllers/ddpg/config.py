@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 
 def init_baseline_for_variant(
@@ -113,9 +113,23 @@ class DDPGConfig:
     log_episodes: bool = False
 
     @property
+    def effective_pattern_mean_hz(self) -> float:
+        """Mean Hz implied by variant + pattern mode (``init-30hz`` → 30 Hz)."""
+        if self.variant == "init-30hz":
+            return 30.0
+        return self.pattern_mean_hz
+
+    def with_variant_defaults(self) -> DDPGConfig:
+        """Return a copy with variant-implied fields applied (e.g. ``init-30hz`` → 30 Hz)."""
+        effective = self.effective_pattern_mean_hz
+        if effective != self.pattern_mean_hz:
+            return replace(self, pattern_mean_hz=effective)
+        return self
+
+    @property
     def init_baseline(self) -> str:
         return init_baseline_for_variant(
             self.variant,
             action_space_mode=self.action_space_mode,
-            pattern_mean_hz=self.pattern_mean_hz,
+            pattern_mean_hz=self.effective_pattern_mean_hz,
         )
