@@ -42,9 +42,11 @@ class DDPGConfig:
     tau: float = 0.005
     update_frequency: int = 1
 
-    # CNN topology (§III.B; channel counts intentionally open)
-    conv_channels: int = 16
-    shrink_dim: int = 4
+    # CNN topology (§III.B, Figure 3a/3b — TASK-146)
+    conv1_out: int = 32
+    conv2_out: int = 64
+    fc_hidden: int = 256
+    pool_kernel: int = 2
 
     # Benchmark variant (`paper`, `init-30hz`, …)
     variant: str = "paper"

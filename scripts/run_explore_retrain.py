@@ -30,7 +30,7 @@ def main() -> int:
     parser.add_argument(
         "--learning-v1",
         action="store_true",
-        help="phase4-results.md §10.4 profile (softmax 3→1, init_bias_scale=0.5, wider CNN)",
+        help="phase4-results.md §10.4 profile (softmax 3→1, init_bias_scale=0.5)",
     )
     parser.add_argument("--out", type=Path, default=Path("artifacts/ddpg/explore_retrain.json"))
     parser.add_argument(
@@ -53,8 +53,6 @@ def main() -> int:
                 exploration_mode="softmax",
                 exploration_temperature_start=3.0,
                 exploration_temperature_end=1.0,
-                conv_channels=32,
-                shrink_dim=8,
                 init_bias_scale=0.5,
                 critic_action_input="one_hot",
                 log_episodes=True,

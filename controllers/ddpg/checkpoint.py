@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +12,12 @@ import torch.nn as nn
 from controllers.ddpg.config import DDPGConfig
 from controllers.ddpg.networks import Actor
 from controllers.ddpg.quantization import QATActor
+
+
+def _config_from_checkpoint_payload(raw: dict[str, Any]) -> DDPGConfig:
+    """Drop unknown keys so pre–TASK-146 checkpoints still deserialize config."""
+    valid = {field.name for field in fields(DDPGConfig)}
+    return DDPGConfig(**{key: value for key, value in raw.items() if key in valid})
 
 
 def fp_actor_state_dict(actor: Actor) -> dict[str, torch.Tensor]:
@@ -67,12 +73,14 @@ def load_actor(
 ) -> tuple[Actor, DDPGConfig]:
     """Restore ``Actor`` and ``DDPGConfig`` from a checkpoint file."""
     payload = load_checkpoint(path, device=device)
-    config = DDPGConfig(**payload["ddpg_config"])
+    config = _config_from_checkpoint_payload(payload["ddpg_config"])
     actor = Actor(
         state_length=int(payload["state_length"]),
         n_actions=int(payload["n_actions"]),
-        conv_channels=config.conv_channels,
-        shrink_dim=config.shrink_dim,
+        conv1_out=config.conv1_out,
+        conv2_out=config.conv2_out,
+        pool_kernel=config.pool_kernel,
+        fc_hidden=config.fc_hidden,
     )
     actor.load_state_dict(payload["actor_state_dict"])
     actor.to(device)

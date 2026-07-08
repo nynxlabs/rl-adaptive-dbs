@@ -74,13 +74,15 @@ where $P_j^{\mathrm{GPi}}$ is the **power spectral density** of the **action pot
 | Pattern 0 | Regular periodic train at `mean_hz` | Byte-identical to `create_dbs_current(mean_hz)` — the paper's initialization target |
 | Patterns 1–40 | Deterministic irregular trains | Same pulse count as pattern 0 (mean rate preserved exactly). Interior onsets jittered by ±1/3 ISI; first/last onsets pinned so total span is unchanged |
 | Jitter PRNG | Seeded by `(mean_hz, pattern_index)` | Reproducible across training, evaluation, and quantization |
-| Resolution | Plant time grid (`dt_ms = 0.01`) | Same grid as the integrator; precomputed traces cached via `lru_cache` |
+| Resolution | Plant time grid (`dt_ms`; follows `PlantConfig` / `plant.dt` in `.rl-dbs.yaml`) | Same grid as the integrator; precomputed traces cached via `lru_cache` |
 
 **Paper-silent choices (documented here per repo convention):**
 
 - Alphabet size 41 is an implementation convenience, not paper-specified. The paper does not state the cardinality of the pattern set.
 - Jitter fraction 1/3 is chosen to keep consecutive pulses well separated (≫ pulse width) while producing visibly irregular trains.
 - First/last onset pinning preserves the total temporal span (and thus the sum of inter-spike intervals) across all patterns in the alphabet.
+
+**Replication uncertainty (TASK-109):** Mehregan et al. motivate learning a stimulation *pattern* at fixed mean rate but **do not specify** how discrete actions map to pulse trains (alphabet size, jitter model, or boundary conditions). Our ±1/3 ISI jitter over 41 deterministic patterns is an **implementation hypothesis**, not paper-grounded. Patterns produced by Mehregan's trained actor may lie **outside** this alphabet; a discrete sweep here cannot fully explain their Fig. 5b claim that irregular learned patterns beat periodic stimulation at 30 Hz without matching their pattern construction and evaluation protocol.
 
 **Plant integration:** `DbsSpec` carries an optional `idbs` field — a precomputed STN drive trace on the plant time grid. When set, `integrate_network` applies it directly instead of synthesizing a regular train from `frequency_hz`. The MATLAB backend ignores `idbs`; pattern mode is Python-plant only.
 

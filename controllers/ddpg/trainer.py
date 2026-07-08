@@ -58,15 +58,19 @@ class DDPGTrainer:
         self.actor = actor or Actor(
             state_length=state_length,
             n_actions=n_actions,
-            conv_channels=config.conv_channels,
-            shrink_dim=config.shrink_dim,
+            conv1_out=config.conv1_out,
+            conv2_out=config.conv2_out,
+            pool_kernel=config.pool_kernel,
+            fc_hidden=config.fc_hidden,
         )
         self.actor = wrap_actor_for_training(self.actor, config.variant)
         self.critic = critic or Critic(
             state_length=state_length,
             n_actions=n_actions,
-            conv_channels=config.conv_channels,
-            shrink_dim=config.shrink_dim,
+            conv1_out=config.conv1_out,
+            conv2_out=config.conv2_out,
+            pool_kernel=config.pool_kernel,
+            fc_hidden=config.fc_hidden,
         )
         self.actor_target = clone_module(self.actor)
         self.critic_target = clone_module(self.critic)
@@ -321,7 +325,7 @@ class DDPGTrainer:
                 self._update_obs_stats(state)
             else:
                 state = next_state
-            if self.config.log_episodes and (i + 1) % 50 == 0:
+            if self.config.log_episodes and (i + 1) % 5 == 0:
                 print(f"warmup step {i + 1}/{steps}", flush=True)
         return steps
 
@@ -361,6 +365,12 @@ class DDPGTrainer:
                 episode_reward += reward
                 state = next_state
                 steps += 1
+                if self.config.log_episodes and steps % 5 == 0:
+                    print(
+                        f"  episode {episode + 1}/{self.config.num_episodes} "
+                        f"step {steps}/{self.config.max_episode_steps}",
+                        flush=True,
+                    )
 
                 if len(self.buffer) >= self.config.min_buffer_size:
                     for _ in range(self.config.update_frequency):

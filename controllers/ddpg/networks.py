@@ -1,4 +1,4 @@
-"""CNN actor–critic for discrete STN patterns (Mehregan §III.B)."""
+"""CNN actor–critic for discrete STN patterns (Mehregan §III.B, Figure 3a/3b)."""
 
 from __future__ import annotations
 
@@ -13,48 +13,91 @@ if TYPE_CHECKING:
     from torch import Tensor
 
 
-class StateEncoder(nn.Module):
-    """1-D CNN + adaptive average pool over biomarker window."""
+def _pooled_length(length: int, pool_kernel: int) -> int:
+    """Temporal length after ``AvgPool1d(pool_kernel)`` with stride = kernel.
 
-    def __init__(self, *, state_length: int, conv_channels: int, shrink_dim: int) -> None:
+    When ``length <= 1`` the pool is skipped (paper assumes longer windows; at
+    ``state_length=1`` two stride-2 pools would zero the sequence).
+    """
+    if length <= 1:
+        return 1
+    return length // pool_kernel
+
+
+def cnn_flat_dim(*, state_length: int, conv2_out: int, pool_kernel: int) -> int:
+    """Flattened feature count after two conv blocks and average pools."""
+    length = _pooled_length(_pooled_length(state_length, pool_kernel), pool_kernel)
+    return conv2_out * length
+
+
+class StateEncoder(nn.Module):
+    """Shared CNN + two 256-d FC layers (Mehregan Figure 3a state branch)."""
+
+    def __init__(
+        self,
+        *,
+        state_length: int,
+        conv1_out: int = 32,
+        conv2_out: int = 64,
+        pool_kernel: int = 2,
+        fc_hidden: int = 256,
+    ) -> None:
         super().__init__()
-        self.conv1 = nn.Conv1d(1, conv_channels, kernel_size=3, padding=1)
-        self.pool = nn.AdaptiveAvgPool1d(shrink_dim)
-        self.conv2 = nn.Conv1d(conv_channels, conv_channels * 2, kernel_size=3, padding=1)
-        self._out_features = conv_channels * 2 * shrink_dim
-        self._state_length = state_length
+        self.conv1 = nn.Conv1d(1, conv1_out, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv1d(conv1_out, conv2_out, kernel_size=3, padding=1)
+        self.pool_kernel = pool_kernel
+        self.fc_hidden = fc_hidden
+        flat_dim = cnn_flat_dim(
+            state_length=state_length,
+            conv2_out=conv2_out,
+            pool_kernel=pool_kernel,
+        )
+        self.fc1 = nn.Linear(flat_dim, fc_hidden)
+        self.fc2 = nn.Linear(fc_hidden, fc_hidden)
 
     @property
     def out_features(self) -> int:
-        return self._out_features
+        return self.fc_hidden
+
+    def _avg_pool(self, x: Tensor) -> Tensor:
+        if x.size(-1) <= 1:
+            return x
+        return F.avg_pool1d(x, kernel_size=self.pool_kernel, stride=self.pool_kernel)
 
     def forward(self, state: Tensor) -> Tensor:
         # state: (batch, state_length)
         x = state.unsqueeze(1)
         x = F.relu(self.conv1(x))
-        x = self.pool(x)
+        x = self._avg_pool(x)
         x = F.relu(self.conv2(x))
-        return x.flatten(1)
+        x = self._avg_pool(x)
+        x = x.flatten(1)
+        x = F.relu(self.fc1(x))
+        return F.relu(self.fc2(x))
 
 
 class Actor(nn.Module):
-    """Maps biomarker state to pattern logits."""
+    """Maps biomarker state to pattern logits (Figure 3a)."""
 
     def __init__(
         self,
         *,
         state_length: int,
         n_actions: int,
-        conv_channels: int = 16,
-        shrink_dim: int = 4,
+        conv1_out: int = 32,
+        conv2_out: int = 64,
+        pool_kernel: int = 2,
+        fc_hidden: int = 256,
     ) -> None:
         super().__init__()
         self.encoder = StateEncoder(
             state_length=state_length,
-            conv_channels=conv_channels,
-            shrink_dim=shrink_dim,
+            conv1_out=conv1_out,
+            conv2_out=conv2_out,
+            pool_kernel=pool_kernel,
+            fc_hidden=fc_hidden,
         )
-        self.head = nn.Linear(self.encoder.out_features, n_actions)
+        self.head = nn.Linear(fc_hidden, n_actions)
 
     def forward(self, state: Tensor) -> Tensor:
         return self.head(self.encoder(state))
@@ -74,34 +117,38 @@ class Actor(nn.Module):
 
 
 class Critic(nn.Module):
-    """State–action value on biomarker state and actor logits."""
+    """State–action value on biomarker state and actor logits (Figure 3b)."""
 
     def __init__(
         self,
         *,
         state_length: int,
         n_actions: int,
-        conv_channels: int = 16,
-        shrink_dim: int = 4,
+        conv1_out: int = 32,
+        conv2_out: int = 64,
+        pool_kernel: int = 2,
+        fc_hidden: int = 256,
     ) -> None:
         super().__init__()
         self.encoder = StateEncoder(
             state_length=state_length,
-            conv_channels=conv_channels,
-            shrink_dim=shrink_dim,
+            conv1_out=conv1_out,
+            conv2_out=conv2_out,
+            pool_kernel=pool_kernel,
+            fc_hidden=fc_hidden,
         )
-        fused = self.encoder.out_features + n_actions
-        self.head = nn.Sequential(
-            nn.Linear(fused, 64),
+        self.action_branch = nn.Sequential(
+            nn.Linear(n_actions, fc_hidden),
             nn.ReLU(),
-            nn.Linear(64, 1),
         )
+        self.head = nn.Linear(fc_hidden, 1)
         self.n_actions = n_actions
 
     def forward(self, state: Tensor, action_features: Tensor) -> Tensor:
         """``action_features`` is either actor logits or a one-hot action vector (n_actions)."""
-        encoded = self.encoder(state)
-        fused = torch.cat([encoded, action_features], dim=-1)
+        state_emb = self.encoder(state)
+        action_emb = self.action_branch(action_features)
+        fused = state_emb + action_emb
         return self.head(fused).squeeze(-1)
 
 
