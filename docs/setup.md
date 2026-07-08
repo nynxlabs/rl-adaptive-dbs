@@ -10,7 +10,7 @@ Install, verify, and use **rl-adaptive-dbs** day to day. For **phases** and **st
 
 - A shared **plant** (Kumaravelu et al., 2016; MATLAB in `reference-material/`) wrapped for RL
 - A shared **Gymnasium-style environment** (`envs/`) — Mehregan et al. API (2 s steps, $P_\beta$, Eq. (8) reward)
-- **Controllers** (`controllers/ddpg` implemented; `snn` placeholder until Phase 5; `sea_dbs` until Phase 6) — one implementation per paper; `ddpg` uses `envs/` directly, `snn` and `sea_dbs` use **adapters** for their paper’s RL interface
+- **Controllers** (`controllers/ddpg` implemented; `snn` scaffolded for Phase 5; `sea_dbs` until Phase 6) — one implementation per paper; `ddpg` uses `envs/` directly, `snn` and `sea_dbs` use **adapters** for their paper’s RL interface
 - **Benchmarking & CLI** (Phase 4) — `benchmarks/` runner, **`rl-dbs`** (`benchmark`, `summary`, `info`, `train`/`eval`), **`rl-dbs-tui`** (Benchmarks tab); Mehregan **PTQ/QAT** in `controllers/ddpg/quantization.py` — [benchmarking.md](benchmarking.md), [cli.md](cli.md), [tui.md](tui.md)
 - **Setup scripts** — **`scripts/setup.sh`** (Python + optional MATLAB); MATLAB detail in **`scripts/matlab/`** — [matlab.md](matlab.md)
 
