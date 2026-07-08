@@ -114,7 +114,7 @@ Phases 9+ are intentionally open; prioritize equivalence and replication paths b
 | [tui.md](../tui.md) | Draft | Phase 4 — start `rl-dbs-tui` (Benchmarks tab over `results/`) |
 | `envs/` | Done | `MatlabPlant`, `MehreganEnv`, $P_\beta$, baselines (`run_baseline_rollout`) |
 | `controllers/ddpg/` | Done (FP + PTQ/QAT) | Full-precision `paper` / `init-30hz`; PTQ/QAT in `quantization.py` |
-| `controllers/snn/` | Placeholder | Phase 5 |
+| `controllers/snn/` | Scaffolded | Phase 5 — package skeleton + Nguyen adapter; training deferred |
 | `controllers/sea_dbs/` | Placeholder | Phase 6 |
 | [matlab.md](../matlab.md) + `scripts/matlab/` | Done (WSL) | Fresh validation: Multipass (Linux) pending; **Sandbox (Windows) passed** 2026-06-30 — [fresh-validation.md](fresh-validation.md) |
 | Project setup script | Done | `scripts/setup.sh`, `scripts/validate-fresh.sh`, Multipass + Sandbox scripts — Phase 4; see [fresh-validation.md](fresh-validation.md) |
