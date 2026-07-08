@@ -37,13 +37,35 @@ The paper frames the method as **Deep Deterministic Policy Gradient (DDPG)** wit
 ### 3.2 Actor $\mu(s \mid \theta_\mu)$
 
 - **Input:** State $s$ formed from the biomarker trajectory (paper §III.B: **CNN** suited to temporal $P_\beta$ structure). For the computational study, the biomarker **window matches the full simulation segment** per step ([environment.md](../../environment.md) §3.2, §5).
-- **Backbone:** Convolutional layers, **average pooling**, then **linear** layers (paper §III.B, Figure 3a). Channel counts, kernel sizes, and **“shrink dimension”** are **not** numerically specified in §IV.A.1 — **intentionally open**; choose a compact CNN, document shapes in code, and keep them fixed across training / evaluation / quantization comparisons.
+- **Backbone (Figure 3a, TASK-146):** Two `Conv1d` blocks with **average pooling** and two **256-unit** ReLU fully-connected layers before the logit head.
+
+| Layer | Shape / op |
+|-------|------------|
+| Input | $(B, L)$ biomarker window, $L =$ `state_length` |
+| `Conv1d` | $1 \to 32$, $k=3$, pad 1, ReLU |
+| `AvgPool1d` | kernel 2, stride 2 (skipped when temporal length $\le 1$) |
+| `Conv1d` | $32 \to 64$, $k=3$, pad 1, ReLU |
+| `AvgPool1d` | kernel 2, stride 2 (skipped when temporal length $\le 1$) |
+| Flatten | |
+| `Linear` | $\to 256$, ReLU |
+| `Linear` | $\to 256$, ReLU |
+| `Linear` | $\to N_{\mathrm{actions}}$ (logits) |
+
+- **`state_length=1` edge case:** The paper assumes a temporal window; with $L=1$ both average pools are **no-ops** so the CNN still runs (flatten size $64$). Document this in code (`networks._pooled_length`).
 - **Output:** **Logits** over the discrete pattern set. Training stores these as $a_{\mathrm{logit}}$.
 - **Action execution:** $\mathrm{softmax}(\mathrm{logits})$ then **argmax** selects the pattern index sent to the plant (paper §III.B).
 
 ### 3.3 Critic $Q(s, a_{\mathrm{logit}} \mid \theta_c)$
 
-- **Input:** Same state representation as the actor, concatenated or otherwise fused with the **action logits** (paper §III.B, Figure 3b; losses use $Q(s^{\tilde{B}}, a_{\mathrm{logit}}^{\tilde{B}})$).
+- **Input:** Same state CNN + FC trunk as the actor (**state branch**), fused with an **action branch** on actor logits (paper §III.B, Figure 3b; losses use $Q(s^{\tilde{B}}, a_{\mathrm{logit}}^{\tilde{B}})$).
+
+| Branch | Layers |
+|--------|--------|
+| State | Same as actor through the second 256-d ReLU FC |
+| Action | `Linear` $N_{\mathrm{actions}} \to 256$, ReLU on $a_{\mathrm{logit}}$ (or one-hot executed action when `critic_action_input=one_hot`) |
+| Fusion | **Element-wise add** of 256-d embeddings |
+| Head | `Linear` $256 \to 1$ scalar $Q$ |
+
 - **Output:** Scalar **state–action value** estimate.
 - **Target network:** $Q_{\mathrm{target}}$ and $\mu_{\mathrm{target}}$ for bootstrapping (Algorithm 1, Eq. (3)).
 
@@ -184,7 +206,7 @@ Hyperparameters with **fixed** values in §IV.A.1 should be **defaults**; open v
 
 ## 8. Consistency checklist
 
-- [x] Actor is **CNN-over-time** on biomarker state; critic uses **same state geometry** plus **logits**.
+- [x] Actor is **CNN-over-time** on biomarker state (Figure 3a); critic uses **same state trunk** with **element-wise add** fusion of action branch (Figure 3b).
 - [x] Applied control is **discrete pattern index** $a$ from **argmax**; replay stores **$a$** and **logits** $a_{\mathrm{logit}}$ for the critic.
 - [x] Target value uses **$Q_{\mathrm{target}}(s', \mu_{\mathrm{target}}(s'))$** with $(1-dw)$ masking.
 - [x] Critic **MSE** to bootstrap target; actor maximizes **$Q(s, \mu(s))$** with critic **frozen** during actor Adam step.
@@ -209,9 +231,9 @@ Pattern mode is **Python-plant only** (`DbsSpec.idbs` precomputed trace). Scalar
 
 ### 2. CNN actor–critic topology
 
-§III.B specifies a CNN with average pooling and linear heads but §IV.A.1 gives no channel counts, kernel sizes, or **shrink dimension**. **Fixed:** temporal CNN over biomarker state; critic fuses the same state with action logits. **Open:** layer shapes. **Decide in** `controllers/ddpg/` and document tensor geometry in code.
+Figure 3a/3b fix channel counts and fusion (TASK-146). **Fixed:** temporal CNN over biomarker state; critic **adds** 256-d state and action embeddings. **Config:** `DDPGConfig.conv1_out`, `conv2_out`, `fc_hidden`, `pool_kernel` (`controllers/ddpg/config.py`).
 
-**Implemented (`controllers/ddpg/networks.py`):** `Conv1d(1→16, k=3)` → `AdaptiveAvgPool1d(shrink_dim=4)` → `Conv1d(16→32, k=3)` → flatten → linear head; critic concatenates encoded state with action logits before MLP. `shrink_dim` and `conv_channels` are `DDPGConfig` fields.
+**Implemented (`controllers/ddpg/networks.py`):** Actor — `Conv1d(1→32)` → `AvgPool1d(2)` → `Conv1d(32→64)` → `AvgPool1d(2)` → flatten → `Linear→256` → `Linear→256` → logits. Critic — same state trunk; `Linear(n_actions→256)` action branch; **element-wise add**; `Linear→1`.
 
 ### 3. Discount, Polyak $\tau$, and update frequency
 

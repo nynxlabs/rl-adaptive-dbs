@@ -68,7 +68,7 @@ The reference drives DBS as a **current injected in STN** (`Idbs` passed to `CTX
 | **Integration step** $\Delta t$ | **0.01 ms** (`dt = 0.01`) | Mehregan §IV.A.1 reports **0.02 ms** for the computational plant |
 | **Default segment in reference script** | **2000 ms** (`tmax = 2000`) per call | RL **segment length** is set by the env or adapter (e.g. **2 s** Mehregan, **100 ms** Nguyen, **2 ms** SEA-DBS)—the plant integrates whatever duration the caller requests |
 
-**Implementation note:** For Mehregan-aligned replication, default plant config should use **$\Delta t = 0.02$ ms** unless released Mehregan training code specifies otherwise. If the bridge keeps the reference **0.01 ms** step, **document the deviation** and validate biomarker statistics ($P_\beta$, baseline traces) under the same protocols.
+**Implementation note:** For Mehregan-aligned replication, set **`plant.dt_ms: 0.02`** in `.rl-dbs.yaml` (or `uv run rl-dbs config set plant.dt 0.02`). `MehreganEnv` and `FixedMeanPatternAlphabet` inherit this grid from `PlantConfig` when constructed via `make_alphabet` / `PythonPlant(config=resolved.plant)`. If the bridge keeps the reference **0.01 ms** step, **document the deviation** and validate biomarker statistics ($P_\beta$, baseline traces) under the same protocols.
 
 **Episode / IC reset:** A new RL episode draws **new initial conditions** (reference: randomized membrane voltages per population, e.g. `v1 = -62 + randn(n,1)*5`). The plant `reset` (or equivalent) must support reproducible seeds for benchmarking.
 
