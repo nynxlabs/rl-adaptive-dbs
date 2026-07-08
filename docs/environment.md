@@ -88,6 +88,10 @@ where $P_j^{\mathrm{GPi}}$ is the **power spectral density** of the **action pot
 
 **Baselines in pattern mode:** Pattern 0 (regular train at `mean_hz`) replaces the old periodic-45Hz baseline. The 130 Hz cDBS and no-stimulation baselines are not representable in pattern mode (different mean frequency); use the scalar-frequency alphabet for those comparisons.
 
+**Pattern 0 semantics (TASK-105):** In fixed-mean pattern mode, **action 0 is active stimulation** — the regular periodic train at `mean_hz`, byte-identical to the paper's initialization target. It is **not** no-stimulation (that would be a different mean rate and has no pattern-space index). When reporting `dominant_action: 0` from pattern-mode training, read it as "regular 45 Hz train," not "off."
+
+**Reward landscape under Eq. (8) (TASK-105):** `scripts/pattern_reward_landscape.py` sweeps all 41 patterns with one RL step each from a common plant reset (`reset(seed)` then `step(action)`). On the Python plant (seed 0, `state_length=1`, Jul 2026), **pattern 0 ranks 1/41 on reward** (best); no irregular pattern beats pattern 0 on that single-step probe (`pattern0_reward≈0.56`, `reward_span≈3.0` across the alphabet). That matches DDPG collapsing to `dominant_action: 0` after v2 config fixes: the critic is learning the landscape, not mistaking pattern 0 for no-stim. Re-run after plant or reward changes; wall time is plant-bound (~15–30 min for 41 patterns on current hardware).
+
 ---
 
 ## 5. Timing and transitions
