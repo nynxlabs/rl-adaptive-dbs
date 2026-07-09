@@ -79,3 +79,26 @@ def test_tui_ascii_mode(capsys) -> None:
     code = tui_main(["--ascii", "--results-dir", str(FIXTURES)])
     assert code == 0
     assert "mehregan_eval_smoke" in capsys.readouterr().out
+
+
+def test_tui_defaults_to_monochrome(monkeypatch) -> None:
+    import os
+
+    from rl_adaptive_dbs.tui import configure_color, main as tui_main
+
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    configure_color(enabled=False)
+    assert os.environ.get("NO_COLOR") == "1"
+
+    tui_main(["--ascii", "--results-dir", str(FIXTURES)])
+    assert os.environ.get("NO_COLOR") == "1"
+
+
+def test_tui_color_flag_clears_no_color(monkeypatch) -> None:
+    import os
+
+    from rl_adaptive_dbs.tui import main as tui_main
+
+    monkeypatch.setenv("NO_COLOR", "1")
+    tui_main(["--color", "--ascii", "--results-dir", str(FIXTURES)])
+    assert "NO_COLOR" not in os.environ
