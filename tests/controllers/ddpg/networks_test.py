@@ -95,3 +95,15 @@ def test_actor_init_toward_action() -> None:
     assert torch.allclose(actor.head.weight, head_weight_before)
     assert torch.allclose(actor.encoder.conv1.weight, encoder_weight_before)
     assert head_weight_before.abs().sum().item() > 0.0
+
+
+def test_actor_init_toward_action_modest_logit_gap() -> None:
+    """TASK-173: bias-only init avoids ~35k instant greedy collapse (TASK-169)."""
+    torch.manual_seed(0)
+    actor = Actor(state_length=16, n_actions=41)
+    actor.init_toward_action(0, bias_scale=2.0)
+    logits = actor(torch.zeros(1, 16))[0]
+    top2 = torch.topk(logits.detach(), 2)
+    gap = (top2.values[0] - top2.values[1]).item()
+    assert gap < 100.0
+    assert int(torch.argmax(logits).item()) == 0
