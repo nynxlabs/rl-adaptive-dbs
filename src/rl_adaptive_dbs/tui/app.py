@@ -16,7 +16,9 @@ from rl_adaptive_dbs.tui.data import (
     suite_status_line,
     suite_table_rows,
 )
+from rl_adaptive_dbs.tui.reload import RESTART_EXIT_CODE
 from rl_adaptive_dbs.tui.training_data import (
+    TrainingRun,
     cycle_training_run_id,
     discover_training_runs,
     return_sparkline_data,
@@ -87,8 +89,38 @@ class TrainingPane(Static):
         table = self.query_one("#training-run-table", DataTable)
         table.add_columns("run", "seed", "episodes", "last_return")
         table.cursor_type = "row"
+        table.can_focus = True
+        self._cached_run_ids: tuple[str, ...] = ()
         self.set_interval(self.refresh_s, self.reload_data)
         self.reload_data()
+
+    def on_show(self) -> None:
+        if self._runs:
+            self.query_one("#training-run-table", DataTable).focus()
+
+    def _sync_cursor_to_active_run(self) -> None:
+        table = self.query_one("#training-run-table", DataTable)
+        for index, run_row in enumerate(self._runs):
+            if run_row.run_id == self._active_run_id:
+                table.move_cursor(row=index)
+                return
+
+    def _update_panels(self, run: TrainingRun) -> None:
+        status = self.query_one("#training-status", Static)
+        detail = self.query_one("#training-detail", Static)
+        progress = self.query_one("#training-progress", ProgressBar)
+        sparkline = self.query_one("#training-sparkline", Sparkline)
+        meta = self.query_one("#training-meta", Static)
+
+        status.update(training_status_line(run, self._runs))
+        detail.update(
+            f"episode return (last {min(len(run.episodes), 40)} episodes)"
+            if run.episodes
+            else "episode return"
+        )
+        progress.update(total=run.planned_episodes, progress=run.current_episode)
+        sparkline.data = return_sparkline_data(run)
+        meta.update("\n".join(training_metadata_lines(run)))
 
     def reload_data(self) -> None:
         self._runs = discover_training_runs(self.artifacts_dir)
@@ -113,6 +145,7 @@ class TrainingPane(Static):
             progress.display = False
             sparkline.display = False
             meta.update("")
+            self._cached_run_ids = ()
             return
 
         empty.display = False
@@ -124,43 +157,48 @@ class TrainingPane(Static):
             status.update(f"No training logs under {self.artifacts_dir}/")
             return
 
-        self._active_run_id = run.run_id
-        status.update(training_status_line(run, self._runs))
-        detail.update(
-            f"episode return (last {min(len(run.episodes), 40)} episodes)"
-            if run.episodes
-            else "episode return"
-        )
+        new_ids = tuple(item.run_id for item in self._runs)
+        table_has_focus = table.has_focus
+        if new_ids != self._cached_run_ids:
+            self._cached_run_ids = new_ids
+            table.clear()
+            for run_row in self._runs:
+                label, seed, episodes, last = run_selector_rows([run_row])[0]
+                table.add_row(label, seed, episodes, last, key=run_row.run_id)
+            if not table_has_focus:
+                self._sync_cursor_to_active_run()
+        else:
+            # Episode counts / last return may change while a run is in progress.
+            for index, run_row in enumerate(self._runs):
+                _, seed, episodes, last = run_selector_rows([run_row])[0]
+                row_key = table.get_row_at(index)
+                if row_key is not None:
+                    table.update_cell(row_key, "seed", seed)
+                    table.update_cell(row_key, "episodes", episodes)
+                    table.update_cell(row_key, "last_return", last)
 
-        table.clear()
-        active_row: int | None = None
-        for index, run_row in enumerate(self._runs):
-            label, seed, episodes, last = run_selector_rows([run_row])[0]
-            table.add_row(label, seed, episodes, last, key=run_row.run_id)
-            if run_row.run_id == run.run_id:
-                active_row = index
-        if active_row is not None:
-            table.move_cursor(row=active_row)
-
-        progress.update(total=run.planned_episodes, progress=run.current_episode)
-        sparkline.data = return_sparkline_data(run)
-        meta.update("\n".join(training_metadata_lines(run)))
+        self._update_panels(run)
 
     def action_prev_run(self) -> None:
         self._active_run_id = cycle_training_run_id(self._runs, self._active_run_id, -1)
         self.reload_data()
+        self._sync_cursor_to_active_run()
 
     def action_next_run(self) -> None:
         self._active_run_id = cycle_training_run_id(self._runs, self._active_run_id, 1)
         self.reload_data()
+        self._sync_cursor_to_active_run()
 
     def _select_run_from_table(self, row_key) -> None:
         if row_key is None:
             return
         run_id = str(row_key.value)
-        if run_id != self._active_run_id:
-            self._active_run_id = run_id
-            self.reload_data()
+        if run_id == self._active_run_id:
+            return
+        self._active_run_id = run_id
+        run = select_training_run(self._runs, run_id)
+        if run is not None:
+            self._update_panels(run)
 
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         if event.data_table.id != "training-run-table":
@@ -220,8 +258,14 @@ class BenchmarksPane(Static):
             "reward_sum",
             "run_id",
         )
+        table.cursor_type = "row"
+        table.can_focus = True
         self.set_interval(self.refresh_s, self.reload_data)
         self.reload_data()
+
+    def on_show(self) -> None:
+        if self._suites:
+            self.query_one("#benchmark-table", DataTable).focus()
 
     def reload_data(self) -> None:
         self._suites = refresh_suites(self.results_dir)
@@ -266,6 +310,12 @@ class RlDbsTuiApp(App):
     TabbedContent {
         height: 1fr;
     }
+    TabbedContent Tabs {
+        height: 1;
+    }
+    TabbedContent Underline {
+        display: none;
+    }
     .placeholder {
         padding: 1 2;
         color: $text-muted;
@@ -275,6 +325,7 @@ class RlDbsTuiApp(App):
     BINDINGS = [
         Binding("q", "quit", "Quit"),
         Binding("r", "refresh", "Refresh"),
+        Binding("ctrl+r", "restart", "Restart"),
         Binding("/", "filter", "Filter", show=True),
         Binding("escape", "clear_filter", "Clear filter"),
         Binding("[", "prev_item", "Prev", show=False),
@@ -338,9 +389,13 @@ class RlDbsTuiApp(App):
         if tab == "tab-training":
             self._training_pane().action_next_run()
 
+    def action_restart(self) -> None:
+        self.exit(RESTART_EXIT_CODE)
+
     def action_help(self) -> None:
         self.notify(
-            "Tab: tabs  [/]: run (Training)  /: filter (Benchmarks)  r: refresh  q: quit",
+            "Tab: tabs  ↑↓: row  [ and ]: run (Training)  /: filter (Benchmarks)"
+            "  r: refresh  Ctrl+R: restart  q: quit",
             title="rl-dbs-tui",
             timeout=5,
         )

@@ -7,18 +7,18 @@ Contributor rules for **rl-adaptive-dbs** — layout, spec-driven workflow, and 
 ## Spec-driven changes
 
 1. Read the relevant spec before non-trivial implementation.
-2. Code under `envs/` or `controllers/<name>/`.
+2. Code under `src/envs/` or `src/controllers/<name>/`.
 3. Update the spec in the **same change** if behavior or interfaces change.
 4. Resolve “intentionally open” items in spec or code—not only in issues or chat.
 
 | Layer | Spec path | Code path |
 |-------|-----------|-----------|
-| Plant | [plant.md](../plant.md) | `envs/` (dynamics backend) |
-| Environment (Mehregan API) | [environment.md](../environment.md) | `envs/` |
-| Controller | [controllers/ddpg/replication.md](../controllers/ddpg/replication.md), [controllers/snn/replication.md](../controllers/snn/replication.md), [controllers/sea_dbs/replication.md](../controllers/sea_dbs/replication.md) | `controllers/<name>/` |
-| Benchmarks | [benchmarking.md](../benchmarking.md) | `benchmarks/` + `rl-dbs benchmark` |
+| Plant | [plant.md](../plant.md) | `src/envs/` (dynamics backend) |
+| Environment (Mehregan API) | [environment.md](../environment.md) | `src/envs/` |
+| Controller | [controllers/ddpg/replication.md](../controllers/ddpg/replication.md), [controllers/snn/replication.md](../controllers/snn/replication.md), [controllers/sea_dbs/replication.md](../controllers/sea_dbs/replication.md) | `src/controllers/<name>/` |
+| Benchmarks | [benchmarking.md](../benchmarking.md) | `src/benchmarks/` + `rl-dbs benchmark` |
 | CLI | [cli.md](../cli.md) | `rl_adaptive_dbs.cli` (Phase 4 start) |
-| User config | [cli.md](../cli.md) §2.3, §5.6 | `rl_adaptive_dbs/user_config.py`, `env_factory.py` |
+| User config | [cli.md](../cli.md) §2.3, §5.6 | `src/rl_adaptive_dbs/user_config.py`, `env_factory.py` |
 | TUI | [tui.md](../tui.md) | `rl_adaptive_dbs.tui` (Phase 4 start) |
 
 ## Naming and layout
@@ -40,7 +40,7 @@ Contributor rules for **rl-adaptive-dbs** — layout, spec-driven workflow, and 
 
 ## Controllers vs environment
 
-- **One plant** for all controllers; variants do not fork `envs/`.
+- **One plant** for all controllers; variants do not fork `src/envs/`.
 - Paper-specific observation/action mismatches → **adapter** in `controllers/<name>/`.
 - Do not duplicate plant dynamics inside controller packages.
 

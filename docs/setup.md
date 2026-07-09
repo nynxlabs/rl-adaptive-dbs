@@ -168,15 +168,16 @@ uv run pytest -m "not matlab"                                   # fast CI subset
 
 ```
 rl-adaptive-dbs/
-├── envs/                    # Plant bridge (`envs/plant/`) + Mehregan env (`envs/mehregan/`)
-├── controllers/
-│   ├── ddpg/                # Mehregan et al.
-│   ├── snn/                 # Nguyen et al.
-│   └── sea_dbs/             # Ravivarapu et al.
-├── benchmarks/              # Suite runner (YAML → results/)
+├── src/
+│   ├── envs/                # Plant bridge (`envs/plant/`) + Mehregan env (`envs/mehregan/`)
+│   ├── controllers/
+│   │   ├── ddpg/            # Mehregan et al.
+│   │   ├── snn/             # Nguyen et al.
+│   │   └── sea_dbs/         # Ravivarapu et al.
+│   ├── benchmarks/          # Suite runner (YAML → results/)
+│   └── rl_adaptive_dbs/     # CLI + TUI entry points
 ├── suites/                  # Benchmark manifests (e.g. mehregan_eval.yaml)
-├── rl_adaptive_dbs/         # CLI + TUI entry points
-├── tests/                   # pytest (mirrors envs/, controllers/, benchmarks/)
+├── tests/                   # pytest (mirrors src/envs/, src/controllers/, …)
 ├── docs/                    # Guides and specs (this file: setup.md)
 ├── reference-material/      # Kumaravelu et al. (2016) MATLAB model
 ├── scripts/
@@ -191,13 +192,15 @@ rl-adaptive-dbs/
 
 **Imports** (after `uv sync`):
 
+Package code lives under **`src/`** (src layout); import names are unchanged:
+
 ```python
 import envs
 from envs.plant import DbsSpec, MatlabPlant   # MATLAB bridge (Phase 2)
 from controllers import ddpg   # also: snn, sea_dbs
 ```
 
-Distribution name in metadata: `rl-adaptive-dbs`. Import paths use underscores and match folder names.
+Distribution name in metadata: `rl-adaptive-dbs`. Import paths use underscores and match package names inside `src/`.
 
 ---
 
@@ -261,7 +264,7 @@ Commit `pyproject.toml` and `uv.lock` together after dependency changes.
 Typical flow (details in [development/conventions.md](development/conventions.md), phases in [development/roadmap.md](development/roadmap.md)):
 
 1. **Read the spec** for what you are touching ([environment.md](environment.md) or `docs/controllers/<name>/replication.md`).
-2. **Edit code** in `envs/` or `controllers/<name>/`.
+2. **Edit code** in `src/envs/` or `src/controllers/<name>/`.
 3. **Run checks** — `uv run pytest` ([development/testing.md](development/testing.md)).
 4. **Update the spec** in the same PR/commit if behavior or the public API changed.
 5. **Benchmark** (Phase 4) — `uv run rl-dbs benchmark --suite-name mehregan_eval_smoke` (quick) or full `mehregan_eval`; `uv run rl-dbs summary` for tables; `uv run rl-dbs-tui` to browse. Ad hoc: `rl-dbs train` / `eval` or `scripts/replicate_mehregan_ddpg.py`.
@@ -270,13 +273,13 @@ Typical flow (details in [development/conventions.md](development/conventions.md
 
 **Shared environment**
 
-- Implement under `envs/` following [environment.md](environment.md).
+- Implement under `src/envs/` following [environment.md](environment.md).
 - Keep Kumaravelu equivalence in mind when changing dynamics or $P_\beta$.
 - Controllers consume the env API; they should not reimplement the plant.
 
 **New or updated controller**
 
-- Code: `controllers/<name>/`
+- Code: `src/controllers/<name>/`
 - Spec: `docs/controllers/<name>/replication.md` (add if missing; optional `extensions.md` for post-replication work).
 - If the paper’s obs/action space differs from the shared env, add an **adapter** in that package.
 
