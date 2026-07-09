@@ -20,7 +20,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--artifacts-dir",
         type=Path,
         default=Path("artifacts"),
-        help="Training artifacts root (reserved for future tabs)",
+        help="Training artifacts root (default: artifacts/)",
     )
     parser.add_argument(
         "--refresh",
@@ -67,7 +67,11 @@ def main(argv: list[str] | None = None) -> int:
 
     from rl_adaptive_dbs.tui.app import RlDbsTuiApp
 
-    app = RlDbsTuiApp(args.results_dir, refresh_s=args.refresh)
+    app = RlDbsTuiApp(
+        args.results_dir,
+        artifacts_dir=args.artifacts_dir,
+        refresh_s=args.refresh,
+    )
     app.run()
     return 0
 

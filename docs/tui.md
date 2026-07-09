@@ -189,6 +189,8 @@ When a filter prompt is open, other keys route to the prompt until `Esc` or `Ent
 | `results/.../timeseries/*.json` | Optional | Arrays `{ "t": float, "p_beta": float, ... }` |
 | `artifacts/.../train_log.jsonl` | Optional | One JSON object per line: `episode`, `return`, `loss`, `timestamp` |
 
+**Training tab (implemented):** also reads script-style **JSON episode arrays** (`[{ "episode", "reward", ... }]`) and **stdout `.log` captures** (`episode N/M, reward: …`). When both exist for the same run stem, **JSON/JSONL wins** over `.log`.
+
 Invalid JSON: show row-level error badge; do not crash the TUI.
 
 ---
@@ -258,7 +260,7 @@ Invalid JSON: show row-level error badge; do not crash the TUI.
 | Fixture `results/` tree + loader unit tests | 4 | Done (`tests/fixtures/benchmark_results/`) |
 | Benchmarks tab only | 4 | Done (Textual) |
 | Eval tab + timeseries sparklines | 5–6 | Not started |
-| Training tab + artifacts watcher | 8+ | Not started |
+| Training tab + artifacts watcher | 8+ | Done (Textual; JSONL, JSON array, `.log`) |
 | Logs tab + bookmarks | 8+ | Not started |
 
 ---

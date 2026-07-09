@@ -1,0 +1,3 @@
+{"episode": 1, "return": -12.5, "loss": 0.42, "timestamp": 1783532400.0}
+{"episode": 2, "return": -8.1, "loss": 0.31, "timestamp": 1783532500.0}
+{"episode": 3, "return": -5.4, "loss": 0.22, "timestamp": 1783532600.0, "total_episodes": 10}
