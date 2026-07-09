@@ -39,7 +39,19 @@ where $P_j^{\mathrm{GPi}}$ is the **power spectral density** of the **action pot
 - **Algorithm 1** in the paper: at each RL step, form state **s** from **$P_\beta$** (after running the plant for the step duration).
 - For the **computational experiments** in §IV.A.1, the **biomarker window** for $P_\\beta$ is described as spanning the **full length of the simulation segment** used for that step (see §5).
 
-**Implementation (Jul 2026, TASK-67):** The paper's "window spanning the full simulation segment" means **`state_length=1`** — a single $P_\\beta$ value computed over the 2 s step. This is **not** a multi-step history window. With `state_length > 1` (e.g. 15), only the most recent element changes per step while the rest are stale history, causing the CNN to see near-identical states and collapse to a constant policy. **Use `state_length=1` as default.**
+**Implementation (TASK-158 / TASK-162, Jul 2026 — paper-real interpretation II):** The CNN input is a **within-step temporal series** of length $L$ (`state_length`), **not** a rolling deque of past whole-step scalars. Each RL step of duration $l = 2\,\mathrm{s}$ is chopped into $L$ equal sub-intervals; **$P_\beta$ (Eq. 1, 13–35 Hz)** is computed independently in each sub-window and normalized to $s(i) = P_{\beta,i} / 1000$. **Default:** `state_mode=within_step`, `state_length=16` (two stride-2 average pools yield length $16 \to 8 \to 4$, activating Fig. 3a pooling).
+
+**Reward Eq. (8) (TASK-162):** Mehregan §IV.A.1 sets the biomarker window to the **full simulation segment** (2 s). **Default:** `reward_state_mode=full_segment` — $s_{\mathrm{sum}}$ uses the **whole-step** scalar $P_\beta$ for reward only; the CNN still sees the $L$-length within-step series. Legacy `reward_state_mode=observation_mean` (mean of CNN inputs) collapses the 30 Hz pattern landscape and caused TASK-159 failure.
+
+| Mode | Config | Meaning |
+|------|--------|---------|
+| **`within_step`** (paper path) | `state_mode=within_step`, `state_length=L` | $L$ biomarker samples **inside** the current 2 s segment |
+| **`multi_step_history`** (extension) | `state_mode=multi_step_history`, `state_length=N` | Rolling deque of $N$ past **whole-step** scalar $P_\beta$ values (TASK-67 collapse mode — not paper-default) |
+| **Scalar shortcut** | `within_step`, `state_length=1` | Single $P_\beta$ over the full 2 s segment (pools skipped; backward-compatible) |
+| **Reward: full segment** | `reward_state_mode=full_segment` (default) | Eq. (8) $s_{\mathrm{sum}}$ from whole-step $P_\beta$; CNN obs may still be within-step $L>1$ |
+| **Reward: observation mean** | `reward_state_mode=observation_mean` | Legacy — $s_{\mathrm{sum}} = \mathrm{mean}(\mathrm{obs})$; collapses 30 Hz landscape at $L=16$ |
+
+**Deprecated for paper replication:** `multi_step_history` with `state_length > 1` — only the newest element changes per step, so the CNN sees near-identical states and collapses to a constant policy (TASK-67).
 
 **Optional context (not used as the main RL input in this study):** **Error index (EI)** for thalamic reliability (paper Equation (2)) appears in §II.B for background and comparison with prior work; the **stated RL objective** uses **$P_\beta$ alone**.
 
@@ -92,7 +104,7 @@ where $P_j^{\mathrm{GPi}}$ is the **power spectral density** of the **action pot
 
 **Pattern 0 semantics (TASK-105):** In fixed-mean pattern mode, **action 0 is active stimulation** — the regular periodic train at `mean_hz`, byte-identical to the paper's initialization target. It is **not** no-stimulation (that would be a different mean rate and has no pattern-space index). When reporting `dominant_action: 0` from pattern-mode training, read it as "regular 45 Hz train," not "off."
 
-**Reward landscape under Eq. (8) (TASK-105):** `scripts/pattern_reward_landscape.py` sweeps all 41 patterns with one RL step each from a common plant reset (`reset(seed)` then `step(action)`). On the Python plant (seed 0, `state_length=1`, Jul 2026), **pattern 0 ranks 1/41 on reward** (best); no irregular pattern beats pattern 0 on that single-step probe (`pattern0_reward≈0.56`, `reward_span≈3.0` across the alphabet). That matches DDPG collapsing to `dominant_action: 0` after v2 config fixes: the critic is learning the landscape, not mistaking pattern 0 for no-stim. Re-run after plant or reward changes; wall time is plant-bound (~15–30 min for 41 patterns on current hardware).
+**Reward landscape under Eq. (8) (TASK-105 / TASK-156):** `scripts/pattern_reward_landscape.py` (and `scripts/run_q6_landscape.py` for paper-aligned `plant.dt_ms=0.02`) sweeps all 41 patterns with one RL step each from a common plant reset (`reset(seed)` then `step(action)`). Results are **mean-rate dependent** (TASK-156): at **45 Hz** (seed 0, `state_length=1`, `dt_ms=0.02`), pattern 0 ranks **1/41**; at **30 Hz** pattern 0 ranks **41/41** and multiple irregular patterns beat it on both 1-step and 30-step constant-policy rollouts — consistent with Mehregan Fig. 5b (periodic 30 Hz elevates beta; irregular patterns can do better). Re-run after plant or reward changes; wall time is plant-bound (~15–25 min per mean rate on current hardware). Canonical Q6 artifacts: `artifacts/ddpg/q6_landscape_*.json`.
 
 ---
 

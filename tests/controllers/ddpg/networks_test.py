@@ -81,7 +81,17 @@ def test_cnn_flat_dim_state_length_15() -> None:
 
 
 def test_actor_init_toward_action() -> None:
+    """Init nudges logits via head bias only; CNN/head weights stay at PyTorch defaults."""
+    torch.manual_seed(0)
     actor = Actor(state_length=1, n_actions=41)
-    actor.init_toward_action(10)
-    logits = actor(torch.zeros(1, 1))
-    assert int(torch.argmax(logits).item()) == 10
+    head_weight_before = actor.head.weight.detach().clone()
+    encoder_weight_before = actor.encoder.conv1.weight.detach().clone()
+
+    actor.init_toward_action(10, bias_scale=2.0)
+
+    assert actor.head.bias[10].item() == 2.0
+    other_bias = torch.cat([actor.head.bias[:10], actor.head.bias[11:]])
+    assert torch.all(other_bias == 0.0)
+    assert torch.allclose(actor.head.weight, head_weight_before)
+    assert torch.allclose(actor.encoder.conv1.weight, encoder_weight_before)
+    assert head_weight_before.abs().sum().item() > 0.0

@@ -36,12 +36,12 @@ The paper frames the method as **Deep Deterministic Policy Gradient (DDPG)** wit
 
 ### 3.2 Actor $\mu(s \mid \theta_\mu)$
 
-- **Input:** State $s$ formed from the biomarker trajectory (paper §III.B: **CNN** suited to temporal $P_\beta$ structure). For the computational study, the biomarker **window matches the full simulation segment** per step ([environment.md](../../environment.md) §3.2, §5).
+- **Input:** State $s$ formed from the **within-step** biomarker trajectory (paper §III.B: **CNN** over temporal $P_\beta$ structure inside each 2 s segment). For the computational study, the biomarker **window matches the full simulation segment** per step — implemented as $L$ equal sub-window $P_\beta$ samples, not a deque of past steps ([environment.md](../../environment.md) §3.2, §5).
 - **Backbone (Figure 3a, TASK-146):** Two `Conv1d` blocks with **average pooling** and two **256-unit** ReLU fully-connected layers before the logit head.
 
 | Layer | Shape / op |
 |-------|------------|
-| Input | $(B, L)$ biomarker window, $L =$ `state_length` |
+| Input | $(B, L)$ within-step biomarker series, $L =$ `state_length` |
 | `Conv1d` | $1 \to 32$, $k=3$, pad 1, ReLU |
 | `AvgPool1d` | kernel 2, stride 2 (skipped when temporal length $\le 1$) |
 | `Conv1d` | $32 \to 64$, $k=3$, pad 1, ReLU |
@@ -91,7 +91,7 @@ For each environment step of duration $l$:
 
 1. **Select action:** $u \leftarrow \mu(s \mid \theta_\mu)$ (forward pass yields logits; **greedy** softmax + argmax selects discrete pattern $a$ applied to STN at **evaluation**). During **training**, the implementation supports two exploration modes (`DDPGConfig.exploration_mode`):
    - **`epsilon` (default):** $\epsilon$-greedy — with probability $\epsilon_t$ sample a uniform random pattern, else argmax on logits. $\epsilon_t$ linearly decays from **0.5** to **0.1** over the full training schedule.
-   - **`softmax`:** sample from $\mathrm{Categorical}(\mathrm{softmax}(\mathrm{logits}/\tau_t))$ with temperature $\tau_t$ linearly annealed from **2.0** to **0.5**.
+   - **`softmax`:** sample from $\mathrm{Categorical}(\mathrm{softmax}(\mathrm{logits}/\tau_t))$ with temperature $\tau_t$ linearly annealed from **2.0** to **0.5** (default). **TASK-170** uses constant $\tau=1.0$ (`exploration_temperature_start=exploration_temperature_end=1.0`) for the decoupled-reward 30 Hz retrain — paper silent on $\tau$; no annealing until ablation data justify it.
    Replay stores the actor logits $a_{\mathrm{logit}}$ from the forward pass (not the random/sampled override). The paper does not specify online exploration; these conventions break constant-policy collapse when `state_length > 1` (TASK-67).
    - **Exploration vs greedy (TASK-67 finding):** Exploration **does not help** with this reward landscape. The reward range across all 41 actions is only ~1.13 (~0.03 per adjacent action pair). Exploration noise (epsilon/softmax) adds variance that **drowns out** the weak reward signal, causing the critic to learn a flat Q-landscape and the actor to collapse to a constant action. The paper's **greedy argmax** approach concentrates data around the current policy's actions, giving the critic a clearer (though still weak) signal. Additional exploration knobs (`logit_noise_std`, `entropy_coeff`, `random_warmup_steps`, `obs_normalize`) are implemented in `DDPGConfig` but do not resolve the collapse — the bottleneck is the reward signal strength, not the exploration strategy.
 
@@ -143,7 +143,7 @@ $$
 ### 4.4 Episode schedule
 
 - **30** steps per episode, **10** training episodes for the reported computational run ([environment.md](../../environment.md) §5, §8).
-- **Policy initialization:** Regular pulses at **mean** frequency **45 Hz** for the main experiment; **30 Hz** variant with other hyperparameters unchanged (paper §IV.A.1–2).
+- **Policy initialization:** Regular pulses at **mean** frequency **45 Hz** for the main experiment; **30 Hz** variant with other hyperparameters unchanged (paper §IV.A.1–2). Implementation: `Actor.init_toward_action` maps the init baseline to a pattern index and sets `head.bias[index] = init_bias_scale` (default **2.0**) with other head biases zeroed; **encoder and head weights keep PyTorch default init** (do not zero — TASK-173).
 
 ### 4.5 Output artifact
 

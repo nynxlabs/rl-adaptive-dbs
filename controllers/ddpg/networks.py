@@ -104,15 +104,20 @@ class Actor(nn.Module):
 
     @staticmethod
     def select_action(logits: Tensor) -> tuple[Tensor, Tensor]:
-        """Softmax + argmax; returns ``(action_index, logits)``."""
+        """Greedy argmax on logits; returns ``(action_index, logits)``."""
         action = torch.argmax(logits, dim=-1)
         return action, logits
 
     def init_toward_action(self, action_index: int, *, bias_scale: float = 2.0) -> None:
-        """Bias logits toward ``action_index`` (45 Hz / 30 Hz init experiments)."""
+        """Bias logits toward ``action_index`` (45 Hz / 30 Hz init experiments).
+
+        Paper §IV.A.1: initialize with regular pulses at mean frequency. We keep
+        default PyTorch encoder and head weights and add a modest positive bias on
+        the periodic pattern index only — zeroing weights caused instant argmax
+        collapse (TASK-169 / TASK-173).
+        """
         with torch.no_grad():
             self.head.bias.zero_()
-            self.head.weight.zero_()
             self.head.bias[action_index] = bias_scale
 
 
