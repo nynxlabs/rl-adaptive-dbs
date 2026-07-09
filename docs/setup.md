@@ -238,7 +238,7 @@ uv run rl-dbs summary --results-dir results/ --csv results/summary.csv
 uv run rl-dbs train --controller ddpg --variant paper --seeds 0 --dry-run
 uv run rl-dbs eval --controller baseline --variant cdbs-130hz --seeds 0
 
-# Browse results (Textual TUI — Benchmarks tab; or ASCII fallback)
+# Browse results (Textual TUI — Benchmarks tab; monochrome by default; `--color` to enable theme)
 uv run rl-dbs-tui --results-dir results/
 uv run rl-dbs-tui --ascii --results-dir results/
 

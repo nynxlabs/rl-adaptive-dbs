@@ -1,0 +1,14 @@
+[
+  {
+    "episode": 1,
+    "reward": -176.49,
+    "steps": 30,
+    "timestamp": 1783532472.86
+  },
+  {
+    "episode": 2,
+    "reward": -114.88,
+    "steps": 30,
+    "timestamp": 1783532560.15
+  }
+]
