@@ -99,6 +99,8 @@ Repo scripts under `scripts/` that import NumPy at module load should be launche
 uv run python -m rl_adaptive_dbs.run --max-threads 3 scripts/run_task177_continuous_freq_probe.py --continuous-only
 ```
 
+Long plant-heavy probes support **`--resume`** (load partial JSON, skip completed actions) and incremental checkpoint writes. Ops notes for the continuous freq probe live locally at `wilzen3476/tasks/task177-continuous-freq-probe.md` (gitignored). Pattern also used by `scripts/run_task177_pattern_alphabet_sweep.py` (`--resume` skips completed experiments).
+
 Scripts using `scripts/train_runtime_guard.run_main` also honor `--max-threads` / `RL_DBS_MAX_THREADS` when passed on the command line (best-effort if NumPy was already imported). Prefer the runner for plant-heavy probes.
 
 ---
