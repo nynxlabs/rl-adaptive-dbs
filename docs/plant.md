@@ -146,6 +146,8 @@ MATLAB vendor args and return packing: [kumaravelu_vendor_patches.md](reference-
 
 **Biomarkers (implemented):** `envs.plant.biomarkers.p_beta` — multitaper GPi PSD (Chronux-style; Kumaravelu `Fs` / tapers), **13–35 Hz** per-neuron integral then mean (Mehregan Eq. (1)). `MatlabPlant.integrate` sets `IntegrateResult.p_beta`.
 
+**Short-segment guard (2026-07-09):** Within-step CNN state (`state_length > 1`) calls `p_beta_subwindows`, which evaluates Eq. (1) on equal sub-intervals of each 2 s RL step. When a subwindow’s time grid is too short for SciPy `dpss` (needs $0 < K < M$ and $NW < M/2$), `multitaper_psd_point_process` clamps the taper count and returns **zero band power** instead of raising. This avoids probe/training crashes on sparse spike trains; full-segment $P_\beta$ on 2 s segments is unchanged.
+
 **Mehregan Gym (implemented):** `envs.mehregan.MehreganEnv` — see [environment.md](environment.md); baselines via `run_baseline_rollout`.
 
 ### Target surface
@@ -172,6 +174,31 @@ Before trusting the Python/MATLAB bridge for training:
 **PythonPlant status (2026-07-03):** Gates (1)–(2) pass for seeds with exported init fixtures (`plant_init_seed{N}.npz`). Spike times match on the shared **0.01 ms** grid (0 ms atol); $P_\beta$ relative error **< 1%**. Cross-backend suite: `tests/envs/plant_backend_equivalence_test.py`. **≥10×** speedup vs MATLAB on 2 s integrate is met via Numba JIT; default-backend flip awaits `mehregan_eval` baseline on Python ([native-plant-port.md](development/native-plant-port.md) §5).
 
 Mark heavy checks `@pytest.mark.matlab` ([development/testing.md](development/testing.md)). CI defaults should skip MATLAB.
+
+### 8.1 Mehregan Figure 1b (GPi PSD panel)
+
+**Status (2026-07-09):** Qualitative replication of Mehregan et al. Fig. 1b — mean GPi multitaper PSD for **healthy control** (`pd=0`), **PD no treatment** (`pd=1`, no DBS), and **PD 130 Hz treatment** (`pd=1`, 130 Hz STN cDBS).
+
+| Item | Convention |
+|------|------------|
+| **Script** | `scripts/plot_fig1b_gpi_psd.py` |
+| **Backend** | `PythonPlant` (default) |
+| **Segment** | 10 s simulated time per seed |
+| **Seeds** | `0–9` mean (matches eval seed set); use `--seeds` to override |
+| **PSD** | Chronux-style multitaper, `fpass` **1–100 Hz** (`SpectrumParams`); plot axis **1–50 Hz** |
+| **Neurons** | Mean PSD across **10** GPi neurons per seed, then mean across seeds |
+| **Cache** | `artifacts/fig1b_gpi_psd_curves.json` — use `--plot-only` to restyle without re-simulating |
+| **Index** | [current-figures.md](../current-figures.md); vault PNG under `figures/fig1b_gpi_psd.png` |
+
+**Qualitative gate:** mean $P_\beta$ (13–35 Hz) orders **PD > healthy** and **130 Hz cDBS < PD** across seeds 0–9 (2026-07-09). Paper does not fix segment length or seed averaging; document choices in results.
+
+```bash
+# Full run (~25 min): simulate + plot + write curves cache
+uv run python scripts/plot_fig1b_gpi_psd.py
+
+# Restyle only (~1 s): labels, axes, y-max
+uv run python scripts/plot_fig1b_gpi_psd.py --plot-only
+```
 
 ---
 
@@ -209,7 +236,7 @@ Reference uses specific `Fs`, `fpass`, and tapers. **Open:** whether adapters ma
 
 ### 4. Healthy vs parkinsonian eval
 
-**Fixed:** training targets **parkinsonian** (`pd = 1`). **Open:** whether benchmarks include `pd = 0` controls. **Decide in** suite manifests.
+**Fixed:** training targets **parkinsonian** (`pd = 1`). **Fig. 1b** includes `pd = 0` healthy controls via `scripts/plot_fig1b_gpi_psd.py` ([§8.1](#81-mehregan-figure-1b-gpi-psd-panel)). **Open:** whether benchmark suites include `pd = 0` controls. **Decide in** suite manifests.
 
 ---
 

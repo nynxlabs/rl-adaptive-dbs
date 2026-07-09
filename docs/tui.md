@@ -1,6 +1,6 @@
 # Terminal user interface specification
 
-This document defines the **`rl-dbs-tui`** terminal UI: monitor training, browse benchmark results, inspect rollouts, and tail logs—**without** a background server. **Phase 4** starts implementation: results loader + **Benchmarks** tab over `results/` from `rl-dbs benchmark` ([cli.md](cli.md), [benchmarking.md](benchmarking.md)). Training monitor, eval drill-down, and logs tabs land in later phases ([development/roadmap.md](development/roadmap.md)).
+This document defines the **`rl-dbs-tui`** terminal UI: monitor training, browse benchmark results, inspect rollouts, and tail logs—**without** a background server. All four tabs are implemented in Textual: **Training**, **Eval**, **Benchmarks**, and **Logs** over `artifacts/` and `results/` from `rl-dbs train`, `rl-dbs eval`, and `rl-dbs benchmark` ([cli.md](cli.md), [benchmarking.md](benchmarking.md)).
 
 **Related specs:** [cli.md](cli.md) (commands and output paths), [benchmarking.md](benchmarking.md) (results layout, metrics), [environment.md](environment.md) ($P_\beta$, eval protocol), [plant.md](plant.md) (biomarker bands).
 
@@ -139,9 +139,10 @@ Cross-paper warning when `reward_sum` is not comparable (banner referencing [ben
 
 | Element | Behavior |
 |---------|----------|
-| **File list** | JSONL and plain logs under `results/`, `artifacts/`, user bookmarks. |
-| **View** | Last *K* lines (default **200**), auto-scroll until user scrolls up. |
-| **Level colors** | `ERROR` red, `WARNING` yellow, `INFO` default (when color enabled). |
+| **File list** | JSONL and plain logs under `results/`, `artifacts/`, user bookmarks. Full-width table (like Training) when no log is open. |
+| **Open** | Highlight with ↑↓; **Enter** opens a full-screen tail view. |
+| **View** | Last *K* lines (default **200**); scroll ↑↓←→ and PgUp/PgDn (focus stays on the Logs pane); **Esc** returns to the file list. |
+| **Level colors** | Not shown in the tail viewer (plain text); level coloring remains a future enhancement. |
 
 ---
 
@@ -262,9 +263,9 @@ Invalid JSON: show row-level error badge; do not crash the TUI.
 | Spec (this document) | 1 | Done |
 | Fixture `results/` tree + loader unit tests | 4 | Done (`tests/fixtures/benchmark_results/`) |
 | Benchmarks tab only | 4 | Done (Textual) |
-| Eval tab + timeseries sparklines | 5–6 | Not started |
+| Eval tab + timeseries sparklines | 5–6 | Done (run picker, summary, P_beta sparkline; Enter from Benchmarks) |
 | Training tab + artifacts watcher | 8+ | Done (Textual; JSONL, JSON array, `.log`) |
-| Logs tab + bookmarks | 8+ | Not started |
+| Logs tab + bookmarks | 8+ | Done (file list, tail, filter, bookmarks) |
 
 ---
 
@@ -303,4 +304,4 @@ Invalid JSON: show row-level error badge; do not crash the TUI.
 
 ### 6. Detail drill-down
 
-**Fixed:** `Enter` opens Eval-style series. **Open:** separate modal vs tab switch. **Decide in** UI implementation.
+**Fixed:** `Enter` on a Benchmarks row switches to the **Eval** tab with that run selected (not a modal).
