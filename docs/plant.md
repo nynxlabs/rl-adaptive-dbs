@@ -181,23 +181,24 @@ Mark heavy checks `@pytest.mark.matlab` ([development/testing.md](development/te
 
 | Item | Convention |
 |------|------------|
-| **Script** | `scripts/plot_fig1b_gpi_psd.py` |
+| **Script** | `scripts/figures/papers/1/1b/plot.py` |
+| **Artifacts** | `artifacts/figures/papers/1/1b/` (`gpi_psd.png`, `curves.json`, `manifest.json`) |
 | **Backend** | `PythonPlant` (default) |
 | **Segment** | 10 s simulated time per seed |
 | **Seeds** | `0–9` mean (matches eval seed set); use `--seeds` to override |
 | **PSD** | Chronux-style multitaper, `fpass` **1–100 Hz** (`SpectrumParams`); plot axis **1–50 Hz** |
 | **Neurons** | Mean PSD across **10** GPi neurons per seed, then mean across seeds |
-| **Cache** | `artifacts/fig1b_gpi_psd_curves.json` — use `--plot-only` to restyle without re-simulating |
+| **Cache** | `artifacts/figures/papers/1/1b/curves.json` — use `--plot-only` to restyle without re-simulating |
 | **Index** | [current-figures.md](../current-figures.md); vault PNG under `figures/fig1b_gpi_psd.png` |
 
 **Qualitative gate:** mean $P_\beta$ (13–35 Hz) orders **PD > healthy** and **130 Hz cDBS < PD** across seeds 0–9 (2026-07-09). Paper does not fix segment length or seed averaging; document choices in results.
 
 ```bash
 # Full run (~25 min): simulate + plot + write curves cache
-uv run python scripts/plot_fig1b_gpi_psd.py
+uv run python scripts/figures/papers/1/1b/plot.py
 
 # Restyle only (~1 s): labels, axes, y-max
-uv run python scripts/plot_fig1b_gpi_psd.py --plot-only
+uv run python scripts/figures/papers/1/1b/plot.py --plot-only
 ```
 
 ---
@@ -236,7 +237,7 @@ Reference uses specific `Fs`, `fpass`, and tapers. **Open:** whether adapters ma
 
 ### 4. Healthy vs parkinsonian eval
 
-**Fixed:** training targets **parkinsonian** (`pd = 1`). **Fig. 1b** includes `pd = 0` healthy controls via `scripts/plot_fig1b_gpi_psd.py` ([§8.1](#81-mehregan-figure-1b-gpi-psd-panel)). **Open:** whether benchmark suites include `pd = 0` controls. **Decide in** suite manifests.
+**Fixed:** training targets **parkinsonian** (`pd = 1`). **Fig. 1b** includes `pd = 0` healthy controls via `scripts/figures/papers/1/1b/plot.py` ([§8.1](#81-mehregan-figure-1b-gpi-psd-panel)). **Open:** whether benchmark suites include `pd = 0` controls. **Decide in** suite manifests.
 
 ---
 
