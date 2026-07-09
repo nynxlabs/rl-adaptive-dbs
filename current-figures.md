@@ -18,9 +18,8 @@ Working copies of paper figure replications for this effort. Source PNGs live un
 | **Legend** | Healthy Control; PD no Treatment; PD 130 Hz Treatment |
 | **Axes** | x: Frequency (Hz), 1–50; y: Power Spectral Density, auto max + 10% headroom |
 | **Vault image** | `figures/fig1b_gpi_psd.png` |
-| **Manifest** | `figures/fig1b_gpi_psd_manifest.json` |
-| **Curves cache** | `figures/fig1b_gpi_psd_curves.json` (repo: `artifacts/fig1b_gpi_psd_curves.json`) |
-| **Script** | `scripts/plot_fig1b_gpi_psd.py` |
+| **Repo artifacts** | `artifacts/figures/papers/1/1b/` |
+| **Script** | `scripts/figures/papers/1/1b/plot.py` |
 | **Spec** | [plant.md](docs/plant.md) §8.1 |
 | **Generated** | 2026-07-09 |
 
@@ -28,11 +27,11 @@ Working copies of paper figure replications for this effort. Source PNGs live un
 
 ```bash
 # Simulate + plot (~25 min) — writes curves cache
-uv run python scripts/plot_fig1b_gpi_psd.py
+uv run python scripts/figures/papers/1/1b/plot.py
 
 # Restyle only (~1 s) — no plant simulation
-uv run python scripts/plot_fig1b_gpi_psd.py --plot-only
-uv run python scripts/plot_fig1b_gpi_psd.py --plot-only --y-max 100
+uv run python scripts/figures/papers/1/1b/plot.py --plot-only
+uv run python scripts/figures/papers/1/1b/plot.py --plot-only --y-max 100
 ```
 
 **Defaults:** seeds `0–9` (mean PSD), 10 s segment, Python plant, multitaper PSD (`fpass` 1–100 Hz) averaged over 10 GPi neurons per seed.

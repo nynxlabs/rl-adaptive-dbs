@@ -15,7 +15,7 @@ Single source of truth for **what we have replicated**, **what diverges**, and *
 | **Plant model** | Kumaravelu et al. (2016) CBGT, parkinsonian (`pd=1`), STN DBS | Bundled MATLAB reference + native `PythonPlant` port | TASK-106; `tests/envs/plant_backend_equivalence_test.py`; [plant.md](../plant.md) §8 |
 | **Python vs MATLAB plant** | Same dynamics on shared grid | GPi spikes and $P_\beta$ match within ~1e-15 spike-time atol / &lt;1% $P_\beta$ rel error (init fixtures) | TASK-106; `tests/envs/python_integrator_fixed_ic_test.py` |
 | **Beta biomarker** | Eq. (1): GPi PSD integral **13–35 Hz**, mean over $n=10$ neurons | `envs/plant/biomarkers.py` — 13–35 Hz (not Kumaravelu default 7–35) | [environment.md](../environment.md) §3.1; TASK-109 |
-| **Fig. 1b (GPi PSD)** | Healthy, PD, PD + 130 Hz cDBS GPi PSD panel | `scripts/plot_fig1b_gpi_psd.py`; seeds 0–9 mean, 10 s segment; qualitative $P_\beta$ ordering matches paper | 2026-07-09; [plant.md](../plant.md) §8.1; [current-figures.md](../../current-figures.md) |
+| **Fig. 1b (GPi PSD)** | Healthy, PD, PD + 130 Hz cDBS GPi PSD panel | `scripts/figures/papers/1/1b/plot.py`; seeds 0–9 mean, 10 s segment; qualitative $P_\beta$ ordering matches paper | 2026-07-09; [plant.md](../plant.md) §8.1; [current-figures.md](../../current-figures.md) |
 | **Reward Eq. (8)** | $\beta_t = 0.35$; positive below threshold; quadratic penalty at/above; **no energy term** | `MehreganEnvConfig.beta_threshold=0.35`; linear branch negated to match Fig. 3c prose (TASK-78) | TASK-109; [environment.md](../environment.md) §6 |
 | **DBS amplitude** | 300 nA/cm² | `DbsSpec.amplitude` default | [plant.md](../plant.md) §4 |
 | **Pulse width** | 0.3 ms | `DbsSpec.pulse_width_ms=0.3` | [plant.md](../plant.md) §4 |

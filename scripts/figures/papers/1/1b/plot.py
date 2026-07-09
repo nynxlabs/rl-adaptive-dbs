@@ -11,9 +11,9 @@ Plots multitaper PSD (Kumaravelu / Chronux-style, 1–100 Hz) averaged across th
 By default, PSD curves are averaged over eval seeds 0–9 to smooth single-draw spikes.
 
 Run:
-  uv run python scripts/plot_fig1b_gpi_psd.py
-  uv run python scripts/plot_fig1b_gpi_psd.py --plot-only --y-max 90
-  uv run python scripts/plot_fig1b_gpi_psd.py --seeds 0,1,7,42,99 --out artifacts/fig1b_gpi_psd.png
+  uv run python scripts/figures/papers/1/1b/plot.py
+  uv run python scripts/figures/papers/1/1b/plot.py --plot-only --y-max 90
+  uv run python scripts/figures/papers/1/1b/plot.py --seeds 0,1,7,42,99
 """
 from __future__ import annotations
 
@@ -30,8 +30,10 @@ import numpy as np
 from envs.plant import DbsSpec, PlantConfig, PythonPlant
 from envs.plant.biomarkers import SpectrumParams, multitaper_psd_point_process, p_beta
 
-ARTIFACTS = Path("artifacts")
-DEFAULT_CURVES = ARTIFACTS / "fig1b_gpi_psd_curves.json"
+FIGURE_DIR = Path("artifacts/figures/papers/1/1b")
+DEFAULT_CURVES = FIGURE_DIR / "curves.json"
+DEFAULT_OUT = FIGURE_DIR / "gpi_psd.png"
+DEFAULT_MANIFEST = FIGURE_DIR / "manifest.json"
 DEFAULT_DURATION_S = 10.0
 DEFAULT_SEEDS: tuple[int, ...] = tuple(range(10))
 
@@ -229,11 +231,7 @@ def main() -> int:
         default=DEFAULT_SEEDS,
         help="Comma-separated eval seeds to average (default: 0–9)",
     )
-    parser.add_argument(
-        "--out",
-        type=Path,
-        default=ARTIFACTS / "fig1b_gpi_psd.png",
-    )
+    parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument(
         "--curves",
         type=Path,
@@ -251,11 +249,7 @@ def main() -> int:
         default=None,
         help="Fixed y-axis max (default: auto from data + 10%% headroom)",
     )
-    parser.add_argument(
-        "--manifest",
-        type=Path,
-        default=ARTIFACTS / "fig1b_gpi_psd_manifest.json",
-    )
+    parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     args = parser.parse_args()
 
     if args.duration_s <= 0:
