@@ -38,7 +38,8 @@ uv run rl-dbs-tui --results-dir results/
 | `--results-dir` | Root for benchmark output (default: `./results`). |
 | `--artifacts-dir` | Training checkpoints and `train_log.jsonl` (default: `./artifacts`). |
 | `--refresh` | File poll interval in seconds (default **1.0**). |
-| `--no-color` | Force monochrome UI. |
+| `--color` | Enable color (default is monochrome). |
+| `--no-color` | Force monochrome (default; redundant with omitting `--color`). |
 
 Optional: `rl-dbs tui` as an alias subcommand later—**intentionally open**; primary binary is `rl-dbs-tui` to keep CLI dependencies minimal.
 
@@ -146,10 +147,10 @@ Cross-paper warning when `reward_sum` is not comparable (banner referencing [ben
 
 | Element | Use |
 |---------|-----|
-| **Sparkline** | Unicode block chars (`▀▄▂`) or ASCII `_.-` fallback when `--no-color` or narrow width. |
+| **Sparkline** | Unicode block chars (`▀▄▂`) or ASCII `_.-` fallback in monochrome mode or narrow width. |
 | **Progress bar** | Training episode fraction; benchmark suite run completion (count `metrics.json` vs planned runs in manifest). |
 | **Tables** | Fixed-width columns; truncate `run_id` with ellipsis in middle. |
-| **Color** | Detect: `NO_COLOR` env, `TERM=dumb`, `--no-color`; else use theme (see §9). |
+| **Color** | **Default: monochrome** (`NO_COLOR=1` before Textual starts). Use `--color` for the theme palette; respect existing `NO_COLOR` / `TERM=dumb` when `--color` is not passed. |
 
 **Math in UI:** Show $P_\beta$ as label `P_beta` in plain terminals; optional Unicode β when encoding is UTF-8.
 
@@ -198,7 +199,7 @@ Invalid JSON: show row-level error badge; do not crash the TUI.
 |-------------|--------|
 | **Width** | Layout degrades at &lt; 80 columns: hide `reward_sum`, shorten headers. |
 | **Height** | Minimum 24 rows; help overlay needs 30+. |
-| **Color** | Respect [NO_COLOR](https://no-color.org/); detect 16 vs 256 colors **intentionally open**. |
+| **Color** | Default monochrome; `--color` enables Textual theme colors. Respects [NO_COLOR](https://no-color.org/) when color is off. |
 | **Mouse** | Optional click on tabs—not required v1. |
 | **Windows** | Use `colorama` or library-native Windows console support if needed. |
 | **SSH / WSL** | Same as Linux when `TERM` supports Unicode; ASCII fallback mandatory. |
@@ -220,7 +221,7 @@ Invalid JSON: show row-level error badge; do not crash the TUI.
 ### 9.2 Cross-platform testing
 
 - Smoke test: import data loaders with fixture `results/` tree under `tests/fixtures/tui/`.
-- Manual matrix: Windows Terminal, Ubuntu, macOS—verify 80-column layout and `--no-color`.
+- Manual matrix: Windows Terminal, Ubuntu, macOS—verify 80-column layout; default monochrome and `--color` smoke check.
 - Do not require a TTY in unit tests; mock the renderer interface.
 
 ### 9.3 Performance
@@ -268,7 +269,8 @@ Invalid JSON: show row-level error badge; do not crash the TUI.
 - [ ] Metric names match [benchmarking.md](benchmarking.md) §4.
 - [ ] Cross-paper suite shows plant-level metrics only when manifest says so.
 - [ ] Invocation documented as `uv run rl-dbs-tui`.
-- [ ] 80-column and `--no-color` modes tested.
+- [x] Default monochrome UI (`NO_COLOR`); `--color` opt-in documented.
+- [ ] 80-column layout tested on all target platforms.
 
 ---
 

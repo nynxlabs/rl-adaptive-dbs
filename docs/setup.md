@@ -10,7 +10,7 @@ Install, verify, and use **rl-adaptive-dbs** day to day. For **phases** and **st
 
 - A shared **plant** (Kumaravelu et al., 2016; MATLAB in `reference-material/`) wrapped for RL
 - A shared **Gymnasium-style environment** (`envs/`) — Mehregan et al. API (2 s steps, $P_\beta$, Eq. (8) reward)
-- **Controllers** (`controllers/ddpg` implemented; `snn` placeholder until Phase 5; `sea_dbs` until Phase 6) — one implementation per paper; `ddpg` uses `envs/` directly, `snn` and `sea_dbs` use **adapters** for their paper’s RL interface
+- **Controllers** (`controllers/ddpg` implemented; `snn` scaffolded for Phase 5; `sea_dbs` until Phase 6) — one implementation per paper; `ddpg` uses `envs/` directly, `snn` and `sea_dbs` use **adapters** for their paper’s RL interface
 - **Benchmarking & CLI** (Phase 4) — `benchmarks/` runner, **`rl-dbs`** (`benchmark`, `summary`, `info`, `train`/`eval`), **`rl-dbs-tui`** (Benchmarks tab); Mehregan **PTQ/QAT** in `controllers/ddpg/quantization.py` — [benchmarking.md](benchmarking.md), [cli.md](cli.md), [tui.md](tui.md)
 - **Setup scripts** — **`scripts/setup.sh`** (Python + optional MATLAB); MATLAB detail in **`scripts/matlab/`** — [matlab.md](matlab.md)
 
@@ -238,7 +238,7 @@ uv run rl-dbs summary --results-dir results/ --csv results/summary.csv
 uv run rl-dbs train --controller ddpg --variant paper --seeds 0 --dry-run
 uv run rl-dbs eval --controller baseline --variant cdbs-130hz --seeds 0
 
-# Browse results (Textual TUI — Benchmarks tab; or ASCII fallback)
+# Browse results (Textual TUI — Benchmarks tab; monochrome by default; `--color` to enable theme)
 uv run rl-dbs-tui --results-dir results/
 uv run rl-dbs-tui --ascii --results-dir results/
 
