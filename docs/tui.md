@@ -31,6 +31,7 @@ Recommended:
 ```bash
 uv run rl-dbs-tui [options]
 uv run rl-dbs-tui --results-dir results/
+uv run rl-dbs-tui --dev --results-dir results/   # auto-restart on TUI code edits
 ```
 
 | Option | Description |
@@ -38,6 +39,7 @@ uv run rl-dbs-tui --results-dir results/
 | `--results-dir` | Root for benchmark output (default: `./results`). |
 | `--artifacts-dir` | Training checkpoints and `train_log.jsonl` (default: `./artifacts`). |
 | `--refresh` | File poll interval in seconds (default **1.0**). |
+| `--dev` | Restart the TUI when `rl_adaptive_dbs/tui/*.py` changes (development). |
 | `--color` | Enable color (default is monochrome). |
 | `--no-color` | Force monochrome (default; redundant with omitting `--color`). |
 
@@ -170,6 +172,7 @@ Global bindings (Vi-style alternatives **intentionally open** for v1):
 | `/` | Open filter prompt (Benchmarks, Logs). |
 | `Esc` | Clear filter / close prompt. |
 | `r` | Force refresh from disk. |
+| `Ctrl+R` | Restart the TUI (reload Python modules; use with `--dev` or after code edits). |
 | `Enter` | Open detail view (run → Eval tab series). |
 | `b` | Bookmark log file path for Logs tab. |
 | `q` | Quit (no save). |
@@ -246,7 +249,7 @@ Invalid JSON: show row-level error badge; do not crash the TUI.
 │ ddpg       │ paper    │  0   │    89.2   │   -12.4   │ 20260524-120030-c3  │
 │ ddpg       │ ptq-int8 │  0   │    94.7   │   -11.8   │ 20260524-120045-d4  │
 ├────────────┴──────────┴──────┴───────────┴───────────┴─────────────────────┤
-│ / filter   r refresh   q quit                                                │
+│ / filter   r refresh   Ctrl+R restart   q quit                                │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 

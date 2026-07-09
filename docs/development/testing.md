@@ -32,7 +32,7 @@ Configuration lives in `pyproject.toml` under `[tool.pytest.ini_options]` (`test
 
 ## 2. Layout
 
-Tests live under **`tests/`** at the repo root (not inside `envs/` or `controllers/`), so they are not shipped in the wheel but still import installed packages after `uv sync`.
+Tests live under **`tests/`** at the repo root (not inside `src/envs/` or `src/controllers/`), so they are not shipped in the wheel but still import installed packages after `uv sync`.
 
 ```
 tests/
@@ -81,7 +81,7 @@ tests/
         └── trainer_test.py
 ```
 
-Mirror **`envs/`** and **`controllers/<name>/`** when adding modules (e.g. `tests/envs/gym_api_test.py`, `tests/controllers/ddpg/actor_test.py`).
+Mirror **`src/envs/`** and **`src/controllers/<name>/`** when adding modules (e.g. `tests/envs/gym_api_test.py`, `tests/controllers/ddpg/actor_test.py`).
 
 Naming: files `*_test.py`, functions `test_*` (pytest default discovery).
 
@@ -126,7 +126,7 @@ Skip when MATLAB is unavailable: `tests/conftest.py` skips `@pytest.mark.matlab`
 
 ## 5. Adding tests for a change
 
-1. Implement under `envs/` or `controllers/<name>/` per the relevant spec.
+1. Implement under `src/envs/` or `src/controllers/<name>/` per the relevant spec.
 2. Add or extend tests under the matching `tests/` subtree.
 3. Run `uv run pytest` before opening a PR.
 4. If behavior is spec-defined, update the spec in the same change ([conventions.md](conventions.md)).

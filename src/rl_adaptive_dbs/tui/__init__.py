@@ -29,6 +29,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Poll interval in seconds (default: 1.0)",
     )
     parser.add_argument(
+        "--dev",
+        action="store_true",
+        help="Restart automatically when rl_adaptive_dbs/tui/*.py changes",
+    )
+    parser.add_argument(
         "--color",
         action="store_true",
         help="Enable color (default: monochrome)",
@@ -54,7 +59,30 @@ def configure_color(*, enabled: bool) -> None:
         os.environ["NO_COLOR"] = "1"
 
 
+def _run_interactive(
+    results_dir: Path,
+    *,
+    artifacts_dir: Path,
+    refresh_s: float,
+) -> int:
+    from rl_adaptive_dbs.tui.reload import RESTART_EXIT_CODE, reload_tui_modules
+
+    while True:
+        reload_tui_modules()
+        from rl_adaptive_dbs.tui.app import RlDbsTuiApp
+
+        app = RlDbsTuiApp(
+            results_dir,
+            artifacts_dir=artifacts_dir,
+            refresh_s=refresh_s,
+        )
+        exit_code = app.run()
+        if exit_code != RESTART_EXIT_CODE:
+            return 0 if exit_code is None else exit_code
+
+
 def main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
     parser = _build_parser()
     args = parser.parse_args(argv)
     configure_color(enabled=args.color and not args.no_color)
@@ -65,15 +93,16 @@ def main(argv: list[str] | None = None) -> int:
         print(ascii_fallback(args.results_dir))
         return 0
 
-    from rl_adaptive_dbs.tui.app import RlDbsTuiApp
+    if args.dev:
+        from rl_adaptive_dbs.tui.reload import run_dev_watcher
 
-    app = RlDbsTuiApp(
+        return run_dev_watcher(argv)
+
+    return _run_interactive(
         args.results_dir,
         artifacts_dir=args.artifacts_dir,
         refresh_s=args.refresh,
     )
-    app.run()
-    return 0
 
 
 __all__ = ["configure_color", "main"]

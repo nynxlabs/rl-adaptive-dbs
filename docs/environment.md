@@ -1,6 +1,6 @@
 # RL environment specification (Mehregan et al., adaptive DBS / quantization)
 
-This document specifies the **computational reinforcement-learning environment** described in *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning* (Mehregan et al.). It is meant to align a Gymnasium-style implementation under `envs/` (repository root) with the published setup. The **DDPG actor–critic controller** (networks, replay, losses, quantization) is specified separately in [controllers/ddpg/replication.md](controllers/ddpg/replication.md).
+This document specifies the **computational reinforcement-learning environment** described in *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning* (Mehregan et al.). It is meant to align a Gymnasium-style implementation under `src/envs/` with the published setup. The **DDPG actor–critic controller** (networks, replay, losses, quantization) is specified separately in [controllers/ddpg/replication.md](controllers/ddpg/replication.md).
 
 The **plant** is the shared **Kumaravelu et al. (2016)** parkinsonian CBGT model with **STN DBS**—topology, integration, actuation, and biomarker primitives are specified in **[plant.md](plant.md)**. This document covers the **Mehregan et al. Gymnasium-style RL environment** built on that plant.
 
@@ -181,7 +181,7 @@ From **§IV.A.1** (for replication / defaults):
 
 ## 9. Optional extensions (same publication)
 
-- **Quantization:** PTQ / QAT on actor–critic networks affects **inference-time** policy outputs; the **environment interface** (plant, $P_\beta$, timing, reward) is unchanged. Implementation: [controllers/ddpg/replication.md](controllers/ddpg/replication.md) §6, [controllers/ddpg/quantization.py](../../controllers/ddpg/quantization.py).
+- **Quantization:** PTQ / QAT on actor–critic networks affects **inference-time** policy outputs; the **environment interface** (plant, $P_\beta$, timing, reward) is unchanged. Implementation: [controllers/ddpg/replication.md](controllers/ddpg/replication.md) §6, [`src/controllers/ddpg/quantization.py`](../src/controllers/ddpg/quantization.py).
 - **Animal validation:** Not part of the computational `Env` API; documented separately if this repo later adds experiment logs or replay buffers for **in vivo** trials.
 
 ---
