@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from rl_adaptive_dbs.tui.markup import escape_brackets
+
 DEFAULT_TOTAL_EPISODES = 10
 MAX_EPISODE_POINTS = 10_000
 MAX_SPARKLINE_EPISODES = 40
@@ -358,8 +360,8 @@ def training_status_line(run: TrainingRun, runs: list[TrainingRun] | None = None
     picker = ""
     if runs and len(runs) > 1 and run.run_id in [item.run_id for item in runs]:
         index = [item.run_id for item in runs].index(run.run_id) + 1
-        picker = f"  [{index}/{len(runs)}]"
-    switch = "  [/] run" if runs and len(runs) > 1 else ""
+        picker = escape_brackets(f"  [{index}/{len(runs)}]")
+    switch = escape_brackets("  [/] run") if runs and len(runs) > 1 else ""
     seed = str(run.seed) if run.seed is not None else "?"
     return (
         f"Training: {run.controller}/{run.variant}{picker}{switch}  "

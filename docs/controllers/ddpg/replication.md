@@ -36,36 +36,14 @@ The paper frames the method as **Deep Deterministic Policy Gradient (DDPG)** wit
 
 ### 3.2 Actor $\mu(s \mid \theta_\mu)$
 
-- **Input:** State $s$ formed from the **within-step** biomarker trajectory (paper §III.B: **CNN** over temporal $P_\beta$ structure inside each 2 s segment). For the computational study, the biomarker **window matches the full simulation segment** per step — implemented as $L$ equal sub-window $P_\beta$ samples, not a deque of past steps ([environment.md](../../environment.md) §3.2, §5).
-- **Backbone (Figure 3a, TASK-146):** Two `Conv1d` blocks with **average pooling** and two **256-unit** ReLU fully-connected layers before the logit head.
-
-| Layer | Shape / op |
-|-------|------------|
-| Input | $(B, L)$ within-step biomarker series, $L =$ `state_length` |
-| `Conv1d` | $1 \to 32$, $k=3$, pad 1, ReLU |
-| `AvgPool1d` | kernel 2, stride 2 (skipped when temporal length $\le 1$) |
-| `Conv1d` | $32 \to 64$, $k=3$, pad 1, ReLU |
-| `AvgPool1d` | kernel 2, stride 2 (skipped when temporal length $\le 1$) |
-| Flatten | |
-| `Linear` | $\to 256$, ReLU |
-| `Linear` | $\to 256$, ReLU |
-| `Linear` | $\to N_{\mathrm{actions}}$ (logits) |
-
-- **`state_length=1` edge case:** The paper assumes a temporal window; with $L=1$ both average pools are **no-ops** so the CNN still runs (flatten size $64$). Document this in code (`networks._pooled_length`).
+- **Input:** State $s$ formed from the biomarker trajectory (paper §III.B: **CNN** suited to temporal $P_\beta$ structure). For the computational study, the biomarker **window matches the full simulation segment** per step ([environment.md](../../environment.md) §3.2, §5).
+- **Backbone:** Convolutional layers, **average pooling**, then **linear** layers (paper §III.B, Figure 3a). Channel counts, kernel sizes, and **“shrink dimension”** are **not** numerically specified in §IV.A.1 — **intentionally open**; choose a compact CNN, document shapes in code, and keep them fixed across training / evaluation / quantization comparisons.
 - **Output:** **Logits** over the discrete pattern set. Training stores these as $a_{\mathrm{logit}}$.
 - **Action execution:** $\mathrm{softmax}(\mathrm{logits})$ then **argmax** selects the pattern index sent to the plant (paper §III.B).
 
 ### 3.3 Critic $Q(s, a_{\mathrm{logit}} \mid \theta_c)$
 
-- **Input:** Same state CNN + FC trunk as the actor (**state branch**), fused with an **action branch** on actor logits (paper §III.B, Figure 3b; losses use $Q(s^{\tilde{B}}, a_{\mathrm{logit}}^{\tilde{B}})$).
-
-| Branch | Layers |
-|--------|--------|
-| State | Same as actor through the second 256-d ReLU FC |
-| Action | `Linear` $N_{\mathrm{actions}} \to 256$, ReLU on $a_{\mathrm{logit}}$ (or one-hot executed action when `critic_action_input=one_hot`) |
-| Fusion | **Element-wise add** of 256-d embeddings |
-| Head | `Linear` $256 \to 1$ scalar $Q$ |
-
+- **Input:** Same state representation as the actor, concatenated or otherwise fused with the **action logits** (paper §III.B, Figure 3b; losses use $Q(s^{\tilde{B}}, a_{\mathrm{logit}}^{\tilde{B}})$).
 - **Output:** Scalar **state–action value** estimate.
 - **Target network:** $Q_{\mathrm{target}}$ and $\mu_{\mathrm{target}}$ for bootstrapping (Algorithm 1, Eq. (3)).
 
@@ -91,7 +69,7 @@ For each environment step of duration $l$:
 
 1. **Select action:** $u \leftarrow \mu(s \mid \theta_\mu)$ (forward pass yields logits; **greedy** softmax + argmax selects discrete pattern $a$ applied to STN at **evaluation**). During **training**, the implementation supports two exploration modes (`DDPGConfig.exploration_mode`):
    - **`epsilon` (default):** $\epsilon$-greedy — with probability $\epsilon_t$ sample a uniform random pattern, else argmax on logits. $\epsilon_t$ linearly decays from **0.5** to **0.1** over the full training schedule.
-   - **`softmax`:** sample from $\mathrm{Categorical}(\mathrm{softmax}(\mathrm{logits}/\tau_t))$ with temperature $\tau_t$ linearly annealed from **2.0** to **0.5** (default). **TASK-170** uses constant $\tau=1.0$ (`exploration_temperature_start=exploration_temperature_end=1.0`) for the decoupled-reward 30 Hz retrain — paper silent on $\tau$; no annealing until ablation data justify it.
+   - **`softmax`:** sample from $\mathrm{Categorical}(\mathrm{softmax}(\mathrm{logits}/\tau_t))$ with temperature $\tau_t$ linearly annealed from **2.0** to **0.5**.
    Replay stores the actor logits $a_{\mathrm{logit}}$ from the forward pass (not the random/sampled override). The paper does not specify online exploration; these conventions break constant-policy collapse when `state_length > 1` (TASK-67).
    - **Exploration vs greedy (TASK-67 finding):** Exploration **does not help** with this reward landscape. The reward range across all 41 actions is only ~1.13 (~0.03 per adjacent action pair). Exploration noise (epsilon/softmax) adds variance that **drowns out** the weak reward signal, causing the critic to learn a flat Q-landscape and the actor to collapse to a constant action. The paper's **greedy argmax** approach concentrates data around the current policy's actions, giving the critic a clearer (though still weak) signal. Additional exploration knobs (`logit_noise_std`, `entropy_coeff`, `random_warmup_steps`, `obs_normalize`) are implemented in `DDPGConfig` but do not resolve the collapse — the bottleneck is the reward signal strength, not the exploration strategy.
 
@@ -143,7 +121,7 @@ $$
 ### 4.4 Episode schedule
 
 - **30** steps per episode, **10** training episodes for the reported computational run ([environment.md](../../environment.md) §5, §8).
-- **Policy initialization:** Regular pulses at **mean** frequency **45 Hz** for the main experiment; **30 Hz** variant with other hyperparameters unchanged (paper §IV.A.1–2). Implementation: `Actor.init_toward_action` maps the init baseline to a pattern index and sets `head.bias[index] = init_bias_scale` (default **2.0**) with other head biases zeroed; **encoder and head weights keep PyTorch default init** (do not zero — TASK-173).
+- **Policy initialization:** Regular pulses at **mean** frequency **45 Hz** for the main experiment; **30 Hz** variant with other hyperparameters unchanged (paper §IV.A.1–2).
 
 ### 4.5 Output artifact
 
@@ -206,7 +184,7 @@ Hyperparameters with **fixed** values in §IV.A.1 should be **defaults**; open v
 
 ## 8. Consistency checklist
 
-- [x] Actor is **CNN-over-time** on biomarker state (Figure 3a); critic uses **same state trunk** with **element-wise add** fusion of action branch (Figure 3b).
+- [x] Actor is **CNN-over-time** on biomarker state; critic uses **same state geometry** plus **logits**.
 - [x] Applied control is **discrete pattern index** $a$ from **argmax**; replay stores **$a$** and **logits** $a_{\mathrm{logit}}$ for the critic.
 - [x] Target value uses **$Q_{\mathrm{target}}(s', \mu_{\mathrm{target}}(s'))$** with $(1-dw)$ masking.
 - [x] Critic **MSE** to bootstrap target; actor maximizes **$Q(s, \mu(s))$** with critic **frozen** during actor Adam step.
@@ -220,20 +198,13 @@ Hyperparameters with **fixed** values in §IV.A.1 should be **defaults**; open v
 
 ### 1. Discrete pattern alphabet size and encoding
 
-The actor outputs logits over a finite STN pattern set, but the paper does not fix **cardinality** or per-pattern waveform semantics. **Fixed:** discrete control via softmax + argmax; replay stores pattern index $a$ and logits $a_{\mathrm{logit}}$. **Decided (TASK-83, Option C):** two action-space modes via `MehreganEnvConfig.action_space_mode`:
-
-| Mode | Alphabet | Default |
-|------|----------|---------|
-| `scalar_frequency` | `PatternAlphabet` — Kumaravelu `0:5:200` Hz grid (41 actions) | yes (backward-compatible benchmarks) |
-| `fixed_mean_pattern` | `FixedMeanPatternAlphabet` — 41 irregular pulse trains at fixed `pattern_mean_hz` (45 Hz paper / 30 Hz ablation) | Option C faithful to Mehregan §IV.A.2 |
-
-Pattern mode is **Python-plant only** (`DbsSpec.idbs` precomputed trace). Scalar mode remains for cDBS / no-stim baselines and legacy checkpoints. See [environment.md](../../environment.md) §4.2 for alphabet construction and paper-silent choices. **Train factory:** `DDPGConfig.action_space_mode` + `pattern_mean_hz`; `init_baseline_for_variant` maps to pattern 0 (regular train at mean Hz) in pattern mode.
+The actor outputs logits over a finite STN pattern set, but the paper does not fix **cardinality** or per-pattern waveform semantics. **Fixed:** discrete control via softmax + argmax; replay stores pattern index $a$ and logits $a_{\mathrm{logit}}$. **Open:** alphabet definition. **Decide in** shared env / Brain config and keep fixed across train, eval, and quantization (see [environment.md](../../environment.md) §4).
 
 ### 2. CNN actor–critic topology
 
-Figure 3a/3b fix channel counts and fusion (TASK-146). **Fixed:** temporal CNN over biomarker state; critic **adds** 256-d state and action embeddings. **Config:** `DDPGConfig.conv1_out`, `conv2_out`, `fc_hidden`, `pool_kernel` (`controllers/ddpg/config.py`).
+§III.B specifies a CNN with average pooling and linear heads but §IV.A.1 gives no channel counts, kernel sizes, or **shrink dimension**. **Fixed:** temporal CNN over biomarker state; critic fuses the same state with action logits. **Open:** layer shapes. **Decide in** `controllers/ddpg/` and document tensor geometry in code.
 
-**Implemented (`controllers/ddpg/networks.py`):** Actor — `Conv1d(1→32)` → `AvgPool1d(2)` → `Conv1d(32→64)` → `AvgPool1d(2)` → flatten → `Linear→256` → `Linear→256` → logits. Critic — same state trunk; `Linear(n_actions→256)` action branch; **element-wise add**; `Linear→1`.
+**Implemented (`controllers/ddpg/networks.py`):** `Conv1d(1→16, k=3)` → `AdaptiveAvgPool1d(shrink_dim=4)` → `Conv1d(16→32, k=3)` → flatten → linear head; critic concatenates encoded state with action logits before MLP. `shrink_dim` and `conv_channels` are `DDPGConfig` fields.
 
 ### 3. Discount, Polyak $\tau$, and update frequency
 
