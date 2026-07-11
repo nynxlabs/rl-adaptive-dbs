@@ -207,6 +207,9 @@ def initialize_network_state(
     return NetworkState(populations=populations, time_ms=0.0)
 
 
+DEFAULT_GPI_SPIKE_BUFFER = 512
+
+
 def integrate_network(
     *,
     config: PlantConfig,
@@ -219,6 +222,7 @@ def integrate_network(
     init_draws: NetworkInitDraws | None = None,
     return_traces: tuple[str, ...] = (),
     debug_steps: tuple[int, ...] = (),
+    gpi_spike_buffer_size: int | None = None,
 ) -> IntegrateResult:
     """Advance the CBGT network for one segment (``CTX_BG_TH_network`` port)."""
 
@@ -485,10 +489,16 @@ def integrate_network(
     numba_gpi_buf: np.ndarray | None = None
     numba_gpi_counts: np.ndarray | None = None
 
+    gpi_buf_len = (
+        DEFAULT_GPI_SPIKE_BUFFER
+        if gpi_spike_buffer_size is None
+        else max(DEFAULT_GPI_SPIKE_BUFFER, int(gpi_spike_buffer_size))
+    )
+
     if use_numba:
         spike_idx = np.zeros((N_CONV, n, 512), dtype=np.int32)
         spike_n = np.zeros((N_CONV, n), dtype=np.int32)
-        numba_gpi_buf = np.zeros((n, 512), dtype=np.float64)
+        numba_gpi_buf = np.zeros((n, gpi_buf_len), dtype=np.float64)
         numba_gpi_counts = np.zeros(n, dtype=np.int32)
         ca3_state = np.full(n, float(CA3), dtype=np.float64)
         ca4_state = np.full(n, float(CA4), dtype=np.float64)

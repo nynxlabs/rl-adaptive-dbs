@@ -127,7 +127,7 @@ The plant lives under `envs/plant/` as a **non-Gym** service the Mehregan `Env` 
 
 **Python init draws:** MATLAB’s `randperm(n, k)` for heterogeneous STN→GPe/GPi conductances is not reproducible from NumPy’s `Generator` alone. `PythonPlant.reset(seed=N)` loads `tests/fixtures/plant_init_seed{N}.npz` (or `~/.cache/rl-adaptive-dbs/plant_init/`) exported via `scripts/export_plant_init_draws.py`. With matching init draws, 2 s GPi spike trains and $P_\beta$ match MATLAB within documented tolerances (`tests/envs/python_integrator_fixed_ic_test.py`, `tests/envs/plant_backend_equivalence_test.py`).
 
-**Performance (2026-07-03, WSL, seed=42, 2 s, no DBS):** MATLAB **≈58–66 s**; PythonPlant **≈6–7 s** with Numba JIT (`envs/plant/network/numba_loop.py`) — **≈10× faster** than MATLAB. NumPy fallback loop remains when Numba is unavailable or trace/debug hooks are requested.
+**Performance (2026-07-03, WSL, seed=42, 2 s, no DBS):** MATLAB **≈58–66 s**; PythonPlant **≈6–7 s** with Numba JIT (`envs/plant/network/numba_loop.py`) — **≈10× faster** than MATLAB. NumPy fallback loop remains when Numba is unavailable or trace/debug hooks are requested. The Numba path records GPi spikes in a fixed per-neuron buffer (**512** by default); long single-shot integrates (Fig 2a, 14 s) must pass `gpi_spike_buffer_size` or spike trains truncate artificially after ~12 s.
 
 ```python
 from envs.plant import DbsSpec, MatlabPlant, PythonPlant
@@ -144,6 +144,27 @@ with PythonPlant() as plant:
 
 MATLAB vendor args and return packing: [kumaravelu_vendor_patches.md](reference-material/kumaravelu_vendor_patches.md). Tests: `tests/envs/matlab_plant_test.py` ([development/testing.md](development/testing.md)).
 
+### Mehregan Fig 2a — GPi $P_\beta$ time series (2026-07-11)
+
+Qualitative replication of Mehregan et al. Fig. 2a — GPi beta-band power ($P_\beta$, Eq. (1)) over **12 s** for **PD no treatment** vs **PD + 130 Hz cDBS**.
+
+| Item | Convention |
+|------|------------|
+| **Script** | `scripts/figures/papers/1/2a/plot.py` |
+| **Artifacts** | `artifacts/figures/papers/1/2a/` (`series.json`, `manifest.json`); PNG `figures/papers/1/2a/beta_power.png` |
+| **Backend** | `PythonPlant` (default) |
+| **Protocol** | **14 s** simulate (2 s pre-roll + 12 s display); plot axis = sim **− 2 s**; DBS at **sim 4 s**; **0.2 s** trailing / **2 s** backward window; windows end at **sim 14 s** (display $t=12$ → `[12, 14]`) |
+| **Spike buffer** | Fig 2a alone passes `gpi_spike_buffer_size` ≈ **904** (`ceil(14 s × 60 Hz) + 64`) — Numba default **512**/neuron truncates GPi spikes on long integrates and caused an artificial end-of-trace cliff (see `scripts/probes/fig2a_spike_buffer_probe.py`) |
+| **Plot** | Dense line trace 0–12 s; dashed vertical at **2 s**; y-axis label **PSD** |
+| **Alt mode** | `--sampling segment` — six whole-segment **2 s** bins (step plot) |
+| **Seeds** | Default **0**; `--seeds` for mean across multiple IC draws |
+| **Comparison** | [docs/figures/paper_1.md](figures/paper_1.md); [current-figures.md](../current-figures.md) |
+
+```bash
+uv run python scripts/figures/papers/1/2a/plot.py
+uv run python scripts/figures/papers/1/2a/plot.py --plot-only
+```
+
 **Biomarkers (implemented):** `envs.plant.biomarkers.p_beta` — multitaper GPi PSD (Chronux-style; Kumaravelu `Fs` / tapers), **13–35 Hz** per-neuron integral then mean (Mehregan Eq. (1)). `MatlabPlant.integrate` sets `IntegrateResult.p_beta`.
 
 **Mehregan Gym (implemented):** `envs.mehregan.MehreganEnv` — see [environment.md](environment.md); baselines via `run_baseline_rollout`.
@@ -153,7 +174,7 @@ MATLAB vendor args and return packing: [kumaravelu_vendor_patches.md](reference-
 | Method | Behavior |
 |--------|----------|
 | `reset(seed=None)` | Parkinsonian ICs (`pd = 1`); optional RNG seed |
-| `integrate(duration_s, dbs_spec, *, record_spikes=True)` | Advance dynamics for `duration_s` simulated seconds with STN drive `dbs_spec`; return GPi (and optionally other) APs, last biomarker samples, info |
+| `integrate(duration_s, dbs_spec, *, record_spikes=True, gpi_spike_buffer_size=None)` | Advance dynamics for `duration_s` simulated seconds with STN drive `dbs_spec`; return GPi (and optionally other) APs, last biomarker samples, info. Optional `gpi_spike_buffer_size` enlarges the Numba GPI spike ring (default **512** per neuron); Fig 2a passes a duration-scaled buffer for 14 s integrates only. |
 | `config` | $\Delta t$, `pd`, default DBS waveform parameters, biomarker bands |
 
 **Not in the plant API:** Gymnasium `step`/`reset` return shapes, Mehregan reward, or controller actions—the **environment** and **adapters** map RL actions to `dbs_spec` and call `integrate` for the correct **segment duration**.

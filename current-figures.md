@@ -59,7 +59,7 @@ uv run python scripts/figures/papers/1/1b/plot.py --plot-only --y-max 100
 | **Comparison** | [docs/figures/paper_1.md § Fig 2a](docs/figures/paper_1.md#fig-2a--gpi-p_beta-time-series) |
 | **Script** | `scripts/figures/papers/1/2a/plot.py` |
 | **Spec** | [plant.md](docs/plant.md) |
-| **Generated** | 2026-07-10 (14 s pre-roll, trailing 0.2 s, seed 0) |
+| **Generated** | 2026-07-11 (end sim 14 s, GPI buffer 904, seed 0) |
 
 **Run:**
 
@@ -77,7 +77,9 @@ uv run python scripts/figures/papers/1/2a/plot.py --seeds 0,1,2,3,4,5,6,7,8,9
 
 **Defaults:** seed `0`, **0.2 s** trailing samples, **2 s** overlapping window, 14 s integrate with 2 s pre-roll.
 
-**Qualitative gate (seed 0):** shared high baseline at `t=0` (sim `[0, 2]`, not zero); 130 Hz drops after display 2 s; no-treatment stays elevated; trailing windows slide through display `t=12` (last window sim `[12, 14]`); no flat tail from an early cap.
+**End protocol note:** windows end at sim 14 s; Fig 2a uses enlarged GPI spike buffer — see [paper_1.md § Fig 2a](docs/figures/paper_1.md#fig-2a--gpi-p_beta-time-series).
+
+**Qualitative gate (seed 0):** shared high baseline at `t=0`; 130 Hz drops after display 2 s; no-treatment stays elevated; trailing windows slide through `t=12` (last window sim `[12, 14]`); red ~503 and blue ~160 at `t=12` with ripple, not a flat tail.
 
 ---
 
