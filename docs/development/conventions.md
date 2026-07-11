@@ -17,9 +17,9 @@ Contributor rules for **rl-adaptive-dbs** — layout, spec-driven workflow, and 
 | Environment (Mehregan API) | [environment.md](../environment.md) | `src/envs/` |
 | Controller | [controllers/ddpg/replication.md](../controllers/ddpg/replication.md), [controllers/snn/replication.md](../controllers/snn/replication.md), [controllers/sea_dbs/replication.md](../controllers/sea_dbs/replication.md) | `src/controllers/<name>/` |
 | Benchmarks | [benchmarking.md](../benchmarking.md) | `src/benchmarks/` + `rl-dbs benchmark` |
-| CLI | [cli.md](../cli.md) | `rl_adaptive_dbs.cli` (Phase 4 start) |
+| CLI | [cli.md](../cli.md) | `src/rl_adaptive_dbs/cli.py` |
 | User config | [cli.md](../cli.md) §2.3, §5.6 | `src/rl_adaptive_dbs/user_config.py`, `env_factory.py` |
-| TUI | [tui.md](../tui.md) | `rl_adaptive_dbs.tui` (Phase 4 start) |
+| TUI | [tui.md](../tui.md) | `src/rl_adaptive_dbs/tui/` (`*_data.py` loaders + Textual `app.py`) |
 
 ## Naming and layout
 
@@ -40,7 +40,7 @@ Contributor rules for **rl-adaptive-dbs** — layout, spec-driven workflow, and 
 
 ## Controllers vs environment
 
-- **One plant** for all controllers; variants do not fork `src/envs/`.
+- **One plant** for all controllers; variants do not fork `envs/`.
 - Paper-specific observation/action mismatches → **adapter** in `controllers/<name>/`.
 - Do not duplicate plant dynamics inside controller packages.
 

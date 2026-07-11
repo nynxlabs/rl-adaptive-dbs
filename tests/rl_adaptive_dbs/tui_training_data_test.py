@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from rich.markup import render
+
 from rl_adaptive_dbs.tui.training_data import (
     discover_training_runs,
     load_training_run,
@@ -60,3 +62,4 @@ def test_sparkline_and_status() -> None:
     line = training_status_line(run, runs)
     assert "ddpg/paper" in line
     assert "3/10" in line
+    render(line)  # bracket hints must not break Textual markup

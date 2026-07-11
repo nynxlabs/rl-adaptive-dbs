@@ -43,11 +43,11 @@ Replicate the shared plant and Mehregan et al. Gym API before any controller wor
 - **DDPG quantization** (Mehregan §III.D / §IV.A.3): **PTQ** (`ptq-fp16`, `ptq-int8`) and **QAT** (`qat`) in `controllers/ddpg/` — used to exercise variant logging and the benchmark runner alongside full-precision `paper` / `init-30hz`.
 - **Benchmark runner** and summary tables / plots over core metrics ($P_\beta$, reward, stim frequency).
 - **CLI** ([cli.md](../cli.md)) — **start** `rl-dbs`: entry point, `benchmark` (primary), `info`, and Mehregan-focused `train` / `eval` wrappers for `ddpg` (including quantized variants).
-- **TUI** ([tui.md](../tui.md)) — **start** `rl-dbs-tui`: read-only **Benchmarks** tab over `results/` (loader + fixture tests); training/logs tabs remain later.
+- **TUI** ([tui.md](../tui.md)) — **`rl-dbs-tui`**: six Textual tabs (Run, Training, Eval, Benchmarks, Logs, Settings) over `artifacts/` and `results/`; detached launch via Run tab; dev mode (`--dev`, Ctrl+R).
 - **Setup scripts** ([setup.md](../setup.md), [matlab.md](../matlab.md)) — **`scripts/setup.sh`** (Python + optional MATLAB); harden **`scripts/matlab/`** cross-platform; **validate on fresh VMs** (clean Linux, macOS, Windows via Git Bash/WSL) so clone → setup → verify works on other machines.
 - **Fresh-machine validation** — exercise the full path on VMs or clean hosts with only git + uv (+ optional MATLAB license): `bash scripts/setup.sh`, docs match prompts, `pytest -m "not matlab"` passes; document OS-specific gaps in [setup.md](../setup.md) / [matlab.md](../matlab.md).
 - **Exit criteria:** repeatable `mehregan_eval` runs across full-precision and quantized `ddpg` variants; replication checklist passable for `ddpg` (including §IV.A.3 quantization); `uv run rl-dbs benchmark` and `uv run rl-dbs-tui` usable for Phase 4 workflows; **setup scripts pass on fresh VMs** on each supported OS (or gaps documented with repro steps).
-- **Results doc:** [phase4-results.md](phase4-results.md) — §8 implementation audit **done** (2026-07-01); full-suite benchmark tables **done** (TASK-94, 2026-07-08).
+- **Results doc:** [phase4-results.md](phase4-results.md) — §8 implementation audit **done** (2026-07-01); full-suite benchmark tables **pending** TASK-9 `mehregan_eval` run.
 
 ### Phase 5 — SNN controller (`snn`), adapter, and per-paper benchmarking
 
@@ -87,7 +87,7 @@ Replicate the shared plant and Mehregan et al. Gym API before any controller wor
 
 - Native Python plant ([plant.md](../plant.md) §9); drop MATLAB dependency after equivalence **and speedup** gates. **In progress (TASK-17):** parity + **≈10×** speed pass (Numba JIT); default flip blocked on `mehregan_eval` baseline — [native-plant-port.md](native-plant-port.md).
 - Modular layout: swappable plant backends, controller packages, adapters, and benchmark runner; CI on smoke tests + selected suites.
-- **Expand** `rl-dbs` / `rl-dbs-tui` (all controllers, training monitor, logs)—initial shells land in Phase 4 ([cli.md](../cli.md), [tui.md](../tui.md)).
+- **Expand** `rl-dbs` for `snn` / `sea_dbs` train/eval (Phase 5–6); TUI v1 is **done** ([cli.md](../cli.md), [tui.md](../tui.md)).
 - Optional per-controller work beyond paper replication: [controllers/ddpg/extensions.md](../controllers/ddpg/extensions.md), [controllers/snn/extensions.md](../controllers/snn/extensions.md), [controllers/sea_dbs/extensions.md](../controllers/sea_dbs/extensions.md), and broader framework ideas (other oscillatory conditions, patient-specific robustness, etc.).
 
 Phases 9+ are intentionally open; prioritize equivalence and replication paths before large refactors.
@@ -111,10 +111,10 @@ Phases 9+ are intentionally open; prioritize equivalence and replication paths b
 | [controllers/fusion.md](../controllers/fusion.md) | Outline | SEA-DBS + DSQN synthesis |
 | [benchmarking.md](../benchmarking.md) | Draft | Suites + `results/` layout; runner + CLI integration — Phase 4 |
 | [cli.md](../cli.md) | Draft | Phase 4 — start `rl-dbs` (`benchmark`, `info`, `ddpg` train/eval) |
-| [tui.md](../tui.md) | Draft | Phase 4 — start `rl-dbs-tui` (Benchmarks tab over `results/`) |
-| `envs/` | Done | `MatlabPlant`, `MehreganEnv`, $P_\beta$, baselines (`run_baseline_rollout`) |
-| `controllers/ddpg/` | Done (FP + PTQ/QAT) | Full-precision `paper` / `init-30hz`; PTQ/QAT in `quantization.py` |
-| `controllers/snn/` | Scaffolded | Phase 5 — package skeleton + Nguyen adapter; training deferred |
+| [tui.md](../tui.md) | Draft | `rl-dbs-tui` — six tabs (Run, Training, Eval, Benchmarks, Logs, Settings) |
+| `envs/` (`src/envs/`) | Done | `MatlabPlant`, `MehreganEnv`, $P_\beta$, baselines (`run_baseline_rollout`) |
+| `controllers/ddpg/` (`src/controllers/ddpg/`) | Done (FP + PTQ/QAT) | Full-precision `paper` / `init-30hz`; PTQ/QAT in `quantization.py` |
+| `controllers/snn/` (`src/controllers/snn/`) | Scaffold | Phase 5 — package stub + shape tests |
 | `controllers/sea_dbs/` | Placeholder | Phase 6 |
 | [matlab.md](../matlab.md) + `scripts/matlab/` | Done (WSL) | Fresh validation: Multipass (Linux) pending; **Sandbox (Windows) passed** 2026-06-30 — [fresh-validation.md](fresh-validation.md) |
 | Project setup script | Done | `scripts/setup.sh`, `scripts/validate-fresh.sh`, Multipass + Sandbox scripts — Phase 4; see [fresh-validation.md](fresh-validation.md) |
@@ -122,7 +122,7 @@ Phases 9+ are intentionally open; prioritize equivalence and replication paths b
 | `PythonPlant` (native port) | In progress | Parity + **≈10×** speed **pass** (Numba JIT, 2026-07-03); default flip **blocked** on `mehregan_eval` baseline — [native-plant-port.md](native-plant-port.md) |
 | Benchmark suite runner | Done | `benchmarks/` + `suites/mehregan_eval*.yaml`; baselines + `ddpg` eval |
 | `rl-dbs` CLI | Partial | `benchmark`, `summary`, `info`, `config show`, `train`/`eval` (`ddpg`); `snn` Phase 5; `sea_dbs` Phase 6 |
-| `rl-dbs-tui` | Partial | Six Textual tabs: **Run** (detached launch), Training, Eval, Benchmarks, Logs, Settings ([tui.md](../tui.md)) |
+| `rl-dbs-tui` | Done (v1) | Six tabs ([Textual](https://textual.textualize.io/)); Run tab launches detached jobs; Settings persistence |
 
 **Current phase:** 4 (benchmark runner, Mehregan quantization, CLI/TUI start, setup scripts + fresh-VM validation).
 

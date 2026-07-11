@@ -32,7 +32,7 @@ Configuration lives in `pyproject.toml` under `[tool.pytest.ini_options]` (`test
 
 ## 2. Layout
 
-Tests live under **`tests/`** at the repo root (not inside `src/envs/` or `src/controllers/`), so they are not shipped in the wheel but still import installed packages after `uv sync`.
+Tests live under **`tests/`** at the repo root (not inside `envs/` or `controllers/`), so they are not shipped in the wheel but still import installed packages after `uv sync`.
 
 ```
 tests/
@@ -50,7 +50,15 @@ tests/
 │   ├── cli_commands_test.py # train/eval/info/summary smoke
 │   ├── train_cmd_test.py    # PTQ train guard, checkpoint paths
 │   ├── user_config_test.py  # .rl-dbs.yaml merge / persist
-│   └── tui_data_test.py     # Benchmarks tab data layer
+│   ├── run_log_meta_test.py # run metadata header parser (Run tab / Logs)
+│   ├── tui_data_test.py     # Benchmarks tab data layer
+│   ├── tui_training_data_test.py
+│   ├── tui_eval_data_test.py
+│   ├── tui_logs_data_test.py
+│   ├── tui_run_data_test.py
+│   ├── tui_run_launch_test.py
+│   ├── tui_settings_data_test.py
+│   └── tui_reload_test.py   # --dev / Ctrl+R reload helpers
 ├── envs/
 │   ├── mock_plant.py        # helper (not collected)
 │   ├── plant_backends.py    # MATLAB/Python comparison helpers (not collected)

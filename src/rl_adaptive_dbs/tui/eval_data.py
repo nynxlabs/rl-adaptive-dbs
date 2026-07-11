@@ -9,6 +9,7 @@ from typing import Any
 from benchmarks.loader import RunRow, SuiteResults
 from benchmarks.results import load_run_timeseries
 from rl_adaptive_dbs.tui.data import refresh_suites, select_suite
+from rl_adaptive_dbs.tui.markup import escape_brackets
 
 MAX_SPARKLINE_POINTS = 10_000
 
@@ -148,8 +149,8 @@ def eval_status_line(
     picker = ""
     if runs and len(runs) > 1 and run.run_id in [item.run_id for item in runs]:
         index = [item.run_id for item in runs].index(run.run_id) + 1
-        picker = f"  [{index}/{len(runs)}]"
-    switch = "  [ and ] run" if runs and len(runs) > 1 else ""
+        picker = escape_brackets(f"  [{index}/{len(runs)}]")
+    switch = escape_brackets("  [ and ] run") if runs and len(runs) > 1 else ""
     ts_note = "  timeseries: yes" if run.has_timeseries else "  timeseries: no"
     return (
         f"Eval: {suite.name} v{suite.version}{picker}{switch}  "

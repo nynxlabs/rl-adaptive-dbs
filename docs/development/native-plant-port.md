@@ -23,10 +23,10 @@ Parallel MATLAB is a bridge; native Python is the long-term fix. Both are in sco
 
 ### Goals
 
-1. **`PythonPlant`** backend implementing the existing `PlantBackend` protocol ([`envs/mehregan/env.py`](../../src/envs/mehregan/env.py)) with the same `integrate()` / `reset()` / `close()` contract as `MatlabPlant`.
+1. **`PythonPlant`** backend implementing the existing `PlantBackend` protocol ([`envs/mehregan/env.py`](../../envs/mehregan/env.py)) with the same `integrate()` / `reset()` / `close()` contract as `MatlabPlant`.
 2. **Bit-for-bit or documented-tolerance equivalence** to the Kumaravelu MATLAB reference for:
    - GPi spike trains (fixed seed, `pd = 1`, no DBS)
-   - $P_\beta$ (13–35 Hz, already computed in Python — [`envs/plant/biomarkers.py`](../../src/envs/plant/biomarkers.py))
+   - $P_\beta$ (13–35 Hz, already computed in Python — [`envs/plant/biomarkers.py`](../../envs/plant/biomarkers.py))
    - DBS frequency response (e.g. 130 Hz, 45 Hz pattern indices)
 3. **Drop-in replacement** — `MehreganEnv`, benchmark runner, and DDPG trainer accept `plant=` without other code changes.
 4. **Reproducible validation** — extend existing `@pytest.mark.matlab` equivalence suite to parametrize backend (`matlab` vs `python`).
@@ -48,9 +48,9 @@ Parallel MATLAB is a bridge; native Python is the long-term fix. Both are in sco
 | Component | Lines (approx.) | Port? | Notes |
 |-----------|-----------------|-------|-------|
 | `simulate_network_model` entry | 1–89 | Partial | Orchestration only; Python `PythonPlant.integrate` replaces |
-| `creatdbs` | 91–108 | **Yes** | STN pulse train from frequency; mirror [`envs/plant/dbs.py`](../../src/envs/plant/dbs.py) |
+| `creatdbs` | 91–108 | **Yes** | STN pulse train from frequency; mirror [`envs/plant/dbs.py`](../../envs/plant/dbs.py) |
 | `CTX_BG_TH_network` | 112–839 | **Yes** | Core integrator — **largest piece** |
-| `find_spike_times` / `spikes_to_cell` | 840–858 | **Yes** | Partially exists in [`envs/plant/spikes.py`](../../src/envs/plant/spikes.py) |
+| `find_spike_times` / `spikes_to_cell` | 840–858 | **Yes** | Partially exists in [`envs/plant/spikes.py`](../../envs/plant/spikes.py) |
 | GPe / TH / STN gating functions | 860–1036 | **Yes** | Direct translation to NumPy vectorized ops |
 | `make_Spectrum` + Chronux helpers | 1040–1235 | **No** | Python biomarkers already validated vs MATLAB |
 | `plant_band_power.m` | separate file | **No** | Validation helper only |
@@ -67,7 +67,7 @@ Parallel MATLAB is a bridge; native Python is the long-term fix. Both are in sco
 ## 4. Proposed architecture
 
 ```
-src/envs/plant/
+envs/plant/
   config.py          # unchanged
   dbs.py             # extend: creatdbs waveform generator if not already equivalent
   spikes.py          # spike detection from voltage traces

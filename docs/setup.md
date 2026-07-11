@@ -9,9 +9,9 @@ Install, verify, and use **rl-adaptive-dbs** day to day. For **phases** and **st
 **rl-adaptive-dbs** provides:
 
 - A shared **plant** (Kumaravelu et al., 2016; MATLAB in `reference-material/`) wrapped for RL
-- A shared **Gymnasium-style environment** (`envs/`) — Mehregan et al. API (2 s steps, $P_\beta$, Eq. (8) reward)
-- **Controllers** (`controllers/ddpg` implemented; `snn` scaffolded for Phase 5; `sea_dbs` until Phase 6) — one implementation per paper; `ddpg` uses `envs/` directly, `snn` and `sea_dbs` use **adapters** for their paper’s RL interface
-- **Benchmarking & CLI** (Phase 4) — `benchmarks/` runner, **`rl-dbs`** (`benchmark`, `summary`, `info`, `train`/`eval`), **`rl-dbs-tui`** (Benchmarks tab); Mehregan **PTQ/QAT** in `controllers/ddpg/quantization.py` — [benchmarking.md](benchmarking.md), [cli.md](cli.md), [tui.md](tui.md)
+- A shared **Gymnasium-style environment** (`src/envs/`) — Mehregan et al. API (2 s steps, $P_\beta$, Eq. (8) reward)
+- **Controllers** (`src/controllers/ddpg` implemented; `src/controllers/snn` scaffolded for Phase 5; `sea_dbs` until Phase 6) — one implementation per paper; `ddpg` uses `envs/` directly, `snn` and `sea_dbs` use **adapters** for their paper’s RL interface
+- **Benchmarking & CLI** (Phase 4) — `src/benchmarks/` runner, **`rl-dbs`** (`benchmark`, `summary`, `info`, `train`/`eval`), **`rl-dbs-tui`** (six tabs — Run, Training, Eval, Benchmarks, Logs, Settings); Mehregan **PTQ/QAT** in `controllers/ddpg/quantization.py` — [benchmarking.md](benchmarking.md), [cli.md](cli.md), [tui.md](tui.md)
 - **Setup scripts** — **`scripts/setup.sh`** (Python + optional MATLAB); MATLAB detail in **`scripts/matlab/`** — [matlab.md](matlab.md)
 
 Packages install in editable mode so local changes are importable immediately after `uv sync`.
@@ -168,16 +168,15 @@ uv run pytest -m "not matlab"                                   # fast CI subset
 
 ```
 rl-adaptive-dbs/
-├── src/
-│   ├── envs/                # Plant bridge (`envs/plant/`) + Mehregan env (`envs/mehregan/`)
-│   ├── controllers/
-│   │   ├── ddpg/            # Mehregan et al.
-│   │   ├── snn/             # Nguyen et al.
-│   │   └── sea_dbs/         # Ravivarapu et al.
-│   ├── benchmarks/          # Suite runner (YAML → results/)
-│   └── rl_adaptive_dbs/     # CLI + TUI entry points
+├── envs/                    # Plant bridge (`envs/plant/`) + Mehregan env (`envs/mehregan/`)
+├── controllers/
+│   ├── ddpg/                # Mehregan et al.
+│   ├── snn/                 # Nguyen et al.
+│   └── sea_dbs/             # Ravivarapu et al.
+├── benchmarks/              # Suite runner (YAML → results/)
 ├── suites/                  # Benchmark manifests (e.g. mehregan_eval.yaml)
-├── tests/                   # pytest (mirrors src/envs/, src/controllers/, …)
+├── rl_adaptive_dbs/         # CLI + TUI entry points
+├── tests/                   # pytest (mirrors envs/, controllers/, benchmarks/)
 ├── docs/                    # Guides and specs (this file: setup.md)
 ├── reference-material/      # Kumaravelu et al. (2016) MATLAB model
 ├── scripts/
@@ -192,15 +191,13 @@ rl-adaptive-dbs/
 
 **Imports** (after `uv sync`):
 
-Package code lives under **`src/`** (src layout); import names are unchanged:
-
 ```python
 import envs
 from envs.plant import DbsSpec, MatlabPlant   # MATLAB bridge (Phase 2)
 from controllers import ddpg   # also: snn, sea_dbs
 ```
 
-Distribution name in metadata: `rl-adaptive-dbs`. Import paths use underscores and match package names inside `src/`.
+Distribution name in metadata: `rl-adaptive-dbs`. Import paths use underscores and match folder names.
 
 ---
 
@@ -241,9 +238,9 @@ uv run rl-dbs summary --results-dir results/ --csv results/summary.csv
 uv run rl-dbs train --controller ddpg --variant paper --seeds 0 --dry-run
 uv run rl-dbs eval --controller baseline --variant cdbs-130hz --seeds 0
 
-# Browse results (Textual TUI — Benchmarks tab; monochrome by default; `--color` to enable theme)
+# Textual TUI — six tabs; monochrome by default; `--color` for theme; `--dev` for live reload
 uv run rl-dbs-tui --results-dir results/
-uv run rl-dbs-tui --ascii --results-dir results/
+uv run rl-dbs-tui --dev --artifacts-dir artifacts/
 
 # Introspection and user config
 uv run rl-dbs info
@@ -273,13 +270,13 @@ Typical flow (details in [development/conventions.md](development/conventions.md
 
 **Shared environment**
 
-- Implement under `src/envs/` following [environment.md](environment.md).
+- Implement under `envs/` following [environment.md](environment.md).
 - Keep Kumaravelu equivalence in mind when changing dynamics or $P_\beta$.
 - Controllers consume the env API; they should not reimplement the plant.
 
 **New or updated controller**
 
-- Code: `src/controllers/<name>/`
+- Code: `controllers/<name>/`
 - Spec: `docs/controllers/<name>/replication.md` (add if missing; optional `extensions.md` for post-replication work).
 - If the paper’s obs/action space differs from the shared env, add an **adapter** in that package.
 

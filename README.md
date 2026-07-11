@@ -18,7 +18,7 @@ Work is delivered in **phases** (see [docs/development/roadmap.md](docs/developm
 
    Per-paper specs: [docs/controllers/](docs/controllers/) (`replication.md`, `extensions.md` for post-replication ideas). **Fusion** (SEA-DBS + DSQN synthesis) is Phase 8: [docs/controllers/fusion.md](docs/controllers/fusion.md).
 
-3. **Benchmarking & tooling** — **Per-paper suites** first (`mehregan_eval`, then `nguyen_eval`, `sea_dbs_eval`); optional **cross-paper** comparison on **plant-level** metrics (`cross_controller_plant`). Spec: [docs/benchmarking.md](docs/benchmarking.md). The **`benchmarks/`** package loads YAML from **`suites/`**, runs baselines and controllers, and writes **`results/`** (local, gitignored). **`uv run rl-dbs benchmark`** is the primary entry point ([docs/cli.md](docs/cli.md)); **`rl-dbs-tui`** browses **`results/`** (Benchmarks tab; Training/Eval/Logs later).
+3. **Benchmarking & tooling** — **Per-paper suites** first (`mehregan_eval`, then `nguyen_eval`, `sea_dbs_eval`); optional **cross-paper** comparison on **plant-level** metrics (`cross_controller_plant`). Spec: [docs/benchmarking.md](docs/benchmarking.md). The **`benchmarks/`** package loads YAML from **`suites/`**, runs baselines and controllers, and writes **`results/`** (local, gitignored). **`uv run rl-dbs benchmark`** is the primary entry point ([docs/cli.md](docs/cli.md)); **`rl-dbs-tui`** monitors **`artifacts/`** and **`results/`** (six tabs: Run, Training, Eval, Benchmarks, Logs, Settings — [docs/tui.md](docs/tui.md)).
 
 **Later (Phase 9+):** validated native Python plant (drop MATLAB after equivalence checks), modular plant/controller/benchmark layout, CI, and **full** CLI/TUI coverage for all controllers—see [docs/development/roadmap.md](docs/development/roadmap.md).
 
@@ -28,13 +28,13 @@ This repository is intended to work on **Windows**, **macOS**, and **Linux** (in
 
 ## Layout
 
-Python code lives at the **repository root** as two installable top-level packages (after `uv sync`, editable):
+Python packages live under **`src/`** (editable install via `uv sync`):
 
-- **`envs/`** — Shared Gymnasium-style RL environment (Mehregan et al. computational setup).
-- **`controllers/`** — Per-paper controllers: `ddpg` (implemented), `snn` (Phase 5), `sea_dbs` (Phase 6).
-- **`benchmarks/`** — Suite runner: YAML manifests → `results/` ([docs/benchmarking.md](docs/benchmarking.md)).
+- **`src/envs/`** — Shared Gymnasium-style RL environment (Mehregan et al. computational setup).
+- **`src/controllers/`** — Per-paper controllers: `ddpg` (implemented), `snn` (Phase 5 scaffold), `sea_dbs` (Phase 6).
+- **`src/benchmarks/`** — Suite runner: YAML manifests → `results/` ([docs/benchmarking.md](docs/benchmarking.md)).
 - **`suites/`** — Versioned eval configs (`mehregan_eval.yaml`, smoke variant for CI).
-- **`rl_adaptive_dbs/`** — CLI (`rl-dbs`) and TUI (`rl-dbs-tui`).
+- **`src/rl_adaptive_dbs/`** — CLI (`rl-dbs`), TUI (`rl-dbs-tui`), and shared entry helpers.
 
 - `docs/` — [setup.md](docs/setup.md) (setup & use), [development/](docs/development/) (roadmap, conventions, `uv`, pytest), [plant.md](docs/plant.md), [environment.md](docs/environment.md), [controllers/](docs/controllers/), [benchmarking.md](docs/benchmarking.md), [cli.md](docs/cli.md), [tui.md](docs/tui.md).
 - `results/` — benchmark outputs from `rl-dbs benchmark` (local, gitignored).
@@ -56,7 +56,7 @@ Specs: [plant.md](docs/plant.md), [environment.md](docs/environment.md), [contro
 
 ## Benchmarking
 
-Cross-controller comparison uses **per-paper eval suites** plus an optional **same-plant** suite; see [docs/benchmarking.md](docs/benchmarking.md) §3. Run suites with **`uv run rl-dbs benchmark`**, summarize with **`uv run rl-dbs summary`**, browse with **`uv run rl-dbs-tui`**. **`rl-dbs train`** / **`eval`** wrap `ddpg` for now.
+Cross-controller comparison uses **per-paper eval suites** plus an optional **same-plant** suite; see [docs/benchmarking.md](docs/benchmarking.md) §3. Run suites with **`uv run rl-dbs benchmark`**, summarize with **`uv run rl-dbs summary`**, monitor with **`uv run rl-dbs-tui`** (launch jobs, training, eval drill-down, logs). **`rl-dbs train`** / **`eval`** wrap `ddpg` for now.
 
 ## References
 
