@@ -1,4 +1,4 @@
-"""Write benchmark results under ``results/`` ([benchmarking.md](../docs/benchmarking.md) §6)."""
+"""Write benchmark results under ``results/`` ([benchmarking.md](../../docs/benchmarking.md) §6)."""
 
 from __future__ import annotations
 
@@ -110,6 +110,32 @@ def load_run_metrics(run_dir: Path) -> dict[str, Any]:
 
 def load_run_config(run_dir: Path) -> dict[str, Any]:
     return json.loads((run_dir / "config.json").read_text(encoding="utf-8"))
+
+
+_TIMESERIES_CANDIDATES = ("rollout.json", "p_beta.json")
+
+
+def load_run_timeseries(run_dir: Path) -> dict[str, Any] | None:
+    """Load per-step series from ``timeseries/`` (``rollout.json`` preferred)."""
+    ts_dir = run_dir / "timeseries"
+    if not ts_dir.is_dir():
+        return None
+    for name in _TIMESERIES_CANDIDATES:
+        path = ts_dir / name
+        if path.is_file():
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                return None
+            return payload if isinstance(payload, dict) else None
+    for path in sorted(ts_dir.glob("*.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(payload, dict):
+            return payload
+    return None
 
 
 def list_suite_runs(suite_dir: Path) -> list[Path]:

@@ -1,0 +1,3 @@
+{"level": "INFO", "message": "run started"}
+{"level": "WARNING", "message": "slow step"}
+{"level": "ERROR", "message": "checkpoint missing"}
