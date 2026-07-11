@@ -64,17 +64,27 @@ def _run_interactive(
     *,
     artifacts_dir: Path,
     refresh_s: float,
+    color_enabled: bool,
 ) -> int:
     from rl_adaptive_dbs.tui.reload import RESTART_EXIT_CODE, reload_tui_modules
+    from rl_adaptive_dbs.tui.settings_data import (
+        TuiSettings,
+        load_settings,
+        settings_file,
+    )
+
+    defaults = TuiSettings(refresh_s=refresh_s, color_enabled=color_enabled)
+    settings = load_settings(settings_file(artifacts_dir), defaults=defaults)
 
     while True:
         reload_tui_modules()
+        settings = load_settings(settings_file(artifacts_dir), defaults=defaults)
         from rl_adaptive_dbs.tui.app import RlDbsTuiApp
 
         app = RlDbsTuiApp(
             results_dir,
             artifacts_dir=artifacts_dir,
-            refresh_s=refresh_s,
+            settings=settings,
         )
         exit_code = app.run()
         if exit_code != RESTART_EXIT_CODE:
@@ -102,6 +112,7 @@ def main(argv: list[str] | None = None) -> int:
         args.results_dir,
         artifacts_dir=args.artifacts_dir,
         refresh_s=args.refresh,
+        color_enabled=args.color and not args.no_color,
     )
 
 
