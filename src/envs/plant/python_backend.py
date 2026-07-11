@@ -54,6 +54,7 @@ class PythonPlant:
         dbs_spec: DbsSpec | None = None,
         *,
         record_spikes: bool = True,
+        gpi_spike_buffer_size: int | None = None,
     ) -> IntegrateResult:
         if duration_s <= 0:
             msg = "duration_s must be positive"
@@ -75,4 +76,5 @@ class PythonPlant:
             iteration=self._iteration,
             seed=self._seed,
             init_draws=self._init_draws,
+            gpi_spike_buffer_size=gpi_spike_buffer_size,
         )
