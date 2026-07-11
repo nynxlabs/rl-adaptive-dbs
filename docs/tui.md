@@ -149,7 +149,8 @@ Cross-paper warning when `reward_sum` is not comparable (banner referencing [ben
 |---------|-----|
 | **Sparkline** | Unicode block chars (`▀▄▂`) or ASCII `_.-` fallback in monochrome mode or narrow width. |
 | **Progress bar** | Training episode fraction; benchmark suite run completion (count `metrics.json` vs planned runs in manifest). |
-| **Tables** | Fixed-width columns; truncate `run_id` with ellipsis in middle. |
+| **Tables** | Fixed-width columns; truncate `run_id` with ellipsis in middle. Row cursor uses Textual block-cursor styling. |
+| **Tab bar** | Active tab uses the same block-cursor highlight rectangle as table rows; default Textual underline is hidden. |
 | **Color** | **Default: monochrome** (`NO_COLOR=1` before Textual starts). Use `--color` for the theme palette; respect existing `NO_COLOR` / `TERM=dumb` when `--color` is not passed. |
 
 **Math in UI:** Show $P_\beta$ as label `P_beta` in plain terminals; optional Unicode β when encoding is UTF-8.
