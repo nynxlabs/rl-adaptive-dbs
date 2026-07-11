@@ -1,0 +1,321 @@
+#!/usr/bin/env python3
+"""Mehregan et al. (paper 1) Figure 1b — mean GPi power spectral density.
+
+Plots multitaper PSD (Kumaravelu / Chronux-style, 1–100 Hz) averaged across the
+10 GPi neurons for three plant conditions:
+
+  - Healthy (`pd = 0`, no DBS)
+  - Parkinsonian (`pd = 1`, no DBS)
+  - Parkinsonian + 130 Hz conventional STN DBS
+
+By default, PSD curves are averaged over eval seeds 0–9 to smooth single-draw spikes.
+
+Run:
+  uv run python scripts/figures/papers/1/1b/plot.py
+  uv run python scripts/figures/papers/1/1b/plot.py --plot-only --y-max 90
+  uv run python scripts/figures/papers/1/1b/plot.py --seeds 0,1,7,42,99
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+from envs.plant import DbsSpec, PlantConfig, PythonPlant
+from envs.plant.biomarkers import SpectrumParams, multitaper_psd_point_process, p_beta
+
+FIGURE_DIR = Path("artifacts/figures/papers/1/1b")
+DEFAULT_CURVES = FIGURE_DIR / "curves.json"
+DEFAULT_OUT = FIGURE_DIR / "gpi_psd.png"
+DEFAULT_MANIFEST = FIGURE_DIR / "manifest.json"
+DEFAULT_DURATION_S = 10.0
+DEFAULT_SEEDS: tuple[int, ...] = tuple(range(10))
+
+# Paper-style light figure (Fig 1b is a qualitative PSD comparison panel).
+STYLE = {
+    "figure.facecolor": "white",
+    "axes.facecolor": "white",
+    "axes.edgecolor": "#333333",
+    "axes.labelcolor": "#111111",
+    "text.color": "#111111",
+    "xtick.color": "#333333",
+    "ytick.color": "#333333",
+    "grid.color": "#cccccc",
+    "legend.facecolor": "white",
+    "legend.edgecolor": "#cccccc",
+    "font.size": 10,
+}
+SERIES = {
+    "healthy": {"label": "Healthy Control", "color": "#2ca02c"},
+    "pd": {"label": "PD no Treatment", "color": "#d62728"},
+    "pd_130hz": {"label": "PD 130 Hz Treatment", "color": "#1f77b4"},
+}
+
+
+@dataclass(frozen=True)
+class Condition:
+    key: str
+    config: PlantConfig
+    dbs: DbsSpec
+
+
+CONDITIONS: tuple[Condition, ...] = (
+    Condition("healthy", PlantConfig(pd=0), DbsSpec.none()),
+    Condition("pd", PlantConfig(pd=1), DbsSpec.none()),
+    Condition("pd_130hz", PlantConfig(pd=1), DbsSpec.from_frequency_hz(130.0)),
+)
+
+
+def parse_seeds(raw: str) -> tuple[int, ...]:
+    parts = [p.strip() for p in raw.split(",") if p.strip()]
+    if not parts:
+        msg = "--seeds must list at least one integer"
+        raise ValueError(msg)
+    return tuple(int(p) for p in parts)
+
+
+def mean_gpi_psd(
+    gpi_spikes: list[np.ndarray],
+    *,
+    dt_ms: float,
+    segment_duration_s: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Average multitaper PSD across GPi neurons (Mehregan Fig 1b / Eq. (1) setup)."""
+    params = SpectrumParams.from_dt_ms(dt_ms)
+    psds: list[np.ndarray] = []
+    freqs: np.ndarray | None = None
+    for spikes in gpi_spikes:
+        psd, f = multitaper_psd_point_process(
+            spikes,
+            params,
+            segment_duration_s=segment_duration_s,
+        )
+        psds.append(psd)
+        freqs = f
+    if freqs is None:
+        msg = "gpi_spikes must be non-empty"
+        raise ValueError(msg)
+    return freqs, np.mean(np.vstack(psds), axis=0)
+
+
+def simulate_condition(
+    plant: PythonPlant,
+    condition: Condition,
+    *,
+    seeds: tuple[int, ...],
+    duration_s: float,
+) -> dict[str, Any]:
+    plant.config = condition.config
+    psd_stack: list[np.ndarray] = []
+    p_beta_by_seed: dict[str, float] = {}
+    freqs: np.ndarray | None = None
+
+    for seed in seeds:
+        print(f"  seed {seed}...", file=sys.stderr)
+        result = plant.reset(seed=seed).integrate(duration_s, condition.dbs)
+        f, psd = mean_gpi_psd(
+            result.gpi_spikes,
+            dt_ms=plant.config.dt_ms,
+            segment_duration_s=duration_s,
+        )
+        freqs = f
+        psd_stack.append(psd)
+        p_beta_by_seed[str(seed)] = float(
+            p_beta(
+                result.gpi_spikes,
+                dt_ms=plant.config.dt_ms,
+                segment_duration_s=duration_s,
+            ),
+        )
+
+    if freqs is None:
+        msg = "no seeds simulated"
+        raise ValueError(msg)
+
+    mean_psd = np.mean(np.vstack(psd_stack), axis=0)
+    p_beta_values = list(p_beta_by_seed.values())
+    return {
+        "key": condition.key,
+        "pd": condition.config.pd,
+        "dbs_hz": condition.dbs.frequency_hz,
+        "freqs_hz": freqs.tolist(),
+        "psd": mean_psd.tolist(),
+        "p_beta_mean": float(np.mean(p_beta_values)),
+        "p_beta_std": float(np.std(p_beta_values)),
+        "p_beta_by_seed": p_beta_by_seed,
+        "n_seeds": len(seeds),
+    }
+
+
+def save_curves(
+    curves: list[dict[str, Any]],
+    path: Path,
+    *,
+    duration_s: float,
+    seeds: tuple[int, ...],
+) -> None:
+    payload = {
+        "figure": "mehregan_fig1b",
+        "duration_s": duration_s,
+        "seeds": list(seeds),
+        "curves": curves,
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2) + "\n")
+
+
+def load_curves(path: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    payload = json.loads(path.read_text())
+    curves = payload.get("curves")
+    if not isinstance(curves, list) or not curves:
+        msg = f"no curves in {path}"
+        raise ValueError(msg)
+    return curves, payload
+
+
+def plot_fig1b(
+    curves: list[dict[str, Any]],
+    *,
+    out_path: Path,
+    title: str,
+    y_max: float | None = None,
+    y_headroom: float = 1.1,
+) -> dict[str, Any]:
+    plt.rcParams.update(STYLE)
+    fig, ax = plt.subplots(figsize=(7.0, 4.5), dpi=150)
+
+    peak_by_series: dict[str, float] = {}
+    for curve in curves:
+        meta = SERIES[curve["key"]]
+        freqs = np.asarray(curve["freqs_hz"], dtype=float)
+        psd = np.asarray(curve["psd"], dtype=float)
+        in_band = freqs <= 50.0
+        peak_by_series[curve["key"]] = float(np.max(psd[in_band]))
+        ax.plot(freqs, psd, color=meta["color"], linewidth=1.8, label=meta["label"])
+
+    data_max = max(peak_by_series.values(), default=0.0)
+    ymax = y_max if y_max is not None else float(np.ceil(data_max * y_headroom))
+
+    ax.set_xlim(1.0, 50.0)
+    ax.set_ylim(0.0, ymax)
+    ax.set_xlabel("Frequency (Hz)")
+    ax.set_ylabel("Power Spectral Density")
+    ax.set_title(title)
+    ax.grid(True, alpha=0.35)
+    ax.legend(loc="upper right", fontsize=9)
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.tight_layout()
+    fig.savefig(out_path, facecolor=fig.get_facecolor())
+    plt.close(fig)
+    return {
+        "out": str(out_path),
+        "series": [c["key"] for c in curves],
+        "psd_peak_hz_0_50": peak_by_series,
+        "y_max": ymax,
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--duration-s", type=float, default=DEFAULT_DURATION_S)
+    parser.add_argument(
+        "--seeds",
+        type=parse_seeds,
+        default=DEFAULT_SEEDS,
+        help="Comma-separated eval seeds to average (default: 0–9)",
+    )
+    parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    parser.add_argument(
+        "--curves",
+        type=Path,
+        default=DEFAULT_CURVES,
+        help="Cached PSD curves JSON (written on simulate; read with --plot-only)",
+    )
+    parser.add_argument(
+        "--plot-only",
+        action="store_true",
+        help="Replot from --curves cache (seconds; no plant simulation)",
+    )
+    parser.add_argument(
+        "--y-max",
+        type=float,
+        default=None,
+        help="Fixed y-axis max (default: auto from data + 10%% headroom)",
+    )
+    parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
+    args = parser.parse_args()
+
+    if args.duration_s <= 0:
+        print("--duration-s must be positive", file=sys.stderr)
+        return 2
+
+    if args.plot_only:
+        if not args.curves.exists():
+            print(f"missing curves cache: {args.curves}", file=sys.stderr)
+            print("Run without --plot-only once to build the cache.", file=sys.stderr)
+            return 2
+        curves, cache_meta = load_curves(args.curves)
+        duration_s = float(cache_meta.get("duration_s", args.duration_s))
+        seeds = tuple(cache_meta.get("seeds", args.seeds))
+        print(f"loaded {len(curves)} curves from {args.curves}", file=sys.stderr)
+    else:
+        duration_s = args.duration_s
+        seeds = args.seeds
+        curves = []
+        with PythonPlant() as plant:
+            for condition in CONDITIONS:
+                print(
+                    f"simulating {condition.key} ({duration_s:.1f} s, "
+                    f"{len(seeds)} seeds)...",
+                    file=sys.stderr,
+                )
+                curves.append(
+                    simulate_condition(
+                        plant,
+                        condition,
+                        seeds=seeds,
+                        duration_s=duration_s,
+                    ),
+                )
+        save_curves(curves, args.curves, duration_s=duration_s, seeds=seeds)
+        print(f"wrote curves cache {args.curves}", file=sys.stderr)
+
+    title = "Oscillatory activity of model neurons in the GPi"
+    panel = plot_fig1b(curves, out_path=args.out, title=title, y_max=args.y_max)
+
+    manifest = {
+        "figure": "mehregan_fig1b",
+        "duration_s": duration_s,
+        "seeds": list(seeds),
+        "curves_cache": str(args.curves),
+        "plot_only": args.plot_only,
+        "panel": panel,
+        "conditions": [
+            {
+                "key": c["key"],
+                "pd": c["pd"],
+                "dbs_hz": c["dbs_hz"],
+                "p_beta_mean": c["p_beta_mean"],
+                "p_beta_std": c["p_beta_std"],
+                "p_beta_by_seed": c["p_beta_by_seed"],
+                "n_seeds": c["n_seeds"],
+            }
+            for c in curves
+        ],
+    }
+    args.manifest.parent.mkdir(parents=True, exist_ok=True)
+    args.manifest.write_text(json.dumps(manifest, indent=2) + "\n")
+
+    print(json.dumps(manifest, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

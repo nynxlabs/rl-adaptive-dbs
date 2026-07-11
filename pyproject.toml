@@ -37,5 +37,8 @@ markers = [
     "matlab: requires MATLAB and the Kumaravelu reference bridge",
 ]
 
+[tool.hatch.build]
+dev-mode-dirs = ["src"]
+
 [tool.hatch.build.targets.wheel]
-packages = ["envs", "controllers", "benchmarks", "rl_adaptive_dbs"]
+packages = ["src/envs", "src/controllers", "src/benchmarks", "src/rl_adaptive_dbs"]
