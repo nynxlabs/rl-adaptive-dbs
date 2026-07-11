@@ -11,7 +11,7 @@ This document defines the **`rl-dbs`** CLI: training, evaluation, benchmarking, 
 | Goal | Notes |
 |------|--------|
 | **Single entry point** | One command name across platforms: `rl-dbs`. |
-| **Spec-driven behavior** | CLI delegates to `envs/`, `controllers/`, and suite manifests—does not duplicate plant dynamics or reward definitions. |
+| **Spec-driven behavior** | CLI delegates to `src/envs/`, `src/controllers/`, and suite manifests—does not duplicate plant dynamics or reward definitions. |
 | **Reproducibility** | Every run logs `controller`, `variant`, `seed`, and paths to config/checkpoints per [benchmarking.md](benchmarking.md) §2. |
 | **Cross-platform** | Paths via `pathlib`; no POSIX-only assumptions in library code; shell examples stay agnostic where possible. |
 
@@ -25,10 +25,10 @@ Register a console script in `pyproject.toml`:
 
 ```toml
 [project.scripts]
-rl-dbs = "rl_adaptive_dbs.cli:main"
+rl-dbs = "rl_adaptive_dbs.entry:cli_main"
 ```
 
-The implementation lives in **`rl_adaptive_dbs.cli`** (`rl_adaptive_dbs/cli.py`); the **user-facing command** is fixed: `rl-dbs`.
+The implementation lives in **`rl_adaptive_dbs.cli`** (`src/rl_adaptive_dbs/cli.py`); packages are under **`src/`** (see [setup.md](setup.md) §4). The console entry **`rl_adaptive_dbs.entry`** bootstraps **`--max-threads`** / **`RL_DBS_MAX_THREADS`** before heavy imports.
 
 ### 2.2 Recommended invocation
 
@@ -49,10 +49,10 @@ Do not require users to set `PYTHONPATH` manually; editable installs from `uv sy
 
 Plant, environment, and global CLI defaults merge in this order (later wins):
 
-1. Built-in dataclass defaults (`envs/plant/config.py`, `envs/mehregan/config.py`).
+1. Built-in dataclass defaults (`src/envs/plant/config.py`, `src/envs/mehregan/config.py`).
 2. User file **`.rl-dbs.yaml`** (or `.rl-dbs.yml`): walk from the current working directory up to the git root. Template: **`.rl-dbs.example.yaml`** at the repo root (`cp .rl-dbs.example.yaml .rl-dbs.yaml`).
-3. Environment variables: `RL_DBS_CONFIG` (explicit file path), `RL_DBS_SEED`, `RL_DBS_RESULTS_DIR`.
-4. Explicit CLI flags (`--config`, `--seed`, `--results-dir`, etc.).
+3. Environment variables: `RL_DBS_CONFIG` (explicit file path), `RL_DBS_SEED`, `RL_DBS_RESULTS_DIR`, `RL_DBS_MAX_THREADS` (default thread-pool cap for Numba/OpenBLAS when no `--max-threads` flag).
+4. Explicit CLI flags (`--config`, `--seed`, `--results-dir`, `--max-threads`, etc.).
 
 `train`, `eval`, and `benchmark` construct `MehreganEnv` from the merged file settings when present. Copy **`.rl-dbs.example.yaml`** to **`.rl-dbs.yaml`** to customize (the latter is gitignored by default).
 
@@ -63,7 +63,7 @@ All filesystem paths accepted on the command line are normalized with `pathlib.P
 ## 3. Command structure
 
 ```
-rl-dbs [--verbose | --quiet] [--config PATH] [--seed SEED] <subcommand> [subcommand options]
+rl-dbs [--verbose | --quiet] [--config PATH] [--seed SEED] [--max-threads N] <subcommand> [subcommand options]
 ```
 
 | Subcommand | Phase (roadmap) | Role |
@@ -87,8 +87,21 @@ Global flags apply before the subcommand and affect logging only unless noted.
 | `--quiet` | `-q` | Log level `WARNING`; suppress progress bars on stderr. |
 | `--config` | | Path to `.rl-dbs.yaml` (overrides discovery walk). |
 | `--seed` | | Default RNG seed when a subcommand omits `--seeds` (overrides `defaults.seed` in the config file). |
+| `--max-threads` | | Cap in-process Numba/OpenBLAS thread pools (`OMP_NUM_THREADS`, `OPENBLAS_NUM_THREADS`, `NUMBA_NUM_THREADS`, etc.). Pair with `taskset` for a hard logical-CPU cap. Fallback: `RL_DBS_MAX_THREADS`. |
 
 `--verbose` and `--quiet` are mutually exclusive; if both are passed, exit **2** (usage error).
+
+### 4.1 Standalone scripts (`python -m rl_adaptive_dbs.run`)
+
+Repo scripts under `scripts/` that import NumPy at module load should be launched through the runner so thread limits apply **before** those imports:
+
+```bash
+uv run python -m rl_adaptive_dbs.run --max-threads 3 scripts/run_task177_continuous_freq_probe.py --continuous-only
+```
+
+Long plant-heavy probes support **`--resume`** (load partial JSON, skip completed actions) and incremental checkpoint writes. Ops notes for the continuous freq probe live locally at `wilzen3476/tasks/task177-continuous-freq-probe.md` (gitignored). Pattern also used by `scripts/run_task177_pattern_alphabet_sweep.py` (`--resume` skips completed experiments).
+
+Scripts using `scripts/train_runtime_guard.run_main` also honor `--max-threads` / `RL_DBS_MAX_THREADS` when passed on the command line (best-effort if NumPy was already imported). Prefer the runner for plant-heavy probes.
 
 ---
 
@@ -396,7 +409,7 @@ CI smoke tests may invoke `rl-dbs info` and `rl-dbs benchmark --dry-run` expecti
 | `train` / `eval` for `snn`, `sea_dbs` | 5 | Not started |
 | Cross-platform packaging polish | 8+ | Not started |
 
-Prefer thin `rl_adaptive_dbs/*.py` modules (`cli.py`, `train_cmd.py`, `eval_cmd.py`, …) that call into `controllers.*` and `envs` per [benchmarking.md](benchmarking.md) §7.
+Prefer thin `src/rl_adaptive_dbs/*.py` modules (`cli.py`, `train_cmd.py`, `eval_cmd.py`, …) that call into `controllers.*` and `envs` per [benchmarking.md](benchmarking.md) §7.
 
 ---
 

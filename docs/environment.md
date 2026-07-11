@@ -1,6 +1,6 @@
 # RL environment specification (Mehregan et al., adaptive DBS / quantization)
 
-This document specifies the **computational reinforcement-learning environment** described in *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning* (Mehregan et al.). It is meant to align a Gymnasium-style implementation under `envs/` (repository root) with the published setup. The **DDPG actor–critic controller** (networks, replay, losses, quantization) is specified separately in [controllers/ddpg/replication.md](controllers/ddpg/replication.md).
+This document specifies the **computational reinforcement-learning environment** described in *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning* (Mehregan et al.). It is meant to align a Gymnasium-style implementation under `src/envs/` with the published setup. The **DDPG actor–critic controller** (networks, replay, losses, quantization) is specified separately in [controllers/ddpg/replication.md](controllers/ddpg/replication.md).
 
 The **plant** is the shared **Kumaravelu et al. (2016)** parkinsonian CBGT model with **STN DBS**—topology, integration, actuation, and biomarker primitives are specified in **[plant.md](plant.md)**. This document covers the **Mehregan et al. Gymnasium-style RL environment** built on that plant.
 
@@ -39,7 +39,19 @@ where $P_j^{\mathrm{GPi}}$ is the **power spectral density** of the **action pot
 - **Algorithm 1** in the paper: at each RL step, form state **s** from **$P_\beta$** (after running the plant for the step duration).
 - For the **computational experiments** in §IV.A.1, the **biomarker window** for $P_\\beta$ is described as spanning the **full length of the simulation segment** used for that step (see §5).
 
-**Implementation (Jul 2026, TASK-67):** The paper's "window spanning the full simulation segment" means **`state_length=1`** — a single $P_\\beta$ value computed over the 2 s step. This is **not** a multi-step history window. With `state_length > 1` (e.g. 15), only the most recent element changes per step while the rest are stale history, causing the CNN to see near-identical states and collapse to a constant policy. **Use `state_length=1` as default.**
+**Implementation (TASK-158 / TASK-162, Jul 2026 — paper-real interpretation II):** The CNN input is a **within-step temporal series** of length $L$ (`state_length`), **not** a rolling deque of past whole-step scalars. Each RL step of duration $l = 2\,\mathrm{s}$ is chopped into $L$ equal sub-intervals; **$P_\beta$ (Eq. 1, 13–35 Hz)** is computed independently in each sub-window and normalized to $s(i) = P_{\beta,i} / 1000$. **Default:** `state_mode=within_step`, `state_length=16` (two stride-2 average pools yield length $16 \to 8 \to 4$, activating Fig. 3a pooling).
+
+**Reward Eq. (8) (TASK-162):** Mehregan §IV.A.1 sets the biomarker window to the **full simulation segment** (2 s). **Default:** `reward_state_mode=full_segment` — $s_{\mathrm{sum}}$ uses the **whole-step** scalar $P_\beta$ for reward only; the CNN still sees the $L$-length within-step series. Legacy `reward_state_mode=observation_mean` (mean of CNN inputs) collapses the 30 Hz pattern landscape and caused TASK-159 failure.
+
+| Mode | Config | Meaning |
+|------|--------|---------|
+| **`within_step`** (paper path) | `state_mode=within_step`, `state_length=L` | $L$ biomarker samples **inside** the current 2 s segment |
+| **`multi_step_history`** (extension) | `state_mode=multi_step_history`, `state_length=N` | Rolling deque of $N$ past **whole-step** scalar $P_\beta$ values (TASK-67 collapse mode — not paper-default) |
+| **Scalar shortcut** | `within_step`, `state_length=1` | Single $P_\beta$ over the full 2 s segment (pools skipped; backward-compatible) |
+| **Reward: full segment** | `reward_state_mode=full_segment` (default) | Eq. (8) $s_{\mathrm{sum}}$ from whole-step $P_\beta$; CNN obs may still be within-step $L>1$ |
+| **Reward: observation mean** | `reward_state_mode=observation_mean` | Legacy — $s_{\mathrm{sum}} = \mathrm{mean}(\mathrm{obs})$; collapses 30 Hz landscape at $L=16$ |
+
+**Deprecated for paper replication:** `multi_step_history` with `state_length > 1` — only the newest element changes per step, so the CNN sees near-identical states and collapses to a constant policy (TASK-67).
 
 **Optional context (not used as the main RL input in this study):** **Error index (EI)** for thalamic reliability (paper Equation (2)) appears in §II.B for background and comparison with prior work; the **stated RL objective** uses **$P_\beta$ alone**.
 
@@ -59,6 +71,40 @@ where $P_j^{\mathrm{GPi}}$ is the **power spectral density** of the **action pot
 - **This repo:** the action is a **scalar frequency** the agent may set freely (0–200 Hz). Because reward Eq. (8) has **no stimulation-cost term** (faithful to the paper), an action's value is essentially state-independent and monotone in beta suppression, so the optimal scalar action is a **single fixed frequency**. **Constant policy is the expected, correct optimum for this action space** — not an exploration or plant-response bug.
 
 **Consequence:** a scalar frequency has no room to be an "irregular pattern," so the paper's *adaptive temporal pattern* cannot be expressed in the current action space. Resolving this requires a **design decision** (see [replication.md](controllers/ddpg/replication.md) §5, TASK-81): **(A)** accept a fixed scalar policy (diverges from the paper's pattern claim); **(B)** add an explicit energy/cost term to the reward (an **extension** — the paper has none); or **(C)** redesign the action space as a **fixed-mean-frequency pulse pattern** to match the paper (faithful, but a larger change to the pattern alphabet and the plant DBS drive).
+
+### 4.2 Fixed-mean-frequency pattern alphabet (Option C, TASK-83)
+
+**Decision (master-approved, jul 7 2026):** Option C — redesign the action space to match Mehregan et al.'s fixed-mean-frequency pulse pattern formulation. Implemented in `envs/mehregan/fixed_mean_patterns.py`.
+
+**What changes:** The actor no longer selects a stimulation *frequency* (0–200 Hz). Instead, it selects a *temporal pulse pattern* from a discrete alphabet, all sharing the same mean stimulation rate (45 Hz default, 30 Hz for ablation). Mean frequency is an **input** to Algorithm 1, not an output — the agent shapes *when* pulses occur, not *how many*.
+
+**Pattern alphabet:**
+
+| Property | Value | Rationale |
+|----------|-------|-----------|
+| `n_patterns` | **41** | Matches the scalar-frequency alphabet size / actor head, so no DDPG topology change needed |
+| Pattern 0 | Regular periodic train at `mean_hz` | Byte-identical to `create_dbs_current(mean_hz)` — the paper's initialization target |
+| Patterns 1–40 | Deterministic irregular trains | Same pulse count as pattern 0 (mean rate preserved exactly). Interior onsets jittered by ±1/3 ISI; first/last onsets pinned so total span is unchanged |
+| Jitter PRNG | Seeded by `(mean_hz, pattern_index)` | Reproducible across training, evaluation, and quantization |
+| Resolution | Plant time grid (`dt_ms`; follows `PlantConfig` / `plant.dt` in `.rl-dbs.yaml`) | Same grid as the integrator; precomputed traces cached via `lru_cache` |
+
+**Paper-silent choices (documented here per repo convention):**
+
+- Alphabet size 41 is an implementation convenience, not paper-specified. The paper does not state the cardinality of the pattern set.
+- Jitter fraction 1/3 is chosen to keep consecutive pulses well separated (≫ pulse width) while producing visibly irregular trains.
+- First/last onset pinning preserves the total temporal span (and thus the sum of inter-spike intervals) across all patterns in the alphabet.
+
+**Replication uncertainty (TASK-109):** Mehregan et al. motivate learning a stimulation *pattern* at fixed mean rate but **do not specify** how discrete actions map to pulse trains (alphabet size, jitter model, or boundary conditions). Our ±1/3 ISI jitter over 41 deterministic patterns is an **implementation hypothesis**, not paper-grounded. Patterns produced by Mehregan's trained actor may lie **outside** this alphabet; a discrete sweep here cannot fully explain their Fig. 5b claim that irregular learned patterns beat periodic stimulation at 30 Hz without matching their pattern construction and evaluation protocol.
+
+**Plant integration:** `DbsSpec` carries an optional `idbs` field — a precomputed STN drive trace on the plant time grid. When set, `integrate_network` applies it directly instead of synthesizing a regular train from `frequency_hz`. The MATLAB backend ignores `idbs`; pattern mode is Python-plant only.
+
+**Usage:** Instantiate `MehreganEnv(alphabet=FixedMeanPatternAlphabet(mean_hz=45.0))`. The env's `action_space` and `step()` are unchanged — only the alphabet-to-DbsSpec mapping differs.
+
+**Baselines in pattern mode:** Pattern 0 (regular train at `mean_hz`) replaces the old periodic-45Hz baseline. The 130 Hz cDBS and no-stimulation baselines are not representable in pattern mode (different mean frequency); use the scalar-frequency alphabet for those comparisons.
+
+**Pattern 0 semantics (TASK-105):** In fixed-mean pattern mode, **action 0 is active stimulation** — the regular periodic train at `mean_hz`, byte-identical to the paper's initialization target. It is **not** no-stimulation (that would be a different mean rate and has no pattern-space index). When reporting `dominant_action: 0` from pattern-mode training, read it as "regular 45 Hz train," not "off."
+
+**Reward landscape under Eq. (8) (TASK-105 / TASK-156):** `scripts/pattern_reward_landscape.py` (and `scripts/run_q6_landscape.py` for paper-aligned `plant.dt_ms=0.02`) sweeps all 41 patterns with one RL step each from a common plant reset (`reset(seed)` then `step(action)`). Results are **mean-rate dependent** (TASK-156): at **45 Hz** (seed 0, `state_length=1`, `dt_ms=0.02`), pattern 0 ranks **1/41**; at **30 Hz** pattern 0 ranks **41/41** and multiple irregular patterns beat it on both 1-step and 30-step constant-policy rollouts — consistent with Mehregan Fig. 5b (periodic 30 Hz elevates beta; irregular patterns can do better). Re-run after plant or reward changes; wall time is plant-bound (~15–25 min per mean rate on current hardware). Canonical Q6 artifacts: `artifacts/ddpg/q6_landscape_*.json`.
 
 ---
 
@@ -135,7 +181,7 @@ From **§IV.A.1** (for replication / defaults):
 
 ## 9. Optional extensions (same publication)
 
-- **Quantization:** PTQ / QAT on actor–critic networks affects **inference-time** policy outputs; the **environment interface** (plant, $P_\beta$, timing, reward) is unchanged. Implementation: [controllers/ddpg/replication.md](controllers/ddpg/replication.md) §6, [controllers/ddpg/quantization.py](../../controllers/ddpg/quantization.py).
+- **Quantization:** PTQ / QAT on actor–critic networks affects **inference-time** policy outputs; the **environment interface** (plant, $P_\beta$, timing, reward) is unchanged. Implementation: [controllers/ddpg/replication.md](controllers/ddpg/replication.md) §6, [`src/controllers/ddpg/quantization.py`](../src/controllers/ddpg/quantization.py).
 - **Animal validation:** Not part of the computational `Env` API; documented separately if this repo later adds experiment logs or replay buffers for **in vivo** trials.
 
 ---
@@ -163,9 +209,11 @@ See [plant.md](plant.md) §5, §10. **Decide in** plant config; validate biomark
 
 ### 3. Discrete pattern alphabet
 
-The actor emits logits over a discrete STN pattern set, but §IV.A.1 does not state **cardinality** or **waveform encoding**. **Fixed:** discrete patterns via softmax + argmax. **Open:** alphabet size and per-pattern STN drive semantics. **Decide in** code and keep stable across training, evaluation, and quantization comparisons.
+The actor emits logits over a discrete STN pattern set, but §IV.A.1 does not state **cardinality** or **waveform encoding**. **Fixed:** discrete patterns via softmax + argmax. Alphabet size and per-pattern STN drive semantics are now **decided** (TASK-83, Option C).
 
-**Implemented (`envs/mehregan/patterns.py`):** 41 actions → Kumaravelu `pick_dbs_freq` 1…41 (`freqs = 0:5:200`); action `0` is no DBS (`pick_dbs_freq == 1`).
+**Scalar mode (`envs/mehregan/patterns.py`):** 41 actions → Kumaravelu `pick_dbs_freq` 1…41 (`freqs = 0:5:200`); action `0` is no DBS (`pick_dbs_freq == 1`).
+
+**Pattern mode (`envs/mehregan/fixed_mean_patterns.py`):** 41 irregular pulse patterns at fixed mean frequency (45 Hz / 30 Hz). See §4.2 for full specification.
 
 ### 4. Observation normalization for reward Eq. (8)
 

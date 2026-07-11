@@ -1,0 +1,6 @@
+INFO starting pattern train smoke
+episode 1/10, reward: -12.50
+WARNING beta power elevated
+episode 2/10, reward: -8.10
+ERROR plant step failed: timeout
+episode 3/10, reward: -5.40

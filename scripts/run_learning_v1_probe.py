@@ -40,8 +40,6 @@ def main() -> int:
             exploration_mode="softmax",
             exploration_temperature_start=3.0,
             exploration_temperature_end=1.0,
-            conv_channels=32,
-            shrink_dim=8,
             init_bias_scale=0.5,
         )
         result = train(env, config, checkpoint_path=args.checkpoint)
@@ -54,8 +52,6 @@ def main() -> int:
             "exploration_mode": "softmax",
             "exploration_temperature": "3.0->1.0",
             "init_bias_scale": 0.5,
-            "conv_channels": 32,
-            "shrink_dim": 8,
             "final_reward": float(result.metrics.episode_rewards[-1]),
             "unique_actions_offline": int(offline["unique_actions_offline"]),
             "dominant_action": int(offline["dominant_action"]),
