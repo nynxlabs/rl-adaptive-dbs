@@ -111,6 +111,14 @@ class RlDbsTuiApp(App):
     TabbedContent {
         height: 1fr;
     }
+    TabbedContent Tabs Tab.-active {
+        background: $block-cursor-background;
+        color: $block-cursor-foreground;
+        text-style: $block-cursor-text-style;
+    }
+    TabbedContent Underline {
+        display: none;
+    }
     .placeholder {
         padding: 1 2;
         color: $text-muted;
