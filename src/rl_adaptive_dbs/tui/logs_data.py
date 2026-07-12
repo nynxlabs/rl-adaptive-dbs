@@ -127,9 +127,10 @@ def discover_log_files(
     results_dir: Path,
     artifacts_dir: Path,
     *,
+    logs_dir: Path | None = None,
     bookmarks: list[Path] | None = None,
 ) -> list[LogFile]:
-    """Find JSONL and plain logs under results/, artifacts/, and bookmarks."""
+    """Find JSONL and plain logs under results/, artifacts/, logs/, and bookmarks."""
     bookmark_paths = bookmarks if bookmarks is not None else load_bookmarks(bookmarks_file(artifacts_dir))
     by_path: dict[Path, LogFile] = {}
 
@@ -137,6 +138,9 @@ def discover_log_files(
         by_path[entry.path] = entry
     for entry in _scan_tree(artifacts_dir, "artifacts"):
         by_path[entry.path] = entry
+    if logs_dir is not None:
+        for entry in _scan_tree(logs_dir, "logs"):
+            by_path[entry.path] = entry
 
     ordered: list[LogFile] = []
     seen_bookmarks: set[Path] = set()
@@ -331,8 +335,8 @@ def logs_status_line(
     return "  ".join(parts)
 
 
-def logs_empty_message(results_dir: Path, artifacts_dir: Path) -> str:
+def logs_empty_message(results_dir: Path, artifacts_dir: Path, logs_dir: Path) -> str:
     return (
-        f"No .jsonl or .log files under {results_dir}/ or {artifacts_dir}/.\n\n"
+        f"No .jsonl or .log files under {results_dir}/, {artifacts_dir}/, or {logs_dir}/.\n\n"
         "Run training or benchmarks in another terminal, or press b to bookmark a path."
     )
