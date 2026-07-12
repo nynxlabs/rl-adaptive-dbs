@@ -23,6 +23,12 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Training artifacts root (default: artifacts/)",
     )
     parser.add_argument(
+        "--logs-dir",
+        type=Path,
+        default=Path("logs"),
+        help="Manual tmux / probe log root (default: logs/)",
+    )
+    parser.add_argument(
         "--refresh",
         type=float,
         default=1.0,
@@ -63,6 +69,7 @@ def _run_interactive(
     results_dir: Path,
     *,
     artifacts_dir: Path,
+    logs_dir: Path,
     refresh_s: float,
     color_enabled: bool,
 ) -> int:
@@ -84,6 +91,7 @@ def _run_interactive(
         app = RlDbsTuiApp(
             results_dir,
             artifacts_dir=artifacts_dir,
+            logs_dir=logs_dir,
             settings=settings,
         )
         exit_code = app.run()
@@ -111,6 +119,7 @@ def main(argv: list[str] | None = None) -> int:
     return _run_interactive(
         args.results_dir,
         artifacts_dir=args.artifacts_dir,
+        logs_dir=args.logs_dir,
         refresh_s=args.refresh,
         color_enabled=args.color and not args.no_color,
     )

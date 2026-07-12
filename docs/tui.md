@@ -38,6 +38,7 @@ uv run rl-dbs-tui --dev --results-dir results/   # auto-restart on TUI code edit
 |--------|-------------|
 | `--results-dir` | Root for benchmark output (default: `./results`). |
 | `--artifacts-dir` | Training checkpoints and `train_log.jsonl` (default: `./artifacts`). |
+| `--logs-dir` | Manual tmux / probe stdout logs (default: `./logs`; shared across worktrees). |
 | `--refresh` | File poll interval in seconds (default **1.0**; overridden by Settings when persisted). |
 | `--dev` | Restart the TUI when `rl_adaptive_dbs/tui/*.py` changes (development). |
 | `--color` | Enable color (default is monochrome). |
@@ -54,6 +55,7 @@ flowchart LR
   subgraph disk [Local files]
     R[results/]
     A[artifacts/]
+    LG[logs/]
     L[train_log.jsonl]
   end
   subgraph tui [rl-dbs-tui process]
@@ -62,12 +64,13 @@ flowchart LR
   end
   R --> W
   A --> W
+  LG --> W
   L --> W
   W --> P
 ```
 
 - **No network.** Launched jobs use a detached local subprocess (`setsid` / new session on POSIX); the TUI does not manage remote workers.
-- **Watcher:** Poll mtime/size on `results/`, `artifacts/`, and explicit log paths; optional `watchdog` dependency is **intentionally open** (stdlib polling is sufficient for v1).
+- **Watcher:** Poll mtime/size on `results/`, `artifacts/`, `logs/`, and explicit log paths; optional `watchdog` dependency is **intentionally open** (stdlib polling is sufficient for v1).
 - **Parsing:** Load `manifest.json`, `metrics.json`, `config.json`, and optional `timeseries/` per [benchmarking.md](benchmarking.md) §6.
 
 ---
@@ -153,7 +156,7 @@ Cross-paper warning when `reward_sum` is not comparable (banner referencing [ben
 
 | Element | Behavior |
 |---------|----------|
-| **File list** | JSONL and plain logs under `results/`, `artifacts/` (including figure runs such as `artifacts/figures/.../run.log`), user bookmarks. Plain `.log` files may start with an `# rl-dbs-run-meta:` header (pid, tmux session, command) so the TUI can show **running** / **finished** state and tail live output while a job is in progress. |
+| **File list** | JSONL and plain logs under `results/`, `artifacts/` (including figure runs such as `artifacts/figures/.../run.log`), **`logs/`** (tmux / probe stdout from `>> logs/foo.log`), and user bookmarks. Plain `.log` files may start with an `# rl-dbs-run-meta:` header (pid, tmux session, command) so the TUI can show **running** / **finished** state and tail live output while a job is in progress. |
 | **Run column** | When a log has run metadata, shows `running pid … tmux:…`, `finished`, or `failed (exit N)`. |
 | **Open** | Highlight with ↑↓; **Enter** opens a full-screen tail view. |
 | **View** | Last *K* lines (default **200**; configurable in Settings); scroll ↑↓←→ and PgUp/PgDn (focus stays on the Logs pane); **Esc** returns to the file list. |
@@ -165,9 +168,9 @@ Cross-paper warning when `reward_sum` is not comparable (banner referencing [ben
 |---------|----------|
 | **Preferences table** | Poll interval (s), log tail lines, training sparkline episodes, color on/off. |
 | **Edit** | **Enter** opens an input for the selected row; **+** / **-** step numeric values; **space** toggles color. |
-| **Persistence** | Changes save immediately to `artifacts/.tui-settings.json`. Paths (`--results-dir`, `--artifacts-dir`) stay CLI-only. |
+| **Persistence** | Changes save immediately to `artifacts/.tui-settings.json`. Paths (`--results-dir`, `--artifacts-dir`, `--logs-dir`) stay CLI-only. |
 | **Apply** | Poll interval, tail size, and sparkline window apply live to open tabs. Color requires **Ctrl+R** restart. |
-| **Info panel** | Shows resolved paths, settings file, and bookmarks file. |
+| **Info panel** | Shows resolved `results/`, `artifacts/`, and `logs/` paths, settings file, and bookmarks file. |
 
 ---
 
