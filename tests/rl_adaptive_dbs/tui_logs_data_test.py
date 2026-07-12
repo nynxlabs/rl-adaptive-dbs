@@ -22,6 +22,10 @@ FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "log_files"
 TRAINING_FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "training_artifacts"
 
 
+def _missing_logs(tmp_path: Path) -> Path:
+    return tmp_path / "missing_logs"
+
+
 def test_discover_log_files_from_artifacts(tmp_path: Path) -> None:
     artifacts = tmp_path / "artifacts"
     results = tmp_path / "results"
@@ -31,21 +35,45 @@ def test_discover_log_files_from_artifacts(tmp_path: Path) -> None:
     target = artifacts / "train.log"
     target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
 
-    files = discover_log_files(results, artifacts)
+    files = discover_log_files(results, artifacts, logs_dir=_missing_logs(tmp_path))
     assert len(files) == 1
     assert files[0].source == "artifacts"
     assert files[0].display_path == "train.log"
 
 
+def test_discover_log_files_from_logs_dir(tmp_path: Path) -> None:
+    artifacts = tmp_path / "artifacts"
+    results = tmp_path / "results"
+    logs = tmp_path / "logs"
+    artifacts.mkdir()
+    results.mkdir()
+    logs.mkdir()
+    probe_log = logs / "fig4a-alphabet-sweep.log"
+    probe_log.write_text("episode 1/10\n", encoding="utf-8")
+
+    files = discover_log_files(results, artifacts, logs_dir=logs)
+    assert len(files) == 1
+    assert files[0].source == "logs"
+    assert files[0].display_path == "fig4a-alphabet-sweep.log"
+
+
 def test_discover_includes_training_fixture_logs() -> None:
-    files = discover_log_files(TRAINING_FIXTURES.parent / "missing", TRAINING_FIXTURES)
+    files = discover_log_files(
+        TRAINING_FIXTURES.parent / "missing",
+        TRAINING_FIXTURES,
+        logs_dir=Path("/nonexistent/logs"),
+    )
     paths = {item.display_path for item in files}
     assert "ddpg/train_paper_seed0.log" in paths
     assert "ddpg/paper/train_log.jsonl" in paths
 
 
 def test_filter_log_files() -> None:
-    files = discover_log_files(TRAINING_FIXTURES.parent / "missing", TRAINING_FIXTURES)
+    files = discover_log_files(
+        TRAINING_FIXTURES.parent / "missing",
+        TRAINING_FIXTURES,
+        logs_dir=Path("/nonexistent/logs"),
+    )
     filtered = filter_log_files(files, "jsonl")
     assert filtered
     assert all("jsonl" in item.display_path.lower() for item in filtered)
@@ -77,7 +105,11 @@ def test_bookmarks_round_trip(tmp_path: Path) -> None:
     loaded = load_bookmarks(path)
     assert loaded == [log_path.resolve()]
 
-    files = discover_log_files(tmp_path / "results", artifacts)
+    files = discover_log_files(
+        tmp_path / "results",
+        artifacts,
+        logs_dir=_missing_logs(tmp_path),
+    )
     assert files[0].is_bookmark is True
     assert files[0].path == log_path.resolve()
 
@@ -116,7 +148,11 @@ def test_discover_log_files_parses_run_meta(tmp_path: Path) -> None:
         ),
     )
 
-    files = discover_log_files(results, artifacts)
+    files = discover_log_files(
+        results,
+        artifacts,
+        logs_dir=_missing_logs(tmp_path),
+    )
     assert len(files) == 1
     item = files[0]
     assert item.run_meta is not None
@@ -141,7 +177,11 @@ def test_filter_log_files_matches_tmux_session(tmp_path: Path) -> None:
             tmux_session="task174-train",
         ),
     )
-    files = discover_log_files(results, artifacts)
+    files = discover_log_files(
+        results,
+        artifacts,
+        logs_dir=_missing_logs(tmp_path),
+    )
     filtered = filter_log_files(files, "task174")
     assert len(filtered) == 1
 

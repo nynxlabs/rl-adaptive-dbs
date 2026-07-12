@@ -36,6 +36,9 @@ Upstream: [ModelDB 206232](https://github.com/ModelDBRepository/206232). Citatio
 |-----------|--------|
 | 1 | `gpi_spike_times` — 1×10 cell of GPi spike time vectors (seconds) |
 | 2–6 | `dt_ms`, `tmax_ms`, `pd`, `pick_dbs_freq`, `dbs_freq_hz` |
+| 13–14 | When `plant_opts.return_th_spikes` and `nargout` > 12: TH spike cell + SMCτ times (s) |
+
+**`plant_opts` (9th argument, optional struct):** `smc_schedule` (`off` | `boc` | `periodic`), `smc_site` (`thalamic` | `cortical`), `smc_frequency_hz` (periodic), `smc_amplitude` (3.5, thalamic), `smc_cortical_amplitude` (50, cortical), `smc_pulse_width_ms` (5.0), `smc_invgamma_shape` (25), `smc_invgamma_scale_ms` (1785.71), optional `idbs` trace (overrides `creatdbs`), `return_th_spikes` (false). BoC inverse-gamma sampling uses base MATLAB `rand` only (no Statistics Toolbox).
 
 `spikes_to_cell` packs `find_spike_times` output because nested struct arrays cannot cross the Python engine.
 

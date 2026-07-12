@@ -755,6 +755,7 @@ class LogsPane(Static):
         results_dir: Path,
         artifacts_dir: Path,
         *,
+        logs_dir: Path,
         refresh_s: float = 1.0,
         color_enabled: bool = False,
         tail_lines: int = 200,
@@ -762,11 +763,12 @@ class LogsPane(Static):
         super().__init__()
         self.results_dir = results_dir
         self.artifacts_dir = artifacts_dir
+        self.logs_dir = logs_dir
         self.refresh_s = refresh_s
         self.color_enabled = color_enabled
         self.tail_lines = tail_lines
         self._bookmarks_path = bookmarks_file(artifacts_dir)
-        self._files = discover_log_files(results_dir, artifacts_dir)
+        self._files = discover_log_files(results_dir, artifacts_dir, logs_dir=logs_dir)
         self._highlighted_path: Path | None = None
         self._opened_path: Path | None = None
         self._filter = ""
@@ -914,7 +916,11 @@ class LogsPane(Static):
         viewer._sync_scrollbars()
 
     def reload_data(self) -> None:
-        self._files = discover_log_files(self.results_dir, self.artifacts_dir)
+        self._files = discover_log_files(
+            self.results_dir,
+            self.artifacts_dir,
+            logs_dir=self.logs_dir,
+        )
         visible = self._filtered_files()
         if self._highlighted_path is None and visible:
             self._highlighted_path = visible[0].path
@@ -926,11 +932,13 @@ class LogsPane(Static):
 
         if not visible:
             status.update(
-                f"No log files under {self.results_dir}/ or {self.artifacts_dir}/"
+                f"No log files under {self.results_dir}/, {self.artifacts_dir}/, or {self.logs_dir}/"
                 if not self._filter
                 else f"No log files match filter: {self._filter!r}"
             )
-            empty.update(logs_empty_message(self.results_dir, self.artifacts_dir))
+            empty.update(
+                logs_empty_message(self.results_dir, self.artifacts_dir, self.logs_dir)
+            )
             empty.display = not self._filter
             table.display = bool(visible)
             self._opened_path = None
@@ -1139,10 +1147,13 @@ class SettingsPane(Static):
         results_dir: Path,
         artifacts_dir: Path,
         settings: TuiSettings,
+        *,
+        logs_dir: Path,
     ) -> None:
         super().__init__()
         self.results_dir = results_dir
         self.artifacts_dir = artifacts_dir
+        self.logs_dir = logs_dir
         self._settings_path = settings_file(artifacts_dir)
         self._bookmarks_path = bookmarks_file(artifacts_dir)
         self.settings = settings
@@ -1185,6 +1196,7 @@ class SettingsPane(Static):
                 settings_info_lines(
                     results_dir=self.results_dir,
                     artifacts_dir=self.artifacts_dir,
+                    logs_dir=self.logs_dir,
                     settings_path=self._settings_path,
                     bookmarks_path=self._bookmarks_path,
                 )
@@ -1600,11 +1612,13 @@ class RlDbsTuiApp(App):
         results_dir: Path,
         *,
         artifacts_dir: Path,
+        logs_dir: Path,
         settings: TuiSettings,
     ) -> None:
         super().__init__()
         self.results_dir = results_dir
         self.artifacts_dir = artifacts_dir
+        self.logs_dir = logs_dir
         self.settings = settings
         self.refresh_s = settings.refresh_s
         self.color_enabled = settings.color_enabled
@@ -1628,6 +1642,7 @@ class RlDbsTuiApp(App):
                 yield LogsPane(
                     self.results_dir,
                     self.artifacts_dir,
+                    logs_dir=self.logs_dir,
                     refresh_s=self.settings.refresh_s,
                     color_enabled=self.settings.color_enabled,
                     tail_lines=self.settings.tail_lines,
@@ -1637,6 +1652,7 @@ class RlDbsTuiApp(App):
                     self.results_dir,
                     self.artifacts_dir,
                     self.settings,
+                    logs_dir=self.logs_dir,
                 )
         yield Footer()
 

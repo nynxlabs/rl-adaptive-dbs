@@ -158,14 +158,35 @@ Qualitative replication of Mehregan et al. Fig. 2a — GPi beta-band power ($P_\
 | **Plot** | Dense line trace 0–12 s; dashed vertical at **2 s**; y-axis label **PSD** |
 | **Alt mode** | `--sampling segment` — six whole-segment **2 s** bins (step plot) |
 | **Seeds** | Default **0**; `--seeds` for mean across multiple IC draws |
-| **Comparison** | [docs/figures/paper_1.md](figures/paper_1.md); [current-figures.md](../current-figures.md) |
+| **Comparison** | [docs/figures/paper_1.md](figures/paper_1.md) |
 
 ```bash
 uv run python scripts/figures/papers/1/2a/plot.py
 uv run python scripts/figures/papers/1/2a/plot.py --plot-only
 ```
 
-**Biomarkers (implemented):** `envs.plant.biomarkers.p_beta` — multitaper GPi PSD (Chronux-style; Kumaravelu `Fs` / tapers), **13–35 Hz** per-neuron integral then mean (Mehregan Eq. (1)). `MatlabPlant.integrate` sets `IntegrateResult.p_beta`.
+### Mehregan Fig 2b — Error Index time series (2026-07-12)
+
+Windowed Error Index (EI, Mehregan Eq. 2 / Gao Eq. 6) over **12 s** for **PD no treatment** vs **PD + 130 Hz cDBS**.
+
+| Item | Convention |
+|------|------------|
+| **Script** | `scripts/figures/papers/1/2b/plot.py` |
+| **Artifacts** | `artifacts/figures/papers/1/2b/`; PNG `figures/papers/1/2b/error_index.png` |
+| **Protocol** | Same trailing-window timing as Fig 2a; **2 s** EI window; TH spike buffer enlarged for 14 s integrates |
+| **Path A (default)** | So-style SMC **into TH** (So et al., 2012): `smc_site='thalamic'`, `iappth_baseline=0` (no Kumaravelu cerebellar bias), `ggith=0.112`, BoC amp **3.5** µA/cm², 5 ms pulses. Restores blue-below-red ordering. |
+| **SMC drive** | `PlantConfig(smc_schedule='boc', smc_site='thalamic'|'cortical', iappth_baseline=..., ggith=...)` — TH path is Fig 2b default; cortical `Iappco` remains for probes (does not match paper EI ordering). |
+| **SMCτ source** | `smc_pulse_source='drive'` (default) or `'cor_spikes'` |
+| **EI definition** | `envs.plant.biomarkers.error_index` — Mehregan Eq. (2) / Gao et al. (ICCPS 2020) Eqs. (4)–(6): misfires / (n · |SMC|); 25 ms TH response window |
+| **Plot** | Dense line 0–12 s; y-axis **Error Index** 0–0.4; dashed vertical at **2 s** |
+| **Comparison** | [docs/figures/paper_1.md](figures/paper_1.md) |
+
+```bash
+uv run --group figures python scripts/figures/papers/1/2b/plot.py
+uv run --group figures python scripts/figures/papers/1/2b/plot.py --plot-only
+```
+
+**Biomarkers (implemented):** `error_index`, `smc_pulse_times_from_trace` / `smc_pulse_times_from_iappco`, `smc_pulse_times_from_cor_spikes`, `resolve_smc_pulse_times`; TH spikes via `record_th_spikes=True` on `integrate`.
 
 **Mehregan Gym (implemented):** `envs.mehregan.MehreganEnv` — see [environment.md](environment.md); baselines via `run_baseline_rollout`.
 

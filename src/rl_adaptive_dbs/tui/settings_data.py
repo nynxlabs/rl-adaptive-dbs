@@ -120,12 +120,14 @@ def settings_info_lines(
     *,
     results_dir: Path,
     artifacts_dir: Path,
+    logs_dir: Path,
     settings_path: Path,
     bookmarks_path: Path,
 ) -> list[str]:
     return [
         f"results: {results_dir}",
         f"artifacts: {artifacts_dir}",
+        f"logs: {logs_dir}",
         f"settings file: {settings_path}",
         f"bookmarks: {bookmarks_path}",
         "Paths come from CLI flags; other values persist in the settings file.",
