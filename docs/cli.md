@@ -51,8 +51,8 @@ Plant, environment, and global CLI defaults merge in this order (later wins):
 
 1. Built-in dataclass defaults (`envs/plant/config.py`, `envs/mehregan/config.py`).
 2. User file **`.rl-dbs.yaml`** (or `.rl-dbs.yml`): walk from the current working directory up to the git root. Template: **`.rl-dbs.example.yaml`** at the repo root (`cp .rl-dbs.example.yaml .rl-dbs.yaml`).
-3. Environment variables: `RL_DBS_CONFIG` (explicit file path), `RL_DBS_SEED`, `RL_DBS_RESULTS_DIR`.
-4. Explicit CLI flags (`--config`, `--seed`, `--results-dir`, etc.).
+3. Environment variables: `RL_DBS_CONFIG` (explicit file path), `RL_DBS_SEED`, `RL_DBS_RESULTS_DIR`, `RL_DBS_MAX_THREADS` (thread-pool cap for Numba/OpenBLAS when no `--max-threads` flag).
+4. Explicit CLI flags (`--config`, `--seed`, `--results-dir`, `--max-threads`, etc.).
 
 `train`, `eval`, and `benchmark` construct `MehreganEnv` from the merged file settings when present. Copy **`.rl-dbs.example.yaml`** to **`.rl-dbs.yaml`** to customize (the latter is gitignored by default).
 
@@ -63,7 +63,7 @@ All filesystem paths accepted on the command line are normalized with `pathlib.P
 ## 3. Command structure
 
 ```
-rl-dbs [--verbose | --quiet] [--config PATH] [--seed SEED] <subcommand> [subcommand options]
+rl-dbs [--verbose | --quiet] [--config PATH] [--seed SEED] [--max-threads N] <subcommand> [subcommand options]
 ```
 
 | Subcommand | Phase (roadmap) | Role |
@@ -87,8 +87,21 @@ Global flags apply before the subcommand and affect logging only unless noted.
 | `--quiet` | `-q` | Log level `WARNING`; suppress progress bars on stderr. |
 | `--config` | | Path to `.rl-dbs.yaml` (overrides discovery walk). |
 | `--seed` | | Default RNG seed when a subcommand omits `--seeds` (overrides `defaults.seed` in the config file). |
+| `--max-threads` | | Cap in-process Numba/OpenBLAS thread pools (`OMP_NUM_THREADS`, `OPENBLAS_NUM_THREADS`, `NUMBA_NUM_THREADS`, etc.). Pair with `taskset` for a hard logical-CPU cap. Fallback: `RL_DBS_MAX_THREADS`. |
 
 `--verbose` and `--quiet` are mutually exclusive; if both are passed, exit **2** (usage error).
+
+### 4.1 Standalone scripts (`python -m rl_adaptive_dbs.run`)
+
+Repo scripts under `scripts/` that import NumPy at module load should be launched through the runner so thread limits apply **before** those imports:
+
+```bash
+uv run python -m rl_adaptive_dbs.run scripts/probes/run_task177_continuous_freq_probe.py --continuous-only
+```
+
+By default the runner caps in-process thread pools at **3** (same budget as the TUI Run tab for plant-heavy scripts). Override with `--max-threads N` or `RL_DBS_MAX_THREADS`. Pair with `taskset` when you need a hard logical-CPU pin.
+
+`rl-dbs train`, `eval`, and `benchmark` apply the same default at console entry (before heavy imports). `scripts.lib.train_runtime_guard.run_main` and `scripts.lib.probe_runtime.run_main` apply it when scripts defer heavy imports until `main()` — prefer the runner when NumPy loads at import time.
 
 ---
 
