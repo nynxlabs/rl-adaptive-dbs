@@ -2,7 +2,7 @@
 
 Side-by-side **paper panel** vs **our replication** for qualitative checks. Plot scripts write replication PNGs to `figures/papers/`; JSON caches to `artifacts/figures/papers/`.
 
-**Passed panels** (1b, 2a, 2b, 4a) use a short **Status** block. **Open panels** keep a full side-by-side checklist until gates pass.
+**Passed panels** (1b, 2a, 2b, 4a, 4b) use a short **Status** block. **Open panels** keep a full side-by-side checklist until gates pass.
 
 | Panel | Script | Spec | Status |
 |-------|--------|------|--------|
@@ -10,10 +10,10 @@ Side-by-side **paper panel** vs **our replication** for qualitative checks. Plot
 | Fig 2a — GPi $P_\beta$ time series | `scripts/figures/papers/1/2a/plot.py` | [plant.md](../plant.md) | Pass |
 | Fig 2b — Error Index time series | `scripts/figures/papers/1/2b/plot.py` | [plant.md](../plant.md) | Pass |
 | Fig 4a — training $P_\beta$ vs step | `scripts/figures/papers/1/4a/plot.py` | [environment.md](../environment.md), [ddpg/replication.md](../controllers/ddpg/replication.md) | Pass (v4) |
-| Fig 4b — training reward vs episode | `scripts/figures/papers/1/4b/plot.py` (planned) | [environment.md](../environment.md), [ddpg/replication.md](../controllers/ddpg/replication.md) | Open |
-| Fig 5a — post-train efficacy @ 45 Hz | `scripts/figures/papers/1/5a/plot.py` (planned) | [environment.md](../environment.md), [ddpg/replication.md](../controllers/ddpg/replication.md) | Open |
+| Fig 4b — training reward vs episode | `scripts/figures/papers/1/4b/plot.py` | [environment.md](../environment.md), [ddpg/replication.md](../controllers/ddpg/replication.md) | Pass |
+| Fig 5a — post-train efficacy @ 45 Hz | `scripts/figures/papers/1/5a/plot.py` | [environment.md](../environment.md), [ddpg/replication.md](../controllers/ddpg/replication.md) | Open (interim plot) |
 | Fig 5b — post-train efficacy @ 30 Hz | `scripts/figures/papers/1/5b/plot.py` | [environment.md](../environment.md), [ddpg/replication.md](../controllers/ddpg/replication.md) | Open (interim plot) |
-| Fig 6a — PTQ / QAT @ 45 Hz | `scripts/figures/papers/1/6a/plot.py` (planned) | [controllers/ddpg/replication.md](../controllers/ddpg/replication.md) | Open |
+| Fig 6a — PTQ / QAT @ 45 Hz | `scripts/figures/papers/1/6a/plot.py` | [controllers/ddpg/replication.md](../controllers/ddpg/replication.md) | Open |
 | Fig 6b — PTQ / QAT @ 30 Hz | `scripts/figures/papers/1/6b/plot.py` (planned) | [controllers/ddpg/replication.md](../controllers/ddpg/replication.md) | Open |
 
 Replication PNGs: `figures/papers/`. JSON caches: `artifacts/figures/papers/`.
@@ -26,11 +26,11 @@ Mean GPi multitaper power spectral density (1–50 Hz) for three conditions: **h
 
 ### Paper (Mehregan et al.)
 
-![Paper Fig 1b](../../figures/papers/1/1b/paper.png)
+![Paper Fig 1b](papers/1/1b/paper.png)
 
 ### Replication
 
-![Replication Fig 1b](../../figures/papers/1/1b/gpi_psd.png)
+![Replication Fig 1b](papers/1/1b/gpi_psd.png)
 
 <!-- caption-1b:start -->
 **Caption:** see manifest
@@ -57,11 +57,11 @@ GPi beta-band power ($P_\beta$, Eq. 1, 13–35 Hz) over **12 s**: **PD no treatm
 
 ### Paper (Mehregan et al.)
 
-![Paper Fig 2a](../../figures/papers/1/2a/paper.png)
+![Paper Fig 2a](papers/1/2a/paper.png)
 
 ### Replication
 
-![Replication Fig 2a](../../figures/papers/1/2a/beta_power.png)
+![Replication Fig 2a](papers/1/2a/beta_power.png)
 
 <!-- caption-2a:start -->
 **Caption:** 14 s sim (2 s pre-roll), plot = sim − 2 s, 0.2 s trailing / 2 s window (end sim 14 s), seed 0 (2026-07-11)
@@ -89,11 +89,11 @@ Windowed Error Index (EI, Eq. 2) over **12 s** with **So-style SMC pulses into T
 
 ### Paper (Mehregan et al.)
 
-![Paper Fig 2b](../../figures/papers/1/2b/paper.png)
+![Paper Fig 2b](papers/1/2b/paper.png)
 
 ### Replication
 
-![Replication Fig 2b](../../figures/papers/1/2b/error_index_v2.png)
+![Replication Fig 2b](papers/1/2b/error_index_v2.png)
 
 <!-- caption-2b:start -->
 **Caption:** 14 s sim (2 s pre-roll), plot = sim − 2 s, 0.2 s trailing / 2 s EI window (end sim 14 s), SMC BoC inv-gamma Iappth, backend python, seed 0, v2, y-axis 0.10–0.4 (2026-07-13)
@@ -126,11 +126,11 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 
 ### Paper (Mehregan et al.)
 
-![Paper Fig 4a](../../figures/papers/1/4a/paper.png)
+![Paper Fig 4a](papers/1/4a/paper.png)
 
 ### Replication
 
-![Replication Fig 4a](../../figures/papers/1/4a/training_beta_v4.png)
+![Replication Fig 4a](papers/1/4a/training_beta_v4.png)
 
 <!-- caption-4a:start -->
 **Caption:** 45 Hz fixed_mean_pattern, within_step L=1, reward=full_segment, softmax, critic=one_hot, seed 0, v4 (same training trace as v3; y-axis auto-fit so late points below 0.3 are visible), init_bias=0.5, early=0.428 late=0.299, trend↓ (2026-07-13). Locked as preferred replication — qualitative high→drop→low shape matches the paper panel.
@@ -175,47 +175,58 @@ tmux new-session -d -s fig4a-train \
 
 ## Fig 4b — training reward vs episode
 
-Episode **total reward** during the same **45 Hz** DDPG run as Fig 4a (§IV.A.1: 10 episodes × 30 steps). The paper panel shows reward rising quickly from roughly **−80** toward **0** by episodes **4–6**, then plateauing near zero; a companion trace in the same panel plots episode-mean **PSD(x10³)** falling inversely (~0.50 → ~0.37).
+Episode **total reward** and **episode-mean PSD(x10³)** during the same **45 Hz** DDPG run as Fig 4a (§IV.A.1). The paper panel indexes episodes **0–8** (line reaches episode 8; ticks every 2): reward rises from roughly **−80** toward **0** by episodes **4–6**, while episode-mean PSD falls inversely (~0.50 → ~0.37). We plot these as **two separate panels** (9 episodes, indices 0–8).
 
 ### Paper (Mehregan et al.)
 
-![Paper Fig 4b](../../figures/papers/1/4b/paper.png)
+![Paper Fig 4b](papers/1/4b/paper.png)
 
 ### Replication
 
-*Not yet generated.* Target: `figures/papers/1/4b/training_reward.png`
+**Reward vs episode**
+
+![Replication Fig 4b reward](papers/1/4b/training_reward_v13.png)
+
+**Episode-mean PSD vs episode**
+
+![Replication Fig 4b PSD](papers/1/4b/training_psd_v13.png)
 
 <!-- caption-4b:start -->
-**Caption:** TBD
+**Caption:** 9 episodes, 45 Hz fixed_mean_pattern (Fig 4a paired run), seed 0, source series_v4.json, v13, reward ep0=-29.1 ep8=16.1, rise_ep=3, psd 0.437→0.292, gate pass (2026-07-13)
 
-**Manifest:** `artifacts/figures/papers/1/4b/manifest.json` (planned)
+**Manifest:** `artifacts/figures/papers/1/4b/manifest.json`
 <!-- caption-4b:end -->
 
-**Status:** Open — paper PNG indexed; dedicated plot script not yet promoted.
+**Status:** Pass — two panels × 9 episodes (indices 0–8), paired with locked Fig 4a v4 (**seed 0**; paper seed unspecified). Qualitative match: reward↑, episode-mean PSD↓, rise by ~ep 3–5. Y-limits snap to data extrema (reward step 10, PSD step 0.05). Numeric bands differ from paper (reward scale, late level, PSD shape); compare **trends**, not pointwise values, across seeds.
+
+**Seed note:** Mehregan et al. do not report the training RNG seed. Our replication locks **seed 0** (Fig 4a v4 cache). Same protocol, different seed → different wiggles and levels; do not expect paper-exact −80→0 reward on one seed alone.
 
 ### Side-by-side checklist
 
-Qualitative gates first; numeric bands are approximate (paper read from panel).
+Qualitative gates first; numeric bands are approximate (paper read from panel; replication from `artifacts/figures/papers/1/4b/manifest.json`, seed 0).
 
 | Check | Paper | Replication | Match? |
 |-------|-------|-------------|--------|
-| **Plot style** | Episode reward line, episodes 1–10 | TBD | — |
-| **Axes** | Episodes ~0–8 (10 total); reward ~−80–0 | TBD | — |
-| **Early episodes (1–3)** | Reward still negative (~−80 to ~−55) | TBD | — |
-| **Rise timing** | Sharp climb episodes **~3–5** toward ~0 | TBD | — |
-| **Late episodes (6–10)** | Plateau near **0** | TBD | — |
-| **Episode-mean β (if plotted)** | Decreases as reward rises (~0.50 → ~0.37) | TBD | — |
+| **Plot style** | One panel; reward + PSD vs episode 0–8 | Two PNGs; episodes 0–8 (0-based), line reaches ep 8 | ✓ |
+| **Axes (episodes)** | 0–8, ticks every 2 | 0–8, ticks every 2 | ✓ |
+| **Axes (reward scale)** | ~−80–0 | auto snap −30–20 (data min/max) | ~ |
+| **Axes (PSD scale)** | ~0.35–0.50 | auto snap 0.25–0.45 (data min/max) | ~ |
+| **Early episodes (0–2)** | Reward negative (~−80 to ~−55) | mean −28.3 (negative, different magnitude) | ~ |
+| **Rise timing** | Climb ~ep 2–6 toward ~0 | first rise by episode 3; jump ~ep 5 | ~ |
+| **Late episodes (6–8)** | Plateau near **0** | mean +14.3 (improved, not near 0) | ~ |
+| **Episode-mean PSD** | Gradual fall ~0.50→~0.37 | 0.437→0.292; cliff ~ep 5 vs paper wiggles | ~ |
+| **Automation gate** | — | `ep_last > ep1` or recovery > 20 (recovery 45.2) | ✓ |
 
-**Interim run** (episode rewards land in the Fig 4a cache until `4b/plot.py` exists):
+**Run:**
 
 ```bash
-uv run python scripts/figures/papers/1/4a/plot.py
-# episode_rewards[] in artifacts/figures/papers/1/4a/manifest.json
+uv run python scripts/figures/papers/1/4b/plot.py
+uv run python scripts/figures/papers/1/4b/plot.py --plot-only
 ```
 
-**Defaults:** same training stack as Fig 4a (45 Hz, seed `0`, `state_length=1`, softmax + one_hot critic, `plant.dt_ms=0.02`).
+Each run writes new ``training_reward_vN.png`` and ``training_psd_vN.png`` (same N) and updates the replication links above.
 
-**Acceptance (automation):** `ep10 > ep1` or peak recovery `> 20` reward units (see `scripts/training/run_task166_pattern_train_30hz_decoupled_fig45.py` `_fig4b_pass`).
+**Defaults:** **9 episodes** (indices **0–8**) from locked Fig 4a **v4** (`series_v4.json`, **seed 0**). Y-limits: ceil/floor of data extrema (reward tick step 10, PSD step 0.05). Locked replication images: **v13**.
 
 ---
 
@@ -232,42 +243,52 @@ Dashed vertical at **2 s** (stimulation onset). Paper claims: trained stimulatio
 
 ### Paper (Mehregan et al.)
 
-![Paper Fig 5a](../../figures/papers/1/5a/paper.png)
+![Paper Fig 5a](papers/1/5a/paper.png)
 
 ### Replication
 
-*Not yet generated.* Target: `figures/papers/1/5a/efficacy_45hz.png`
+![Replication Fig 5a](papers/1/5a/efficacy_45hz.png)
 
 <!-- caption-5a:start -->
-**Caption:** TBD
+**Caption:** 45 Hz paper-protocol eval, Python plant, seed 0; post-onset means: no_stim=478, trained=300, periodic=300, cdbs130=199; automation gates pass (2026-07-13)
 
-**Manifest:** `artifacts/figures/papers/1/5a/manifest.json` (planned)
+**Manifest:** `artifacts/figures/papers/1/5a/manifest.json`
 <!-- caption-5a:end -->
 
-**Status:** Open — paper PNG indexed; eval/plot pipeline exists but not yet promoted to `figures/papers/1/5a/`.
+**Status:** Open (interim plot) — four-series panel promoted; automation gates pass (shared baseline, trained &lt; no stim, 130 Hz lowest). **Remaining gap:** trained policy collapsed to **pattern 0** (green ≡ orange); paper expects trained **above** periodic 45 Hz on raw $P_\beta$.
 
 ### Side-by-side checklist
 
 | Check | Paper | Replication | Match? |
 |-------|-------|-------------|--------|
-| **Protocol** | 2 s baseline + 5×2 s steps; fixed seed | TBD | — |
-| **Series** | no stim, trained 45 Hz, periodic 45 Hz, 130 Hz cDBS | TBD | — |
-| **Shared baseline (0–2 s)** | Traces overlap pre-onset | TBD | — |
-| **Ordering after onset** | **130 Hz** lowest; trained **< no stim** | TBD | — |
-| **Trained vs periodic 45 Hz** | Trained above periodic 45 Hz on raw $P_\beta$ but paper-claimed efficacious at same mean rate | TBD | — |
+| **Protocol** | 2 s baseline + 5×2 s steps; fixed seed | seed 0, 5×2 s steps | ✓ |
+| **Series** | no stim, trained 45 Hz, periodic 45 Hz, 130 Hz cDBS | all four plotted | ✓ |
+| **Shared baseline (0–2 s)** | Traces overlap pre-onset | Δ = 0 (~489) | ✓ |
+| **Ordering after onset** | **130 Hz** lowest; trained **< no stim** | cdbs130=199; trained=300 &lt; no_stim=478 | ✓ |
+| **Trained vs periodic 45 Hz** | Trained above periodic 45 Hz on raw $P_\beta$ | **Identical** (300 = 300; action 0 collapse) | ✗ |
 
-**Interim run:**
+**Run:**
 
 ```bash
-uv run python scripts/run_task108_paper_protocol_eval.py --mean-hz 45 \
-  --landscape artifacts/ddpg/pattern_reward_landscape_45hz.json \
-  --checkpoint artifacts/ddpg/<trained_45hz_checkpoint>.pt
-uv run python scripts/figures/plot_beta_psd_paper_figures.py
+# Full pipeline (train + eval + plot, ~30–60 min train):
+uv run python scripts/figures/papers/1/5a/plot.py
+
+# Eval + plot only (after checkpoint exists):
+uv run python scripts/figures/papers/1/5a/plot.py --no-train --run-eval \
+  --checkpoint artifacts/figures/papers/1/5a/checkpoint.pt
+
+# Replot from cached eval JSON:
+uv run python scripts/figures/papers/1/5a/plot.py --plot-only
 ```
 
-Writes interim PNG to `artifacts/ddpg/fig5a_beta_psd_45hz.png` until `5a/plot.py` promotes into `figures/papers/1/5a/`.
+Long run — use tmux:
 
-**Defaults:** seed `0`, `plant.dt_ms=0.02`, `state_length=1`, `fixed_mean_pattern`, `pattern_mean_hz=45`.
+```bash
+tmux new-session -d -s fig5a-train \
+ "setsid nohup uv run python scripts/figures/papers/1/5a/plot.py >> logs/fig5a-train.log 2>&1 < /dev/null"
+```
+
+**Defaults:** seed `0`, Python plant, `plant.dt_ms=0.02`, `state_length=1`, `fixed_mean_pattern`, `pattern_mean_hz=45`.
 
 ---
 
@@ -283,11 +304,11 @@ Key paper claim: **periodic 30 Hz elevates** beta (stimulation rate inside the b
 
 ### Paper (Mehregan et al.)
 
-![Paper Fig 5b](../../figures/papers/1/5b/paper.png)
+![Paper Fig 5b](papers/1/5b/paper.png)
 
 ### Replication
 
-![Replication Fig 5b](../../figures/papers/1/5b/efficacy_30hz.png)
+![Replication Fig 5b](papers/1/5b/efficacy_30hz.png)
 
 <!-- caption-5b:start -->
 **Caption:** Interim 30 Hz paper-protocol eval (task108 JSON), PSD(x10³) scale, y-axis 0.10–0.70; periodic mean=0.627, trained mean=0.514 (seed 0).
@@ -337,7 +358,7 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 
 ### Paper (Mehregan et al.)
 
-![Paper Fig 6a](../../figures/papers/1/6a/paper.png)
+![Paper Fig 6a](papers/1/6a/paper.png)
 
 ### Replication
 
@@ -349,7 +370,26 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 **Manifest:** `artifacts/figures/papers/1/6a/manifest.json` (planned)
 <!-- caption-6a:end -->
 
-**Status:** Open — depends on a passing 45 Hz trained checkpoint; PTQ/QAT hooks exist in `controllers/ddpg/quantization.py`.
+**Status:** Open — plot script promoted; requires fresh fp32 + QAT training (no architecture-compatible legacy checkpoints). Qualitative gates: PTQ fp16/int8 track fp32 after onset; QAT stays elevated.
+
+**Run:**
+
+```bash
+uv run python scripts/figures/papers/1/6a/plot.py
+uv run python scripts/figures/papers/1/6a/plot.py --plot-only
+uv run python scripts/figures/papers/1/6a/plot.py --skip-train \
+  --fp32-checkpoint artifacts/figures/papers/1/6a/fp32_train0.pt \
+  --qat-checkpoint artifacts/figures/papers/1/6a/qat_train0.pt
+```
+
+Long run (~1–2 h). Use tmux:
+
+```bash
+tmux new-session -d -s fig6a-train \
+ "setsid nohup uv run python scripts/figures/papers/1/6a/plot.py >> logs/fig6a-train.log 2>&1 < /dev/null"
+```
+
+**Defaults:** seed `0`, Fig 4a DDPG profile (45 Hz, softmax + one_hot critic), 10-episode fp32 + QAT trains; eval protocol matches Fig 5a (2 s baseline + 5×2 s steps); raw PSD y-axis.
 
 ### Side-by-side checklist
 
@@ -382,7 +422,7 @@ Same quantization panel layout as Fig 6a for the **30 Hz** trained model (§IV.A
 
 ### Paper (Mehregan et al.)
 
-![Paper Fig 6b](../../figures/papers/1/6b/paper.png)
+![Paper Fig 6b](papers/1/6b/paper.png)
 
 ### Replication
 
