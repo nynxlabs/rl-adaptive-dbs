@@ -204,7 +204,7 @@ Global bindings (Vi-style alternatives **intentionally open** for v1):
 | `Ctrl+R` | Restart the TUI (reload Python modules; use with `--dev` or after code edits). |
 | `Enter` | Run: launch (with confirm) / Logs: open tail / Benchmarks: Eval drill-down / Settings: edit row. |
 | `x` | Launch selected Run recipe (with confirm). |
-| `b` | Bookmark log file path for Logs tab. |
+| `b` | Toggle bookmark for selected log (Logs tab). |
 | `+` / `-` | Adjust selected Settings value. |
 | `[` / `]` | Previous / next training or eval run (when multiple runs). |
 | `space` | Toggle color (Settings tab). |
