@@ -172,7 +172,7 @@ Windowed Error Index (EI, Mehregan Eq. 2 / Gao Eq. 6) over **12 s** for **PD no 
 | Item | Convention |
 |------|------------|
 | **Script** | `scripts/figures/papers/1/2b/plot.py` |
-| **Artifacts** | `artifacts/figures/papers/1/2b/`; PNG `figures/papers/1/2b/error_index.png` |
+| **Artifacts** | `artifacts/figures/papers/1/2b/`; PNG `figures/papers/1/2b/error_index_v1.png` |
 | **Protocol** | Same trailing-window timing as Fig 2a; **2 s** EI window; TH spike buffer enlarged for 14 s integrates |
 | **Path A (default)** | So-style SMC **into TH** (So et al., 2012): `smc_site='thalamic'`, `iappth_baseline=0` (no Kumaravelu cerebellar bias), `ggith=0.112`, BoC amp **3.5** µA/cm², 5 ms pulses. Restores blue-below-red ordering. |
 | **SMC drive** | `PlantConfig(smc_schedule='boc', smc_site='thalamic'|'cortical', iappth_baseline=..., ggith=...)` — TH path is Fig 2b default; cortical `Iappco` remains for probes (does not match paper EI ordering). |
