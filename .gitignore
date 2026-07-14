@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 results/
 artifacts/
+logs/
+docs/figures/papers/
+.worktrees/
 .rl-dbs.yaml
 .rl-dbs.yml
 .validation-logs/
@@ -11,3 +14,4 @@ artifacts/
 AGENTS.md
 matlab-license.md
 notes.md
+wilzen3476/
