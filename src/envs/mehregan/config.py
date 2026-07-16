@@ -24,6 +24,7 @@ class MehreganEnvConfig:
     state_length: int = 1  # paper original; state_length > 1 requires obs preprocessing (TASK-67)
     action_space_mode: str = "scalar_frequency"  # scalar_frequency | fixed_mean_pattern
     pattern_mean_hz: float = 45.0  # mean stimulation rate for fixed_mean_pattern mode
+    skip_regular: bool = False  # True → exclude pattern 0 (regular periodic) from agent action space
 
 
 def make_alphabet(
@@ -40,6 +41,7 @@ def make_alphabet(
         return FixedMeanPatternAlphabet(
             mean_hz=config.pattern_mean_hz,
             step_duration_s=config.step_duration_s,
+            skip_regular=config.skip_regular,
         )
     if config.action_space_mode == "scalar_frequency":
         from envs.mehregan.patterns import PatternAlphabet

@@ -134,18 +134,33 @@ class FixedMeanPatternAlphabet:
     step_duration_s: float = 2.0
     dt_ms: float = 0.01
     n_patterns: int = 41
+    skip_regular: bool = False  # True → exclude pattern 0 (regular periodic); agent sees only irregular patterns
     pulse_width_ms: float = DBS_PULSE_WIDTH_MS
     amplitude: float = DBS_AMPLITUDE_NA_PER_CM2
     jitter_fraction: float = DEFAULT_JITTER_FRACTION
 
     @property
     def n_actions(self) -> int:
-        return self.n_patterns
+        return self.n_patterns - 1 if self.skip_regular else self.n_patterns
+
+    def _pattern_index(self, action: int) -> int:
+        """Map agent action to internal pattern index.
+
+        When ``skip_regular`` is True, agent action 0 maps to pattern 1
+        (the first irregular pattern), skipping pattern 0 (regular periodic).
+        """
+        if self.skip_regular:
+            return action + 1  # action 0 → pattern 1, action 39 → pattern 40
+        return action
 
     def idbs_for_pattern(self, index: int) -> np.ndarray:
-        """Return the (cached, read-only) STN drive trace for pattern ``index``."""
-        if index < 0 or index >= self.n_actions:
-            msg = f"pattern index {index} outside [0, {self.n_actions})"
+        """Return the (cached, read-only) STN drive trace for pattern ``index``.
+
+        ``index`` is the **internal** pattern index (0 = regular, 1–40 = irregular).
+        Use :meth:`idbs_for_action` for agent action → trace lookup.
+        """
+        if index < 0 or index >= self.n_patterns:
+            msg = f"pattern index {index} outside [0, {self.n_patterns})"
             raise ValueError(msg)
         return _build_idbs(
             index=index,
@@ -157,6 +172,10 @@ class FixedMeanPatternAlphabet:
             jitter_fraction=self.jitter_fraction,
         )
 
+    def idbs_for_action(self, action: int) -> np.ndarray:
+        """Return the STN drive trace for an agent action (respects ``skip_regular``)."""
+        return self.idbs_for_pattern(self._pattern_index(action))
+
     def pulse_count(self, index: int) -> int:
         """Number of pulses (rising edges) in pattern ``index`` — the mean rate."""
         trace = self.idbs_for_pattern(index)
@@ -165,7 +184,7 @@ class FixedMeanPatternAlphabet:
         return int(np.count_nonzero(rising))
 
     def to_dbs_spec(self, action: int) -> DbsSpec:
-        idbs = self.idbs_for_pattern(int(action))
+        idbs = self.idbs_for_action(int(action))
         return DbsSpec(
             pick_dbs_freq=DbsSpec.from_frequency_hz(self.mean_hz).pick_dbs_freq,
             idbs=idbs,
@@ -173,13 +192,14 @@ class FixedMeanPatternAlphabet:
         )
 
     def action_for_dbs_spec(self, spec: DbsSpec) -> int:
-        """Map a baseline periodic-at-mean spec to pattern 0 (regular train).
+        """Map a baseline periodic-at-mean spec to the regular-pattern action.
 
-        Only the mean-rate periodic baseline is representable in pattern mode;
-        it is the paper's initialization target (``init_baseline_for_variant`` →
-        pattern 0). Other fixed frequencies (e.g. 130 Hz cDBS, no stimulation)
-        have no pattern-space equivalent.
+        When ``skip_regular`` is True, maps to the first irregular pattern (action 0)
+        as a fallback for baseline initialization — the regular periodic pattern is
+        not in the agent action space, but the trainer needs an init target.
         """
+        if self.skip_regular:
+            return 0  # first irregular pattern — best available init target
         return self.action_for_frequency_hz(spec.frequency_hz)
 
     def action_for_frequency_hz(self, hz: float) -> int:
