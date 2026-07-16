@@ -6,6 +6,14 @@ import json
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 
+from rl_adaptive_dbs.tui.launch_follow import (
+    LAUNCH_FOLLOW_ASK,
+    LAUNCH_FOLLOW_LOGS,
+    LAUNCH_FOLLOW_MODES,
+    cycle_launch_follow_setting,
+    launch_follow_label,
+    normalize_launch_follow,
+)
 from rl_adaptive_dbs.tui.logs_data import DEFAULT_TAIL_LINES
 from rl_adaptive_dbs.tui.training_data import MAX_SPARKLINE_EPISODES
 
@@ -15,6 +23,7 @@ SETTING_KEYS = (
     "refresh_s",
     "tail_lines",
     "sparkline_episodes",
+    "launch_follow",
     "color_enabled",
 )
 
@@ -29,6 +38,7 @@ SETTING_DESCRIPTIONS: dict[str, str] = {
     "refresh_s": "How often tabs reload data from disk.",
     "tail_lines": "Lines shown when tailing an open log file.",
     "sparkline_episodes": "Episode window for the Training return sparkline.",
+    "launch_follow": "After Run tab launch: follow in Logs, tmux tail split, ask, or off.",
     "color_enabled": "Use theme colors instead of monochrome (restart required).",
 }
 
@@ -40,6 +50,7 @@ class TuiSettings:
     refresh_s: float = DEFAULT_REFRESH_S
     tail_lines: int = DEFAULT_TAIL_LINES
     sparkline_episodes: int = MAX_SPARKLINE_EPISODES
+    launch_follow: str = LAUNCH_FOLLOW_LOGS
     color_enabled: bool = False
 
     @classmethod
@@ -52,6 +63,9 @@ class TuiSettings:
             if key not in raw:
                 continue
             value = raw[key]
+            if key == "launch_follow":
+                merged[key] = normalize_launch_follow(value, default=base.launch_follow)
+                continue
             if key == "color_enabled":
                 if isinstance(value, bool):
                     merged[key] = value
@@ -88,8 +102,12 @@ def save_settings(path: Path, settings: TuiSettings) -> None:
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
-def clamp_setting(key: str, value: float | int | bool) -> float | int | bool:
+def clamp_setting(key: str, value: float | int | bool | str) -> float | int | bool | str:
     """Clamp numeric settings to documented bounds."""
+    if key == "launch_follow":
+        if isinstance(value, str):
+            return normalize_launch_follow(value)
+        return LAUNCH_FOLLOW_LOGS
     if key == "color_enabled":
         return bool(value)
     bounds = SETTING_BOUNDS.get(key)
@@ -112,6 +130,7 @@ def settings_table_rows(settings: TuiSettings) -> list[tuple[str, str, str]]:
         ("refresh_s", "Poll interval (s)", f"{settings.refresh_s:g}"),
         ("tail_lines", "Log tail lines", str(settings.tail_lines)),
         ("sparkline_episodes", "Training sparkline episodes", str(settings.sparkline_episodes)),
+        ("launch_follow", "Launch follow output", launch_follow_label(settings.launch_follow)),
         ("color_enabled", "Color", "on" if settings.color_enabled else "off"),
     ]
 
@@ -150,9 +169,26 @@ def settings_status_line(settings: TuiSettings, *, selected_key: str | None = No
     return "Settings"
 
 
-def parse_setting_input(key: str, text: str) -> float | int | bool | None:
+def parse_setting_input(key: str, text: str) -> float | int | bool | str | None:
     """Parse user input for a setting; return None on failure."""
     stripped = text.strip().lower()
+    if key == "launch_follow":
+        aliases = {
+            "logs": LAUNCH_FOLLOW_LOGS,
+            "log": LAUNCH_FOLLOW_LOGS,
+            "logs tab": LAUNCH_FOLLOW_LOGS,
+            "terminal": LAUNCH_FOLLOW_TERMINAL,
+            "tmux": LAUNCH_FOLLOW_TERMINAL,
+            "none": LAUNCH_FOLLOW_NONE,
+            "off": LAUNCH_FOLLOW_NONE,
+            "no": LAUNCH_FOLLOW_NONE,
+            "ask": LAUNCH_FOLLOW_ASK,
+        }
+        if stripped in aliases:
+            return aliases[stripped]
+        if stripped in LAUNCH_FOLLOW_MODES:
+            return stripped
+        return None
     if key == "color_enabled":
         if stripped in {"1", "true", "on", "yes", "y"}:
             return True
@@ -169,6 +205,11 @@ def parse_setting_input(key: str, text: str) -> float | int | bool | None:
 
 def step_setting(settings: TuiSettings, key: str, delta: int) -> TuiSettings:
     """Increment or decrement a numeric setting by one step."""
+    if key == "launch_follow":
+        return replace(
+            settings,
+            launch_follow=cycle_launch_follow_setting(settings.launch_follow, delta),
+        )
     if key == "color_enabled":
         return replace(settings, color_enabled=not settings.color_enabled)
     current = getattr(settings, key)

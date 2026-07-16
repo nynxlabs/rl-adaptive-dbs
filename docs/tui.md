@@ -97,7 +97,7 @@ Minimum terminal: **80×24** characters. Recommended: **100×30+**.
 
 | Tab | Purpose | Primary data sources |
 |-----|---------|----------------------|
-| **Run** | Launch detached `rl-dbs` commands and repo scripts | Built-in CLI recipes + `scripts/training/`, `scripts/figures/**/plot.py`, `scripts/replication/`, `scripts/probes/` |
+| **Run** | Launch detached `rl-dbs` commands and repo scripts | **figure replication**, **CLI**, **training**, **diagnostics**, **replication** (see §4.3) |
 | **Training** | Live training metrics, loss/return curves | `artifacts/<controller>/<variant>/train_log.jsonl`, checkpoint dir mtime |
 | **Eval** | Rollout stats, $P_\beta$ traces for a selected run | `results/<suite>/runs/.../timeseries/`, `metrics.json` |
 | **Benchmarks** | Suite-level table: controller × variant × seed | `results/<suite>/manifest.json`, `runs/*/metrics.json` |
@@ -110,10 +110,11 @@ Only one tab is visible at a time; the status bar shows the active suite filter 
 
 | Element | Behavior |
 |---------|----------|
-| **Recipe list** | Built-in `rl-dbs` shortcuts (`train`, `benchmark`, `info`) plus discoverable entry points under `scripts/training/`, `scripts/replication/`, `scripts/figures/**/plot.py`, and `scripts/probes/run_*.py`. |
+| **Recipe list** | Five categories (sorted): **figure replication** (`scripts/figures/**/plot.py`), **CLI** (built-in `rl-dbs` shortcuts), **training** (`scripts/training/run_*.py`), **diagnostics** (`scripts/probes/*.py`), **replication** (`scripts/replication/` when present). Figure labels parse panel titles from script docstrings. |
 | **Filter** | `/` filters label, category, or command substring. |
 | **Launch** | **Enter** or **`x`** opens a confirmation dialog, then starts the command detached. Stdout/stderr go to `artifacts/tui-runs/<recipe>-<timestamp>.log` with `# rl-dbs-run-meta:` header (same format as shell launchers). |
-| **Logs link** | New log paths are bookmarked automatically; switch to **Logs** (tab `5`) to tail live output. |
+| **Follow output** | After launch, the TUI can **auto-follow** the new log. In the confirm dialog, press **`f`** to cycle: **Logs tab** (default), **Terminal** (`tail -f` in a tmux split pane), or **Don't follow**. Default is controlled by **Settings → Launch follow output** (`logs`, `terminal`, `none`, or `ask`). Terminal follow requires running the TUI inside **tmux**; otherwise it falls back to the Logs tab and shows the manual `tail -f` command. |
+| **Logs link** | New log paths are bookmarked automatically. With follow mode **Logs tab**, the TUI switches to **Logs** and opens a live tail (auto-scroll). |
 | **Survival** | Detached runs survive TUI quit and SSH disconnect (POSIX: new session). Long plant-heavy jobs should still be started from **tmux** when you need an attachable shell — the Run tab records the current tmux session name in metadata when launched inside tmux. |
 
 ### 4.4 Training tab detail
@@ -166,7 +167,7 @@ Cross-paper warning when `reward_sum` is not comparable (banner referencing [ben
 
 | Element | Behavior |
 |---------|----------|
-| **Preferences table** | Poll interval (s), log tail lines, training sparkline episodes, color on/off. |
+| **Preferences table** | Poll interval (s), log tail lines, training sparkline episodes, launch follow mode, color on/off. |
 | **Edit** | **Enter** opens an input for the selected row; **+** / **-** step numeric values; **space** toggles color. |
 | **Persistence** | Changes save immediately to `artifacts/.tui-settings.json`. Paths (`--results-dir`, `--artifacts-dir`, `--logs-dir`) stay CLI-only. |
 | **Apply** | Poll interval, tail size, and sparkline window apply live to open tabs. Color requires **Ctrl+R** restart. |
@@ -203,6 +204,7 @@ Global bindings (Vi-style alternatives **intentionally open** for v1):
 | `r` | Force refresh from disk. |
 | `Ctrl+R` | Restart the TUI (reload Python modules; use with `--dev` or after code edits). |
 | `Enter` | Run: launch (with confirm) / Logs: open tail / Benchmarks: Eval drill-down / Settings: edit row. |
+| `f` | Cycle launch follow mode in the Run confirm dialog (Logs tab / Terminal / Don't follow). |
 | `x` | Launch selected Run recipe (with confirm). |
 | `b` | Toggle bookmark for selected log (Logs tab). |
 | `+` / `-` | Adjust selected Settings value. |
@@ -224,7 +226,7 @@ When a filter prompt is open, other keys route to the prompt until `Esc` or `Ent
 | `results/<suite>/runs/<id>/config.json` | Per run | `controller`, `variant`, `seed`, `checkpoint` |
 | `results/.../timeseries/*.json` | Optional | Arrays `{ "t": float, "p_beta": float, ... }` |
 | `artifacts/.../train_log.jsonl` | Optional | One JSON object per line: `episode`, `return`, `loss`, `timestamp` |
-| `artifacts/.tui-settings.json` | Optional | Persisted poll interval, tail lines, sparkline window, color |
+| `artifacts/.tui-settings.json` | Optional | Persisted poll interval, tail lines, sparkline window, launch follow mode, color |
 | `artifacts/.tui-log-bookmarks.json` | Optional | Bookmarked log paths for Logs tab |
 
 Invalid JSON: show row-level error badge; do not crash the TUI.

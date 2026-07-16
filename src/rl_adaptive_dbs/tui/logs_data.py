@@ -61,14 +61,42 @@ def save_bookmarks(path: Path, bookmarks: list[Path]) -> None:
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
+def _resolved_bookmark_paths(bookmarks: list[Path]) -> set[Path]:
+    return {item.expanduser().resolve() for item in bookmarks}
+
+
+def is_bookmarked(bookmarks_path: Path, log_path: Path) -> bool:
+    resolved = log_path.expanduser().resolve()
+    return resolved in _resolved_bookmark_paths(load_bookmarks(bookmarks_path))
+
+
 def add_bookmark(bookmarks_path: Path, log_path: Path) -> list[Path]:
     """Append ``log_path`` to bookmarks if missing; return updated list."""
     resolved = log_path.expanduser().resolve()
     bookmarks = load_bookmarks(bookmarks_path)
-    if resolved not in {item.expanduser().resolve() for item in bookmarks}:
+    if resolved not in _resolved_bookmark_paths(bookmarks):
         bookmarks.append(resolved)
         save_bookmarks(bookmarks_path, bookmarks)
     return bookmarks
+
+
+def remove_bookmark(bookmarks_path: Path, log_path: Path) -> list[Path]:
+    """Remove ``log_path`` from bookmarks if present; return updated list."""
+    resolved = log_path.expanduser().resolve()
+    bookmarks = load_bookmarks(bookmarks_path)
+    kept = [item for item in bookmarks if item.expanduser().resolve() != resolved]
+    if len(kept) != len(bookmarks):
+        save_bookmarks(bookmarks_path, kept)
+    return kept
+
+
+def toggle_bookmark(bookmarks_path: Path, log_path: Path) -> bool:
+    """Toggle bookmark state for ``log_path``; return True when now bookmarked."""
+    if is_bookmarked(bookmarks_path, log_path):
+        remove_bookmark(bookmarks_path, log_path)
+        return False
+    add_bookmark(bookmarks_path, log_path)
+    return True
 
 
 def _display_path(path: Path, *, base: Path | None) -> str:
@@ -338,5 +366,11 @@ def logs_status_line(
 def logs_empty_message(results_dir: Path, artifacts_dir: Path, logs_dir: Path) -> str:
     return (
         f"No .jsonl or .log files under {results_dir}/, {artifacts_dir}/, or {logs_dir}/.\n\n"
-        "Run training or benchmarks in another terminal, or press b to bookmark a path."
+        "Run training or benchmarks in another terminal, or press b to toggle a bookmark."
     )
+
+
+def logs_hints_line(*, viewing: bool = False) -> str:
+    if viewing:
+        return "↑↓ scroll  b toggle bookmark  Esc back to list"
+    return "↑↓ select  Enter open  b toggle bookmark  / filter  Esc clear filter"

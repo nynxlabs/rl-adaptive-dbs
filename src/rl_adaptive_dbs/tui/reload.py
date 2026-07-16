@@ -91,6 +91,7 @@ def reload_tui_modules() -> None:
     import rl_adaptive_dbs.tui.app as app_module
     import rl_adaptive_dbs.tui.data as data_module
     import rl_adaptive_dbs.tui.eval_data as eval_data_module
+    import rl_adaptive_dbs.tui.launch_follow as launch_follow_module
     import rl_adaptive_dbs.tui.logs_data as logs_data_module
     import rl_adaptive_dbs.tui.run_data as run_data_module
     import rl_adaptive_dbs.tui.run_launch as run_launch_module
@@ -101,6 +102,7 @@ def reload_tui_modules() -> None:
     importlib.reload(run_log_meta_module)
     importlib.reload(eval_data_module)
     importlib.reload(logs_data_module)
+    importlib.reload(launch_follow_module)
     importlib.reload(run_data_module)
     importlib.reload(run_launch_module)
     importlib.reload(settings_data_module)
