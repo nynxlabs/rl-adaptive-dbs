@@ -3,11 +3,18 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from pathlib import Path
 
 from rl_adaptive_dbs.run_log_meta import RUN_EXIT_PREFIX, RUN_META_PREFIX
-from rl_adaptive_dbs.tui.run_launch import command_text, default_log_path, launch_detached
+from rl_adaptive_dbs.tui.run_launch import (
+    command_text,
+    default_log_path,
+    launch_detached,
+    tail_log_command,
+    tail_log_in_terminal,
+)
 
 
 def test_command_text_quotes_spaces() -> None:
@@ -18,6 +25,24 @@ def test_default_log_path_under_artifacts(tmp_path: Path) -> None:
     path = default_log_path(tmp_path / "artifacts", "cli/info")
     assert path.parent == tmp_path / "artifacts" / "tui-runs"
     assert "cli_info" in path.name
+
+
+def test_tail_log_command_quotes_path(tmp_path: Path) -> None:
+    log_path = tmp_path / "my run.log"
+    cmd = tail_log_command(log_path, tail_lines=50)
+    assert "tail -n 50 -f" in cmd
+    assert "my run.log" in cmd
+
+
+def test_tail_log_in_terminal_without_tmux_returns_false(tmp_path: Path) -> None:
+    log_path = tmp_path / "probe.log"
+    log_path.write_text("", encoding="utf-8")
+    old = os.environ.pop("TMUX", None)
+    try:
+        assert tail_log_in_terminal(log_path) is False
+    finally:
+        if old is not None:
+            os.environ["TMUX"] = old
 
 
 def test_launch_detached_writes_metadata(tmp_path: Path) -> None:

@@ -12,9 +12,12 @@ from rl_adaptive_dbs.tui.logs_data import (
     discover_log_files,
     filter_log_files,
     format_log_line,
+    is_bookmarked,
     load_bookmarks,
     log_file_rows,
+    remove_bookmark,
     tail_lines,
+    toggle_bookmark,
 )
 from rl_adaptive_dbs.run_log_meta import RunLogMeta, write_run_log_header
 
@@ -123,6 +126,32 @@ def test_bookmarks_persist_as_json(tmp_path: Path) -> None:
 
     payload = json.loads(path.read_text(encoding="utf-8"))
     assert payload == [str(log_path.resolve())]
+
+
+def test_remove_bookmark(tmp_path: Path) -> None:
+    artifacts = tmp_path / "artifacts"
+    artifacts.mkdir()
+    log_path = FIXTURES / "sample.log"
+    path = bookmarks_file(artifacts)
+    add_bookmark(path, log_path)
+    assert is_bookmarked(path, log_path)
+
+    remove_bookmark(path, log_path)
+    assert load_bookmarks(path) == []
+    assert not is_bookmarked(path, log_path)
+
+
+def test_toggle_bookmark(tmp_path: Path) -> None:
+    artifacts = tmp_path / "artifacts"
+    artifacts.mkdir()
+    log_path = FIXTURES / "sample.log"
+    path = bookmarks_file(artifacts)
+
+    assert toggle_bookmark(path, log_path) is True
+    assert is_bookmarked(path, log_path)
+    assert toggle_bookmark(path, log_path) is False
+    assert not is_bookmarked(path, log_path)
+    assert load_bookmarks(path) == []
 
 
 def test_format_log_line_color_markup() -> None:
