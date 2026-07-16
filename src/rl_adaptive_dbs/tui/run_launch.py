@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -43,6 +44,39 @@ def detect_tmux_session() -> str | None:
         return None
     name = result.stdout.strip()
     return name or None
+
+
+def tail_log_in_terminal(
+    log_path: Path,
+    *,
+    tail_lines: int = 200,
+    tmux_session: str | None = None,
+) -> bool:
+    """Open ``tail -f`` in a new tmux split pane below the current pane."""
+    if os.name == "nt" or not shutil.which("tail") or not shutil.which("tmux"):
+        return False
+    session = tmux_session if tmux_session is not None else detect_tmux_session()
+    if not session:
+        return False
+    quoted = shlex.quote(str(log_path.resolve()))
+    cmd = f"tail -n {max(1, int(tail_lines))} -f {quoted}"
+    try:
+        result = subprocess.run(
+            ["tmux", "split-window", "-v", "-p", "30", cmd],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0
+
+
+def tail_log_command(log_path: Path, *, tail_lines: int = 200) -> str:
+    """Shell command the user can run to follow a launch log manually."""
+    quoted = shlex.quote(str(log_path.resolve()))
+    return f"tail -n {max(1, int(tail_lines))} -f {quoted}"
 
 
 def command_text(argv: list[str]) -> str:

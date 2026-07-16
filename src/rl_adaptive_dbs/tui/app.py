@@ -43,9 +43,16 @@ from rl_adaptive_dbs.tui.eval_data import (
     p_beta_sparkline_data,
     select_eval_run,
 )
+from rl_adaptive_dbs.tui.launch_follow import (
+    LAUNCH_FOLLOW_LOGS,
+    LAUNCH_FOLLOW_NONE,
+    LAUNCH_FOLLOW_TERMINAL,
+    cycle_dialog_follow,
+    initial_dialog_follow,
+    launch_follow_label,
+)
 from rl_adaptive_dbs.tui.logs_data import (
     LogFile,
-    add_bookmark,
     bookmarks_file,
     cycle_log_file,
     discover_log_files,
@@ -53,9 +60,11 @@ from rl_adaptive_dbs.tui.logs_data import (
     log_file_rows,
     log_row_key,
     logs_empty_message,
+    logs_hints_line,
     logs_status_line,
     select_log_file,
     tail_lines,
+    toggle_bookmark,
 )
 from rl_adaptive_dbs.paths import find_repo_root
 from rl_adaptive_dbs.tui.reload import RESTART_EXIT_CODE
@@ -69,7 +78,12 @@ from rl_adaptive_dbs.tui.run_data import (
     run_status_line,
     select_recipe,
 )
-from rl_adaptive_dbs.tui.run_launch import LaunchResult, launch_detached
+from rl_adaptive_dbs.tui.run_launch import (
+    LaunchResult,
+    launch_detached,
+    tail_log_command,
+    tail_log_in_terminal,
+)
 from rl_adaptive_dbs.tui.settings_data import (
     TuiSettings,
     parse_setting_input,
@@ -748,6 +762,12 @@ class LogsPane(Static):
     #logs-view:focus {
         border: solid $accent;
     }
+    #logs-hints {
+        dock: bottom;
+        height: 1;
+        padding: 0 1;
+        color: $text-muted;
+    }
     """
 
     def __init__(
@@ -788,6 +808,7 @@ class LogsPane(Static):
                     highlight=False,
                     auto_scroll=False,
                 )
+        yield Static("", id="logs-hints")
 
     def on_mount(self) -> None:
         table = self.query_one("#logs-file-table", DataTable)
@@ -803,6 +824,7 @@ class LogsPane(Static):
         self._refresh_timer = None
         self._restart_refresh_timer()
         self.reload_data()
+        self._update_hints()
 
     def _restart_refresh_timer(self) -> None:
         if self._refresh_timer is not None:
@@ -854,6 +876,11 @@ class LogsPane(Static):
     def _filtered_files(self) -> list[LogFile]:
         return filter_log_files(self._files, self._filter)
 
+    def _update_hints(self) -> None:
+        self.query_one("#logs-hints", Static).update(
+            logs_hints_line(viewing=self.is_viewing_log())
+        )
+
     def _update_status(self) -> None:
         visible = self._filtered_files()
         opened = select_log_file(visible, self._opened_path) if self._opened_path else None
@@ -866,6 +893,7 @@ class LogsPane(Static):
                 tail_lines=self.tail_lines,
             )
         )
+        self._update_hints()
 
     def action_back_to_list(self) -> None:
         if self._opened_path is None:
@@ -1020,8 +1048,9 @@ class LogsPane(Static):
         if path is None:
             self.notify("No log file selected", title="Logs", timeout=3)
             return
-        add_bookmark(self._bookmarks_path, path)
-        self.notify(f"Bookmarked {path.name}", title="Logs", timeout=3)
+        bookmarked = toggle_bookmark(self._bookmarks_path, path)
+        verb = "Bookmarked" if bookmarked else "Removed bookmark for"
+        self.notify(f"{verb} {path.name}", title="Logs", timeout=3)
         self._cached_file_list_key = ()
         self.reload_data()
 
@@ -1245,9 +1274,11 @@ class SettingsPane(Static):
 
     def action_toggle_selected(self) -> None:
         key = self.highlighted_setting_key()
-        if key != "color_enabled":
+        if key == "color_enabled":
+            self._commit_settings(step_setting(self.settings, key, 1))
             return
-        self._commit_settings(step_setting(self.settings, key, 1))
+        if key == "launch_follow":
+            self._commit_settings(step_setting(self.settings, key, 1))
 
     def action_toggle_color(self) -> None:
         self.action_toggle_selected()
@@ -1287,6 +1318,10 @@ class SettingsPane(Static):
 class ConfirmLaunchScreen(ModalScreen[bool]):
     """Confirm before starting a detached run."""
 
+    BINDINGS = [
+        Binding("f", "cycle_follow", "Follow mode", show=False),
+    ]
+
     DEFAULT_CSS = """
     ConfirmLaunchScreen {
         align: center middle;
@@ -1303,23 +1338,41 @@ class ConfirmLaunchScreen(ModalScreen[bool]):
         color: $text-muted;
         padding: 1 0;
     }
+    #confirm-follow {
+        color: $text-muted;
+        padding: 1 0 0 0;
+    }
     #confirm-buttons {
         height: auto;
         padding-top: 1;
     }
     """
 
-    def __init__(self, recipe: RunRecipe) -> None:
+    def __init__(self, recipe: RunRecipe, *, initial_follow: str) -> None:
         super().__init__()
         self.recipe = recipe
+        self.follow_mode = initial_follow
 
     def compose(self) -> ComposeResult:
         with Vertical(id="confirm-dialog"):
             yield Label(f"Launch detached?\n{self.recipe.label}")
             yield Static(self.recipe.command_preview, id="confirm-command")
+            yield Static("", id="confirm-follow")
             with Horizontal(id="confirm-buttons"):
                 yield Button("Launch", variant="primary", id="launch")
                 yield Button("Cancel", id="cancel")
+
+    def on_mount(self) -> None:
+        self._update_follow_label()
+
+    def _update_follow_label(self) -> None:
+        self.query_one("#confirm-follow", Static).update(
+            f"Follow output: {launch_follow_label(self.follow_mode)}  (f: cycle)"
+        )
+
+    def action_cycle_follow(self) -> None:
+        self.follow_mode = cycle_dialog_follow(self.follow_mode)
+        self._update_follow_label()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "launch")
@@ -1441,7 +1494,10 @@ class RunPane(Static):
         lines = [recipe.command_preview]
         if recipe.description:
             lines.append(recipe.description)
-        lines.append("Enter or x: launch detached  |  logs: tab 5  |  output → artifacts/tui-runs/")
+        lines.append(
+            "Enter or x: launch detached  |  f: follow mode in confirm dialog"
+            "  |  output → artifacts/tui-runs/"
+        )
         detail.update("\n".join(lines))
 
     def _sync_cursor_to_active(self) -> None:
@@ -1513,7 +1569,11 @@ class RunPane(Static):
         if recipe is None:
             self.notify("No recipe selected", title="Run", timeout=3)
             return
-        confirmed = await self.app.push_screen_wait(ConfirmLaunchScreen(recipe))
+        app = self.app
+        settings = app.settings if isinstance(app, RlDbsTuiApp) else TuiSettings()
+        initial_follow = initial_dialog_follow(settings.launch_follow)
+        screen = ConfirmLaunchScreen(recipe, initial_follow=initial_follow)
+        confirmed = await self.app.push_screen_wait(screen)
         if not confirmed:
             return
         try:
@@ -1534,6 +1594,8 @@ class RunPane(Static):
             timeout=5,
         )
         self.reload_data()
+        if isinstance(app, RlDbsTuiApp):
+            app.follow_launch_log(result.log_path, screen.follow_mode)
 
 
 class RlDbsTuiApp(App):
@@ -1593,7 +1655,7 @@ class RlDbsTuiApp(App):
         Binding("4", "jump_tab_4", "Benchmarks", show=False),
         Binding("5", "jump_tab_5", "Logs", show=False),
         Binding("6", "jump_tab_6", "Settings", show=False),
-        Binding("b", "bookmark", "Bookmark", show=False),
+        Binding("b", "bookmark", "Toggle bookmark", show=True),
         Binding("x", "launch", "Launch", show=False),
         Binding("+", "increase_setting", "Increase", show=False),
         Binding("shift+equal", "increase_setting", "Increase", show=False),
@@ -1850,8 +1912,32 @@ class RlDbsTuiApp(App):
         if log_path is None:
             self.notify("No launch in this session yet", title="Run", timeout=3)
             return
-        self._logs_pane()._open_file(log_path)
-        self._jump_tab_id("tab-logs")
+        self.follow_launch_log(log_path, LAUNCH_FOLLOW_LOGS)
+
+    def follow_launch_log(self, log_path: Path, mode: str) -> None:
+        """Open or tail the launch log according to the selected follow mode."""
+        if mode == LAUNCH_FOLLOW_NONE:
+            return
+        if mode == LAUNCH_FOLLOW_TERMINAL:
+            if tail_log_in_terminal(log_path, tail_lines=self.settings.tail_lines):
+                self.notify(
+                    f"tail -f in tmux split → {log_path.name}",
+                    title="Following in terminal",
+                    timeout=4,
+                )
+                return
+            fallback = tail_log_command(log_path, tail_lines=self.settings.tail_lines)
+            self.notify(
+                f"Not in tmux — following in Logs tab. Manual: {fallback}",
+                title="Following in Logs",
+                timeout=8,
+            )
+            mode = LAUNCH_FOLLOW_LOGS
+        if mode == LAUNCH_FOLLOW_LOGS:
+            logs = self._logs_pane()
+            logs.reload_data()
+            logs._open_file(log_path)
+            self._jump_tab_id("tab-logs")
 
     def action_increase_setting(self) -> None:
         if self._active_tab_id() == "tab-settings":
@@ -1872,8 +1958,9 @@ class RlDbsTuiApp(App):
         self.notify(
             "←→ Tab: tabs (not while viewing a log)  1-6: jump  ↑↓: row  [ ]: prev/next"
             "  Enter/x: launch (Run) / open log (Logs) / edit (Settings) / Benchmarks→Eval"
+            "  f: follow mode (launch confirm)"
             "  + / -: adjust setting (Settings)  space: toggle  /: filter"
-            "  Esc: back to list / clear filter  b: bookmark (Logs)"
+            "  Esc: back to list / clear filter  b: toggle bookmark (Logs)"
             "  r: refresh  Ctrl+R: restart  q: quit",
             title="rl-dbs-tui",
             timeout=6,
