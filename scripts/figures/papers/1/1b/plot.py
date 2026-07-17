@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -115,10 +116,21 @@ def simulate_condition(
     psd_stack: list[np.ndarray] = []
     p_beta_by_seed: dict[str, float] = {}
     freqs: np.ndarray | None = None
+    t_cond0 = time.monotonic()
+    dbs_note = f"{condition.dbs.frequency_hz:.0f} Hz" if condition.dbs.frequency_hz > 0 else "none"
+    print(
+        f"  [{condition.key}] pd={condition.config.pd} dbs={dbs_note} "
+        f"({len(seeds)} seeds, {duration_s:.1f}s each)",
+        file=sys.stderr,
+        flush=True,
+    )
 
     for seed in seeds:
-        print(f"  seed {seed}...", file=sys.stderr)
+        t_seed0 = time.monotonic()
+        print(f"    seed {seed} integrate {duration_s:.1f}s...", file=sys.stderr, flush=True)
         result = plant.reset(seed=seed).integrate(duration_s, condition.dbs)
+        seed_elapsed = time.monotonic() - t_seed0
+        spike_count = sum(int(np.asarray(s).size) for s in result.gpi_spikes)
         f, psd = mean_gpi_psd(
             result.gpi_spikes,
             dt_ms=plant.config.dt_ms,
@@ -126,13 +138,27 @@ def simulate_condition(
         )
         freqs = f
         psd_stack.append(psd)
-        p_beta_by_seed[str(seed)] = float(
+        pb = float(
             p_beta(
                 result.gpi_spikes,
                 dt_ms=plant.config.dt_ms,
                 segment_duration_s=duration_s,
             ),
         )
+        p_beta_by_seed[str(seed)] = pb
+        print(
+            f"    seed {seed} done in {seed_elapsed:.1f}s "
+            f"({spike_count:,} GPi spikes, P_beta={pb:.1f})",
+            file=sys.stderr,
+            flush=True,
+        )
+
+    cond_elapsed = time.monotonic() - t_cond0
+    print(
+        f"  [{condition.key}] done in {cond_elapsed:.1f}s",
+        file=sys.stderr,
+        flush=True,
+    )
 
     if freqs is None:
         msg = "no seeds simulated"
@@ -270,11 +296,13 @@ def main() -> int:
         seeds = args.seeds
         curves = []
         with PythonPlant() as plant:
+            t_total0 = time.monotonic()
             for condition in CONDITIONS:
                 print(
                     f"simulating {condition.key} ({duration_s:.1f} s, "
                     f"{len(seeds)} seeds)...",
                     file=sys.stderr,
+                    flush=True,
                 )
                 curves.append(
                     simulate_condition(
@@ -284,6 +312,12 @@ def main() -> int:
                         duration_s=duration_s,
                     ),
                 )
+            total_elapsed = time.monotonic() - t_total0
+            print(
+                f"all {len(CONDITIONS)} conditions done in {total_elapsed:.1f}s",
+                file=sys.stderr,
+                flush=True,
+            )
         save_curves(curves, args.curves, duration_s=duration_s, seeds=seeds)
         print(f"wrote curves cache {args.curves}", file=sys.stderr)
 

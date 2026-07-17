@@ -1582,6 +1582,7 @@ class RunPane(Static):
                 repo_root=self.repo_root,
                 artifacts_dir=self.artifacts_dir,
                 recipe_id=recipe.log_recipe_id(),
+                cpus=settings.cpus or None,
             )
         except (OSError, ValueError) as exc:
             self.notify(str(exc), title="Launch failed", severity="error", timeout=6)

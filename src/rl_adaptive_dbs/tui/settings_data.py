@@ -25,6 +25,7 @@ SETTING_KEYS = (
     "sparkline_episodes",
     "launch_follow",
     "color_enabled",
+    "cpus",
 )
 
 SETTING_BOUNDS: dict[str, tuple[float, float] | None] = {
@@ -32,6 +33,7 @@ SETTING_BOUNDS: dict[str, tuple[float, float] | None] = {
     "tail_lines": (50.0, 2000.0),
     "sparkline_episodes": (10.0, 200.0),
     "color_enabled": None,
+    "cpus": None,
 }
 
 SETTING_DESCRIPTIONS: dict[str, str] = {
@@ -40,6 +42,7 @@ SETTING_DESCRIPTIONS: dict[str, str] = {
     "sparkline_episodes": "Episode window for the Training return sparkline.",
     "launch_follow": "After Run tab launch: follow in Logs, tmux tail split, ask, or off.",
     "color_enabled": "Use theme colors instead of monochrome (restart required).",
+    "cpus": "CPU cores for launched runs (taskset -c). Empty = all cores. E.g. 0-2,0-5.",
 }
 
 
@@ -52,6 +55,7 @@ class TuiSettings:
     sparkline_episodes: int = MAX_SPARKLINE_EPISODES
     launch_follow: str = LAUNCH_FOLLOW_LOGS
     color_enabled: bool = False
+    cpus: str = ""
 
     @classmethod
     def from_mapping(cls, raw: object, *, defaults: TuiSettings | None = None) -> TuiSettings:
@@ -68,6 +72,10 @@ class TuiSettings:
                 continue
             if key == "color_enabled":
                 if isinstance(value, bool):
+                    merged[key] = value
+                continue
+            if key == "cpus":
+                if isinstance(value, str):
                     merged[key] = value
                 continue
             if key in {"tail_lines", "sparkline_episodes"}:
@@ -110,6 +118,8 @@ def clamp_setting(key: str, value: float | int | bool | str) -> float | int | bo
         return LAUNCH_FOLLOW_LOGS
     if key == "color_enabled":
         return bool(value)
+    if key == "cpus":
+        return str(value) if isinstance(value, str) else ""
     bounds = SETTING_BOUNDS.get(key)
     if bounds is None:
         return value
@@ -132,6 +142,7 @@ def settings_table_rows(settings: TuiSettings) -> list[tuple[str, str, str]]:
         ("sparkline_episodes", "Training sparkline episodes", str(settings.sparkline_episodes)),
         ("launch_follow", "Launch follow output", launch_follow_label(settings.launch_follow)),
         ("color_enabled", "Color", "on" if settings.color_enabled else "off"),
+        ("cpus", "CPU cores (taskset)", settings.cpus or "all"),
     ]
 
 
@@ -195,6 +206,8 @@ def parse_setting_input(key: str, text: str) -> float | int | bool | str | None:
         if stripped in {"0", "false", "off", "no", "n"}:
             return False
         return None
+    if key == "cpus":
+        return stripped  # free-form string, empty means all cores
     try:
         if key in {"tail_lines", "sparkline_episodes"}:
             return int(stripped)
@@ -212,6 +225,8 @@ def step_setting(settings: TuiSettings, key: str, delta: int) -> TuiSettings:
         )
     if key == "color_enabled":
         return replace(settings, color_enabled=not settings.color_enabled)
+    if key == "cpus":
+        return settings  # no +/- stepping for free-form string
     current = getattr(settings, key)
     if key == "refresh_s":
         step = 0.25 if delta > 0 else -0.25

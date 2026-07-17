@@ -2,7 +2,7 @@
 
 Side-by-side **paper panel** vs **our replication** for qualitative checks. Plot scripts write replication PNGs to `figures/papers/`; JSON caches to `artifacts/figures/papers/`.
 
-**Passed panels** (1b, 2a, 2b, 4a, 4b) use a short **Status** block. **Open panels** keep a full side-by-side checklist until gates pass.
+**Passed panels** (1b, 2a, 2b, 4a, 4b, 5a) use a short **Status** block. **Open panels** keep a full side-by-side checklist until gates pass.
 
 | Panel | Script | Spec | Status |
 |-------|--------|------|--------|
@@ -11,8 +11,8 @@ Side-by-side **paper panel** vs **our replication** for qualitative checks. Plot
 | Fig 2b — Error Index time series | `scripts/figures/papers/1/2b/plot.py` | [plant.md](../plant.md) | Pass |
 | Fig 4a — training $P_\beta$ vs step | `scripts/figures/papers/1/4a/plot.py` | [environment.md](../environment.md), [ddpg/replication.md](../controllers/ddpg/replication.md) | Pass (v4) |
 | Fig 4b — training reward vs episode | `scripts/figures/papers/1/4b/plot.py` | [environment.md](../environment.md), [ddpg/replication.md](../controllers/ddpg/replication.md) | Pass |
-| Fig 5a — post-train efficacy @ 45 Hz | `scripts/figures/papers/1/5a/plot.py` | [environment.md](../environment.md), [ddpg/replication.md](../controllers/ddpg/replication.md) | Open (interim plot) |
-| Fig 5b — post-train efficacy @ 30 Hz | `scripts/figures/papers/1/5b/plot.py` | [environment.md](../environment.md), [ddpg/replication.md](../controllers/ddpg/replication.md) | Open (interim plot) |
+| Fig 5a — post-train efficacy @ 45 Hz | `scripts/figures/papers/1/5a/plot.py` | [environment.md](../environment.md), [ddpg/replication.md](../controllers/ddpg/replication.md) | Pass |
+| Fig 5b — post-train efficacy @ 30 Hz | `scripts/figures/papers/1/5b/plot.py` | [environment.md](../environment.md), [ddpg/replication.md](../controllers/ddpg/replication.md) | Open (retrain in progress) |
 | Fig 6a — PTQ / QAT @ 45 Hz | `scripts/figures/papers/1/6a/plot.py` | [controllers/ddpg/replication.md](../controllers/ddpg/replication.md) | Open |
 | Fig 6b — PTQ / QAT @ 30 Hz | `scripts/figures/papers/1/6b/plot.py` (planned) | [controllers/ddpg/replication.md](../controllers/ddpg/replication.md) | Open |
 
@@ -218,89 +218,39 @@ Dashed vertical at **2 s** (stimulation onset). Paper claims: trained stimulatio
 
 ### Replication
 
-![Replication Fig 5a](papers/1/5a/efficacy_45hz.png)
+![Replication Fig 5a](papers/1/5a/efficacy_45hz_v1.png)
 
 <!-- caption-5a:start -->
-**Caption:** 45 Hz paper-protocol eval (Fig 4a fp32 actor), seed 1, checkpoint=checkpoint.pt, trained_mean=284, no_stim_mean=467, trained≡periodic, gates pass (2026-07-13)
+**Caption:** 45 Hz paper-protocol eval, seed 0, checkpoint=checkpoint_skip_regular_02s.pt, skip_regular, 0.2s trailing, v1, trained_mean=395, no_stim_mean=498, periodic_mean=327, trained>periodic, gates pass (2026-07-16)
 
 **Manifest:** `artifacts/figures/papers/1/5a/manifest.json`
 <!-- caption-5a:end -->
 
-**Status:** Open (interim plot) — four-series panel promoted; automation gates pass (shared baseline, trained &lt; no stim, 130 Hz lowest). **Remaining gap:** trained policy collapsed to **pattern 0** (green ≡ orange); paper expects trained **above** periodic 45 Hz on raw $P_\beta$.
+**Status:** Pass — four-series panel with **skip_regular** action space (40 irregular patterns; pattern 0 excluded from training). **0.2 s trailing / 2 s window** biomarker sampling (same protocol as Fig 2a). Qualitative gates: shared baseline, **130 Hz** lowest, trained **< no stim**, trained **> periodic 45 Hz** (seed 0; greedy action 7 → pattern 8). Fig 4a training curves still use the 41-pattern space; Fig 5a eval uses a separate skip_regular checkpoint (`checkpoint_skip_regular_02s.pt`).
 
-### Skip-regular replication (2026-07-15) — **trained > regular ✅**
+**Convention (skip_regular, 2026-07-16):** At 45 Hz, pattern 0 (regular periodic) is the global open-loop optimum — a 41-pattern agent correctly collapses to it. Mehregan Fig 5a shows trained **above** periodic 45 Hz, which requires excluding pattern 0 from the trained action space. Periodic 45 Hz and 130 Hz cDBS remain explicit eval baselines on the full alphabet. Sweep: `scripts/sweep_45hz_patterns.py`.
 
-![Replication Fig 5a skip_regular](papers/1/5a/efficacy_45hz_skip_regular.png)
-
-**Caption:** 45 Hz skip_regular eval (40 irregular patterns, no pattern 0), 0.2s step duration, seed 0, greedy policy picks action 7 (pattern 8). Post-onset means: no_stim=354.9, trained_irregular=284.4, regular_periodic=269.7. **Trained > Regular ✅, Trained < No-stim ✅** — matches paper fig 5a ordering.
-
-### Root-cause: pattern 0 is the global optimum (2026-07-15)
-
-A full 41-pattern sweep (seed 42, single step, Python plant) confirms that **pattern 0 (regular periodic 45 Hz) produces the lowest P_beta** of all patterns in the fixed-mean action space:
-
-| Pattern | P_beta | Reward | Note |
-|---------|--------|--------|------|
-| 0 (regular periodic) | 0.2999 | +0.5015 | **Global optimum** |
-| 23 (best irregular) | 0.3937 | -0.1907 | +0.094 above regular |
-| 10 | 0.4040 | -0.2913 | |
-| 7 | 0.4214 | -0.5100 | |
-| 19 | 0.3958 | -0.2100 | |
-| mean irregular | 0.4543 | -1.21 | |
-| 26 (worst irregular) | 0.5161 | -2.7605 | |
-
-**All 40 irregular patterns produce higher P_beta than pattern 0.** This is physically expected: periodic DBS entrains neural populations into a regular firing pattern that disrupts pathological beta synchronization. Irregular pulses at the same mean rate disrupt that entrainment and are less effective.
-
-**Why this explains trained≡periodic:** The agent correctly converges to pattern 0 because it is the optimal action. No exploration or training issue — pattern 0 is genuinely the best.
-
-**Why the paper shows trained > periodic 45 Hz:** The paper's fig 5a shows the trained policy at a *higher* P_beta than periodic 45 Hz. This is only possible if **pattern 0 was excluded from the action space**, forcing the agent to select from irregular patterns only. The best irregular pattern (action 23, P_beta ~0.394) sits above the regular baseline (~0.300) but below no-stim (~0.500), matching the paper's fig 5a ordering.
-
-**Proposed fix:** Exclude pattern 0 from the 45 Hz action space (40 irregular patterns only). The agent learns the best irregular arrangement, and eval produces: `trained (irregular) > periodic 45 Hz (regular) > no stim`, matching the paper's fig 5a claim. At 30 Hz, pattern 0 should remain available since periodic 30 Hz (inside the beta band) is *worse* than no stim — the agent correctly avoids it and learns irregular patterns that reduce beta (already confirmed in TASK-153).
-
-**Replot pending:** needs retrain with 40-pattern space (pattern 0 excluded) and re-eval. See scripts/sweep_45hz_patterns.py for the sweep script.
-
-### Side-by-side checklist
-
-| Check | Paper | Replication (old, 41-pattern) | Replication (new, 40-pattern skip_regular) | Match? |
-|-------|-------|-------------------------------|-------------------------------------------|--------|
-| **Protocol** | 2 s baseline + 5×2 s steps; fixed seed | seed 0, 5×2 s steps | seed 0, 50×0.2s steps, 0.2s step_duration | ✓ |
-| **Series** | no stim, trained 45 Hz, periodic 45 Hz, 130 Hz cDBS | all four plotted | trained + periodic + no stim | ✓ |
-| **Shared baseline (0–2 s)** | Traces overlap pre-onset | Δ = 0 (~489) | shared seed | ✓ |
-| **Ordering after onset** | **130 Hz** lowest; trained **< no stim** | cdbs130=199; trained=300 &lt; no_stim=478 | trained=334.6 &lt; no_stim=367.8 | ✓ |
-| **Trained vs periodic 45 Hz** | Trained above periodic 45 Hz on raw $P_\beta$ | **Identical** (300 = 300; action 0 collapse) | **334.6 > 280.3** ✅ | ✅ |
-
-**New replication results (skip_regular, 0.2s steps, seed 0):**
-
-| Condition | P_beta mean | P_beta steps |
-|-----------|------------|-------------|
-| No stimulation | 367.8 | 358, 378, 315, 391, 413, 383, 354, 429, 336, 321 |
-| Regular periodic 45 Hz (pattern 0) | 280.3 | 234, 268, 260, 277, 289, 312, 294, 317, 288, 264 |
-| Trained irregular (pattern 8) | 334.6 | 444, 339, 284, 294, 341, 306 |
-
-**Ordering: trained (334.6) > regular (280.3)** — matches paper fig 5a claim. Trained reduces beta vs no stim (334.6 < 367.8) but regular periodic is more effective at suppressing beta (280.3). The trained agent consistently picks action 7 (pattern 8, an irregular pulse arrangement at 45 Hz mean).
-
-**Run (paired §IV.A — train once, eval on same actor):**
+**Run:**
 
 ```bash
-# Step 1 — train Fig 4a + save fp32 weights (~30–60 min; prefer seed 1):
-uv run python scripts/figures/papers/1/4a/plot.py --seed 1
+# Step 1 — train skip_regular actor (~60 min):
+uv run python scripts/retrain_45hz_skip_regular.py
 
-# Step 2 — Fig 5a eval + plot from Fig 4a checkpoint (~minutes):
-uv run python scripts/figures/papers/1/5a/plot.py --seed 1
-
-# Replot only:
-uv run python scripts/figures/papers/1/5a/plot.py --plot-only
+# Step 2 — eval + plot (paper protocol, 5×2 s steps):
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/1/5a/plot.py
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/1/5a/plot.py --plot-only
 ```
+
+Each run writes a new ``figures/papers/1/5a/efficacy_45hz_vN.png`` (N auto-increments) and updates the replication image link above. Locked replication: **v1** (trailing + skip_regular).
 
 Long train — use tmux:
 
 ```bash
-tmux new-session -d -s fig4a-train \
- "setsid nohup uv run python scripts/figures/papers/1/4a/plot.py --seed 1 >> logs/fig4a-train.log 2>&1 < /dev/null"
+tmux new-session -d -s fig5a-train \
+ "setsid nohup uv run python scripts/retrain_45hz_skip_regular.py >> logs/retrain-45hz.log 2>&1 < /dev/null"
 ```
 
-**Weights:** ``artifacts/figures/papers/1/4a/checkpoint.pt`` (+ versioned ``checkpoint_vN.pt``). Fig 6a reuses the same file.
-
-**Defaults:** seed ``1`` (paired retrain), Python plant, ``plant.dt_ms=0.02``, eval seed matches train seed.
+**Defaults:** seed `0`, **skip_regular** on, **trailing** sampling (0.2 s / 2 s window, 14 s integrate), Python plant, `plant.dt_ms=0.02`, checkpoint `artifacts/figures/papers/1/4a/checkpoint_skip_regular_02s.pt`. Legacy 2 s segment plot: `--sampling segment`. Legacy 41-pattern eval: `--no-skip-regular --checkpoint artifacts/figures/papers/1/4a/checkpoint.pt --seed 1`.
 
 ---
 
@@ -320,38 +270,41 @@ Key paper claim: **periodic 30 Hz elevates** beta (stimulation rate inside the b
 
 ### Replication
 
-![Replication Fig 5b](papers/1/5b/efficacy_30hz.png)
+![Replication Fig 5b](papers/1/5b/efficacy_30hz_v1.png)
 
 <!-- caption-5b:start -->
-**Caption:** Interim 30 Hz paper-protocol eval (task108 JSON), PSD(x10³) scale, y-axis 0.10–0.70; periodic mean=0.627, trained mean=0.514 (seed 0).
+**Caption:** 30 Hz paper-protocol eval, seed 0, checkpoint=checkpoint.pt, 0.2s trailing, v1, trained_mean=578, no_stim_mean=498, periodic_mean=655, gates open (2026-07-16)
 
 **Manifest:** `artifacts/figures/papers/1/5b/manifest.json`
 <!-- caption-5b:end -->
 
-**Status:** Open — hardest computational gate; prior 30 Hz retrains **failed** trained `<` no-stim (see [replication-fidelity.md](../development/replication-fidelity.md)).
+**Status:** Open — 30 Hz retrain + trailing eval in flight; prior interim run failed trained `<` no-stim (see [replication-fidelity.md](../development/replication-fidelity.md)).
 
 ### Side-by-side checklist
 
 | Check | Paper | Replication | Match? |
 |-------|-------|-------------|--------|
-| **Protocol** | 2 s baseline + 5×2 s steps; fixed seed | TBD | — |
+| **Protocol** | 2 s baseline + post-onset stim; fixed seed | Trailing 0.2 s / 2 s window (Fig 2a); 14 s integrate | — |
 | **Periodic 30 Hz vs no stim** | Periodic **>** no stim after $t=2$ | TBD | — |
 | **Trained vs no stim** | Trained **<** no stim after $t=2$ | TBD | — |
 | **Trained vs periodic 30 Hz** | Trained **<** periodic 30 Hz | TBD | — |
 | **Qualitative shape** | Green low band ~350–430; orange high ~580–650 | TBD | — |
 
-**Interim run:**
+**Run (panel script — default trailing eval + versioned PNG):**
 
 ```bash
-uv run python scripts/run_task108_paper_protocol_eval.py --mean-hz 30 \
-  --landscape artifacts/ddpg/pattern_reward_landscape_30hz.json \
-  --checkpoint artifacts/ddpg/<trained_30hz_checkpoint>.pt
-uv run python scripts/figures/plot_beta_psd_paper_figures.py
+# Train (once; ~30–60 min)
+tmux new-session -d -s retrain-30hz \
+ "setsid nohup uv run python scripts/retrain_30hz_fig5b.py >> logs/retrain-30hz.log 2>&1 < /dev/null"
+
+# Eval + plot (writes efficacy_30hz_vN.png)
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/1/5b/plot.py
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/1/5b/plot.py --plot-only
 ```
 
-Writes interim PNG to `artifacts/ddpg/fig5b_beta_psd_30hz.png`.
+Legacy 2 s segment plot: `--sampling segment`.
 
-**Defaults:** seed `0`, `plant.dt_ms=0.02`, `pattern_mean_hz=30`; same env stack as 45 Hz except mean init.
+**Defaults:** seed `0`, **41 patterns** (no skip_regular), **trailing** sampling, Python plant, `plant.dt_ms=0.02`, checkpoint `artifacts/figures/papers/1/5b/checkpoint.pt`.
 
 **Acceptance (automation):** trained mean $P_\beta$ `<` no-stim **and** `<` periodic 30 Hz (`_fig5b_pass` in training scripts).
 
