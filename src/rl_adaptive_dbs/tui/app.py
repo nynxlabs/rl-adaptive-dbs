@@ -1534,6 +1534,7 @@ class RunPane(Static):
         if event.data_table.id != "run-recipe-table":
             return
         self._select_recipe_from_table(event.row_key)
+        self.app.run_worker(self.action_confirm_launch())
 
     def action_open_filter(self) -> None:
         field = self.query_one("#run-filter-input", Input)
