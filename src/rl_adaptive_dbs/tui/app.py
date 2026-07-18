@@ -70,12 +70,23 @@ from rl_adaptive_dbs.paths import find_repo_root
 from rl_adaptive_dbs.tui.reload import RESTART_EXIT_CODE
 from rl_adaptive_dbs.tui.run_data import (
     RunRecipe,
+    cycle_folder_id,
     cycle_recipe_id,
     discover_run_recipes,
+    filter_folders,
     filter_recipes,
+    folder_id_from_row,
+    folder_row_id,
+    folder_table_rows,
+    is_folder_row_id,
+    list_run_folders,
     recipe_table_rows,
+    recipes_in_category,
     run_empty_message,
+    run_folder_hints,
+    run_root_hints,
     run_status_line,
+    select_folder,
     select_recipe,
 )
 from rl_adaptive_dbs.tui.run_launch import (
@@ -1379,7 +1390,7 @@ class ConfirmLaunchScreen(ModalScreen[bool]):
 
 
 class RunPane(Static):
-    """Run tab: browse recipes and launch detached jobs."""
+    """Run tab: browse category folders, then launch detached jobs."""
 
     DEFAULT_CSS = """
     RunPane {
@@ -1421,13 +1432,25 @@ class RunPane(Static):
         self.artifacts_dir = artifacts_dir
         self.repo_root = (repo_root or find_repo_root()).resolve()
         self._recipes = discover_run_recipes(self.repo_root)
-        self._active_recipe_id: str | None = self._recipes[0].recipe_id if self._recipes else None
+        self._browse_category: str | None = None
+        self._active_row_id: str | None = None
         self._filter = ""
+        self._table_mode: str | None = None
         self._last_launch: LaunchResult | None = None
         self._last_launch_label: str | None = None
+        self._seed_initial_selection()
+
+    def _seed_initial_selection(self) -> None:
+        folders = list_run_folders(self._recipes)
+        if folders:
+            self._active_row_id = folder_row_id(folders[0].category)
+            return
+        visible = self._visible_recipes()
+        if visible:
+            self._active_row_id = visible[0].recipe_id
 
     def compose(self) -> ComposeResult:
-        yield Input(placeholder="filter label, category, or command…", id="run-filter-input")
+        yield Input(placeholder="filter…", id="run-filter-input")
         yield Static("", id="run-status")
         with Vertical():
             yield Static("", id="run-empty")
@@ -1436,37 +1459,76 @@ class RunPane(Static):
 
     def on_mount(self) -> None:
         table = self.query_one("#run-recipe-table", DataTable)
-        table.add_columns("category", "label", "command")
         table.cursor_type = "row"
         table.can_focus = True
         self.reload_data()
 
     def on_show(self) -> None:
-        if self._visible_recipes():
+        if self._at_root() and self._visible_folders():
+            self.query_one("#run-recipe-table", DataTable).focus()
+        elif self._visible_recipes():
             self.query_one("#run-recipe-table", DataTable).focus()
 
+    def _at_root(self) -> bool:
+        return self._browse_category is None
+
+    def _visible_folders(self) -> list:
+        return filter_folders(list_run_folders(self._recipes), self._filter)
+
     def _visible_recipes(self) -> list[RunRecipe]:
-        return filter_recipes(self._recipes, self._filter)
+        if self._browse_category is None:
+            return []
+        scoped = recipes_in_category(self._recipes, self._browse_category)
+        return filter_recipes(scoped, self._filter)
 
     def active_recipe(self) -> RunRecipe | None:
-        return select_recipe(self._visible_recipes(), self._active_recipe_id)
+        if self._at_root():
+            return None
+        return select_recipe(self._visible_recipes(), self._active_row_id)
 
     def last_launch_log(self) -> Path | None:
         return self._last_launch.log_path if self._last_launch else None
 
+    def _set_table_mode(self, mode: str) -> None:
+        if self._table_mode == mode:
+            return
+        table = self.query_one("#run-recipe-table", DataTable)
+        table.clear(columns=True)
+        if mode == "root":
+            table.add_columns("folder", "items")
+        else:
+            table.add_columns("label", "command")
+        self._table_mode = mode
+
+    def _update_filter_placeholder(self) -> None:
+        field = self.query_one("#run-filter-input", Input)
+        if self._at_root():
+            field.placeholder = "filter folders…"
+        else:
+            field.placeholder = "filter label or command…"
+
     def reload_data(self) -> None:
         self._recipes = discover_run_recipes(self.repo_root)
-        visible = self._visible_recipes()
-        if self._active_recipe_id is None and visible:
-            self._active_recipe_id = visible[0].recipe_id
+        if self._browse_category is not None:
+            category_ids = {item.category for item in self._recipes}
+            if self._browse_category not in category_ids:
+                self._browse_category = None
 
         status = self.query_one("#run-status", Static)
         empty = self.query_one("#run-empty", Static)
         table = self.query_one("#run-recipe-table", DataTable)
         detail = self.query_one("#run-detail", Static)
+        self._update_filter_placeholder()
 
         if not self._recipes:
-            status.update(run_status_line([], None))
+            status.update(
+                run_status_line(
+                    browse_category=None,
+                    folder_count=0,
+                    visible_count=0,
+                    last_launch=self._last_launch_label,
+                )
+            )
             empty.update(run_empty_message(self.repo_root))
             empty.display = True
             table.display = False
@@ -1475,11 +1537,81 @@ class RunPane(Static):
 
         empty.display = False
         table.display = True
-        active = self.active_recipe()
+
+        if self._at_root():
+            self._reload_root_view(status, table, detail)
+            return
+        self._reload_folder_view(status, table, detail)
+
+    def _reload_root_view(self, status: Static, table: DataTable, detail: Static) -> None:
+        folders = self._visible_folders()
+        if not folders:
+            self._filter = ""
+            self._active_row_id = None
+            status.update(
+                run_status_line(
+                    browse_category=None,
+                    folder_count=0,
+                    visible_count=0,
+                    last_launch=self._last_launch_label,
+                )
+            )
+            table.clear()
+            detail.update("No folders match the filter.")
+            return
+
+        if self._active_row_id is None or not is_folder_row_id(self._active_row_id):
+            self._active_row_id = folder_row_id(folders[0].category)
+        active_folder = select_folder(folders, self._active_row_id)
+        selected_label = active_folder.label if active_folder else None
         status.update(
-            run_status_line(visible, active, last_launch=self._last_launch_label)
+            run_status_line(
+                browse_category=None,
+                folder_count=len(list_run_folders(self._recipes)),
+                visible_count=len(folders),
+                selected_label=selected_label,
+                last_launch=self._last_launch_label,
+            )
         )
 
+        self._set_table_mode("root")
+        table.clear()
+        for index, row in enumerate(folder_table_rows(folders)):
+            table.add_row(*row, key=folder_row_id(folders[index].category))
+        self._sync_cursor_to_active()
+        detail.update(run_root_hints())
+
+    def _reload_folder_view(self, status: Static, table: DataTable, detail: Static) -> None:
+        visible = self._visible_recipes()
+        if not visible:
+            self._active_row_id = None
+            status.update(
+                run_status_line(
+                    browse_category=self._browse_category,
+                    folder_count=len(list_run_folders(self._recipes)),
+                    visible_count=0,
+                    last_launch=self._last_launch_label,
+                )
+            )
+            table.clear()
+            detail.update("No recipes match the filter.")
+            return
+
+        if self._active_row_id is None or is_folder_row_id(self._active_row_id):
+            self._active_row_id = visible[0].recipe_id
+        active = self.active_recipe()
+        selected_label = active.label if active else None
+        status.update(
+            run_status_line(
+                browse_category=self._browse_category,
+                folder_count=len(list_run_folders(self._recipes)),
+                visible_count=len(visible),
+                selected_label=selected_label,
+                last_launch=self._last_launch_label,
+            )
+        )
+
+        self._set_table_mode("folder")
         table.clear()
         for index, row in enumerate(recipe_table_rows(visible)):
             table.add_row(*row, key=visible[index].recipe_id)
@@ -1489,64 +1621,118 @@ class RunPane(Static):
     def _update_detail(self, recipe: RunRecipe | None) -> None:
         detail = self.query_one("#run-detail", Static)
         if recipe is None:
-            detail.update("")
+            detail.update(run_folder_hints() if not self._at_root() else run_root_hints())
             return
         lines = [recipe.command_preview]
         if recipe.description:
             lines.append(recipe.description)
-        lines.append(
-            "Enter or x: launch detached  |  f: follow mode in confirm dialog"
-            "  |  output → artifacts/tui-runs/"
-        )
+        lines.append(run_folder_hints())
         detail.update("\n".join(lines))
 
     def _sync_cursor_to_active(self) -> None:
         table = self.query_one("#run-recipe-table", DataTable)
+        if self._at_root():
+            visible = self._visible_folders()
+            for index, item in enumerate(visible):
+                if folder_row_id(item.category) == self._active_row_id:
+                    table.move_cursor(row=index)
+                    return
+            return
         visible = self._visible_recipes()
         for index, item in enumerate(visible):
-            if item.recipe_id == self._active_recipe_id:
+            if item.recipe_id == self._active_row_id:
                 table.move_cursor(row=index)
                 return
 
-    def _select_recipe_from_table(self, row_key) -> None:
+    def _select_row_from_table(self, row_key) -> None:
         if row_key is None:
             return
-        recipe_id = str(row_key.value)
-        if recipe_id == self._active_recipe_id:
+        row_id = str(row_key.value)
+        if row_id == self._active_row_id:
             return
-        self._active_recipe_id = recipe_id
-        self._update_detail(self.active_recipe())
+        self._active_row_id = row_id
+        if self._at_root():
+            active_folder = select_folder(self._visible_folders(), row_id)
+            selected_label = active_folder.label if active_folder else None
+            detail = self.query_one("#run-detail", Static)
+            detail.update(run_root_hints())
+        else:
+            self._update_detail(self.active_recipe())
+            selected_label = self.active_recipe().label if self.active_recipe() else None
         status = self.query_one("#run-status", Static)
         status.update(
             run_status_line(
-                self._visible_recipes(),
-                self.active_recipe(),
+                browse_category=self._browse_category,
+                folder_count=len(list_run_folders(self._recipes)),
+                visible_count=len(self._visible_folders() if self._at_root() else self._visible_recipes()),
+                selected_label=selected_label,
                 last_launch=self._last_launch_label,
             )
         )
 
+    def _enter_folder(self, category: str) -> None:
+        self._browse_category = category
+        self._filter = ""
+        field = self.query_one("#run-filter-input", Input)
+        field.value = ""
+        field.remove_class("visible")
+        scoped = recipes_in_category(self._recipes, category)
+        self._active_row_id = scoped[0].recipe_id if scoped else None
+        self.reload_data()
+
+    def _exit_folder(self) -> None:
+        if self._browse_category is None:
+            return
+        self._active_row_id = folder_row_id(self._browse_category)
+        self._browse_category = None
+        self._filter = ""
+        field = self.query_one("#run-filter-input", Input)
+        field.value = ""
+        field.remove_class("visible")
+        self.reload_data()
+
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         if event.data_table.id != "run-recipe-table":
             return
-        self._select_recipe_from_table(event.row_key)
+        self._select_row_from_table(event.row_key)
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         if event.data_table.id != "run-recipe-table":
             return
-        self._select_recipe_from_table(event.row_key)
-        self.app.run_worker(self.action_confirm_launch())
+        self._select_row_from_table(event.row_key)
+        if self.action_activate_selection():
+            self.run_worker(self.action_confirm_launch())
+
+    def action_activate_selection(self) -> bool:
+        """Enter a folder or signal that a recipe launch should run."""
+        if self._at_root():
+            if self._active_row_id and is_folder_row_id(self._active_row_id):
+                self._enter_folder(folder_id_from_row(self._active_row_id))
+            return False
+        return True
 
     def action_open_filter(self) -> None:
         field = self.query_one("#run-filter-input", Input)
         field.add_class("visible")
         field.focus()
 
-    def action_clear_filter(self) -> None:
-        self._filter = ""
+    def action_clear_filter(self) -> bool:
+        """Clear filter or navigate back to folder list. Returns True when handled."""
         field = self.query_one("#run-filter-input", Input)
-        field.value = ""
-        field.remove_class("visible")
-        self.reload_data()
+        if field.has_class("visible"):
+            self._filter = ""
+            field.value = ""
+            field.remove_class("visible")
+            self.reload_data()
+            return True
+        if self._browse_category is not None:
+            self._exit_folder()
+            return True
+        if self._filter:
+            self._filter = ""
+            self.reload_data()
+            return True
+        return False
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         if event.input.id != "run-filter-input":
@@ -1556,13 +1742,21 @@ class RunPane(Static):
         self.reload_data()
 
     def action_prev_recipe(self) -> None:
-        visible = self._visible_recipes()
-        self._active_recipe_id = cycle_recipe_id(visible, self._active_recipe_id, -1)
+        if self._at_root():
+            folders = self._visible_folders()
+            self._active_row_id = cycle_folder_id(folders, self._active_row_id, -1)
+        else:
+            visible = self._visible_recipes()
+            self._active_row_id = cycle_recipe_id(visible, self._active_row_id, -1)
         self.reload_data()
 
     def action_next_recipe(self) -> None:
-        visible = self._visible_recipes()
-        self._active_recipe_id = cycle_recipe_id(visible, self._active_recipe_id, 1)
+        if self._at_root():
+            folders = self._visible_folders()
+            self._active_row_id = cycle_folder_id(folders, self._active_row_id, 1)
+        else:
+            visible = self._visible_recipes()
+            self._active_row_id = cycle_recipe_id(visible, self._active_row_id, 1)
         self.reload_data()
 
     async def action_confirm_launch(self) -> None:
@@ -1845,7 +2039,8 @@ class RlDbsTuiApp(App):
         if tab == "tab-benchmarks":
             self._benchmarks_pane().action_clear_filter()
         elif tab == "tab-run":
-            self._run_pane().action_clear_filter()
+            if self._run_pane().action_clear_filter():
+                return
         elif tab == "tab-logs":
             logs = self._logs_pane()
             if logs.is_viewing_log():
@@ -1893,7 +2088,9 @@ class RlDbsTuiApp(App):
             self._settings_pane().action_open_editor()
             return
         if tab == "tab-run":
-            self.run_worker(self._run_pane().action_confirm_launch())
+            run = self._run_pane()
+            if run.action_activate_selection():
+                self.run_worker(run.action_confirm_launch())
             return
         if tab != "tab-benchmarks":
             return

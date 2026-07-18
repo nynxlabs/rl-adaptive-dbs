@@ -33,6 +33,10 @@ PAPER_4A_REPLICATION_ALT = "Replication Fig 4a"
 PAPER_4B_REF = "figures/papers/1/4b/paper.png"
 PAPER_4B_REPLICATION_ALT = "Replication Fig 4b reward"
 PAPER_4B_PSD_REPLICATION_ALT = "Replication Fig 4b PSD"
+PAPER_5A_MANIFEST = "artifacts/figures/papers/1/5a/manifest.json"
+PAPER_5A_REPLICATION_ALT = "Replication Fig 5a"
+PAPER_5B_MANIFEST = "artifacts/figures/papers/1/5b/manifest.json"
+PAPER_5B_REPLICATION_ALT = "Replication Fig 5b"
 PAPER_6A_PNG = "figures/papers/1/6a/ptq_qat_45hz.png"
 PAPER_6A_MANIFEST = "artifacts/figures/papers/1/6a/manifest.json"
 PAPER_6A_REF = "figures/papers/1/6a/paper.png"
@@ -581,6 +585,169 @@ def promote_4a(
         "png_repo_rel": repo_rel,
         "manifest": PAPER_4A_MANIFEST,
         "series": str(series_path),
+        "caption": caption,
+        "doc": str(PAPER_1_DOC),
+    }
+
+
+def _caption_5a(manifest: dict[str, Any]) -> str:
+    seed = manifest.get("seed", 0)
+    panel = manifest.get("panel") or {}
+    gates = manifest.get("gates") or panel.get("gates") or {}
+    ckpt = manifest.get("checkpoint") or manifest.get("fig4a_checkpoint") or "see manifest"
+    bits = [
+        "45 Hz paper-protocol eval",
+        f"seed {seed}",
+        f"checkpoint={Path(str(ckpt)).name}",
+    ]
+    if manifest.get("skip_regular"):
+        bits.append("skip_regular")
+    if manifest.get("sampling") == "trailing":
+        bits.append("0.2s trailing")
+    version = manifest.get("png_version")
+    if version is not None:
+        bits.append(f"v{version}")
+    trained_mean = panel.get("trained_mean")
+    if isinstance(trained_mean, (int, float)):
+        bits.append(f"trained_mean={trained_mean:.0f}")
+    bits.append(f"no_stim_mean={panel.get('no_stim_mean', float('nan')):.0f}")
+    periodic_mean = panel.get("periodic_mean")
+    if isinstance(periodic_mean, (int, float)):
+        bits.append(f"periodic_mean={periodic_mean:.0f}")
+    if gates.get("trained_above_periodic"):
+        bits.append("trained>periodic")
+    elif panel.get("trained_equals_periodic"):
+        bits.append("trained≡periodic")
+    if gates.get("pass"):
+        bits.append("gates pass")
+    else:
+        bits.append("gates open")
+    return f"{', '.join(bits)} ({_today()})"
+
+
+def _ensure_paper_1_doc_5a(*, caption_5a: str) -> None:
+    if not PAPER_1_DOC.exists():
+        return
+    text = PAPER_1_DOC.read_text()
+    if "<!-- caption-5a:start -->" not in text:
+        return
+    text = _replace_marker(
+        text,
+        "caption-5a",
+        _caption_block(caption_5a, PAPER_5A_MANIFEST),
+    )
+    PAPER_1_DOC.write_text(text)
+
+
+def _caption_5b(manifest: dict[str, Any]) -> str:
+    seed = manifest.get("seed", 0)
+    panel = manifest.get("panel") or {}
+    gates = manifest.get("gates") or panel.get("gates") or {}
+    ckpt = manifest.get("checkpoint") or "see manifest"
+    bits = [
+        "30 Hz paper-protocol eval",
+        f"seed {seed}",
+        f"checkpoint={Path(str(ckpt)).name}",
+    ]
+    if manifest.get("sampling") == "trailing":
+        bits.append("0.2s trailing")
+    version = manifest.get("png_version")
+    if version is not None:
+        bits.append(f"v{version}")
+    trained_mean = panel.get("trained_mean")
+    if isinstance(trained_mean, (int, float)):
+        bits.append(f"trained_mean={trained_mean:.0f}")
+    bits.append(f"no_stim_mean={panel.get('no_stim_mean', float('nan')):.0f}")
+    periodic_mean = panel.get("periodic_mean")
+    if isinstance(periodic_mean, (int, float)):
+        bits.append(f"periodic_mean={periodic_mean:.0f}")
+    if gates.get("trained_below_periodic") and gates.get("trained_below_no_stim"):
+        bits.append("trained<both")
+    elif panel.get("trained_equals_periodic"):
+        bits.append("trained≡periodic")
+    if gates.get("pass"):
+        bits.append("gates pass")
+    else:
+        bits.append("gates open")
+    return f"{', '.join(bits)} ({_today()})"
+
+
+def _ensure_paper_1_doc_5b(*, caption_5b: str) -> None:
+    if not PAPER_1_DOC.exists():
+        return
+    text = PAPER_1_DOC.read_text()
+    if "<!-- caption-5b:start -->" not in text:
+        return
+    text = _replace_marker(
+        text,
+        "caption-5b",
+        _caption_block(caption_5b, PAPER_5B_MANIFEST),
+    )
+    PAPER_1_DOC.write_text(text)
+
+
+def promote_5b(
+    *,
+    manifest: dict[str, Any],
+    eval_path: Path,
+    png_path: Path,
+    update_docs: bool = True,
+) -> dict[str, str]:
+    """Refresh Fig 5b caption + replication image link in ``docs/figures/paper_1.md``."""
+    caption = _caption_5b(manifest)
+    repo_rel = repo_rel_posix(png_path)
+    if update_docs:
+        _ensure_paper_1_doc_5b(caption_5b=caption)
+        text = PAPER_1_DOC.read_text()
+        text = _set_markdown_image_link(
+            text,
+            alt=PAPER_5B_REPLICATION_ALT,
+            repo_rel=repo_rel,
+        )
+        PAPER_1_DOC.write_text(text)
+    materialize_docs_figure_papers()
+    return {
+        "png": str(png_path),
+        "png_repo_rel": repo_rel,
+        "manifest": PAPER_5B_MANIFEST,
+        "eval": str(eval_path),
+        "caption": caption,
+        "doc": str(PAPER_1_DOC),
+    }
+
+
+def promote_5a(
+    *,
+    manifest: dict[str, Any],
+    eval_path: Path,
+    png_path: Path,
+    update_docs: bool = True,
+) -> dict[str, str]:
+    """Refresh Fig 5a caption + replication image link in ``docs/figures/paper_1.md``."""
+    caption = _caption_5a(manifest)
+    repo_rel = repo_rel_posix(png_path)
+    if update_docs:
+        _ensure_paper_1_doc_5a(caption_5a=caption)
+        text = PAPER_1_DOC.read_text()
+        repl_old = "*Not yet generated.* Target: `figures/papers/1/5a/efficacy_45hz.png`"
+        if repl_old in text:
+            text = text.replace(
+                repl_old,
+                f"![Replication Fig 5a]({_doc_figure_link(repo_rel)})",
+                1,
+            )
+        text = _set_markdown_image_link(
+            text,
+            alt=PAPER_5A_REPLICATION_ALT,
+            repo_rel=repo_rel,
+        )
+        PAPER_1_DOC.write_text(text)
+    materialize_docs_figure_papers()
+    return {
+        "png": str(png_path),
+        "png_repo_rel": repo_rel,
+        "manifest": PAPER_5A_MANIFEST,
+        "eval": str(eval_path),
         "caption": caption,
         "doc": str(PAPER_1_DOC),
     }
