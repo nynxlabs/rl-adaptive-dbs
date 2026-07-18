@@ -63,7 +63,7 @@ def load_cached_init_draws(seed: int, *, search_dirs: tuple[Path, ...] | None = 
     candidates: list[Path] = []
     if search_dirs is not None:
         candidates.extend(search_dirs)
-    repo_fixtures = Path(__file__).resolve().parents[3] / "tests" / "fixtures"
+    repo_fixtures = Path(__file__).resolve().parents[4] / "tests" / "fixtures"
     candidates.append(repo_fixtures)
     candidates.append(init_draws_cache_dir())
 
