@@ -18,8 +18,8 @@ dependencies = [
 ]
 
 [project.scripts]
-rl-dbs = "rl_adaptive_dbs.cli:main"
-rl-dbs-tui = "rl_adaptive_dbs.tui:main"
+rl-dbs = "rl_adaptive_dbs.entry:cli_main"
+rl-dbs-tui = "rl_adaptive_dbs.entry:tui_main"
 
 [dependency-groups]
 dev = [
@@ -28,6 +28,9 @@ dev = [
 ]
 matlab = [
     "matlabengine==25.2.2",
+]
+figures = [
+    "matplotlib>=3.10.0",
 ]
 
 [tool.pytest.ini_options]

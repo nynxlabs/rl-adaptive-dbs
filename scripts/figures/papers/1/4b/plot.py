@@ -8,7 +8,8 @@ Paper §IV.A.1 companion to Fig 4a: two panels over **9 episodes** indexed
   2. **Episode-mean PSD(x10³)** ($P_\\beta / 1000$) vs episode
 
 Loads traces from the Fig 4a series cache (default: locked ``series_v4.json``,
-first 8 episodes). Writes separate versioned PNGs per run.
+first 8 episodes). Writes a combined two-panel PNG (``training_fig4b_vN.png``)
+for showcase side-by-side use, plus separate reward/PSD PNGs for debugging.
 
 Run:
   uv run python scripts/figures/papers/1/4b/plot.py
@@ -40,6 +41,7 @@ DEFAULT_FIG4A_SERIES = FIG4A_CACHE_DIR / "series_v4.json"
 DEFAULT_MANIFEST = CACHE_DIR / "manifest.json"
 REWARD_STEM = "training_reward"
 PSD_STEM = "training_psd"
+COMBINED_STEM = "training_fig4b"
 
 DEFAULT_EPISODES = 9
 STEPS_PER_EPISODE = 30
@@ -252,27 +254,16 @@ def _episode_x_axis(ax: plt.Axes, n_points: int) -> None:
     ax.set_xticks(np.arange(0, last_ep + 1, 2))
 
 
-def plot_reward_vs_episode(
-    episode_rewards: list[float],
-    *,
-    out_path: Path,
-) -> dict[str, Any]:
-    plt.rcParams.update(STYLE)
+def _plot_reward_on_ax(ax: plt.Axes, episode_rewards: list[float]) -> dict[str, Any]:
     y = np.asarray(episode_rewards, dtype=float)
     x = _episode_x_coords(len(y))
-    fig, ax = plt.subplots(figsize=(8.0, 4.5), dpi=150)
     ax.plot(x, y, marker="o", color="#16a34a", linewidth=1.2, markersize=4)
     _episode_x_axis(ax, len(y))
     y0, y1, yticks = _ylim_for_rewards(y)
     ax.set_ylim(y0, y1)
     ax.set_yticks(yticks)
-    ax.set_xlabel("Episode")
     ax.set_ylabel("Reward")
     ax.grid(True, axis="y", color="#cccccc", linewidth=0.6, alpha=0.9)
-    fig.tight_layout()
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path)
-    plt.close(fig)
     return {
         "n_episodes": int(y.size),
         "y_min": float(y.min()) if y.size else float("nan"),
@@ -282,15 +273,9 @@ def plot_reward_vs_episode(
     }
 
 
-def plot_psd_vs_episode(
-    episode_mean_beta: list[float],
-    *,
-    out_path: Path,
-) -> dict[str, Any]:
-    plt.rcParams.update(STYLE)
+def _plot_psd_on_ax(ax: plt.Axes, episode_mean_beta: list[float]) -> dict[str, Any]:
     y = np.asarray(episode_mean_beta, dtype=float)
     x = _episode_x_coords(len(y))
-    fig, ax = plt.subplots(figsize=(8.0, 4.5), dpi=150)
     ax.plot(x, y, marker="o", color="#1f6f6f", linewidth=1.2, markersize=4)
     _episode_x_axis(ax, len(y))
     y0, y1, yticks = _ylim_for_psd(y)
@@ -299,16 +284,71 @@ def plot_psd_vs_episode(
     ax.set_xlabel("Episode")
     ax.set_ylabel(r"PSD($x10^3$)")
     ax.grid(True, axis="y", color="#cccccc", linewidth=0.6, alpha=0.9)
-    fig.tight_layout()
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path)
-    plt.close(fig)
     return {
         "n_episodes": int(y.size),
         "y_min": float(y.min()) if y.size else float("nan"),
         "y_max": float(y.max()) if y.size else float("nan"),
         "y_mean": float(y.mean()) if y.size else float("nan"),
         "ylim": [y0, y1],
+    }
+
+
+def plot_reward_vs_episode(
+    episode_rewards: list[float],
+    *,
+    out_path: Path,
+) -> dict[str, Any]:
+    plt.rcParams.update(STYLE)
+    fig, ax = plt.subplots(figsize=(8.0, 4.5), dpi=150)
+    panel = _plot_reward_on_ax(ax, episode_rewards)
+    ax.set_xlabel("Episode")
+    fig.tight_layout()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path)
+    plt.close(fig)
+    return panel
+
+
+def plot_psd_vs_episode(
+    episode_mean_beta: list[float],
+    *,
+    out_path: Path,
+) -> dict[str, Any]:
+    plt.rcParams.update(STYLE)
+    fig, ax = plt.subplots(figsize=(8.0, 4.5), dpi=150)
+    panel = _plot_psd_on_ax(ax, episode_mean_beta)
+    fig.tight_layout()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path)
+    plt.close(fig)
+    return panel
+
+
+def plot_combined_fig4b(
+    episode_rewards: list[float],
+    episode_mean_beta: list[float],
+    *,
+    out_path: Path,
+) -> dict[str, Any]:
+    """Paper-style stacked panel: reward (top) + episode-mean PSD (bottom)."""
+    plt.rcParams.update(STYLE)
+    fig, (ax_reward, ax_psd) = plt.subplots(
+        2,
+        1,
+        sharex=True,
+        figsize=(8.0, 7.0),
+        dpi=150,
+    )
+    reward_panel = _plot_reward_on_ax(ax_reward, episode_rewards)
+    psd_panel = _plot_psd_on_ax(ax_psd, episode_mean_beta)
+    fig.tight_layout()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path)
+    plt.close(fig)
+    return {
+        "reward": reward_panel,
+        "psd": psd_panel,
+        "n_episodes": reward_panel["n_episodes"],
     }
 
 
@@ -493,14 +533,9 @@ def main() -> int:
     parser.add_argument(
         "--update-checklist",
         action="store_true",
-        default=True,
-        help="Rewrite Fig 4b checklist in paper_1.md (default: on)",
+        help="Rewrite Fig 4b checklist in paper_1.md (off by default; passed panels use Status only)",
     )
-    parser.add_argument(
-        "--no-update-checklist",
-        dest="update_checklist",
-        action="store_false",
-    )
+    parser.set_defaults(update_checklist=False)
     parser.set_defaults(update_docs=True)
     args = parser.parse_args()
 
@@ -514,8 +549,10 @@ def main() -> int:
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     reward_path, png_version = _figure_promote.next_versioned_png(FIGURES_DIR, REWARD_STEM)
     psd_path = FIGURES_DIR / f"{PSD_STEM}_v{png_version}.png"
+    combined_path = FIGURES_DIR / f"{COMBINED_STEM}_v{png_version}.png"
     reward_path = _vault_backed_png(reward_path)
     psd_path = _vault_backed_png(psd_path)
+    combined_path = _vault_backed_png(combined_path)
 
     print(
         f"Fig 4b — {args.episodes} episodes from {args.fig4a_series}",
@@ -524,6 +561,11 @@ def main() -> int:
 
     reward_panel = plot_reward_vs_episode(episode_rewards, out_path=reward_path)
     psd_panel = plot_psd_vs_episode(episode_mean_beta, out_path=psd_path)
+    combined_panel = plot_combined_fig4b(
+        episode_rewards,
+        episode_mean_beta,
+        out_path=combined_path,
+    )
     summary = _gate_summary(episode_rewards, episode_mean_beta=episode_mean_beta)
     summary["reward_ylim"] = list(reward_panel.get("ylim", []))
     summary["psd_ylim"] = list(psd_panel.get("ylim", []))
@@ -541,6 +583,10 @@ def main() -> int:
         "episode_mean_beta": episode_mean_beta,
         "summary": summary,
         "panels": {
+            "combined": {
+                **combined_panel,
+                "output_png": _figure_promote.repo_rel_posix(combined_path),
+            },
             "reward": {
                 **reward_panel,
                 "output_png": _figure_promote.repo_rel_posix(reward_path),
@@ -550,6 +596,7 @@ def main() -> int:
                 "output_png": _figure_promote.repo_rel_posix(psd_path),
             },
         },
+        "output_png_combined": _figure_promote.repo_rel_posix(combined_path),
         "output_png_reward": _figure_promote.repo_rel_posix(reward_path),
         "output_png_psd": _figure_promote.repo_rel_posix(psd_path),
     }
@@ -570,6 +617,7 @@ def main() -> int:
     args.manifest.parent.mkdir(parents=True, exist_ok=True)
     args.manifest.write_text(json.dumps(manifest, indent=2) + "\n")
 
+    print(f"wrote {combined_path}", flush=True)
     print(f"wrote {reward_path}", flush=True)
     print(f"wrote {psd_path}", flush=True)
     print(f"wrote {args.manifest}", flush=True)

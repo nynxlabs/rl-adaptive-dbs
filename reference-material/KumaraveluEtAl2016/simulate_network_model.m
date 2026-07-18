@@ -1,4 +1,4 @@
-function varargout = simulate_network_model(IT,pd,corstim,pick_dbs_freq,dynamics_only,seed,tmax_ms,gpe_debug_i)
+function varargout = simulate_network_model(IT,pd,corstim,pick_dbs_freq,dynamics_only,seed,tmax_ms,gpe_debug_i,plant_opts)
 
 %IT - iteration number (trial no)
 %pd - 0(normal/healthy condition), 1(Parkinson's disease(PD) condition)
@@ -8,10 +8,33 @@ function varargout = simulate_network_model(IT,pd,corstim,pick_dbs_freq,dynamics
 %seed (optional) - RNG seed for reproducible ICs; default rng('shuffle')
 %tmax_ms (optional) - segment duration in ms; default 2000
 %gpe_debug_i (optional) - MATLAB loop index i for gpe_debug_snapshot; default 5186
+%plant_opts (optional) - struct:
+%   smc_schedule ('off' | 'boc' | 'periodic'; default 'off')
+%   smc_frequency_hz (periodic schedule only; legacy: >0 enables periodic when schedule off)
+%   smc_amplitude (default 3.5 uA/cm2 additive on 1.2 baseline, BoC thalamic)
+%   smc_cortical_amplitude (default 50 uA/cm2 on Iappco when smc_site='cortical')
+%   smc_site ('thalamic' | 'cortical'; default 'thalamic')
+%   smc_pulse_width_ms (default 5.0)
+%   smc_invgamma_shape (default 25, BoC)
+%   smc_invgamma_scale_ms (default 1785.71, BoC)
+%   idbs (optional 1 x n_steps STN drive; overrides creatdbs)
+%   return_th_spikes (logical; default false)
+%   smc_pulse_source ('drive' | 'cor_spikes'; default 'drive')
 if nargin < 5, dynamics_only = false; end
 if nargin < 6 || isempty(seed), rng('shuffle'); else, rng(seed); end
 if nargin < 7 || isempty(tmax_ms), tmax = 2000; else, tmax = double(tmax_ms); end
 if nargin < 8 || isempty(gpe_debug_i), gpe_debug_i = 5186; else, gpe_debug_i = double(gpe_debug_i); end
+if nargin < 9 || isempty(plant_opts), plant_opts = struct(); end
+if ~isfield(plant_opts, 'smc_schedule'), plant_opts.smc_schedule = 'off'; end
+if ~isfield(plant_opts, 'smc_frequency_hz'), plant_opts.smc_frequency_hz = 0; end
+if ~isfield(plant_opts, 'smc_amplitude'), plant_opts.smc_amplitude = 3.5; end
+if ~isfield(plant_opts, 'smc_cortical_amplitude'), plant_opts.smc_cortical_amplitude = 50.0; end
+if ~isfield(plant_opts, 'smc_site'), plant_opts.smc_site = 'thalamic'; end
+if ~isfield(plant_opts, 'smc_pulse_width_ms'), plant_opts.smc_pulse_width_ms = 5.0; end
+if ~isfield(plant_opts, 'smc_invgamma_shape'), plant_opts.smc_invgamma_shape = 25.0; end
+if ~isfield(plant_opts, 'smc_invgamma_scale_ms'), plant_opts.smc_invgamma_scale_ms = 1785.71; end
+if ~isfield(plant_opts, 'return_th_spikes'), plant_opts.return_th_spikes = false; end
+if ~isfield(plant_opts, 'smc_pulse_source'), plant_opts.smc_pulse_source = 'drive'; end
 
 n = 10;             % number of neurons in each nucleus
 dt = 0.01;          % ms
@@ -27,8 +50,13 @@ pattern = freqs(pick_dbs_freq);
 
 % Create DBS Current
 
-if pick_dbs_freq==1
-    
+if isfield(plant_opts, 'idbs') && ~isempty(plant_opts.idbs)
+  Idbs = plant_opts.idbs;
+  if numel(Idbs) ~= length(t)
+    error('plant_opts.idbs length must match time grid (%d).', length(t));
+  end
+elseif pick_dbs_freq==1
+  
   Idbs=zeros(1,length(t)); 
   
 else
@@ -37,34 +65,47 @@ else
   
 end
 
-% Create Cortical Stimulus Pulse
-
-if corstim==1
-    
-  Iappco=zeros(1,length(t));
-  Iappco((1000/dt):((1000+0.3)/dt))=350;
-  
+% SMC drive for Error Index (BoC / periodic); site = thalamic Iappth or cortical Iappco
+[Iappth_trace, smc_component_th] = resolve_thalamic_smc(plant_opts, t, dt);
+smc_site = plant_opts.smc_site;
+if strcmp(smc_site, 'cortical') && smc_schedule_enabled(plant_opts)
+    [Iappco, smc_component] = resolve_cortical_smc(plant_opts, t, dt);
+    smc_pulse_times_s = smc_rising_edges(smc_component, dt);
+    corstim = 1;
 else
-
-  Iappco=zeros(1,length(t));
-  
+    smc_component = smc_component_th;
+    smc_pulse_times_s = smc_rising_edges(smc_component, dt);
+    % Create Cortical Stimulus Pulse (Kumaravelu beta-validation pulse at 1 s)
+    if corstim==1
+      Iappco=zeros(1,length(t));
+      Iappco((1000/dt):((1000+0.3)/dt))=350;
+    else
+      Iappco=zeros(1,length(t));
+    end
 end
 
 % Run CTX-BG-TH Network Model
 if nargout > 11
-    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace gpe_debug_snapshot plant_init_export] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i);
+    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace gpe_debug_snapshot plant_init_export] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i,Iappth_trace);
 elseif nargout > 10
-    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace gpe_debug_snapshot] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i);
+    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace gpe_debug_snapshot] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i,Iappth_trace);
 elseif nargout > 9
-    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i);
+    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i,Iappth_trace);
 elseif nargout > 8
-    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i);
+    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i,Iappth_trace);
 elseif nargout > 7
-    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i);
+    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i,Iappth_trace);
 elseif nargout > 6
-    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i);
+    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i,Iappth_trace);
 else
-    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i);
+    [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i,Iappth_trace);
+end
+
+smc_drive_times_s = smc_pulse_times_s;
+if strcmp(plant_opts.smc_pulse_source, 'cor_spikes')
+    cor_cells = spikes_to_cell(Cor_APs);
+    smc_pulse_times_s = smc_pulse_times_from_cor_spikes( ...
+        cor_cells, smc_drive_times_s, plant_opts.smc_pulse_width_ms / 1000.0);
 end
 
 if dynamics_only
@@ -95,6 +136,12 @@ if dynamics_only
   end
   if nargout > 11
     varargout{12} = plant_init_export;
+  end
+  if nargout > 12
+    varargout{13} = spikes_to_cell(TH_APs);
+  end
+  if nargout > 13
+    varargout{14} = smc_pulse_times_s;
   end
   return
 end
@@ -143,9 +190,13 @@ end
 
 
 
-function [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace gpe_debug_snapshot plant_init_export] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i)
+function [TH_APs STN_APs GPe_APs GPi_APs Striat_APs_indr Striat_APs_dr Cor_APs vgi_trace vsn_trace vge_trace vstr_indr_trace gpe_debug_snapshot plant_init_export] = CTX_BG_TH_network(pd,corstim,tmax,dt,n,Idbs,Iappco,gpe_debug_i,Iappth_trace)
     
     if nargin < 8 || isempty(gpe_debug_i), gpe_debug_i = 5186; end
+    if nargin < 9 || isempty(Iappth_trace)
+        t_grid = 0:dt:tmax;
+        Iappth_trace = 1.2 * ones(1, length(t_grid));
+    end
     gpe_debug_snapshot = struct();
     plant_init_export = struct();
    
@@ -595,7 +646,7 @@ gei=0.1;
     Ik1=gk(1)*((0.75*(1-H1)).^4).*(V1-Ek(1));
     It1=gt(1)*(p1.^2).*R1.*(V1-Et);
     Igith=ggith*(V1-Esyn(6)).*(S4); 
-    Iappth=1.2;
+    Iappth=Iappth_trace(i);
  
 
     %STN cell currents
@@ -944,6 +995,144 @@ function cells = spikes_to_cell(ap_struct)
     for k = 1:n
         cells{k} = ap_struct(k).times(:);
     end
+end
+
+function [iappth_trace, smc_component] = resolve_thalamic_smc(plant_opts, t, dt)
+    baseline = 1.2;
+    n_steps = numel(t);
+    smc_component = zeros(1, n_steps);
+    iappth_trace = baseline * ones(1, n_steps);
+    if ~strcmp(plant_opts.smc_site, 'thalamic') || ~smc_schedule_enabled(plant_opts)
+        return
+    end
+    [smc_component, ~] = build_smc_component(plant_opts, t, dt, plant_opts.smc_amplitude);
+    iappth_trace = baseline + smc_component;
+end
+
+function [iappco_trace, smc_component] = resolve_cortical_smc(plant_opts, t, dt)
+    n_steps = numel(t);
+    smc_component = zeros(1, n_steps);
+    iappco_trace = zeros(1, n_steps);
+    [smc_component, iappco_trace] = build_smc_component(plant_opts, t, dt, plant_opts.smc_cortical_amplitude);
+end
+
+function enabled = smc_schedule_enabled(plant_opts)
+    enabled = strcmp(plant_opts.smc_schedule, 'boc') || strcmp(plant_opts.smc_schedule, 'periodic');
+    if ~enabled && plant_opts.smc_frequency_hz > 0
+        enabled = true;
+    end
+end
+
+function [smc_component, drive_trace] = build_smc_component(plant_opts, t, dt, amplitude)
+    schedule = plant_opts.smc_schedule;
+    if strcmp(schedule, 'off') && plant_opts.smc_frequency_hz > 0
+        schedule = 'periodic';
+    end
+    switch schedule
+        case 'boc'
+            [drive_trace, smc_component] = build_boc_invgamma_thalamic_smc( ...
+                t, dt, 0.0, amplitude, plant_opts.smc_pulse_width_ms, ...
+                plant_opts.smc_invgamma_shape, plant_opts.smc_invgamma_scale_ms);
+        case 'periodic'
+            [drive_trace, smc_component] = build_periodic_thalamic_smc( ...
+                plant_opts.smc_frequency_hz, t, dt, 0.0, ...
+                amplitude, plant_opts.smc_pulse_width_ms);
+        otherwise
+            n_steps = numel(t);
+            smc_component = zeros(1, n_steps);
+            drive_trace = zeros(1, n_steps);
+    end
+end
+
+function [iappth_trace, smc_component] = build_periodic_thalamic_smc(smc_hz, t, dt, baseline, amplitude, pulse_width_ms)
+% Periodic SMC pulses embedded in thalamic Iappth.
+    n_steps = numel(t);
+    smc_component = zeros(1, n_steps);
+    iappth_trace = baseline * ones(1, n_steps);
+    if smc_hz <= 0
+        return
+    end
+    isi_ms = 1000.0 / smc_hz;
+    pulse_steps = max(1, round(pulse_width_ms / dt));
+    onset_ms = 0.0;
+    while onset_ms <= t(end)
+        start_idx = round(onset_ms / dt) + 1;
+        end_idx = min(start_idx + pulse_steps - 1, n_steps);
+        if start_idx <= n_steps
+            smc_component(start_idx:end_idx) = amplitude;
+            iappth_trace(start_idx:end_idx) = baseline + amplitude;
+        end
+        onset_ms = onset_ms + isi_ms;
+    end
+end
+
+function [iappth_trace, smc_component] = build_boc_invgamma_thalamic_smc(t, dt, baseline, amplitude, pulse_width_ms, shape, scale_ms)
+% BoC inverse-gamma inter-pulse intervals (Jovanov platform / Gao EI).
+    n_steps = numel(t);
+    smc_component = zeros(1, n_steps);
+    iappth_trace = baseline * ones(1, n_steps);
+    pulse_steps = max(1, round(pulse_width_ms / dt));
+    onset_ms = 0.0;
+    while onset_ms <= t(end)
+        start_idx = round(onset_ms / dt) + 1;
+        end_idx = min(start_idx + pulse_steps - 1, n_steps);
+        if start_idx <= n_steps
+            smc_component(start_idx:end_idx) = amplitude;
+            iappth_trace(start_idx:end_idx) = baseline + amplitude;
+        end
+        period_ms = sample_invgamma_period_ms(shape, scale_ms);
+        period_ms = max(period_ms, pulse_width_ms + 0.001);
+        onset_ms = onset_ms + period_ms;
+    end
+end
+
+function [iappth_trace, smc_component] = build_thalamic_smc(smc_hz, t, dt, baseline, amplitude, pulse_width_ms)
+% Deprecated alias for periodic SMC (kept for compatibility).
+    [iappth_trace, smc_component] = build_periodic_thalamic_smc( ...
+        smc_hz, t, dt, baseline, amplitude, pulse_width_ms);
+end
+
+function period_ms = sample_invgamma_period_ms(shape, scale_ms)
+% Inverse-gamma period sample (matches scipy.stats.invgamma(shape, scale=scale_ms)).
+% Gamma(shape, 1) as sum of shape exponentials — base MATLAB only.
+    g = sum(-log(rand(1, round(shape))));
+    period_ms = scale_ms / g;
+end
+
+function pulse_times_s = smc_rising_edges(smc_component, dt)
+    rising = find(smc_component(1:end-1) <= 0 & smc_component(2:end) > 0) + 1;
+    pulse_times_s = (rising - 1) * dt / 1000.0;
+    if ~isempty(smc_component) && smc_component(1) > 0
+        pulse_times_s = [0.0, pulse_times_s];
+    end
+end
+
+function events_s = smc_pulse_times_from_cor_spikes(cor_cells, drive_times_s, pulse_width_s)
+% Map each scheduled SMC drive pulse to earliest Cor spike in (tau, tau+pulse_width].
+    drives = drive_times_s(:)';
+    events_s = [];
+    for k = 1:numel(drives)
+        tau = drives(k);
+        t_lo = tau;
+        t_hi = tau + pulse_width_s;
+        best = [];
+        for c = 1:numel(cor_cells)
+            spikes = cor_cells{c}(:)';
+            in_win = spikes > t_lo & spikes <= t_hi;
+            if any(in_win)
+                cand = min(spikes(in_win));
+                if isempty(best) || cand < best
+                    best = cand;
+                end
+            end
+        end
+        if ~isempty(best)
+            events_s(end+1) = best; %#ok<AGROW>
+        else
+            events_s(end+1) = tau; %#ok<AGROW>
+        end
+    end
+    events_s = events_s(:)';
 end
 
 function [ainf] = gpe_ainf(V)

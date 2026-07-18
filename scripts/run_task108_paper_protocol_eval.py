@@ -8,7 +8,7 @@ optional trained DDPG checkpoints.
 Run:
   uv run python scripts/run_task108_paper_protocol_eval.py --mean-hz 45 \\
     --landscape artifacts/ddpg/pattern_reward_landscape_45hz.json \\
-    --checkpoint artifacts/ddpg/pattern_train_v2.pt
+    --checkpoint artifacts/figures/papers/1/4a/checkpoint.pt
 """
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ import argparse
 import json
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -29,20 +30,55 @@ from controllers.ddpg.networks import Actor
 from envs.mehregan.baselines import run_baseline_mehregan_eval
 from envs.mehregan.config import MehreganEnvConfig
 from envs.mehregan.env import MehreganEnv
+from envs.mehregan.fixed_mean_patterns import FixedMeanPatternAlphabet
 from envs.plant.python_backend import PythonPlant
 from rl_adaptive_dbs.user_config import resolve_config
 from scripts.pattern_reward_landscape import describe_pattern
 
+PAPER_DT_MS = 0.02
 
-def _make_pattern_env(*, mean_hz: float, seed: int | None = None) -> MehreganEnv:
+
+def _plant_config(*, plant_dt_ms: float | None = None):
     resolved = resolve_config()
+    if plant_dt_ms is None:
+        return resolved.plant
+    return replace(resolved.plant, dt_ms=plant_dt_ms)
+
+
+def _make_pattern_env(
+    *,
+    mean_hz: float,
+    plant_dt_ms: float | None = PAPER_DT_MS,
+    skip_regular: bool = False,
+    step_duration_s: float | None = None,
+) -> MehreganEnv:
+    plant_cfg = _plant_config(plant_dt_ms=plant_dt_ms)
     env_cfg = MehreganEnvConfig(
         state_length=1,
         action_space_mode="fixed_mean_pattern",
         pattern_mean_hz=mean_hz,
         max_episode_steps=5,
+        skip_regular=skip_regular,
     )
-    plant = PythonPlant(config=resolved.plant)
+    if step_duration_s is not None:
+        env_cfg = replace(env_cfg, step_duration_s=step_duration_s)
+    alphabet = FixedMeanPatternAlphabet(
+        mean_hz=mean_hz,
+        step_duration_s=env_cfg.step_duration_s,
+        dt_ms=plant_cfg.dt_ms,
+        skip_regular=skip_regular,
+    )
+    plant = PythonPlant(config=plant_cfg)
+    return MehreganEnv(plant=plant, config=env_cfg, alphabet=alphabet)
+
+
+def _make_scalar_env(*, plant_dt_ms: float | None = PAPER_DT_MS) -> MehreganEnv:
+    env_cfg = MehreganEnvConfig(
+        state_length=1,
+        action_space_mode="scalar_frequency",
+        max_episode_steps=5,
+    )
+    plant = PythonPlant(config=_plant_config(plant_dt_ms=plant_dt_ms))
     return MehreganEnv(plant=plant, config=env_cfg)
 
 
@@ -88,12 +124,9 @@ def _constant_action_eval(
     }
 
 
-def _no_stim_probe(*, seed: int) -> dict[str, Any]:
+def _no_stim_probe(*, seed: int, plant_dt_ms: float | None = PAPER_DT_MS) -> dict[str, Any]:
     """Single 2 s segment with no stimulation (scalar-frequency action 0)."""
-    resolved = resolve_config()
-    env_cfg = MehreganEnvConfig(state_length=1, action_space_mode="scalar_frequency")
-    plant = PythonPlant(config=resolved.plant)
-    env = MehreganEnv(plant=plant, config=env_cfg)
+    env = _make_scalar_env(plant_dt_ms=plant_dt_ms)
     try:
         env.reset(seed=seed)
         _obs, reward, _term, _trunc, info = env.step(0)
@@ -164,35 +197,68 @@ def run_eval(
     checkpoints: list[Path],
     seed: int,
     eval_steps: int,
+    plant_dt_ms: float | None = PAPER_DT_MS,
+    include_scalar_baselines: bool = True,
+    skip_regular: bool = False,
+    step_duration_s: float | None = None,
 ) -> dict[str, Any]:
     landscape = _landscape_summary(landscape_path)
     best_irregular = landscape["best_reward_action"]
     if best_irregular == 0:
-        # Pick highest-reward non-zero pattern for the irregular baseline slot.
         payload = json.loads(landscape_path.read_text())
-        candidates = [
-            p for p in payload["patterns"] if int(p["action"]) != 0
-        ]
+        candidates = [p for p in payload["patterns"] if int(p["action"]) != 0]
         best_irregular = int(max(candidates, key=lambda p: p["reward"])["action"])
 
-    env = _make_pattern_env(mean_hz=mean_hz)
+    pattern_env = _make_pattern_env(
+        mean_hz=mean_hz,
+        plant_dt_ms=plant_dt_ms,
+        skip_regular=False,
+        step_duration_s=step_duration_s,
+    )
+    trained_env = (
+        _make_pattern_env(
+            mean_hz=mean_hz,
+            plant_dt_ms=plant_dt_ms,
+            skip_regular=True,
+            step_duration_s=step_duration_s,
+        )
+        if skip_regular
+        else pattern_env
+    )
+    scalar_env = (
+        _make_scalar_env(plant_dt_ms=plant_dt_ms) if include_scalar_baselines else None
+    )
     try:
         policies: dict[str, Any] = {
             "pattern0_regular": _constant_action_eval(
-                env,
+                pattern_env,
                 0,
                 seed=seed,
                 label="pattern0_regular",
                 eval_steps=eval_steps,
             ),
             "best_open_loop_irregular": _constant_action_eval(
-                env,
+                pattern_env,
                 best_irregular,
                 seed=seed,
                 label=f"best_open_loop_irregular_a{best_irregular}",
                 eval_steps=eval_steps,
             ),
         }
+
+        if scalar_env is not None:
+            policies["no_stim"] = run_baseline_mehregan_eval(
+                scalar_env,
+                "none",
+                seed=seed,
+                eval_steps=eval_steps,
+            )
+            policies["cdbs_130hz"] = run_baseline_mehregan_eval(
+                scalar_env,
+                "cdbs-130hz",
+                seed=seed,
+                eval_steps=eval_steps,
+            )
 
         for ckpt_path in checkpoints:
             if not ckpt_path.exists():
@@ -202,19 +268,23 @@ def run_eval(
                 continue
             try:
                 ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+                eval_env = trained_env if skip_regular else pattern_env
                 if "actor_state_dict" in ckpt:
                     actor, _cfg = load_actor(ckpt_path)
                 else:
                     actor = _load_trainer_actor(
-                        ckpt_path, mean_hz=mean_hz, n_actions=env.action_space.n
+                        ckpt_path,
+                        mean_hz=mean_hz,
+                        n_actions=eval_env.action_space.n,
                     )
                 payload = run_mehregan_eval(
-                    env,
+                    eval_env,
                     actor,
                     config=EvalConfig(seed=seed, eval_steps=eval_steps),
                 )
                 payload["label"] = f"trained_ddpg_{ckpt_path.stem}"
                 payload["checkpoint"] = str(ckpt_path)
+                payload["skip_regular"] = skip_regular
                 policies[payload["label"]] = payload
             except Exception as exc:  # noqa: BLE001 — report eval failures in artifact
                 policies[f"error_{ckpt_path.stem}"] = {
@@ -232,15 +302,22 @@ def run_eval(
             and float(data["total_reward"]) > p0_total
         }
     finally:
-        env.close()
+        pattern_env.close()
+        if skip_regular and trained_env is not pattern_env:
+            trained_env.close()
+        if scalar_env is not None:
+            scalar_env.close()
 
-    no_stim = _no_stim_probe(seed=seed)
+    no_stim = _no_stim_probe(seed=seed, plant_dt_ms=plant_dt_ms)
 
     return {
         "task": "TASK-108",
         "mean_hz": mean_hz,
         "seed": seed,
         "eval_steps": eval_steps,
+        "plant_dt_ms": plant_dt_ms,
+        "skip_regular": skip_regular,
+        "step_duration_s": step_duration_s,
         "landscape_1step": landscape,
         "no_stim_1step": no_stim,
         "paper_protocol_policies": policies,
@@ -256,6 +333,17 @@ def main() -> int:
     parser.add_argument("--landscape", type=Path, required=True)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--eval-steps", type=int, default=5)
+    parser.add_argument(
+        "--plant-dt-ms",
+        type=float,
+        default=PAPER_DT_MS,
+        help="Plant integrator step (default 0.02 for paper figures)",
+    )
+    parser.add_argument(
+        "--no-scalar-baselines",
+        action="store_true",
+        help="Skip no-stim and 130 Hz cDBS scalar-frequency baselines",
+    )
     parser.add_argument(
         "--checkpoint",
         type=Path,
@@ -283,6 +371,8 @@ def main() -> int:
         checkpoints=list(args.checkpoint),
         seed=args.seed,
         eval_steps=args.eval_steps,
+        plant_dt_ms=args.plant_dt_ms,
+        include_scalar_baselines=not args.no_scalar_baselines,
     )
     payload["elapsed_s"] = round(time.time() - t0, 2)
     out.write_text(json.dumps(payload, indent=2) + "\n")

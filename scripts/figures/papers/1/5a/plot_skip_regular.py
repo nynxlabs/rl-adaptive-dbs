@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Quick plot: skip_regular 45Hz eval — 3 conditions (no stim, trained irregular, regular periodic).
+"""Deprecated — use ``scripts/figures/papers/1/5a/plot.py`` (skip_regular is default).
+
+Quick plot: skip_regular 45Hz eval — 3 conditions (no stim, trained irregular, regular periodic).
 
 Generates a step-function P_beta comparison matching the paper's fig 5a layout.
 Uses 0.2s step duration, seed 0.

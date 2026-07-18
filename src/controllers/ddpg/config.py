@@ -68,7 +68,7 @@ class DDPGConfig:
 
     # Exploration during training (paper uses greedy argmax at deploy; not specified for
     # online interaction — see replication.md §4.2). Linear decay over total env steps.
-    exploration_mode: str = "epsilon"  # epsilon | softmax
+    exploration_mode: str = "epsilon"  # epsilon | softmax | greedy
     exploration_epsilon_start: float = 0.5
     exploration_epsilon_end: float = 0.1
     exploration_temperature_start: float = 2.0
@@ -135,3 +135,59 @@ class DDPGConfig:
             action_space_mode=self.action_space_mode,
             pattern_mean_hz=self.effective_pattern_mean_hz,
         )
+
+
+def fig4a_ddpg_config(
+    *,
+    seed: int = 0,
+    num_episodes: int = 10,
+    max_episode_steps: int = 30,
+    pattern_mean_hz: float = 45.0,
+    exploration_mode: str = "softmax",
+    init_bias_scale: float = 0.5,
+    exploration_temperature_start: float = 3.0,
+    exploration_temperature_end: float = 1.0,
+    logit_noise_std: float = 0.1,
+    critic_action_input: str = "one_hot",
+) -> DDPGConfig:
+    """Mehregan Fig 4a — 45 Hz pattern DDPG.
+
+    Default profile: softmax + one_hot critic (v4 learning curve). For paper-faithful
+    Alg. 1 interaction use ``exploration_mode="greedy"`` + ``critic_action_input="logits"``
+    (no online exploration noise, no replay warmup extensions).
+    """
+    if exploration_mode == "greedy":
+        return DDPGConfig(
+            variant="paper",
+            seed=seed,
+            num_episodes=num_episodes,
+            max_episode_steps=max_episode_steps,
+            action_space_mode="fixed_mean_pattern",
+            pattern_mean_hz=pattern_mean_hz,
+            exploration_mode="greedy",
+            init_bias_scale=init_bias_scale,
+            critic_action_input=critic_action_input,
+            logit_noise_std=0.0,
+            entropy_coeff=0.0,
+            random_warmup_steps=0,
+            critic_warmup_steps=0,
+            log_episodes=True,
+        )
+    return DDPGConfig(
+        variant="paper",
+        seed=seed,
+        num_episodes=num_episodes,
+        max_episode_steps=max_episode_steps,
+        action_space_mode="fixed_mean_pattern",
+        pattern_mean_hz=pattern_mean_hz,
+        exploration_mode=exploration_mode,
+        exploration_temperature_start=exploration_temperature_start,
+        exploration_temperature_end=exploration_temperature_end,
+        init_bias_scale=init_bias_scale,
+        critic_action_input=critic_action_input,
+        critic_warmup_steps=100,
+        logit_noise_std=logit_noise_std,
+        entropy_coeff=0.01,
+        random_warmup_steps=100,
+        log_episodes=True,
+    )

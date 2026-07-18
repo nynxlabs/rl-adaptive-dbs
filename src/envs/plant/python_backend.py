@@ -55,6 +55,10 @@ class PythonPlant:
         *,
         record_spikes: bool = True,
         gpi_spike_buffer_size: int | None = None,
+        record_th_spikes: bool = False,
+        th_spike_buffer_size: int | None = None,
+        record_cor_spikes: bool = False,
+        cor_spike_buffer_size: int | None = None,
     ) -> IntegrateResult:
         if duration_s <= 0:
             msg = "duration_s must be positive"
@@ -67,6 +71,9 @@ class PythonPlant:
         if self._rng is None:
             self.reset(seed=self._seed)
 
+        if self.config.smc_pulse_source == "cor_spikes":
+            record_cor_spikes = True
+
         return integrate_network(
             config=self.config,
             duration_s=duration_s,
@@ -77,4 +84,8 @@ class PythonPlant:
             seed=self._seed,
             init_draws=self._init_draws,
             gpi_spike_buffer_size=gpi_spike_buffer_size,
+            record_th_spikes=record_th_spikes,
+            th_spike_buffer_size=th_spike_buffer_size,
+            record_cor_spikes=record_cor_spikes,
+            cor_spike_buffer_size=cor_spike_buffer_size,
         )
