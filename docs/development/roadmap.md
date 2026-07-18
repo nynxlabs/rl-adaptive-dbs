@@ -15,7 +15,7 @@ Phases and implementation status for **rl-adaptive-dbs**. Contributor rules: [co
 | Fig 5b | **Open** | 30 Hz post-train efficacy; pattern-mode retrain |
 | Fig 6a, 6b | **Open** | PTQ/QAT panels — [ddpg/replication.md](../controllers/ddpg/replication.md) §6 |
 
-**How this relates to phases:** Phases 1–3 (specs, environment, DDPG) and most Phase 4 **infrastructure** (benchmark runner, `rl-dbs`, `rl-dbs-tui`, PTQ/QAT hooks, setup scripts) are **done**. Remaining Mehregan work is **closing open panels** — which may require plant conventions, training protocol, or quantization fixes documented in [replication-fidelity.md](replication-fidelity.md), not ticking a phase box. Phases 5–9 (SNN, SEA-DBS, cross-controller comparison, fusion, native plant) stay on the long-term plan and start when Mehregan figure replication is in good shape (or when a panel explicitly needs them).
+**How this relates to phases:** Phases 1–3 (specs, environment, DDPG) and most Phase 4 **infrastructure** (benchmark runner, `rl-dbs`, `rl-dbs-tui`, PTQ/QAT hooks) are **done**. **Setup scripts** were expanded for Phase 4 but **have not been re-verified end-to-end** on clean hosts since that expansion — see [setup.md](../setup.md) § Setup script verification status. Remaining Mehregan work is **closing open panels** — which may require plant conventions, training protocol, or quantization fixes documented in [replication-fidelity.md](replication-fidelity.md), not ticking a phase box. Phases 5–9 (SNN, SEA-DBS, cross-controller comparison, fusion, native plant) stay on the long-term plan and start when Mehregan figure replication is in good shape (or when a panel explicitly needs them).
 
 **Contributors:** read the panel checklist before large sweeps; promote stable findings into the panel `plot.py` and update [figures/paper_1.md](../figures/paper_1.md) in the same pass. See [conventions.md](conventions.md) § Figure replication.
 
@@ -63,7 +63,7 @@ Replicate the shared plant and Mehregan et al. Gym API before any controller wor
 - **Benchmark runner** and summary tables / plots over core metrics ($P_\beta$, reward, stim frequency).
 - **CLI** ([cli.md](../cli.md)) — **start** `rl-dbs`: entry point, `benchmark` (primary), `info`, and Mehregan-focused `train` / `eval` wrappers for `ddpg` (including quantized variants).
 - **TUI** ([tui.md](../tui.md)) — **`rl-dbs-tui`**: six Textual tabs (Run, Training, Eval, Benchmarks, Logs, Settings) over `artifacts/` and `results/`; detached launch via Run tab; dev mode (`--dev`, Ctrl+R).
-- **Setup scripts** ([setup.md](../setup.md), [matlab.md](../matlab.md)) — **`scripts/setup.sh`** (Python + optional MATLAB); harden **`scripts/matlab/`** cross-platform; **validate on fresh VMs** (clean Linux, macOS, Windows via Git Bash/WSL) so clone → setup → verify works on other machines.
+- **Setup scripts** ([setup.md](../setup.md), [matlab.md](../matlab.md)) — **`scripts/setup.sh`** (Python + optional MATLAB); harden **`scripts/matlab/`** cross-platform; **validate on fresh VMs** (clean Linux, macOS, Windows via Git Bash/WSL) so clone → setup → verify works on other machines. **Status:** scripts landed during Phase 4 but **not re-verified end-to-end** since CLI/TUI/`--validate` expansion — active pass tracked in [setup.md](../setup.md) § Setup script verification status.
 - **Fresh-machine validation** — exercise the full path on VMs or clean hosts with only git + uv (+ optional MATLAB license): `bash scripts/setup.sh`, docs match prompts, `pytest -m "not matlab"` passes; document OS-specific gaps in [setup.md](../setup.md) / [matlab.md](../matlab.md).
 - **Exit criteria:** repeatable `mehregan_eval` runs across full-precision and quantized `ddpg` variants; replication checklist passable for `ddpg` (including §IV.A.3 quantization); `uv run rl-dbs benchmark` and `uv run rl-dbs-tui` usable for Phase 4 workflows; **setup scripts pass on fresh VMs** on each supported OS (or gaps documented with repro steps).
 - **Results doc:** [phase4-results.md](phase4-results.md) — §8 implementation audit **done** (2026-07-01); full-suite `mehregan_eval` **done** (TASK-9, 2026-07-03). Remaining Mehregan validation is **figure-panel** driven ([figures/paper_1.md](../figures/paper_1.md)), not another suite pass.
@@ -136,7 +136,7 @@ Phases 9+ are intentionally open; prioritize equivalence and replication paths b
 | `controllers/snn/` (`src/controllers/snn/`) | Scaffold | Phase 5 — package stub + shape tests |
 | `controllers/sea_dbs/` | Placeholder | Phase 6 |
 | [matlab.md](../matlab.md) + `scripts/matlab/` | Done (WSL) | Fresh validation: Multipass (Linux) pending; **Sandbox (Windows) passed** 2026-06-30 — [fresh-validation.md](fresh-validation.md) |
-| Project setup script | Done | `scripts/setup.sh`, `scripts/validate-fresh.sh`, Multipass + Sandbox scripts — Phase 4; see [fresh-validation.md](fresh-validation.md) |
+| Project setup script | **Verification pending** | Scripts landed in Phase 4 (`setup.sh`, `validate-fresh.sh`, Multipass + Sandbox); **not re-run on clean hosts** since CLI/TUI/`--validate` expansion — [setup.md](../setup.md) § Setup script verification status |
 | MATLAB plant bridge | Done | `envs/plant/` + `envs/mehregan/`; `@pytest.mark.matlab` equivalence suite |
 | `PythonPlant` (native port) | In progress | Parity + **≈10×** speed **pass** (Numba JIT, 2026-07-03); default flip **blocked** on `mehregan_eval` baseline — [native-plant-port.md](native-plant-port.md) |
 | Benchmark suite runner | Done | `benchmarks/` + `suites/mehregan_eval*.yaml`; baselines + `ddpg` eval |
@@ -147,7 +147,7 @@ Phases 9+ are intentionally open; prioritize equivalence and replication paths b
 
 **Scheduling axis:** figure replication ([figures/paper_1.md](../figures/paper_1.md)) — open: Fig 5b, 6a, 6b.
 
-**Phase map (reference):** Phases 1–4 infrastructure largely **complete**; Phase 5+ deferred until Mehregan panels close or a task explicitly needs them. Outstanding portability: Multipass Linux fresh-validation ([fresh-validation.md](fresh-validation.md)).
+**Phase map (reference):** Phases 1–4 infrastructure largely **complete**; Phase 5+ deferred until Mehregan panels close or a task explicitly needs them. **Setup scripts:** verification pass in progress — expanded for Phase 4 but not re-run on clean hosts since CLI/TUI/`--validate` additions ([setup.md](../setup.md) § Setup script verification status). Outstanding portability: Multipass Linux fresh-validation ([fresh-validation.md](fresh-validation.md)).
 
 ---
 

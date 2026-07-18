@@ -14,7 +14,7 @@ bash scripts/matlab/setup.sh
 
 Walks through install (optional), `MATLAB_ROOT`, license, `uv sync`, shell persistence, and `scripts/matlab/verify.sh`. Manual steps below if you prefer.
 
-**Phase 4:** harden `scripts/matlab/` on Linux, macOS, and Windows (Git Bash / WSL) and keep prompts aligned with this doc. Top-level **`scripts/setup.sh`** runs Python setup and can delegate here — [setup.md](setup.md), [development/roadmap.md](development/roadmap.md).
+**Phase 4:** harden `scripts/matlab/` on Linux, macOS, and Windows (Git Bash / WSL) and keep prompts aligned with this doc. Top-level **`scripts/setup.sh`** runs Python setup and can delegate here — [setup.md](setup.md), [development/roadmap.md](development/roadmap.md). **Note:** the MATLAB setup flow has **not been re-verified** on clean hosts since Phase 4 expanded the Python side (CLI, TUI, validation scripts); WSL-only spot checks may not match current `pyproject.toml` groups — see [setup.md](setup.md) § Setup script verification status.
 
 | You have… | Start at |
 |-----------|----------|

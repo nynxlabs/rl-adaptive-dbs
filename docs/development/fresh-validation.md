@@ -2,6 +2,8 @@
 
 Portability gate: confirm the repo **installs and passes basic checks** on clean Linux and Windows hosts — not only your daily WSL checkout. Day-to-day install and training workflows live in [setup.md](../setup.md). Pytest layout: [testing.md](testing.md).
 
+**Verification status:** Fresh-host scripts and the `validate-fresh.sh` CLI smoke block were added during Phase 4 alongside `rl-dbs`, `rl-dbs-tui`, and expanded dependency groups. **They have not been re-run end-to-end on Multipass or Windows Sandbox since that expansion** (last documented Sandbox pass: 2026-06-30, before current CLI checks). Treat results as stale until the active verification pass completes — [setup.md](../setup.md) § Setup script verification status.
+
 ---
 
 ## Not for training
