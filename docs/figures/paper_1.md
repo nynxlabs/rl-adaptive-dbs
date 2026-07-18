@@ -1,5 +1,7 @@
 # Mehregan et al. (paper 1) — figure comparisons
 
+**Primary replication tracker** for this repo. Work is scheduled by **panel**, not by roadmap phase: each row below is an exit criterion with qualitative gates, a committed `plot.py`, and side-by-side PNGs.
+
 Side-by-side **paper panel** vs **our replication** for qualitative checks. Plot scripts write replication PNGs to `figures/papers/`; JSON caches to `artifacts/figures/papers/`.
 
 **Passed panels** (1b, 2a, 2b, 4a, 4b, 5a) use a short **Status** block. **Open panels** keep a full side-by-side checklist until gates pass.
@@ -214,14 +216,14 @@ Dashed vertical at **2 s** (stimulation onset). Paper claims: trained stimulatio
 
 ### Paper (Mehregan et al.)
 
-![Paper Fig 5a](papers/1/5a/paper.png)
+![Paper Fig 5a](Screenshot_20260717-120345.png)
 
 ### Replication
 
-![Replication Fig 5a](papers/1/5a/efficacy_45hz_v1.png)
+![Replication Fig 5a](papers/1/5a/efficacy_45hz_v3.png)
 
 <!-- caption-5a:start -->
-**Caption:** 45 Hz paper-protocol eval, seed 0, checkpoint=checkpoint_skip_regular_02s.pt, skip_regular, 0.2s trailing, v1, trained_mean=395, no_stim_mean=498, periodic_mean=327, trained>periodic, gates pass (2026-07-16)
+**Caption:** 45 Hz paper-protocol eval, seed 0, checkpoint=checkpoint_skip_regular_02s.pt, skip_regular, 0.2s trailing, v3, trained_mean=395, no_stim_mean=498, periodic_mean=327, trained>periodic, gates pass (2026-07-17)
 
 **Manifest:** `artifacts/figures/papers/1/5a/manifest.json`
 <!-- caption-5a:end -->

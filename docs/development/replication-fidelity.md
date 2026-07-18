@@ -2,7 +2,9 @@
 
 Single source of truth for **what we have replicated**, **what diverges**, and **what we added** when reproducing Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning*. This document consolidates findings from ~150 tasks; detailed specs remain in [environment.md](../environment.md), [plant.md](../plant.md), and [controllers/ddpg/replication.md](../controllers/ddpg/replication.md).
 
-**How to use:** Before training, benchmarking, or claiming paper alignment, check the tables below. When a row says **verified**, cite the evidence column. When a row says **deviation** or **hypothesis**, do not treat it as paper-grounded without further validation.
+**Scheduling:** day-to-day Mehregan validation follows **figure panels** ([figures/paper_1.md](../figures/paper_1.md)), not phase numbers. This doc explains *why* a panel passes or fails; the figure doc records *status* and run commands.
+
+**How to use:** Before training, benchmarking, or claiming paper alignment, check the tables below and the relevant panel in [figures/paper_1.md](../figures/paper_1.md). When a row says **verified**, cite the evidence column. When a row says **deviation** or **hypothesis**, do not treat it as paper-grounded without further validation.
 
 **Other controllers:** Nguyen (SNN) and Ravivarapu (SEA-DBS) have separate replication specs under `docs/controllers/snn/` and `docs/controllers/sea_dbs/`. This document covers **Mehregan DDPG** only.
 

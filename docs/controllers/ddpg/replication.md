@@ -2,7 +2,24 @@
 
 This document specifies the **learning-based controller** (actor–critic training loop, losses, targets, and optional quantization) from *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning* (Mehregan et al.). It is meant to align `controllers/ddpg/` (and training scripts) with the published method.
 
-**Companion spec:** Plant dynamics and biomarker primitives — [plant.md](../../plant.md). Mehregan env ($P_\beta$ window, step timing, reward $R$, baselines) — [environment.md](../../environment.md). Benchmark suites and variant slugs — [benchmarking.md](../../benchmarking.md); CLI — [cli.md](../../cli.md). This document is authoritative for **policy optimization** unless the others explicitly describe the same quantity.
+**Companion spec:** Plant dynamics and biomarker primitives — [plant.md](../../plant.md). Mehregan env ($P_\beta$ window, step timing, reward $R$, baselines) — [environment.md](../../environment.md). Benchmark suites and variant slugs — [benchmarking.md](../../benchmarking.md); CLI — [cli.md](../../cli.md). **Panel checklist (primary exit criterion):** [figures/paper_1.md](../../figures/paper_1.md). Verified vs divergent details — [replication-fidelity.md](../../development/replication-fidelity.md). This document is authoritative for **policy optimization** unless the others explicitly describe the same quantity.
+
+---
+
+## Figure replication (scheduling)
+
+Mehregan DDPG work is validated **panel-by-panel**, not by “Phase 3 complete.” Each training or quantization panel has a committed train+plot script under `scripts/figures/papers/1/<panel>/plot.py` and qualitative gates in [figures/paper_1.md](../../figures/paper_1.md).
+
+| Panel | This spec covers | Script | Status |
+|-------|------------------|--------|--------|
+| Fig 4a | Training $P_\beta$ vs step; Algorithm 1 + exploration defaults | `scripts/figures/papers/1/4a/plot.py` | Pass |
+| Fig 4b | Episode reward + PSD trends | `scripts/figures/papers/1/4b/plot.py` | Pass |
+| Fig 5a | Post-train efficacy @ 45 Hz init | `scripts/figures/papers/1/5a/plot.py` | Pass |
+| Fig 5b | Post-train efficacy @ 30 Hz init | `scripts/figures/papers/1/5b/plot.py` | **Open** |
+| Fig 6a | PTQ / QAT @ 45 Hz | `scripts/figures/papers/1/6a/plot.py` | **Open** |
+| Fig 6b | PTQ / QAT @ 30 Hz | planned | **Open** |
+
+Plant-only panels (1b, 2a, 2b) gate on [plant.md](../../plant.md) §8. When this spec and [environment.md](../../environment.md) disagree with a passing panel, **reconcile explicitly** — do not treat `mehregan_eval` suite metrics alone as replication success ([roadmap.md](../../development/roadmap.md)).
 
 ---
 

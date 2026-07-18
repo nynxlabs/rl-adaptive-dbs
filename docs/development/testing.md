@@ -40,7 +40,8 @@ tests/
 ├── imports_test.py          # smoke: editable install
 ├── docs_test.py             # spec link / section checks
 ├── fixtures/
-│   └── benchmark_results/   # TUI + summary fixture tree
+│   ├── benchmark_results/   # TUI + summary fixture tree
+│   └── thread_limit_probe.py  # subprocess helper for thread_limits_test
 ├── benchmarks/
 │   ├── suite_test.py        # YAML load, run expansion
 │   ├── runner_test.py       # mock-plant suite execution
@@ -58,13 +59,15 @@ tests/
 │   ├── tui_run_data_test.py
 │   ├── tui_run_launch_test.py
 │   ├── tui_settings_data_test.py
-│   └── tui_reload_test.py   # --dev / Ctrl+R reload helpers
+│   ├── tui_reload_test.py   # --dev / Ctrl+R reload helpers
+│   └── thread_limits_test.py  # RL_DBS_MAX_THREADS / --max-threads bootstrap
 ├── envs/
 │   ├── mock_plant.py        # helper (not collected)
 │   ├── plant_backends.py    # MATLAB/Python comparison helpers (not collected)
 │   ├── conftest.py          # parametrized plant_backend fixtures
 │   ├── biomarkers_test.py
 │   ├── baselines_test.py
+│   ├── error_index_test.py      # EI metric + SMC pulse helpers
 │   ├── mehregan_reward_test.py
 │   ├── mehregan_env_test.py     # MehreganEnv (mock plant)
 │   ├── python_plant_test.py     # PythonPlant scaffold + DBS waveform
@@ -81,12 +84,15 @@ tests/
         ├── buffer_test.py
         ├── checkpoint_test.py
         ├── checklist_test.py    # Mehregan §IV replication checklist
+        ├── ddpg_fig4a_config_test.py  # Fig 4a training defaults
         ├── eval_test.py
         ├── matlab_trainer_test.py   # train + eval on MatlabPlant (@pytest.mark.matlab)
         ├── networks_test.py
         ├── quantization_test.py     # PTQ/QAT stubs
         ├── replication_test.py
         └── trainer_test.py
+└── scripts/
+    └── train_runtime_guard_test.py  # scripts.lib.train_runtime_guard
 ```
 
 Mirror **`src/envs/`** and **`src/controllers/<name>/`** when adding modules (e.g. `tests/envs/gym_api_test.py`, `tests/controllers/ddpg/actor_test.py`).
@@ -103,7 +109,8 @@ Naming: files `*_test.py`, functions `test_*` (pytest default discovery).
 | **Unit** | `tests/` | reward math, observation windows, adapter shapes |
 | **Integration** | `tests/` | `reset` / `step`, episode length, baseline policies |
 | **Equivalence / regression** | `tests/` with `@pytest.mark.matlab` or `slow` | GPi spikes (`matlab_plant_test.py`); $P_\beta$ vs MATLAB (`matlab_biomarkers_test.py`, needs `dpss`) |
-| **Paper replication benchmarks** | `rl-dbs benchmark` + `results/` (Phase 4) | full suites per [benchmarking.md](../benchmarking.md); smoke subsets in pytest only |
+| **Paper replication** | Figure panel scripts + [figures/paper_1.md](../figures/paper_1.md) | train+plot under `scripts/figures/papers/`; qualitative gates |
+| **Benchmark suites** | `rl-dbs benchmark` + `results/` | full suites per [benchmarking.md](../benchmarking.md); smoke subsets in pytest only |
 
 Keep CI fast: default runs should pass without MATLAB; skip or mark heavy checks.
 

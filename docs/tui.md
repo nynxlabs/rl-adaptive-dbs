@@ -23,7 +23,7 @@ Separate entry point from the CLI (lighter dependencies acceptable):
 
 ```toml
 [project.scripts]
-rl-dbs-tui = "rl_adaptive_dbs.tui:main"
+rl-dbs-tui = "rl_adaptive_dbs.entry:tui_main"
 ```
 
 Recommended:
@@ -110,9 +110,9 @@ Only one tab is visible at a time; the status bar shows the active suite filter 
 
 | Element | Behavior |
 |---------|----------|
-| **Recipe list** | Five categories (sorted): **figure replication** (`scripts/figures/**/plot.py`), **CLI** (built-in `rl-dbs` shortcuts), **training** (`scripts/training/run_*.py`), **diagnostics** (`scripts/probes/*.py`), **replication** (`scripts/replication/` when present). Figure labels parse panel titles from script docstrings. |
-| **Filter** | `/` filters label, category, or command substring. |
-| **Launch** | **Enter** or **`x`** opens a confirmation dialog, then starts the command detached. Stdout/stderr go to `artifacts/tui-runs/<recipe>-<timestamp>.log` with `# rl-dbs-run-meta:` header (same format as shell launchers). |
+| **Recipe list** | Root shows **category folders** (figure replication, CLI, training, diagnostics, replication). **Enter** opens a folder; inside, recipes show **label** and **command** only. **Esc** returns to the folder list (or clears an active filter first). |
+| **Filter** | `/` filters folder names at root; inside a folder, filters label or command substring. |
+| **Launch** | Inside a folder: **Enter** or **`x`** opens a confirmation dialog, then starts the command detached. Stdout/stderr go to `artifacts/tui-runs/<recipe>-<timestamp>.log` with `# rl-dbs-run-meta:` header (same format as shell launchers). |
 | **Follow output** | After launch, the TUI can **auto-follow** the new log. In the confirm dialog, press **`f`** to cycle: **Logs tab** (default), **Terminal** (`tail -f` in a tmux split pane), or **Don't follow**. Default is controlled by **Settings → Launch follow output** (`logs`, `terminal`, `none`, or `ask`). Terminal follow requires running the TUI inside **tmux**; otherwise it falls back to the Logs tab and shows the manual `tail -f` command. |
 | **Logs link** | New log paths are bookmarked automatically. With follow mode **Logs tab**, the TUI switches to **Logs** and opens a live tail (auto-scroll). |
 | **Survival** | Detached runs survive TUI quit and SSH disconnect (POSIX: new session). Long plant-heavy jobs should still be started from **tmux** when you need an attachable shell — the Run tab records the current tmux session name in metadata when launched inside tmux. |
@@ -200,10 +200,10 @@ Global bindings (Vi-style alternatives **intentionally open** for v1):
 | `↑` / `↓` | Move selection in lists/tables. |
 | `PgUp` / `PgDn` | Page scroll in active panel. |
 | `/` | Open filter prompt (Run, Benchmarks, Logs). |
-| `Esc` | Clear filter / close prompt / back to log list. |
+| `Esc` | Clear filter / close prompt / Run: back to folder list / Logs: back to log list. |
 | `r` | Force refresh from disk. |
 | `Ctrl+R` | Restart the TUI (reload Python modules; use with `--dev` or after code edits). |
-| `Enter` | Run: launch (with confirm) / Logs: open tail / Benchmarks: Eval drill-down / Settings: edit row. |
+| `Enter` | Run: open folder (root) or launch with confirm (inside folder) / Logs: open tail / Benchmarks: Eval drill-down / Settings: edit row. |
 | `f` | Cycle launch follow mode in the Run confirm dialog (Logs tab / Terminal / Don't follow). |
 | `x` | Launch selected Run recipe (with confirm). |
 | `b` | Toggle bookmark for selected log (Logs tab). |
