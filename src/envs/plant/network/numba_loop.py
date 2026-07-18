@@ -34,6 +34,7 @@ CONV_COR = 6
 
 SPIKE_SYN_THRESHOLD = -10.0
 GPI_SPIKE_THRESHOLD = -20.0
+TH_SPIKE_THRESHOLD = -20.0
 
 
 @njit(cache=True)
@@ -147,6 +148,8 @@ def run_cbgt_loop(
     max_index: int,
     idbs: np.ndarray,
     iappco: np.ndarray,
+    iappth: np.ndarray,
+    ggith: float,
     t_ms: np.ndarray,
     # wiring
     all_idx: np.ndarray,
@@ -291,6 +294,12 @@ def run_cbgt_loop(
     # GPi spike output
     gpi_spike_buf: np.ndarray,
     gpi_spike_n: np.ndarray,
+    th_spike_buf: np.ndarray,
+    th_spike_n: np.ndarray,
+    record_th_spikes: bool,
+    cor_spike_buf: np.ndarray,
+    cor_spike_n: np.ndarray,
+    record_cor_spikes: bool,
     # scalars
     iappgpe: float,
     uce_scale: float,
@@ -412,7 +421,7 @@ def run_cbgt_loop(
     _ESYN6 = -80.0
     _TAU = 5.0
     _TAU_I = 13.0
-    _GGITH = 0.112
+    _GGITH = ggith
     _GGESN = 0.5
     _GSTRGPE = 0.5
     _GSTRGPI = 0.5
@@ -423,7 +432,6 @@ def run_cbgt_loop(
     _GIE = 0.2
     _GTHCOR = 0.15
     _GEi = 0.1
-    _IAPPTH = 1.2
     _IAPPGPI = 3.0
     _STN_TD2 = 130.0
     _STN_TR2 = 2.0
@@ -510,7 +518,13 @@ def run_cbgt_loop(
             ik1 = _GK0 * ((0.75 * (1.0 - H1[i])) ** 4) * (V1 - _EK0)
             it1 = _GT0 * (p1_i**2) * R1[i] * (V1 - _ET)
             igith = _GGITH * (V1 - _ESYN5) * S4[i]
-            vth[i] = V1 + dt * ((1.0 / _CM) * (-il1 - ik1 - ina1 - it1 - igith + _IAPPTH))
+            vth[i] = V1 + dt * ((1.0 / _CM) * (-il1 - ik1 - ina1 - it1 - igith + iappth[step]))
+            if record_th_spikes:
+                if V1 <= TH_SPIKE_THRESHOLD and vth[i] > TH_SPIKE_THRESHOLD:
+                    cnt_th = th_spike_n[i]
+                    if cnt_th < th_spike_buf.shape[1]:
+                        th_spike_buf[i, cnt_th] = t_ms[step - 1] / 1000.0
+                        th_spike_n[i] = cnt_th + 1
             H1[i] = H1[i] + dt * ((h1_i - H1[i]) / th1_i)
             R1[i] = R1[i] + dt * ((r1_i - R1[i]) / tr1_i)
         _conv_record_crossings(CONV_TH, spike_idx, spike_n, v1_prev, vth, SPIKE_SYN_THRESHOLD)
@@ -713,6 +727,13 @@ def run_cbgt_loop(
                 _conv_record_spike(CONV_COR, spike_idx, spike_n, i)
             ve[i] = ve_i
             ue[i] = ue_i
+            if record_cor_spikes:
+                if v7_prev[i] <= TH_SPIKE_THRESHOLD and ve_i > TH_SPIKE_THRESHOLD:
+                    idx = i
+                    cnt = cor_spike_n[idx]
+                    if cnt < cor_spike_buf.shape[1]:
+                        cor_spike_buf[idx, cnt] = t_ms[step - 1] / 1000.0
+                        cor_spike_n[idx] = cnt + 1
         _conv_eval_all(spike_idx, spike_n, CONV_COR, syn_cor_d2, S6a)
         _conv_eval_all(spike_idx, spike_n, CONV_COR, syn_cor_stn_a, S6b)
         _conv_eval_all(spike_idx, spike_n, CONV_COR, syn_cor_stn_n, S6bn)
@@ -730,6 +751,13 @@ def run_cbgt_loop(
                 ui_i = ui[i] + _DI
             vi[i] = vi_i
             ui[i] = ui_i
+            if record_cor_spikes:
+                if v8_prev[i] <= TH_SPIKE_THRESHOLD and vi_i > TH_SPIKE_THRESHOLD:
+                    idx = n + i
+                    cnt = cor_spike_n[idx]
+                    if cnt < cor_spike_buf.shape[1]:
+                        cor_spike_buf[idx, cnt] = t_ms[step - 1] / 1000.0
+                        cor_spike_n[idx] = cnt + 1
             if V7 < SPIKE_SYN_THRESHOLD and ve[i] > SPIKE_SYN_THRESHOLD:
                 uce[i] = uce_scale
             else:

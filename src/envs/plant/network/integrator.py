@@ -8,8 +8,14 @@ from typing import Any, Mapping
 
 import numpy as np
 
-from envs.plant.biomarkers import p_beta
-from envs.plant.config import PlantConfig
+from envs.plant.biomarkers import p_beta, resolve_smc_pulse_times, smc_pulse_times_from_trace
+from envs.plant.config import (
+    BOC_SMC_AMPLITUDE,
+    BOC_SMC_INVGAMMA_SCALE_MS,
+    BOC_SMC_INVGAMMA_SHAPE,
+    BOC_SMC_PULSE_WIDTH_MS,
+    PlantConfig,
+)
 from envs.plant.dbs import DbsSpec, create_dbs_current
 from envs.plant.matlab_backend import IntegrateResult
 from envs.plant.network import gating as g
@@ -165,6 +171,171 @@ def _create_cortical_stimulus(tmax_ms: float, dt_ms: float) -> np.ndarray:
     return iappco
 
 
+def create_periodic_cortical_stimulus(
+    frequency_hz: float,
+    *,
+    tmax_ms: float,
+    dt_ms: float,
+    amplitude: float = 350.0,
+    pulse_width_ms: float = 0.3,
+) -> np.ndarray:
+    """Periodic cortical ``Iappco`` pulses (legacy probe helper)."""
+    n_steps = int(round(tmax_ms / dt_ms)) + 1
+    iappco = np.zeros(n_steps, dtype=np.float64)
+    if frequency_hz <= 0.0:
+        return iappco
+    isi_ms = 1000.0 / frequency_hz
+    pulse_steps = max(1, int(round(pulse_width_ms / dt_ms)))
+    onset_ms = 0.0
+    while onset_ms <= tmax_ms:
+        start_idx = int(round(onset_ms / dt_ms))
+        end_idx = min(start_idx + pulse_steps, n_steps)
+        if start_idx < n_steps:
+            iappco[start_idx:end_idx] = amplitude
+        onset_ms += isi_ms
+    return iappco
+
+
+def create_periodic_thalamic_smc(
+    frequency_hz: float,
+    *,
+    tmax_ms: float,
+    dt_ms: float,
+    amplitude: float = BOC_SMC_AMPLITUDE,
+    pulse_width_ms: float = BOC_SMC_PULSE_WIDTH_MS,
+) -> np.ndarray:
+    """BoC-style SMC pulse component for ``Iappth`` (Gao: embedded in TH activations)."""
+    n_steps = int(round(tmax_ms / dt_ms)) + 1
+    smc = np.zeros(n_steps, dtype=np.float64)
+    if frequency_hz <= 0.0:
+        return smc
+    isi_ms = 1000.0 / frequency_hz
+    pulse_steps = max(1, int(round(pulse_width_ms / dt_ms)))
+    onset_ms = 0.0
+    while onset_ms <= tmax_ms:
+        start_idx = int(round(onset_ms / dt_ms))
+        end_idx = min(start_idx + pulse_steps, n_steps)
+        if start_idx < n_steps:
+            smc[start_idx:end_idx] = amplitude
+        onset_ms += isi_ms
+    return smc
+
+
+def create_boc_invgamma_thalamic_smc(
+    *,
+    tmax_ms: float,
+    dt_ms: float,
+    rng: np.random.Generator,
+    amplitude: float = BOC_SMC_AMPLITUDE,
+    pulse_width_ms: float = BOC_SMC_PULSE_WIDTH_MS,
+    invgamma_shape: float = BOC_SMC_INVGAMMA_SHAPE,
+    invgamma_scale_ms: float = BOC_SMC_INVGAMMA_SCALE_MS,
+) -> np.ndarray:
+    """BoC inverse-gamma SMC pulse component (Jovanov platform / Gao EI protocol)."""
+    from scipy.stats import invgamma
+
+    n_steps = int(round(tmax_ms / dt_ms)) + 1
+    smc = np.zeros(n_steps, dtype=np.float64)
+    pulse_steps = max(1, int(round(pulse_width_ms / dt_ms)))
+    onset_ms = 0.0
+    while onset_ms <= tmax_ms:
+        start_idx = int(round(onset_ms / dt_ms))
+        end_idx = min(start_idx + pulse_steps, n_steps)
+        if start_idx < n_steps:
+            smc[start_idx:end_idx] = amplitude
+        period_ms = float(
+            invgamma.rvs(invgamma_shape, scale=invgamma_scale_ms, random_state=rng)
+        )
+        period_ms = max(period_ms, pulse_width_ms + 1e-3)
+        onset_ms += period_ms
+    return smc
+
+
+def _build_smc_pulse_component(
+    config: PlantConfig,
+    *,
+    tmax_ms: float,
+    dt_ms: float,
+    rng: np.random.Generator,
+    amplitude: float | None = None,
+) -> np.ndarray:
+    """BoC or periodic SMC pulse component (rising edges define SMCτ)."""
+    n_steps = int(round(tmax_ms / dt_ms)) + 1
+    amp = float(config.smc_amplitude if amplitude is None else amplitude)
+    schedule = config.smc_schedule
+    if schedule == "off" and config.smc_frequency_hz > 0.0:
+        schedule = "periodic"
+
+    if schedule == "boc":
+        return create_boc_invgamma_thalamic_smc(
+            tmax_ms=tmax_ms,
+            dt_ms=dt_ms,
+            rng=rng,
+            amplitude=amp,
+            pulse_width_ms=config.smc_pulse_width_ms,
+            invgamma_shape=config.smc_invgamma_shape,
+            invgamma_scale_ms=config.smc_invgamma_scale_ms,
+        )
+    hz = config.smc_frequency_hz if schedule == "periodic" else 10.0
+    return create_periodic_thalamic_smc(
+        hz,
+        tmax_ms=tmax_ms,
+        dt_ms=dt_ms,
+        amplitude=amp,
+        pulse_width_ms=config.smc_pulse_width_ms,
+    )
+
+
+def _resolve_iappco(
+    *,
+    corstim: int,
+    config: PlantConfig,
+    tmax_ms: float,
+    dt_ms: float,
+    rng: np.random.Generator,
+) -> tuple[np.ndarray, int, np.ndarray]:
+    """Build cortical drive, effective ``corstim``, and SMCτ component for EI."""
+    n_steps = int(round(tmax_ms / dt_ms)) + 1
+    smc_trace = np.zeros(n_steps, dtype=np.float64)
+    if config.smc_enabled() and config.smc_site == "cortical":
+        smc_trace = _build_smc_pulse_component(
+            config,
+            tmax_ms=tmax_ms,
+            dt_ms=dt_ms,
+            rng=rng,
+            amplitude=config.smc_cortical_amplitude,
+        )
+        return smc_trace.copy(), 1, smc_trace
+    if corstim == 1:
+        return _create_cortical_stimulus(tmax_ms, dt_ms), 1, smc_trace
+    return np.zeros(n_steps, dtype=np.float64), 0, smc_trace
+
+
+def _resolve_iappth(
+    *,
+    config: PlantConfig,
+    tmax_ms: float,
+    dt_ms: float,
+    rng: np.random.Generator,
+    baseline: float | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Build thalamic drive and SMC pulse component when ``smc_site='thalamic'``."""
+    n_steps = int(round(tmax_ms / dt_ms)) + 1
+    base = float(config.iappth_baseline if baseline is None else baseline)
+    if not config.smc_enabled() or config.smc_site != "thalamic":
+        zeros = np.zeros(n_steps, dtype=np.float64)
+        return np.full(n_steps, base, dtype=np.float64), zeros
+
+    smc = _build_smc_pulse_component(
+        config,
+        tmax_ms=tmax_ms,
+        dt_ms=dt_ms,
+        rng=rng,
+    )
+    iappth = np.full(n_steps, base, dtype=np.float64) + smc
+    return iappth, smc
+
+
 def _spike_convolver_step(
     conv: SpikeConvolver,
     v_prev: np.ndarray,
@@ -223,8 +394,15 @@ def integrate_network(
     return_traces: tuple[str, ...] = (),
     debug_steps: tuple[int, ...] = (),
     gpi_spike_buffer_size: int | None = None,
+    record_th_spikes: bool = False,
+    th_spike_buffer_size: int | None = None,
+    record_cor_spikes: bool = False,
+    cor_spike_buffer_size: int | None = None,
 ) -> IntegrateResult:
     """Advance the CBGT network for one segment (``CTX_BG_TH_network`` port)."""
+
+    if config.smc_pulse_source == "cor_spikes":
+        record_cor_spikes = True
 
     if rng is None:
         raise ValueError("rng must be initialized before integrating the network")
@@ -233,6 +411,7 @@ def integrate_network(
     n = config.neurons_per_region
     pd = int(config.pd)
     corstim = int(config.corstim)
+    smc_frequency_hz = float(config.smc_frequency_hz)
     tmax_ms = duration_s * 1000.0
     n_steps = int(round(tmax_ms / dt_ms)) + 1
     t_ms = np.arange(n_steps, dtype=np.float64) * dt_ms
@@ -254,10 +433,20 @@ def integrate_network(
             tmax_ms=tmax_ms,
             dt_ms=dt_ms,
         )
-    if corstim == 1:
-        iappco = _create_cortical_stimulus(tmax_ms, dt_ms)
-    else:
-        iappco = np.zeros(n_steps, dtype=np.float64)
+    iappco, corstim, smc_trace_co = _resolve_iappco(
+        corstim=corstim,
+        config=config,
+        tmax_ms=tmax_ms,
+        dt_ms=dt_ms,
+        rng=rng,
+    )
+    iappth, smc_trace_th = _resolve_iappth(
+        config=config,
+        tmax_ms=tmax_ms,
+        dt_ms=dt_ms,
+        rng=rng,
+    )
+    smc_trace = smc_trace_co if config.smc_site == "cortical" else smc_trace_th
 
     # --- Initial voltages (MATLAB draw order: v1..v6) ---
     if init_draws is not None:
@@ -311,6 +500,14 @@ def integrate_network(
     gpi_spike_lists: list[list[float]] | None = None
     if record_spikes and trace_vgi is None:
         gpi_spike_lists = [[] for _ in range(n)]
+
+    th_spike_lists: list[list[float]] | None = None
+    if record_th_spikes:
+        th_spike_lists = [[] for _ in range(n)]
+
+    cor_spike_lists: list[list[float]] | None = None
+    if record_cor_spikes:
+        cor_spike_lists = [[] for _ in range(2 * n)]
 
     # --- Wiring permutations (15 randperm draws) ---
     if init_draws is not None:
@@ -468,6 +665,7 @@ def integrate_network(
     iappgpe = 3.0 - 2.0 * corstim * (1 - pd)
     uce_scale = _GPEAK / (_TAU * np.exp(-1.0)) / dt
     gpi_spike_threshold = -20.0
+    th_spike_threshold = -20.0
     v1_prev = np.empty(n, dtype=np.float64)
     v2_prev = np.empty(n, dtype=np.float64)
     v3_prev = np.empty(n, dtype=np.float64)
@@ -488,11 +686,25 @@ def integrate_network(
     )
     numba_gpi_buf: np.ndarray | None = None
     numba_gpi_counts: np.ndarray | None = None
+    numba_th_buf: np.ndarray | None = None
+    numba_th_counts: np.ndarray | None = None
+    numba_cor_buf: np.ndarray | None = None
+    numba_cor_counts: np.ndarray | None = None
 
     gpi_buf_len = (
         DEFAULT_GPI_SPIKE_BUFFER
         if gpi_spike_buffer_size is None
         else max(DEFAULT_GPI_SPIKE_BUFFER, int(gpi_spike_buffer_size))
+    )
+    th_buf_len = (
+        DEFAULT_GPI_SPIKE_BUFFER
+        if th_spike_buffer_size is None
+        else max(DEFAULT_GPI_SPIKE_BUFFER, int(th_spike_buffer_size))
+    )
+    cor_buf_len = (
+        DEFAULT_GPI_SPIKE_BUFFER
+        if cor_spike_buffer_size is None
+        else max(DEFAULT_GPI_SPIKE_BUFFER, int(cor_spike_buffer_size))
     )
 
     if use_numba:
@@ -500,6 +712,18 @@ def integrate_network(
         spike_n = np.zeros((N_CONV, n), dtype=np.int32)
         numba_gpi_buf = np.zeros((n, gpi_buf_len), dtype=np.float64)
         numba_gpi_counts = np.zeros(n, dtype=np.int32)
+        if record_th_spikes:
+            numba_th_buf = np.zeros((n, th_buf_len), dtype=np.float64)
+            numba_th_counts = np.zeros(n, dtype=np.int32)
+        else:
+            numba_th_buf = np.zeros((n, 1), dtype=np.float64)
+            numba_th_counts = np.zeros(n, dtype=np.int32)
+        if record_cor_spikes:
+            numba_cor_buf = np.zeros((2 * n, cor_buf_len), dtype=np.float64)
+            numba_cor_counts = np.zeros(2 * n, dtype=np.int32)
+        else:
+            numba_cor_buf = np.zeros((1, 1), dtype=np.float64)
+            numba_cor_counts = np.zeros(1, dtype=np.int32)
         ca3_state = np.full(n, float(CA3), dtype=np.float64)
         ca4_state = np.full(n, float(CA4), dtype=np.float64)
         run_cbgt_loop(
@@ -511,6 +735,8 @@ def integrate_network(
             conv_th.max_index,
             idbs,
             iappco,
+            iappth,
+            float(config.ggith),
             t_ms,
             all_idx,
             bll,
@@ -648,6 +874,12 @@ def integrate_network(
             spike_n,
             numba_gpi_buf,
             numba_gpi_counts,
+            numba_th_buf,
+            numba_th_counts,
+            record_th_spikes,
+            numba_cor_buf,
+            numba_cor_counts,
+            record_cor_spikes,
             iappgpe,
             uce_scale,
         )
@@ -774,7 +1006,7 @@ def integrate_network(
             ina1 = _GNA[0] * (m1**3) * H1 * (V1 - _ENA[0])
             ik1 = _GK[0] * ((0.75 * (1.0 - H1)) ** 4) * (V1 - _EK[0])
             it1 = _GT[0] * (p1**2) * R1 * (V1 - _ET)
-            igith = _GGITH * (V1 - _ESYN[5]) * S4
+            igith = float(config.ggith) * (V1 - _ESYN[5]) * S4
 
             # --- STN currents ---
             ina2 = _GNA[1] * (M2**3) * H2 * (V2 - _ENA[1])
@@ -867,10 +1099,16 @@ def integrate_network(
 
             # --- Thalamus update ---
             vth[:] = V1 + dt * (
-                (1.0 / _CM) * (-il1 - ik1 - ina1 - it1 - igith + _IAPPTH)
+                (1.0 / _CM) * (-il1 - ik1 - ina1 - it1 - igith + iappth[step])
             )
             H1 = H1 + dt * ((h1 - H1) / th1)
             R1 = R1 + dt * ((r1 - R1) / tr1)
+            if th_spike_lists is not None:
+                cross_th = (V1 <= th_spike_threshold) & (vth > th_spike_threshold)
+                if cross_th.any():
+                    t_spike_s = t_ms[step - 1] / 1000.0
+                    for neuron_index in np.flatnonzero(cross_th):
+                        th_spike_lists[neuron_index].append(t_spike_s)
 
             (S7,) = _spike_convolver_step(
                 conv_th,
@@ -1007,6 +1245,12 @@ def integrate_network(
                     conv_cor.on_spike(j)
             ve[:] = ve_new
             ue[:] = ue_new
+            if cor_spike_lists is not None:
+                cross_ve = (V7 <= th_spike_threshold) & (ve > th_spike_threshold)
+                if cross_ve.any():
+                    t_spike_s = t_ms[step - 1] / 1000.0
+                    for neuron_index in np.flatnonzero(cross_ve):
+                        cor_spike_lists[neuron_index].append(t_spike_s)
 
             S6a = conv_cor.evaluate_all(kernels["syn_func_cor_d2"])
             S6b = conv_cor.evaluate_all(kernels["syn_func_cor_stn_a"])
@@ -1029,6 +1273,12 @@ def integrate_network(
                     ui_new[j] = ui[j] + _DI
             vi[:] = vi_new
             ui[:] = ui_new
+            if cor_spike_lists is not None:
+                cross_vi = (V8 <= th_spike_threshold) & (vi > th_spike_threshold)
+                if cross_vi.any():
+                    t_spike_s = t_ms[step - 1] / 1000.0
+                    for neuron_index in np.flatnonzero(cross_vi):
+                        cor_spike_lists[n + neuron_index].append(t_spike_s)
 
             aci = (V8 < SPIKE_SYN_THRESHOLD_MV) & (vi > SPIKE_SYN_THRESHOLD_MV)
             uci = np.zeros(n, dtype=np.float64)
@@ -1050,6 +1300,8 @@ def integrate_network(
                 trace_vstr_indr[:, step] = vstr_indr
 
     gpi_spikes: list[np.ndarray] = []
+    th_spikes: list[np.ndarray] = []
+    cor_spikes: list[np.ndarray] = []
     p_beta_val: float | None = None
     if record_spikes:
         if use_numba and numba_gpi_buf is not None and numba_gpi_counts is not None:
@@ -1065,13 +1317,50 @@ def integrate_network(
             dt_ms=dt_ms,
             segment_duration_s=duration_s,
         )
+    if record_th_spikes:
+        if use_numba and numba_th_buf is not None and numba_th_counts is not None:
+            th_spikes = gpi_spikes_from_buffer(numba_th_buf, numba_th_counts)
+        elif th_spike_lists is not None:
+            th_spikes = [
+                np.asarray(times, dtype=np.float64) for times in th_spike_lists
+            ]
+        elif trace_vth is not None:
+            th_spikes = find_spike_times(trace_vth, t_ms, n)
+    if record_cor_spikes:
+        if use_numba and numba_cor_buf is not None and numba_cor_counts is not None:
+            cor_spikes = gpi_spikes_from_buffer(numba_cor_buf, numba_cor_counts)
+        elif cor_spike_lists is not None:
+            cor_spikes = [
+                np.asarray(times, dtype=np.float64) for times in cor_spike_lists
+            ]
+
+    drive_pulse_times = smc_pulse_times_from_trace(smc_trace, dt_ms=dt_ms)
+    smc_pulse_times = resolve_smc_pulse_times(
+        drive_pulse_times_s=drive_pulse_times,
+        cor_spikes=cor_spikes if cor_spikes else None,
+        pulse_source=config.smc_pulse_source,
+        pulse_width_ms=config.smc_pulse_width_ms,
+    )
 
     info: dict[str, Any] = {
         "dbs_freq_hz": float(dbs_spec.frequency_hz),
         "gpi_spike_counts": spike_counts(gpi_spikes).tolist() if record_spikes else [],
         "tmax_ms": float(tmax_ms),
         "iteration": iteration,
+        "smc_frequency_hz": smc_frequency_hz,
+        "smc_schedule": config.smc_schedule,
+        "smc_site": config.smc_site,
+        "smc_pulse_source": config.smc_pulse_source,
+        "smc_drive_times_s": drive_pulse_times.tolist(),
+        "smc_pulse_times_s": smc_pulse_times.tolist(),
+        "smc_pulse_count": int(smc_pulse_times.size),
     }
+    if record_th_spikes:
+        info["th_spike_counts"] = spike_counts(th_spikes).tolist()
+        info["th_spikes"] = th_spikes
+    if record_cor_spikes:
+        info["cor_spike_counts"] = spike_counts(cor_spikes).tolist()
+        info["cor_spikes"] = cor_spikes
     if p_beta_val is not None:
         info["p_beta"] = p_beta_val
     if debug_snapshots:

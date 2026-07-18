@@ -189,7 +189,10 @@ class DDPGTrainer:
                 noise = torch.randn_like(logits) * self.config.logit_noise_std
                 logits = logits + noise
             logits_np = logits.squeeze(0).cpu().numpy()
-            if self.config.exploration_mode == "softmax":
+            if self.config.exploration_mode == "greedy":
+                action_t, _ = Actor.select_action(logits)
+                action = int(action_t.item())
+            elif self.config.exploration_mode == "softmax":
                 temp = self._exploration_temperature(env_step)
                 probs = F.softmax(logits / temp, dim=-1)
                 action = int(torch.multinomial(probs, 1).item())

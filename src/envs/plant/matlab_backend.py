@@ -90,12 +90,59 @@ class MatlabPlant:
         self._iteration = 0
         return self
 
+    def _plant_opts(
+        self,
+        eng: Any,
+        *,
+        record_th_spikes: bool,
+        dbs_spec: DbsSpec,
+        n_steps: int,
+    ) -> Any:
+        import matlab
+
+        opts = eng.struct(
+            "smc_schedule",
+            str(self.config.smc_schedule),
+            "smc_frequency_hz",
+            float(self.config.smc_frequency_hz),
+            "smc_amplitude",
+            float(self.config.smc_amplitude),
+            "smc_pulse_width_ms",
+            float(self.config.smc_pulse_width_ms),
+            "smc_invgamma_shape",
+            float(self.config.smc_invgamma_shape),
+            "smc_invgamma_scale_ms",
+            float(self.config.smc_invgamma_scale_ms),
+            "smc_site",
+            str(self.config.smc_site),
+            "smc_cortical_amplitude",
+            float(self.config.smc_cortical_amplitude),
+            "smc_pulse_source",
+            str(self.config.smc_pulse_source),
+            "return_th_spikes",
+            bool(record_th_spikes),
+        )
+        if dbs_spec.idbs is not None:
+            idbs = np.asarray(dbs_spec.idbs, dtype=np.float64).reshape(-1)
+            if idbs.size != n_steps:
+                msg = (
+                    f"dbs_spec.idbs length {idbs.size} != expected {n_steps} "
+                    f"for MatlabPlant integrate"
+                )
+                raise ValueError(msg)
+            opts["idbs"] = matlab.double(idbs.reshape(1, -1).tolist())
+        return opts
+
     def integrate(
         self,
         duration_s: float,
         dbs_spec: DbsSpec | None = None,
         *,
         record_spikes: bool = True,
+        record_th_spikes: bool = False,
+        th_spike_buffer_size: int | None = None,
+        record_cor_spikes: bool = False,
+        cor_spike_buffer_size: int | None = None,
     ) -> IntegrateResult:
         if duration_s <= 0:
             msg = "duration_s must be positive"
@@ -103,6 +150,8 @@ class MatlabPlant:
 
         spec = dbs_spec if dbs_spec is not None else DbsSpec.none()
         tmax_ms = duration_s * 1000.0
+        dt_ms = self.config.dt_ms
+        n_steps = int(round(tmax_ms / dt_ms)) + 1
         eng = self._get_engine()
 
         self._iteration += 1
@@ -112,6 +161,13 @@ class MatlabPlant:
         else:
             seed_arg = float(self._seed)
 
+        plant_opts = self._plant_opts(
+            eng,
+            record_th_spikes=record_th_spikes,
+            dbs_spec=spec,
+            n_steps=n_steps,
+        )
+        nargout = 14 if record_th_spikes else 6
         raw = eng.simulate_network_model(
             float(self._iteration),
             float(self.config.pd),
@@ -120,9 +176,11 @@ class MatlabPlant:
             True,
             seed_arg,
             float(tmax_ms),
-            nargout=6,
+            [],
+            plant_opts,
+            nargout=nargout,
         )
-        gpi_cell, dt_ms, tmax_out, pd_out, _pick, dbs_freq_hz = raw
+        gpi_cell, dt_ms, tmax_out, pd_out, _pick, dbs_freq_hz = raw[:6]
 
         gpi_spikes: list[np.ndarray] = []
         if record_spikes:
@@ -130,6 +188,17 @@ class MatlabPlant:
                 gpi_cell,
                 neurons=self.config.neurons_per_region,
             )
+
+        th_spikes: list[np.ndarray] = []
+        smc_pulse_times_s: np.ndarray = np.array([], dtype=np.float64)
+        if record_th_spikes:
+            th_cell = raw[12]
+            th_spikes = spikes_from_matlab_cell(
+                th_cell,
+                neurons=self.config.neurons_per_region,
+            )
+            smc_raw = raw[13]
+            smc_pulse_times_s = np.asarray(smc_raw, dtype=np.float64).reshape(-1)
 
         p_beta_val: float | None = None
         if record_spikes:
@@ -139,11 +208,20 @@ class MatlabPlant:
                 segment_duration_s=duration_s,
             )
 
-        info = {
+        info: dict[str, Any] = {
             "dbs_freq_hz": float(dbs_freq_hz),
             "gpi_spike_counts": spike_counts(gpi_spikes).tolist() if record_spikes else [],
             "tmax_ms": float(tmax_out),
+            "smc_frequency_hz": float(self.config.smc_frequency_hz),
+            "smc_schedule": str(self.config.smc_schedule),
+            "smc_site": str(self.config.smc_site),
+            "smc_pulse_source": str(self.config.smc_pulse_source),
+            "smc_pulse_times_s": smc_pulse_times_s.tolist(),
+            "smc_pulse_count": int(smc_pulse_times_s.size),
         }
+        if record_th_spikes:
+            info["th_spike_counts"] = spike_counts(th_spikes).tolist()
+            info["th_spikes"] = th_spikes
         if p_beta_val is not None:
             info["p_beta"] = p_beta_val
         return IntegrateResult(
