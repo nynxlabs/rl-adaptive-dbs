@@ -4,12 +4,15 @@ import numpy as np
 from controllers.ddpg.config import DDPGConfig
 from controllers.ddpg.trainer import DDPGTrainer
 from tests.envs.mock_plant import MockPlant
-from envs.mehregan.env import MehreganEnv
+from envs.mehregan.env import MehreganEnv, MehreganEnvConfig
 
 
 def _make_trainer(obs_normalize: bool = True, state_length: int = 5) -> DDPGTrainer:
     plant = MockPlant()
-    env = MehreganEnv(plant=plant)
+    env = MehreganEnv(
+        plant=plant,
+        config=MehreganEnvConfig(state_length=state_length),
+    )
     config = DDPGConfig(
         obs_normalize=obs_normalize,
         num_episodes=1,
@@ -17,14 +20,6 @@ def _make_trainer(obs_normalize: bool = True, state_length: int = 5) -> DDPGTrai
         min_buffer_size=2,
         batch_size=2,
     )
-    # Force state_length from config
-    env.observation_space = type(env.observation_space)(
-        low=env.observation_space.low[:state_length],
-        high=env.observation_space.high[:state_length],
-        shape=(state_length,),
-        dtype=env.observation_space.dtype,
-    )
-    env._obs_window = type(env._obs_window)(maxlen=state_length)
     return DDPGTrainer(env, config)
 
 

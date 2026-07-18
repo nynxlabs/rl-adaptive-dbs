@@ -7,14 +7,14 @@ from collections.abc import Iterator
 import pytest
 
 from envs.plant import MatlabPlant, PlantConfig, PythonPlant
-from tests.envs.plant_backends import BACKEND_NAMES, PlantBackendName, matlab_available
+from tests.envs.plant_backends import BACKEND_NAMES, PlantBackendName, matlab_engine_available
 
 
 @pytest.fixture(scope="module", params=BACKEND_NAMES, ids=list(BACKEND_NAMES))
 def plant_backend(request: pytest.FixtureRequest) -> PlantBackendName:
     backend: PlantBackendName = request.param
-    if backend == "matlab" and not matlab_available():
-        pytest.skip("MATLAB not installed or not licensed")
+    if backend == "matlab" and not matlab_engine_available():
+        pytest.skip("MATLAB Python engine not installed (uv sync --group matlab)")
     return backend
 
 
