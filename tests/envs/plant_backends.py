@@ -36,9 +36,15 @@ def matlab_available() -> bool:
     return _check()
 
 
+def matlab_engine_available() -> bool:
+    from tests.conftest import matlab_engine_available as _check
+
+    return _check()
+
+
 def require_matlab() -> None:
-    if not matlab_available():
-        pytest.skip("MATLAB not installed or not licensed")
+    if not matlab_engine_available():
+        pytest.skip("MATLAB Python engine not installed (uv sync --group matlab)")
 
 
 @contextmanager

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from envs.plant.network.matlab_rng import MatlabRandomState, load_cached_init_draws
 
@@ -21,8 +22,15 @@ def test_load_cached_init_draws_seed42() -> None:
     assert draws.v1.shape == (10,)
 
 
+@pytest.mark.matlab
 def test_cached_init_draws_gsngen_matches_matlab_export() -> None:
     """Fixture gsngen must match live CTX_BG_TH_network (plant_init_export)."""
+    pytest.importorskip("matlab.engine")
+    from tests.conftest import matlab_engine_available
+
+    if not matlab_engine_available():
+        pytest.skip("MATLAB Python engine not installed (uv sync --group matlab)")
+
     from scripts.export_plant_init_draws import export_matlab_init_draws
 
     draws = load_cached_init_draws(42)

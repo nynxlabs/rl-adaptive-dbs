@@ -25,6 +25,17 @@ def matlab_available() -> bool:
     return result.returncode == 0
 
 
+def matlab_engine_available() -> bool:
+    """Licensed MATLAB **and** ``matlabengine`` installed (``uv sync --group matlab``)."""
+    if not matlab_available():
+        return False
+    try:
+        import matlab.engine  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers",
@@ -35,9 +46,9 @@ def pytest_configure(config: pytest.Config) -> None:
 def pytest_collection_modifyitems(
     config: pytest.Config, items: list[pytest.Item]
 ) -> None:
-    if matlab_available():
+    if matlab_engine_available():
         return
-    skip = pytest.mark.skip(reason="MATLAB not installed or not licensed")
+    skip = pytest.mark.skip(reason="MATLAB engine not available (install/license or uv sync --group matlab)")
     for item in items:
         if "matlab" in item.keywords:
             item.add_marker(skip)
