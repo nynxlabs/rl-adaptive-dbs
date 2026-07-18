@@ -18,6 +18,21 @@ Packages install in editable mode so local changes are importable immediately af
 
 ---
 
+## Setup script verification status
+
+**The setup scripts have not been re-verified end-to-end since Phase 4 expanded the install surface** (benchmark runner, `rl-dbs` / `rl-dbs-tui`, PTQ/QAT deps, `scripts/validate-fresh.sh`, Multipass / Windows Sandbox host scripts, and the `--validate` flag on `scripts/setup.sh`). They were written and spot-checked on the maintainer’s WSL checkout during that work; **clone → setup → verify on a clean host is not currently guaranteed.**
+
+| Area | Status |
+|------|--------|
+| **`scripts/setup.sh`** (Python-only path) | **Unverified** since expansion — import check + `pytest -m "not matlab"` assumed OK on dev machine |
+| **`scripts/setup.sh --with-matlab`** | **Unverified** — delegates to `scripts/matlab/setup.sh` |
+| **`scripts/matlab/`** | **Partially verified** on WSL only ([matlab.md](matlab.md)); cross-platform prompts not recently exercised |
+| **Fresh-host validation** (`validate-fresh.sh`, Multipass / Sandbox) | **Stale** — last Sandbox pass 2026-06-30; CLI smoke checks added since then ([fresh-validation.md](development/fresh-validation.md)) |
+
+**If you are setting up on a new machine:** start with `bash scripts/setup.sh --python-only --non-interactive` and the checks in §3 below. Report failures in an issue with OS, `uv --version`, and the command output. **Maintainers:** active re-verification is tracked in [development/roadmap.md](development/roadmap.md) (Phase 4 setup exit criteria).
+
+---
+
 ## 1. Prerequisites
 
 | Requirement | Notes |
