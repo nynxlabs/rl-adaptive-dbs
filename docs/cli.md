@@ -1,6 +1,6 @@
 # Command-line interface specification
 
-This document defines the **`rl-dbs`** CLI: training, evaluation, benchmarking, configuration, and repository introspection. **Phase 4** starts implementation: `benchmark` and `info` first, then Mehregan `ddpg` `train` / `eval` (including quantized variants). Broader controller coverage and packaging hardening continue in Phases 5–9 ([development/roadmap.md](development/roadmap.md)).
+This document defines the **`rl-dbs`** CLI: training, evaluation, benchmarking, configuration, and repository introspection. Implemented in Phase 4; **Mehregan replication exit criteria** are figure panels ([figures/paper_1.md](figures/paper_1.md)), not CLI completeness alone. Broader controller coverage continues in later roadmap phases ([development/roadmap.md](development/roadmap.md)).
 
 **Related specs:** [development/roadmap.md](development/roadmap.md) (phases), [benchmarking.md](benchmarking.md) (suites, results layout), [tui.md](tui.md) (read-only monitor), [environment.md](environment.md) (Mehregan Gym API), [plant.md](plant.md) (plant config), [controllers/](controllers/) (per-paper training). Tooling: [development/venv.md](development/venv.md) (`uv run`).
 
@@ -25,10 +25,11 @@ Register a console script in `pyproject.toml`:
 
 ```toml
 [project.scripts]
-rl-dbs = "rl_adaptive_dbs.cli:main"
+rl-dbs = "rl_adaptive_dbs.entry:cli_main"
+rl-dbs-tui = "rl_adaptive_dbs.entry:tui_main"
 ```
 
-The implementation lives in **`rl_adaptive_dbs.cli`** (`rl_adaptive_dbs/cli.py`); the **user-facing command** is fixed: `rl-dbs`.
+`entry.py` applies the thread-pool cap **before** importing NumPy-heavy modules (see §4.1).
 
 ### 2.2 Recommended invocation
 
