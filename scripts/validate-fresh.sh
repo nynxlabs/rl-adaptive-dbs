@@ -71,7 +71,7 @@ fi
 if [[ "$RUN_SETUP" -eq 1 ]]; then
   bash "$_script_dir/setup.sh" --python-only --non-interactive --skip-tests
 else
-  uv sync --group dev
+  uv sync --group dev --group figures
 fi
 
 say_section() { printf '\n=== %s ===\n' "$*"; }
