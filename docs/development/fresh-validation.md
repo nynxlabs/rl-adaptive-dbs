@@ -2,7 +2,7 @@
 
 Portability gate: confirm the repo **installs and passes basic checks** on clean Linux and Windows hosts — not only your daily WSL checkout. Day-to-day install and training workflows live in [setup.md](../setup.md). Pytest layout: [testing.md](testing.md).
 
-**Verification status:** Fresh-host scripts and the `validate-fresh.sh` CLI smoke block were added during Phase 4 alongside `rl-dbs`, `rl-dbs-tui`, and expanded dependency groups. **They have not been re-run end-to-end on Multipass or Windows Sandbox since that expansion** (last documented Sandbox pass: 2026-06-30, before current CLI checks). Treat results as stale until the active verification pass completes — [setup.md](../setup.md) § Setup script verification status.
+**Verification status:** Fresh-host scripts and the `validate-fresh.sh` CLI smoke block were added during Phase 4 alongside `rl-dbs`, `rl-dbs-tui`, and expanded dependency groups. **Maintainer WSL pass (2026-07-18):** `setup.sh --python-only --non-interactive --validate` succeeded after syncing `dev` + `figures` and fixing fixture-path / MATLAB-engine skip logic — see [setup.md](../setup.md) § Setup script verification status. **Multipass / Windows Sandbox** have not been re-run since that expansion (last Sandbox pass: 2026-06-30).
 
 ---
 
@@ -228,7 +228,7 @@ Bump the pinned Git release in `scripts/validation-repo.ps1` when validating aga
 | Mapped mode stuck / no `sandbox.log` | Use **`-Clone`** + background launcher (NTFS stage). `\\wsl.localhost\...` maps are intermittent |
 | `validate-fresh` instant exit 2, no output | Fixed in bootstrap: PowerShell must not expand `$PATH` in the bash `-lc` string (use backtick-escaped `$`) |
 | `uv sync` access denied on `C:\host-logs\cache\uv` | Host cache must be **Windows** wheels (native `uv` prefetch). Bootstrap copies cache to Sandbox `%TEMP%` before sync |
-| `matlabengine` / Python 3.14 in Sandbox | Repo `.python-version` pins 3.12; bootstrap sets `UV_PYTHON=3.12`. `--python-only` uses `uv sync --group dev` (no MATLAB group) |
+| `matlabengine` / Python 3.14 in Sandbox | Repo `.python-version` pins 3.12; bootstrap sets `UV_PYTHON=3.12`. `--python-only` uses `uv sync --group dev --group figures` (no MATLAB group) |
 | PyTorch `c10.dll` / WinError 126 | Install **VC++ Redistributable** in bootstrap; prefetch `vc_redist.x64.exe` into `.validation-logs/cache/` |
 | `uv` / GitHub download hung in Sandbox | Host prefetch into `.validation-logs/cache/` before launch (launcher does this for `-Clone`) |
 
@@ -238,6 +238,7 @@ Bump the pinned Git release in `scripts/validation-repo.ps1` when validating aga
 
 | Date | Environment | Python-only | MATLAB (optional) | Notes |
 |------|-------------|-------------|-------------------|-------|
+| 2026-07-18 | Maintainer WSL (existing checkout) | pass (291 pytest + CLI smoke) | not run | `setup.sh --python-only --non-interactive --validate`; post Phase 4 re-verify |
 | | Multipass Ubuntu 24.04 | | | |
 | 2026-06-30 | Windows Sandbox + Git Bash (`-Clone`) | pass (89 pytest) | n/a | `git_sha` from shallow clone; VC++ redist + Windows uv cache |
 | | macOS | deferred | deferred | no hardware |
