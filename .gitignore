@@ -5,6 +5,9 @@ results/
 artifacts/
 logs/
 docs/figures/papers/
+*.bak.*
+nohup.out
+_probe_patterns.py
 .worktrees/
 .rl-dbs.yaml
 .rl-dbs.yml

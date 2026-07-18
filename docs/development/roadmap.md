@@ -4,7 +4,26 @@ Phases and implementation status for **rl-adaptive-dbs**. Contributor rules: [co
 
 ---
 
-## 1. Roadmap
+## Current priorities — figure replication
+
+**Day-to-day work is figure-first**, not “complete Phase N, then start Phase N+1.” The practical exit criterion for Mehregan replication is **qualitative match on named paper panels** — ordering, shape, and shared baselines — documented panel-by-panel in [figures/paper_1.md](../figures/paper_1.md). Each panel has a committed script under `scripts/figures/papers/<paper>/<panel>/plot.py`, qualitative gates in the spec, and side-by-side PNGs under `figures/papers/`.
+
+| Mehregan panel | Status | Blocks / notes |
+|----------------|--------|----------------|
+| Fig 1b, 2a, 2b | **Pass** | Plant / biomarker gates — [plant.md](../plant.md) |
+| Fig 4a, 4b, 5a | **Pass** | Training + 45 Hz efficacy — [environment.md](../environment.md), [ddpg/replication.md](../controllers/ddpg/replication.md) |
+| Fig 5b | **Open** | 30 Hz post-train efficacy; pattern-mode retrain |
+| Fig 6a, 6b | **Open** | PTQ/QAT panels — [ddpg/replication.md](../controllers/ddpg/replication.md) §6 |
+
+**How this relates to phases:** Phases 1–3 (specs, environment, DDPG) and most Phase 4 **infrastructure** (benchmark runner, `rl-dbs`, `rl-dbs-tui`, PTQ/QAT hooks, setup scripts) are **done**. Remaining Mehregan work is **closing open panels** — which may require plant conventions, training protocol, or quantization fixes documented in [replication-fidelity.md](replication-fidelity.md), not ticking a phase box. Phases 5–9 (SNN, SEA-DBS, cross-controller comparison, fusion, native plant) stay on the long-term plan and start when Mehregan figure replication is in good shape (or when a panel explicitly needs them).
+
+**Contributors:** read the panel checklist before large sweeps; promote stable findings into the panel `plot.py` and update [figures/paper_1.md](../figures/paper_1.md) in the same pass. See [conventions.md](conventions.md) § Figure replication.
+
+---
+
+## 1. Roadmap (long-term layers)
+
+The phase list below is **architectural history and future structure** — useful for scoping packages and specs, but **not** the primary scheduling axis while Mehregan panels remain open.
 
 Work proceeds in layers: rough specs, then environment and controllers in paper order (DDPG, then SNN, then SEA-DBS), each with per-paper benchmarking, then cross-controller comparison, fusion, then long-term modularity and a native plant.
 
@@ -36,7 +55,7 @@ Replicate the shared plant and Mehregan et al. Gym API before any controller wor
 - Variants: `paper`, `init-30hz` (full-precision, complete); **PTQ** (`ptq-fp16`, `ptq-int8`) and **QAT** (`qat`) — Phase 4 ([controllers/ddpg/replication.md](../controllers/ddpg/replication.md) §6).
 - **Exit criteria:** training run completes; eval roll-out matches spec checklist on `envs/` without adapters — met via `run_replication`, `scripts/replicate_mehregan_ddpg.py`, and mock/MATLAB tests.
 
-### Phase 4 — Benchmarking the first controller (current)
+### Phase 4 — Benchmarking the first controller (infrastructure complete; figure panels drive remaining work)
 
 - Suite definitions (YAML or equivalent) per [benchmarking.md](../benchmarking.md).
 - **Per-paper suite** for Mehregan replication (`mehregan_eval`): baselines + `ddpg` variants × seeds → `results/`.
@@ -47,7 +66,7 @@ Replicate the shared plant and Mehregan et al. Gym API before any controller wor
 - **Setup scripts** ([setup.md](../setup.md), [matlab.md](../matlab.md)) — **`scripts/setup.sh`** (Python + optional MATLAB); harden **`scripts/matlab/`** cross-platform; **validate on fresh VMs** (clean Linux, macOS, Windows via Git Bash/WSL) so clone → setup → verify works on other machines.
 - **Fresh-machine validation** — exercise the full path on VMs or clean hosts with only git + uv (+ optional MATLAB license): `bash scripts/setup.sh`, docs match prompts, `pytest -m "not matlab"` passes; document OS-specific gaps in [setup.md](../setup.md) / [matlab.md](../matlab.md).
 - **Exit criteria:** repeatable `mehregan_eval` runs across full-precision and quantized `ddpg` variants; replication checklist passable for `ddpg` (including §IV.A.3 quantization); `uv run rl-dbs benchmark` and `uv run rl-dbs-tui` usable for Phase 4 workflows; **setup scripts pass on fresh VMs** on each supported OS (or gaps documented with repro steps).
-- **Results doc:** [phase4-results.md](phase4-results.md) — §8 implementation audit **done** (2026-07-01); full-suite benchmark tables **pending** TASK-9 `mehregan_eval` run.
+- **Results doc:** [phase4-results.md](phase4-results.md) — §8 implementation audit **done** (2026-07-01); full-suite `mehregan_eval` **done** (TASK-9, 2026-07-03). Remaining Mehregan validation is **figure-panel** driven ([figures/paper_1.md](../figures/paper_1.md)), not another suite pass.
 
 ### Phase 5 — SNN controller (`snn`), adapter, and per-paper benchmarking
 
@@ -123,8 +142,12 @@ Phases 9+ are intentionally open; prioritize equivalence and replication paths b
 | Benchmark suite runner | Done | `benchmarks/` + `suites/mehregan_eval*.yaml`; baselines + `ddpg` eval |
 | `rl-dbs` CLI | Partial | `benchmark`, `summary`, `info`, `config show`, `train`/`eval` (`ddpg`); `snn` Phase 5; `sea_dbs` Phase 6 |
 | `rl-dbs-tui` | Done (v1) | Six tabs ([Textual](https://textual.textualize.io/)); Run tab launches detached jobs; Settings persistence |
+| Thread limits (`thread_limits.py`, `run.py`) | Done | Default 3-thread cap for plant-heavy CLI + `python -m rl_adaptive_dbs.run` |
+| Figure panel scripts (`scripts/figures/papers/`) | Partial | 1b–5a pass; 5b, 6a, 6b open — [figures/paper_1.md](../figures/paper_1.md) |
 
-**Current phase:** 4 (benchmark runner, Mehregan quantization, CLI/TUI start, setup scripts + fresh-VM validation).
+**Scheduling axis:** figure replication ([figures/paper_1.md](../figures/paper_1.md)) — open: Fig 5b, 6a, 6b.
+
+**Phase map (reference):** Phases 1–4 infrastructure largely **complete**; Phase 5+ deferred until Mehregan panels close or a task explicitly needs them. Outstanding portability: Multipass Linux fresh-validation ([fresh-validation.md](fresh-validation.md)).
 
 ---
 
@@ -132,6 +155,8 @@ Phases 9+ are intentionally open; prioritize equivalence and replication paths b
 
 | Doc | Role |
 |-----|------|
+| [figures/paper_1.md](../figures/paper_1.md) | Mehregan panel replication — primary goal tracker |
+| [replication-fidelity.md](replication-fidelity.md) | Mehregan verified / divergent / added |
 | [setup.md](../setup.md) | Setup and how to use the repo |
 | [testing.md](testing.md) | pytest layout, markers, what to test |
 | [development/](README.md) | Dev docs hub ([roadmap.md](roadmap.md), [conventions.md](conventions.md)) |

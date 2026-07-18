@@ -1,6 +1,17 @@
 # Conventions
 
-Contributor rules for **rl-adaptive-dbs** — layout, spec-driven workflow, and cross-controller comparison. Paper-aligned behavior lives in the **specs** under `docs/`. Phases and status: [roadmap.md](roadmap.md).
+Contributor rules for **rl-adaptive-dbs** — layout, spec-driven workflow, and cross-controller comparison. Paper-aligned behavior lives in the **specs** under `docs/`. Priorities and phase map: [roadmap.md](roadmap.md). **Panel checklist:** [figures/paper_1.md](../figures/paper_1.md).
+
+---
+
+## Figure replication
+
+Mehregan work is organized around **paper panels**, not roadmap phase numbers.
+
+1. **Exit criteria first** — list qualitative gates in [figures/paper_1.md](../figures/paper_1.md) (or the panel section) before large sweeps.
+2. **Ship surface** — committed train+plot entry points live under `scripts/figures/papers/<paper>/<panel>/plot.py` (indexed in [figures/paper_1.md](../figures/paper_1.md)). Shared helpers: `scripts/figures/papers/promote.py`, `scripts/lib/` when imported by panel scripts.
+3. **Promote, don’t thrash** — `scripts/probes/` and `scripts/debug/` are diagnostic; fold stable findings into the panel script and update the figure doc in the same pass.
+4. **Specs follow panels** — plant/training/convention changes that unblock a panel update [plant.md](../plant.md), [environment.md](../environment.md), or the relevant [controllers/](../controllers/) spec and [replication-fidelity.md](replication-fidelity.md).
 
 ---
 
