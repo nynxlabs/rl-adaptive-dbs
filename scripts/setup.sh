@@ -106,8 +106,8 @@ if [[ "$WITH_MATLAB" -eq 1 ]]; then
   say "=== Python dependencies (uv sync --all-groups) ==="
   uv sync --all-groups
 else
-  say "=== Python dependencies (uv sync --group dev) ==="
-  uv sync --group dev
+  say "=== Python dependencies (uv sync --group dev --group figures) ==="
+  uv sync --group dev --group figures
 fi
 say ""
 
