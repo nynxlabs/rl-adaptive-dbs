@@ -178,7 +178,7 @@ results/
 | Each controller exposes `train()` / `evaluate(seed, checkpoint)` with shared metric dict | Partial (`ddpg` only) |
 | Suite runner (`benchmarks/` + `rl-dbs benchmark` per [cli.md](cli.md)) loads suite YAML, runs baselines + controllers (including quantized variants), writes `results/` | Done |
 | Initial `rl-dbs` / `rl-dbs-tui` per Phase 4 ([cli.md](cli.md), [tui.md](tui.md)) | Done — `benchmark`, `summary`, `info`, `config show`, `ddpg` train/eval; TUI six tabs |
-| Setup scripts: `scripts/setup.sh` + `scripts/matlab/`; fresh-VM validation ([setup.md](setup.md), [matlab.md](matlab.md)) | In progress |
+| Setup scripts: `scripts/setup.sh` + `scripts/matlab/`; fresh-VM validation ([setup.md](setup.md), [matlab.md](matlab.md)) | Partial — WSL python-only verified 2026-07-18; Multipass / Sandbox pending |
 | Summary tables / plots over `results/` | Done — `rl-dbs summary` (+ optional `--csv`); TUI Benchmarks + Eval tabs |
 
 When adding code, prefer a **thin** runner that calls into `controllers.*` and `envs` rather than duplicating plant logic in scripts.

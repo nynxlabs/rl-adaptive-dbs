@@ -20,16 +20,16 @@ Packages install in editable mode so local changes are importable immediately af
 
 ## Setup script verification status
 
-**The setup scripts have not been re-verified end-to-end since Phase 4 expanded the install surface** (benchmark runner, `rl-dbs` / `rl-dbs-tui`, PTQ/QAT deps, `scripts/validate-fresh.sh`, Multipass / Windows Sandbox host scripts, and the `--validate` flag on `scripts/setup.sh`). They were written and spot-checked on the maintainer’s WSL checkout during that work; **clone → setup → verify on a clean host is not currently guaranteed.**
+Phase 4 expanded the install surface (benchmark runner, `rl-dbs` / `rl-dbs-tui`, PTQ/QAT deps, `scripts/validate-fresh.sh`, Multipass / Windows Sandbox host scripts, and the `--validate` flag on `scripts/setup.sh`). A **re-verification pass** started 2026-07-18 after that expansion.
 
 | Area | Status |
 |------|--------|
-| **`scripts/setup.sh`** (Python-only path) | **Unverified** since expansion — import check + `pytest -m "not matlab"` assumed OK on dev machine |
-| **`scripts/setup.sh --with-matlab`** | **Unverified** — delegates to `scripts/matlab/setup.sh` |
+| **`scripts/setup.sh`** (Python-only path) | **Verified** on maintainer WSL (2026-07-18) — `bash scripts/setup.sh --python-only --non-interactive --validate`; 291 pytest passed, CLI smoke OK. Syncs **`dev` + `figures`** (matplotlib required by figure-panel tests). |
+| **`scripts/setup.sh --with-matlab`** | **Unverified** in this pass — delegates to `scripts/matlab/setup.sh` |
 | **`scripts/matlab/`** | **Partially verified** on WSL only ([matlab.md](matlab.md)); cross-platform prompts not recently exercised |
-| **Fresh-host validation** (`validate-fresh.sh`, Multipass / Sandbox) | **Stale** — last Sandbox pass 2026-06-30; CLI smoke checks added since then ([fresh-validation.md](development/fresh-validation.md)) |
+| **Fresh-host validation** (`validate-fresh.sh`, Multipass / Sandbox) | **Pending** — last Sandbox pass 2026-06-30 (pre-CLI smoke); re-run after WSL fixes land ([fresh-validation.md](development/fresh-validation.md)) |
 
-**If you are setting up on a new machine:** start with `bash scripts/setup.sh --python-only --non-interactive` and the checks in §3 below. Report failures in an issue with OS, `uv --version`, and the command output. **Maintainers:** active re-verification is tracked in [development/roadmap.md](development/roadmap.md) (Phase 4 setup exit criteria).
+**If you are setting up on a new machine:** start with `bash scripts/setup.sh --python-only --non-interactive` and the checks in §3 below. Report failures in an issue with OS, `uv --version`, and the command output.
 
 ---
 
@@ -55,7 +55,7 @@ cd rl-adaptive-dbs
 bash scripts/setup.sh
 ```
 
-`scripts/setup.sh` runs `uv sync --group dev` (Python + pytest tooling). With `--with-matlab` it also syncs the **matlab** group and delegates to **`scripts/matlab/setup.sh`**. Use `uv sync --all-groups` only when you want every optional group in one step on a dev machine.
+`scripts/setup.sh` runs `uv sync --group dev --group figures` (Python + pytest tooling + matplotlib for figure-panel tests). With `--with-matlab` it also syncs the **matlab** group and delegates to **`scripts/matlab/setup.sh`**. Use `uv sync --all-groups` only when you want every optional group in one step on a dev machine.
 
 | Flag | Effect |
 |------|--------|
@@ -80,7 +80,8 @@ bash scripts/matlab/setup.sh
 |---------|----------------|
 | `bash scripts/setup.sh` | Python + verify; optional MATLAB ([matlab.md](matlab.md)) |
 | `uv sync` | Runtime deps + editable `envs` / `controllers` (minimal / CI) |
-| `uv sync --all-groups` | Above + **dev** group (`pytest`, etc.) — use locally |
+| `uv sync --group dev --group figures` | Above + **dev** (`pytest`, TUI) + **figures** (`matplotlib` for panel tests) — default `setup.sh` Python path |
+| `uv sync --all-groups` | Every optional group (`dev`, `figures`, `matlab`) — full dev machine |
 | `bash scripts/matlab/setup.sh` | MATLAB install/connect, `uv sync`, `verify.sh` |
 
 Details: activation, `uv add`, pinning Python → [development/venv.md](development/venv.md).

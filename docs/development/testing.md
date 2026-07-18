@@ -123,7 +123,7 @@ Registered in `pyproject.toml`:
 | Marker | Use |
 |--------|-----|
 | `slow` | Long rollouts, training smoke, large fixtures |
-| `matlab` | Needs MATLAB and `reference-material/KumaraveluEtAl2016/` bridge |
+| `matlab` | Needs licensed MATLAB **and** `matlabengine` (`uv sync --group matlab`) plus the Kumaravelu bridge |
 
 Example:
 
@@ -135,7 +135,9 @@ def test_p_beta_matches_reference_segment() -> None:
     ...
 ```
 
-Skip when MATLAB is unavailable: `tests/conftest.py` skips `@pytest.mark.matlab` tests when batch `license('test','MATLAB')` fails. With MATLAB, run `source scripts/matlab/env.sh` and `uv sync --group matlab` first ([matlab.md](../matlab.md)).
+**Skip logic:** `tests/conftest.py` defines `matlab_available()` (batch license check) and `matlab_engine_available()` (license **and** `import matlab.engine`). Collection skips `@pytest.mark.matlab` when the engine is unavailable. Parametrized plant fixtures (`plant_backend` with id `matlab`) skip the MATLAB arm when only the binary is installed — e.g. after `uv sync --group dev --group figures` without `--group matlab`. With MATLAB, run `source scripts/matlab/env.sh` and `uv sync --group matlab` first ([matlab.md](../matlab.md)).
+
+**Default pytest subset:** `pytest -m "not matlab"` is what `scripts/setup.sh` runs. That suite still needs the **figures** group (`matplotlib`) for `tests/scripts/fig2a_trailing_window_test.py`.
 
 ---
 

@@ -26,10 +26,21 @@ From the repository root (same on all platforms):
 
 ```bash
 uv sync                  # runtime deps + editable install (CI / minimal images)
-uv sync --all-groups     # runtime + dev (local development)
+uv sync --group dev --group figures   # default local / setup.sh Python path
+uv sync --all-groups     # runtime + dev + figures + matlab
 ```
 
-`uv sync` creates `.venv/` if missing, picks an interpreter compatible with `requires-python` in `pyproject.toml`, installs **runtime** dependencies from `[project]`, and **installs this repository in editable mode** so top-level packages `envs` and `controllers` import correctly. Dev tools (for example `pytest`) live in the `dev` dependency group; use **`uv sync --all-groups`** locally, or **`uv sync --group dev`** for the same result while only `dev` is defined.
+`uv sync` creates `.venv/` if missing, picks an interpreter compatible with `requires-python` in `pyproject.toml`, installs **runtime** dependencies from `[project]`, and **installs this repository in editable mode** so top-level packages `envs` and `controllers` import correctly.
+
+**Optional dependency groups** (`pyproject.toml` `[dependency-groups]`):
+
+| Group | Packages | When |
+|-------|----------|------|
+| **dev** | `pytest`, `textual` | Local tests and TUI — always for development |
+| **figures** | `matplotlib` | Figure-panel tests (`tests/scripts/`) and `scripts/figures/papers/` |
+| **matlab** | `matlabengine` | MATLAB plant bridge ([matlab.md](../matlab.md)) |
+
+`scripts/setup.sh` (Python-only) runs **`uv sync --group dev --group figures`**. MATLAB setup adds **`--group matlab`**. Use **`uv sync --all-groups`** for a full dev machine in one step.
 
 Prefer **`uv run`** so you do not need to activate the venv:
 
