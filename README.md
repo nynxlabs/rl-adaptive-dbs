@@ -1,5 +1,7 @@
 # rl-adaptive-dbs
 
+> **Work in progress.** This repository is under active development. Substantial **refinement** is still needed across docs, scripts, and code paths, and there is **redundant** content that still needs to be consolidated or removed.
+
 Replication of published **adaptive DBS** reinforcement-learning work on one shared **parkinsonian plant** (Kumaravelu et al., 2016): a Mehregan et al. Gymnasium-style environment in `envs/`, then **separate controller implementations** from each source paper (with adapters where a paper’s RL interface differs), benchmarking, cross-controller comparison, and later fusion and modularity.
 
 ## Current goals
