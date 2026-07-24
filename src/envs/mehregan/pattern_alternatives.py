@@ -289,12 +289,27 @@ class BurstPatternAlphabet:
             amplitude=self.amplitude,
         )
 
+    def idbs_for_action(self, action: int) -> np.ndarray:
+        return self.idbs_for_pattern(int(action))
+
     def to_dbs_spec(self, action: int) -> DbsSpec:
         return DbsSpec(
             pick_dbs_freq=DbsSpec.from_frequency_hz(self.mean_hz).pick_dbs_freq,
             idbs=self.idbs_for_pattern(int(action)),
             mean_hz=self.mean_hz,
         )
+
+    def action_for_dbs_spec(self, spec: DbsSpec) -> int:
+        return self.action_for_frequency_hz(spec.frequency_hz)
+
+    def action_for_frequency_hz(self, hz: float) -> int:
+        if abs(float(hz) - self.mean_hz) < 1e-6:
+            return 0
+        msg = (
+            f"frequency {hz} Hz has no burst pattern (mean_hz={self.mean_hz}); "
+            "only the mean-rate periodic baseline maps to a pattern (index 0)"
+        )
+        raise ValueError(msg)
 
 
 @dataclass(frozen=True)
@@ -392,6 +407,146 @@ def _build_continuous_hz_idbs(
     )
     trace.setflags(write=False)
     return trace
+
+
+@lru_cache(maxsize=None)
+def _build_therapeutic_burst_idbs(
+    *,
+    index: int,
+    mean_hz: float,
+    step_duration_s: float,
+    dt_ms: float,
+    pulse_width_ms: float,
+    amplitude: float,
+) -> np.ndarray:
+    """Pack fixed pulse count into high-rate bursts separated by silence.
+
+    Paper Fig 5b prose: irregular 30 Hz-mean trains work because the
+    *instantaneous* rate leaves the beta band. TASK-177 showed periodic
+    14–34 Hz all lose to no-stim; this construction forces local rates
+    into the therapeutic band (~90–160 Hz) while preserving mean rate.
+    """
+    n_steps = _grid_steps(step_duration_s=step_duration_s, dt_ms=dt_ms)
+    if mean_hz <= 0 or index == 0:
+        return _regular_trace(
+            mean_hz=mean_hz,
+            step_duration_s=step_duration_s,
+            dt_ms=dt_ms,
+            pulse_width_ms=pulse_width_ms,
+            amplitude=amplitude,
+        )
+
+    pulse_len = int(round(pulse_width_ms / dt_ms))
+    isi_steps = int(round((1000.0 / mean_hz) / dt_ms))
+    n_pulses = int(_regular_onsets(n_steps=n_steps, isi_steps=isi_steps).shape[0])
+    if n_pulses <= 2:
+        return _regular_trace(
+            mean_hz=mean_hz,
+            step_duration_s=step_duration_s,
+            dt_ms=dt_ms,
+            pulse_width_ms=pulse_width_ms,
+            amplitude=amplitude,
+        )
+
+    burst_sizes = (3, 4, 5, 6, 8, 10)
+    burst_hz_list = (90.0, 100.0, 110.0, 130.0, 150.0, 160.0)
+    variant = index - 1
+    burst_size = burst_sizes[variant % len(burst_sizes)]
+    burst_hz = burst_hz_list[(variant // len(burst_sizes)) % len(burst_hz_list)]
+    intra_isi = max(pulse_len + 1, int(round((1000.0 / burst_hz) / dt_ms)))
+
+    n_bursts = int(np.ceil(n_pulses / burst_size))
+    span = max(1, n_steps - pulse_len)
+    # Evenly space burst starts across the step; clamp so each burst fits.
+    burst_span = (burst_size - 1) * intra_isi + pulse_len
+    usable = max(1, span - burst_span)
+    if n_bursts == 1:
+        starts = [0]
+    else:
+        starts = [int(round(i * usable / (n_bursts - 1))) for i in range(n_bursts)]
+
+    onsets: list[int] = []
+    for start in starts:
+        for j in range(burst_size):
+            if len(onsets) >= n_pulses:
+                break
+            t = start + j * intra_isi
+            if t + pulse_len > n_steps:
+                break
+            if onsets and t < onsets[-1] + pulse_len:
+                t = onsets[-1] + pulse_len
+            if t + pulse_len > n_steps:
+                break
+            onsets.append(t)
+        if len(onsets) >= n_pulses:
+            break
+
+    # Top up with regular spacing if a burst was clipped at the window end.
+    t = onsets[-1] + isi_steps if onsets else 0
+    while len(onsets) < n_pulses and t + pulse_len <= n_steps:
+        onsets.append(t)
+        t += isi_steps
+
+    onsets_arr = np.array(sorted(onsets[:n_pulses]), dtype=np.int64)
+    return _trace_from_onsets(
+        onsets_arr, n_steps=n_steps, pulse_len=pulse_len, amplitude=amplitude
+    )
+
+
+@dataclass(frozen=True)
+class TherapeuticBurstAlphabet:
+    """High-rate pulse packets at fixed 30 Hz mean (Fig 5b alphabet redesign).
+
+    Pattern 0 remains regular ``mean_hz``. Patterns 1–40 pack the same pulse
+    count into short bursts at 90–160 Hz with silent gaps — instantaneous rate
+    outside the beta band, mean rate unchanged.
+    """
+
+    mean_hz: float
+    step_duration_s: float = 2.0
+    dt_ms: float = 0.02
+    n_patterns: int = 41
+    pulse_width_ms: float = DBS_PULSE_WIDTH_MS
+    amplitude: float = DBS_AMPLITUDE_NA_PER_CM2
+
+    @property
+    def n_actions(self) -> int:
+        return self.n_patterns
+
+    def idbs_for_pattern(self, index: int) -> np.ndarray:
+        if index < 0 or index >= self.n_actions:
+            msg = f"pattern index {index} outside [0, {self.n_actions})"
+            raise ValueError(msg)
+        return _build_therapeutic_burst_idbs(
+            index=index,
+            mean_hz=self.mean_hz,
+            step_duration_s=self.step_duration_s,
+            dt_ms=self.dt_ms,
+            pulse_width_ms=self.pulse_width_ms,
+            amplitude=self.amplitude,
+        )
+
+    def idbs_for_action(self, action: int) -> np.ndarray:
+        return self.idbs_for_pattern(int(action))
+
+    def to_dbs_spec(self, action: int) -> DbsSpec:
+        return DbsSpec(
+            pick_dbs_freq=DbsSpec.from_frequency_hz(self.mean_hz).pick_dbs_freq,
+            idbs=self.idbs_for_pattern(int(action)),
+            mean_hz=self.mean_hz,
+        )
+
+    def action_for_dbs_spec(self, spec: DbsSpec) -> int:
+        return self.action_for_frequency_hz(spec.frequency_hz)
+
+    def action_for_frequency_hz(self, hz: float) -> int:
+        if abs(float(hz) - self.mean_hz) < 1e-6:
+            return 0
+        msg = (
+            f"frequency {hz} Hz has no therapeutic-burst pattern (mean_hz={self.mean_hz}); "
+            "only the mean-rate periodic baseline maps to a pattern (index 0)"
+        )
+        raise ValueError(msg)
 
 
 @dataclass(frozen=True)

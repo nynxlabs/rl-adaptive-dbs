@@ -13,7 +13,7 @@ Replication of published **adaptive DBS** reinforcement-learning work on one sha
 | Mehregan et al. panel checklist | [docs/figures/paper_1.md](docs/figures/paper_1.md) | `scripts/figures/papers/<paper>/<panel>/plot.py` |
 | What matches / diverges from the paper | [docs/development/replication-fidelity.md](docs/development/replication-fidelity.md) | Specs under `docs/plant.md`, `docs/environment.md`, `docs/controllers/` |
 
-**Open panels (Mehregan):** Fig 5b (30 Hz efficacy), Fig 6a (PTQ/QAT @ 45 Hz), Fig 6b (PTQ/QAT @ 30 Hz, planned). Six plant/training panels already pass (1b, 2a, 2b, 4a, 4b, 5a).
+**Open panels (Mehregan):** Fig 6a (PTQ/QAT @ 45 Hz), Fig 6b (PTQ/QAT @ 30 Hz, planned). Seven panels pass (1b, 2a, 2b, 4a, 4b, 5a, 5b); Fig 5b uses `BurstPatternAlphabet`.
 
 The **phase roadmap** ([docs/development/roadmap.md](docs/development/roadmap.md)) still describes long-term architecture — environment, controllers, benchmarking, fusion — but day-to-day priorities follow **figure gates** first. Suite runs (`mehregan_eval`), CLI/TUI, and fresh-VM validation support replication; they are not the main exit criterion on their own.
 

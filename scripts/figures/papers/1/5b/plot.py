@@ -12,9 +12,9 @@ Three series on the **raw PSD** scale:
   3. Periodic 30 Hz / pattern 0 (orange)
 
 **Paired workflow (default):** eval + plot from 30 Hz checkpoint
-(``artifacts/figures/papers/1/5b/checkpoint.pt``). Full 41-pattern alphabet
-(pattern 0 kept — worst open-loop at 30 Hz). Train with
-``scripts/retrain_30hz_fig5b.py``.
+(``artifacts/figures/papers/1/5b/checkpoint.pt``). **BurstPatternAlphabet**
+(41 patterns; pattern 0 = regular 30 Hz; irregulars = 60–120 Hz clusters at
+fixed mean rate — Fig 5b redesign). Train with ``scripts/retrain_30hz_fig5b.py``.
 
 Run:
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/1/5b/plot.py
@@ -41,7 +41,7 @@ if str(_REPO_ROOT) not in sys.path:
 import matplotlib.pyplot as plt
 import numpy as np
 
-from envs.mehregan.fixed_mean_patterns import FixedMeanPatternAlphabet
+from envs.mehregan.pattern_alternatives import BurstPatternAlphabet
 from envs.plant import DbsSpec, PlantConfig, PythonPlant
 from envs.plant.dbs import create_dbs_current
 
@@ -78,8 +78,9 @@ TIME_MAX_S = 12.0
 STIM_ONSET_S = 2.0
 TRAILING_RL_STEP_S = 0.2
 TRAILING_STIM_STEPS = int((TIME_MAX_S - STIM_ONSET_S) / TRAILING_RL_STEP_S)
-DEFAULT_Y_MIN = 100.0
-DEFAULT_Y_MAX = 700.0
+# Y-limits default to auto-fit from plotted traces; override with --y-min / --y-max.
+DEFAULT_Y_MIN: float | None = None
+DEFAULT_Y_MAX: float | None = None
 
 STYLE = {
     "figure.facecolor": "white",
@@ -108,19 +109,49 @@ SERIES = {
 
 
 def _vault_backed_png(path: Path) -> Path:
+    """Ensure replication PNGs land in the vault via ``paper.png``'s target dir.
+
+    Worktrees often materialize ``paper.png`` as a real file (not a symlink). In that
+    case, fall back to the main checkout's ``paper.png`` symlink so we still write
+    the vault path and leave a worktree symlink for local viewing.
+    """
     path = Path(path)
     paper = path.parent / "paper.png"
     if not paper.is_symlink():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return path
+        main = _figure_promote.main_checkout_root(_REPO_ROOT)
+        main_paper = main / "figures" / "papers" / "1" / "5b" / "paper.png"
+        if main_paper.is_symlink():
+            paper = main_paper
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            return path
     vault_dir = paper.resolve().parent
     vault_target = vault_dir / path.name
     path.parent.mkdir(parents=True, exist_ok=True)
+    if path.is_symlink() and path.resolve() == vault_target.resolve():
+        return path
     if path.exists() or path.is_symlink():
+        # Real file in a worktree from an earlier run — replace with vault symlink.
+        if path.is_file() and not path.is_symlink():
+            if not vault_target.exists():
+                import shutil
+
+                shutil.copy2(path, vault_target)
+            path.unlink()
+            path.symlink_to(vault_target)
+            return path
         return path
     if not vault_target.exists():
         vault_target.touch()
     path.symlink_to(vault_target)
+    # Also expose on main checkout figures/ when plotting from a worktree.
+    main = _figure_promote.main_checkout_root(_REPO_ROOT)
+    main_link = main / "figures" / "papers" / "1" / "5b" / path.name
+    if main_link.parent.is_dir() and not main_link.exists():
+        try:
+            main_link.symlink_to(vault_target)
+        except OSError:
+            pass
     return path
 
 
@@ -182,7 +213,7 @@ def _integrate_idbs(
     dt_ms: float,
     onset_sim_s: float,
     segment_actions: list[int] | None,
-    alphabet: FixedMeanPatternAlphabet | None,
+    alphabet: BurstPatternAlphabet | None,
     scalar_hz: float | None = None,
     rl_step_s: float = SEGMENT_S,
 ) -> np.ndarray:
@@ -228,11 +259,10 @@ def _trained_actions_fine(
     env_cfg = MehreganEnvConfig()
     plant = PythonPlant(config=plant_cfg)
     dt_ms = float(PAPER_DT_MS)
-    alphabet = FixedMeanPatternAlphabet(
+    alphabet = BurstPatternAlphabet(
         mean_hz=MEAN_HZ,
         step_duration_s=TRAILING_RL_STEP_S,
         dt_ms=dt_ms,
-        skip_regular=False,
     )
     plant.config = PlantConfig(pd=1, dt_ms=dt_ms)
     plant.reset(seed=seed)
@@ -263,7 +293,7 @@ def _trailing_condition_trace(
     seed: int,
     label: str,
     segment_actions: list[int] | None,
-    alphabet: FixedMeanPatternAlphabet | None,
+    alphabet: BurstPatternAlphabet | None,
     scalar_hz: float | None,
     times: np.ndarray,
     rl_step_s: float = SEGMENT_S,
@@ -323,11 +353,10 @@ def _run_trailing_eval(
     times = _fig2a.sample_times(_fig2a.STEP_S, duration_s=_fig2a.DISPLAY_S)
     plant = PythonPlant(config=PlantConfig(pd=1, dt_ms=PAPER_DT_MS))
     dt_ms = float(PAPER_DT_MS)
-    alphabet = FixedMeanPatternAlphabet(
+    alphabet = BurstPatternAlphabet(
         mean_hz=MEAN_HZ,
         step_duration_s=TRAILING_RL_STEP_S,
         dt_ms=dt_ms,
-        skip_regular=False,
     )
     periodic_actions = [0] * TRAILING_STIM_STEPS
     trained_actions = _trained_actions_fine(checkpoint, seed=seed)
@@ -431,21 +460,38 @@ def fig5b_pass(panel: dict[str, Any]) -> dict[str, Any]:
 def _ylim_for_traces(
     traces: list[list[float]],
     *,
-    y_min: float,
-    y_max: float,
+    y_min: float | None = None,
+    y_max: float | None = None,
 ) -> tuple[float, float, list[float]]:
+    """Choose y-limits from data (default) or explicit overrides.
+
+    When ``y_min`` / ``y_max`` are ``None``, pad the finite trace extrema and
+    snap to a nice 50-unit grid. Explicit values pin that end of the axis.
+    """
     flat = [v for trace in traces for v in trace if np.isfinite(v)]
     if not flat:
-        return y_min, y_max, [100.0, 200.0, 300.0, 400.0, 500.0, 600.0]
+        lo = 100.0 if y_min is None else float(y_min)
+        hi = 700.0 if y_max is None else float(y_max)
+        if hi <= lo:
+            hi = lo + 200.0
+        ticks = [float(t) for t in np.arange(lo, hi + 1e-9, 100.0)]
+        return lo, hi, ticks
+
     pad = 20.0
-    lo = min(y_min, float(np.min(flat)) - pad)
-    hi = max(y_max, float(np.max(flat)) + pad)
+    data_lo = float(np.min(flat)) - pad
+    data_hi = float(np.max(flat)) + pad
+    lo = float(y_min) if y_min is not None else data_lo
+    hi = float(y_max) if y_max is not None else data_hi
+    # Keep non-negative beta power readable; do not force a fixed paper band.
+    if y_min is None:
+        lo = max(0.0, lo)
     lo = float(np.floor(lo / 50.0) * 50.0)
     hi = float(np.ceil(hi / 50.0) * 50.0)
     if hi <= lo:
         hi = lo + 200.0
-    ticks = [float(t) for t in np.arange(lo, hi + 1e-9, 100.0)]
-    if ticks[-1] < hi - 1e-9:
+    step = 50.0 if (hi - lo) <= 400.0 else 100.0
+    ticks = [float(t) for t in np.arange(lo, hi + 1e-9, step)]
+    if not ticks or ticks[-1] < hi - 1e-9:
         ticks.append(hi)
     return lo, hi, ticks
 
@@ -454,8 +500,8 @@ def plot_fig5b(
     payload: dict[str, Any],
     *,
     out_path: Path,
-    y_min: float = DEFAULT_Y_MIN,
-    y_max: float = DEFAULT_Y_MAX,
+    y_min: float | None = DEFAULT_Y_MIN,
+    y_max: float | None = DEFAULT_Y_MAX,
 ) -> dict[str, Any]:
     plt.rcParams.update(STYLE)
     fig, ax = plt.subplots(figsize=(8.0, 4.5), dpi=150)
@@ -649,8 +695,18 @@ def main() -> int:
         help=f"Output PNG (default: next {OUT_STEM}_vN.png)",
     )
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
-    parser.add_argument("--y-min", type=float, default=DEFAULT_Y_MIN)
-    parser.add_argument("--y-max", type=float, default=DEFAULT_Y_MAX)
+    parser.add_argument(
+        "--y-min",
+        type=float,
+        default=None,
+        help="Y-axis minimum (default: auto from traces)",
+    )
+    parser.add_argument(
+        "--y-max",
+        type=float,
+        default=None,
+        help="Y-axis maximum (default: auto from traces)",
+    )
     parser.add_argument(
         "--sampling",
         choices=("trailing", "segment"),
