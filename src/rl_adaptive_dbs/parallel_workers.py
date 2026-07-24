@@ -52,14 +52,32 @@ def train_seed_worker(job: TrainSeedJob) -> dict[str, Any]:
     """Train one seed in an isolated process with its own MATLAB engine."""
     from dataclasses import replace
 
+    ckpt_path = job.checkpoint_dir / f"{job.variant}_train{job.seed}.pt"
+
+    if job.controller == "snn":
+        from controllers.snn.config import SNNConfig
+        from controllers.snn.trainer import train_dsqn
+
+        config = SNNConfig(variant=job.variant, seed=int(job.seed), log_episodes=True)
+        if job.episodes is not None:
+            config = replace(config, num_episodes=int(job.episodes))
+        plan: dict[str, Any] = {
+            "controller": job.controller,
+            "variant": job.variant,
+            "seed": job.seed,
+            "episodes": config.num_episodes,
+            "checkpoint": ckpt_path.as_posix(),
+        }
+        train_dsqn(config=config, checkpoint_path=ckpt_path)
+        return {**plan, "status": "ok"}
+
     from controllers.ddpg.config import DDPGConfig
     from rl_adaptive_dbs.env_factory import build_mehregan_env
 
     config = DDPGConfig(variant=job.variant, seed=int(job.seed))
     if job.episodes is not None:
         config = replace(config, num_episodes=int(job.episodes))
-    ckpt_path = job.checkpoint_dir / f"{job.variant}_train{job.seed}.pt"
-    plan: dict[str, Any] = {
+    plan = {
         "controller": job.controller,
         "variant": job.variant,
         "seed": job.seed,

@@ -18,7 +18,7 @@ from controllers.ddpg.quantization import fp_source_variant, is_ptq_variant
 from rl_adaptive_dbs.info import CONTROLLER_VARIANTS
 
 
-_CONTROLLER_PHASE: dict[str, int] = {"snn": 5, "sea_dbs": 6}
+_CONTROLLER_PHASE: dict[str, int] = {"sea_dbs": 6}
 
 
 def validate_eval_request(controller: str, variant: str) -> None:
@@ -33,10 +33,13 @@ def validate_eval_request(controller: str, variant: str) -> None:
     if variant not in CONTROLLER_VARIANTS[controller]:
         msg = f"unknown variant {variant!r} for controller {controller!r}"
         raise KeyError(msg)
-    if controller != "ddpg":
+    if controller in _CONTROLLER_PHASE:
         phase = _CONTROLLER_PHASE[controller]
         msg = f"eval for {controller!r} is not implemented (Phase {phase})"
         raise NotImplementedError(msg)
+    if controller == "snn":
+        # Eval path for snn is wired below; keep sea_dbs blocked via _CONTROLLER_PHASE.
+        return
 
 
 def _resolve_checkpoint(
@@ -52,7 +55,7 @@ def _resolve_checkpoint(
     if checkpoint is not None:
         return checkpoint if checkpoint.is_absolute() else (repo_root / checkpoint).resolve()
     ckpt_variant = fp_source_variant(variant) if is_ptq_variant(variant) else variant
-    default = repo_root / "artifacts" / "ddpg" / f"{ckpt_variant}_train{train_seed}.pt"
+    default = repo_root / "artifacts" / controller / f"{ckpt_variant}_train{train_seed}.pt"
     return default
 
 
@@ -77,6 +80,64 @@ def eval_controller(
 ) -> list[RunRecord]:
     validate_eval_request(controller, variant)
     repo_root = find_repo_root()
+
+    if controller == "snn":
+        from controllers.snn.config import EVAL_EPISODES, EVAL_MAX_STEPS, SNNConfig
+        from controllers.snn.eval import evaluate as evaluate_snn
+
+        records: list[RunRecord] = []
+        for seed in seeds:
+            ckpt = _resolve_checkpoint(
+                controller, variant, checkpoint, repo_root=repo_root, train_seed=int(seed)
+            )
+            if ckpt is None or not ckpt.is_file():
+                msg = f"checkpoint not found: {ckpt}"
+                raise FileNotFoundError(msg)
+            cfg = SNNConfig(variant=variant, seed=int(seed))
+            payload = evaluate_snn(
+                ckpt,
+                config=cfg,
+                episodes=EVAL_EPISODES,
+                max_steps=EVAL_MAX_STEPS,
+            )
+            rid = run_id or make_run_id()
+            planned = PlannedRun(
+                controller=controller,
+                variant=variant,
+                seed=int(seed),
+                entry=ControllerEntry(
+                    controller=controller, variant=variant, checkpoint=ckpt, adapter=True
+                ),
+                checkpoint=ckpt,
+            )
+            records.append(
+                RunRecord(
+                    planned=planned,
+                    run_id=rid,
+                    run_dir=Path("results") / "adhoc_eval" / "runs" / run_dir_name(planned, rid),
+                    metrics={
+                        "controller": controller,
+                        "variant": variant,
+                        "seed": int(seed),
+                        "run_id": rid,
+                        "protocol": "nguyen_eval",
+                        "p_beta_mean": payload["p_beta_mean"],
+                        "reward_sum": payload["reward_sum"],
+                        "alpha_beta_mean": payload["alpha_beta_mean"],
+                        "n_episodes": payload["n_episodes"],
+                    },
+                    config={
+                        "controller": controller,
+                        "variant": variant,
+                        "seed": int(seed),
+                        "checkpoint": ckpt.as_posix(),
+                        "protocol": "nguyen_eval",
+                    },
+                    timeseries=None,
+                )
+            )
+        return records
+
     suite = _suite_manifest_for_eval(suite_name, repo_root=repo_root)
     protocol = suite.protocol if suite else "mehregan"
     eval_steps = suite.eval_steps if suite else 5

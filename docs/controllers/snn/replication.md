@@ -4,7 +4,7 @@ This document specifies the **deep spiking Q-network (DSQN)** controller from *C
 
 **Companion spec:** The shared **Kumaravelu et al. (2016)** plant — [plant.md](../../plant.md). **Mehregan et al.** Gymnasium API — [environment.md](../../environment.md). **This document is authoritative for the Nguyen controller**—observation, action, reward, timing, and DSQN training—unless the others explicitly describe the same quantity.
 
-**Scheduling:** Nguyen replication is **Phase 5** on the long-term roadmap ([roadmap.md](../../development/roadmap.md)). Active work follows **Mehregan figure panels** ([figures/paper_1.md](../../figures/paper_1.md)) first; implement `controllers/snn/` when Mehregan panels close or a task explicitly needs this adapter.
+**Scheduling:** Nguyen replication is **Phase 5** and is **active in parallel** with Mehregan ([roadmap.md](../../development/roadmap.md)). Panel tracker: [figures/paper_2.md](../../figures/paper_2.md). Prefer adapter-local conventions over changing Mehregan env defaults.
 
 ---
 
@@ -241,35 +241,35 @@ Hyperparameters with **fixed** values in §IV (episode count, threshold **150**,
 
 ### 1. Spike observation layout ($n \times N$)
 
-Eq. (4) defines a binary spike matrix; §III.B mentions **128** inputs per forward pass (distinct from replay cadence **128**). **Fixed:** binary encoding; **100 ms** RL step. **Open:** which CBGT regions are included, sequence length $n$, and alignment of $n$ with the 100 ms window. **Decide in** `SpikeObservationEncoder`; document tensor shapes and keep fixed across train/eval.
+Eq. (4) defines a binary spike matrix; §III.B mentions **128** inputs per forward pass (distinct from replay cadence **128**). **Fixed:** binary encoding; **100 ms** RL step. **Chosen (v1):** GPi-only ($N=10$), sequence length $n=10$ (`SNNConfig.n_regions=1`, `sequence_steps=10`). Expand regions when the encoder covers full CBGT.
 
 ### 2. Per-parameter DBS delta sensitivities
 
-Ternary actions $\{-1,0,1\}$ scale amplitude, frequency, and pulse width by unspecified scalar step sizes. **Fixed:** three parameters, three ternary choices each (nine outputs). **Open:** numeric sensitivities and plausible bounds. **Decide in** `DBSParameterState` / adapter; keep parameters in biologically plausible ranges.
+Ternary actions $\{-1,0,1\}$ scale amplitude, frequency, and pulse width by unspecified scalar step sizes. **Fixed:** three parameters, three ternary choices each (nine outputs). **Chosen (v1):** amplitude **10** nA/cm², frequency **5** Hz, pulse width **0.05** ms per $+1$ (`SNNConfig.*_sensitivity`), with adapter clamps.
 
 ### 3. Nine-way vs factored action selection
 
-Nine output LIF units are consistent with three parameters × three choices, but the paper does not say whether control uses one **joint** argmax over nine actions or **three independent** argmaxes. **Fixed:** spike-count selection for behavior, membrane potentials for Q-learning. **Open:** head grouping scheme. **Decide in** `select_action` and use consistently for training and evaluation.
+Nine output LIF units are consistent with three parameters × three choices, but the paper does not say whether control uses one **joint** argmax over nine actions or **three independent** argmaxes. **Fixed:** spike-count selection for behavior, membrane potentials for Q-learning. **Chosen (v1):** `action_scheme="factored"` — three group argmaxes; Q is the sum of the three selected group membrane values (replay index 0–26).
 
 ### 4. DQN stabilizers and target-network policy
 
-The paper uses DQN bootstrapping but does not name Double DQN, dueling heads, or target-network **update period**. **Fixed:** replay flush every **128** stored transitions; Q-targets from output membrane potentials at $s'$. **Open:** stabilizer set ($\gamma$, learning rate, target copy/hard-update schedule). **Decide in** `DSQNTrainer` config beside the code.
+The paper uses DQN bootstrapping but does not name Double DQN, dueling heads, or target-network **update period**. **Fixed:** replay flush every **128** stored transitions; Q-targets from output membrane potentials at $s'$. **Chosen (v1):** $\gamma=0.99$, Adam lr $10^{-3}$, hard target copy every **100** gradient updates (`SNNConfig.target_update_period`).
 
 ### 5. $\epsilon$-greedy exploration schedule
 
-§III.B specifies decreasing $\epsilon$ each time step; Fig. 4 qualitatively shifts toward exploitation around episode **~100**, but no numeric schedule is tabulated. **Fixed:** $\epsilon$-greedy overlay on spike-count argmax. **Open:** initial $\epsilon$, decay rule, and floor. **Decide in** trainer config and log values used.
+§III.B specifies decreasing $\epsilon$ each time step; Fig. 4 qualitatively shifts toward exploitation around episode **~100**, but no numeric schedule is tabulated. **Fixed:** $\epsilon$-greedy overlay on spike-count argmax. **Chosen (v1):** $\epsilon: 1.0 \rightarrow 0.05$ over **2500** env steps (~100 episodes × 25 steps).
 
 ### 6. Early-termination persistence $t_u$
 
-Episodes terminate early when GPi $\alpha$–$\beta < \theta = 150$ for $t_u$ **consecutive** steps, with terminal bonus using remaining horizon $t_r$ (Eq. (7)). **Fixed:** threshold **150**; bonus uses $t_r$. **Open:** required consecutive sub-threshold steps $t_u$. **Decide in** `NguyenEnvAdapter` termination logic.
+Episodes terminate early when GPi $\alpha$–$\beta < \theta = 150$ for $t_u$ **consecutive** steps, with terminal bonus using remaining horizon $t_r$ (Eq. (7)). **Fixed:** threshold **150**; bonus uses $t_r$. **Chosen (v1):** $t_u = 3$ (`SNNConfig.subthreshold_steps_required`).
 
 ### 7. Reward coefficients and distance metric $d$
 
-Eq. (7) combines energy penalty $\delta E$, threshold indicator $\theta_u$, squared gap $d$, and terminal scale $\tau$, but numeric $\delta$, $\tau$, and the exact normalization of $d$ are not given. **Fixed:** reward structure and energy index Eq. (6); **$\theta_u = 1$ when $\alpha$–$\beta < \theta$** (consistent with $\tau$ as “reward for being under the threshold”). **Open:** coefficient values. **Decide in** trainer/adapter config; align with released code if available, else tune for stable learning and document.
+Eq. (7) combines energy penalty $\delta E$, threshold indicator $\theta_u$, squared gap $d$, and terminal scale $\tau$, but numeric $\delta$, $\tau$, and the exact normalization of $d$ are not given. **Fixed:** reward structure and energy index Eq. (6); **$\theta_u = 1$ when $\alpha$–$\beta < \theta$** (consistent with $\tau$ as “reward for being under the threshold”). **Chosen (v1):** $\delta=0.01$, $\tau=1.0$ (`SNNConfig.energy_penalty`, `threshold_reward`).
 
 ### 8. LIF firing threshold $\theta_{\mathrm{th}}$
 
-§III.B fixes leak $\beta = 0.95$ and distinguishes biomarker threshold $\theta = 150$ from the LIF spike threshold symbol $\theta_{\mathrm{th}}$. **Fixed:** three-layer LIF DSQN with **128** hidden and **9** output units. **Open:** numeric $\theta_{\mathrm{th}}$ for membrane spike rule. **Decide in** `LIFLayer` defaults unless released code specifies otherwise.
+§III.B fixes leak $\beta = 0.95$ and distinguishes biomarker threshold $\theta = 150$ from the LIF spike threshold symbol $\theta_{\mathrm{th}}$. **Fixed:** three-layer LIF DSQN with **128** hidden and **9** output units. **Chosen (v1):** $\theta_{\mathrm{th}} = 1.0$ (`SNNConfig.lif_threshold`).
 
 ### 9. Shared `envs/` adapter vs Nguyen timing
 

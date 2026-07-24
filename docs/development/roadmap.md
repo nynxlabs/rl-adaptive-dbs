@@ -15,9 +15,16 @@ Phases and implementation status for **rl-adaptive-dbs**. Contributor rules: [co
 | Fig 5b | **Pass** | 30 Hz post-train efficacy; `BurstPatternAlphabet` |
 | Fig 6a, 6b | **Open** | PTQ/QAT panels — [ddpg/replication.md](../controllers/ddpg/replication.md) §6 |
 
-**How this relates to phases:** Phases 1–3 (specs, environment, DDPG) and most Phase 4 **infrastructure** (benchmark runner, `rl-dbs`, `rl-dbs-tui`, PTQ/QAT hooks) are **done**. **Setup scripts:** Python-only path **re-verified on maintainer WSL** (2026-07-18); Multipass / Sandbox and `--with-matlab` still pending — [setup.md](../setup.md) § Setup script verification status. Remaining Mehregan work is **closing open panels** — which may require plant conventions, training protocol, or quantization fixes documented in [replication-fidelity.md](replication-fidelity.md), not ticking a phase box. Phases 5–9 (SNN, SEA-DBS, cross-controller comparison, fusion, native plant) stay on the long-term plan and start when Mehregan figure replication is in good shape (or when a panel explicitly needs them).
+**How this relates to phases:** Phases 1–3 (specs, environment, DDPG) and most Phase 4 **infrastructure** (benchmark runner, `rl-dbs`, `rl-dbs-tui`, PTQ/QAT hooks) are **done**. **Setup scripts:** Python-only path **re-verified on maintainer WSL** (2026-07-18); Multipass / Sandbox and `--with-matlab` still pending — [setup.md](../setup.md) § Setup script verification status. Remaining Mehregan work is **closing open panels** (Fig 6a/6b) — [replication-fidelity.md](replication-fidelity.md). **Phase 5 (Nguyen / SNN) is active in parallel** — figure tracker [figures/paper_2.md](../figures/paper_2.md); do not block it on Mehregan finish. Phases 6–9 (SEA-DBS, cross-controller comparison, fusion, native plant) stay deferred until needed.
 
-**Contributors:** read the panel checklist before large sweeps; promote stable findings into the panel `plot.py` and update [figures/paper_1.md](../figures/paper_1.md) in the same pass. See [conventions.md](conventions.md) § Figure replication.
+**Parallel tracks:**
+
+| Track | Tracker | Focus now |
+|-------|---------|-----------|
+| Mehregan (paper 1) | [figures/paper_1.md](../figures/paper_1.md) | Fig 6a/6b open |
+| Nguyen (paper 2) | [figures/paper_2.md](../figures/paper_2.md) | Fig 3 first; DSQN train/eval |
+
+**Contributors:** read the panel checklist before large sweeps; promote stable findings into the panel `plot.py` and update the matching `figures/paper_*.md` in the same pass. See [conventions.md](conventions.md) § Figure replication.
 
 ---
 
@@ -68,7 +75,7 @@ Replicate the shared plant and Mehregan et al. Gym API before any controller wor
 - **Exit criteria:** repeatable `mehregan_eval` runs across full-precision and quantized `ddpg` variants; replication checklist passable for `ddpg` (including §IV.A.3 quantization); `uv run rl-dbs benchmark` and `uv run rl-dbs-tui` usable for Phase 4 workflows; **setup scripts pass on fresh VMs** on each supported OS (or gaps documented with repro steps).
 - **Results doc:** [phase4-results.md](phase4-results.md) — §8 implementation audit **done** (2026-07-01); full-suite `mehregan_eval` **done** (TASK-9, 2026-07-03). Remaining Mehregan validation is **figure-panel** driven ([figures/paper_1.md](../figures/paper_1.md)), not another suite pass.
 
-### Phase 5 — SNN controller (`snn`), adapter, and per-paper benchmarking
+### Phase 5 — SNN controller (`snn`), adapter, and per-paper benchmarking (**active**)
 
 | Package | Paper | Notes |
 |---------|--------|--------|
@@ -77,7 +84,8 @@ Replicate the shared plant and Mehregan et al. Gym API before any controller wor
 - Replicate `controllers/snn/`; extend or wrap `envs/` only via the **adapter** (no duplicated CBGT dynamics).
 - Extend `rl-dbs train` / `eval` to `snn` (Phase 4 covers `ddpg` only).
 - **Per-paper suite** `nguyen_eval`; same runner and `rl-dbs` patterns as Phase 4.
-- **Exit criteria:** `snn` trains/evals on the **same plant** through its documented adapter; `nguyen_eval` runs complete.
+- **Figure track:** [figures/paper_2.md](../figures/paper_2.md) (Fig 3–7).
+- **Exit criteria:** `snn` trains/evals on the **same plant** through its documented adapter; `nguyen_eval` runs complete; qualitative panel gates in `paper_2.md`.
 
 ### Phase 6 — SEA-DBS controller (`sea_dbs`), adapter, and per-paper benchmarking
 
@@ -133,7 +141,7 @@ Phases 9+ are intentionally open; prioritize equivalence and replication paths b
 | [tui.md](../tui.md) | Draft | `rl-dbs-tui` — six tabs (Run, Training, Eval, Benchmarks, Logs, Settings) |
 | `envs/` (`src/envs/`) | Done | `MatlabPlant`, `MehreganEnv`, $P_\beta$, baselines (`run_baseline_rollout`) |
 | `controllers/ddpg/` (`src/controllers/ddpg/`) | Done (FP + PTQ/QAT) | Full-precision `paper` / `init-30hz`; PTQ/QAT in `quantization.py` |
-| `controllers/snn/` (`src/controllers/snn/`) | Scaffold | Phase 5 — package stub + shape tests |
+| `controllers/snn/` (`src/controllers/snn/`) | In progress | Phase 5 active — adapter + DSQN; train/eval + Fig 3–7 — [figures/paper_2.md](../figures/paper_2.md) |
 | `controllers/sea_dbs/` | Placeholder | Phase 6 |
 | [matlab.md](../matlab.md) + `scripts/matlab/` | Done (WSL) | Fresh validation: Multipass (Linux) pending; **Sandbox (Windows) passed** 2026-06-30 — [fresh-validation.md](fresh-validation.md) |
 | Project setup script | **Partial** | WSL python-only pass 2026-07-18 (`setup.sh --validate`, 291 pytest); Multipass / Sandbox + `--with-matlab` pending — [setup.md](../setup.md), [fresh-validation.md](fresh-validation.md) |
@@ -143,11 +151,11 @@ Phases 9+ are intentionally open; prioritize equivalence and replication paths b
 | `rl-dbs` CLI | Partial | `benchmark`, `summary`, `info`, `config show`, `train`/`eval` (`ddpg`); `snn` Phase 5; `sea_dbs` Phase 6 |
 | `rl-dbs-tui` | Done (v1) | Six tabs ([Textual](https://textual.textualize.io/)); Run tab launches detached jobs; Settings persistence |
 | Thread limits (`thread_limits.py`, `run.py`) | Done | Default 3-thread cap for plant-heavy CLI + `python -m rl_adaptive_dbs.run` |
-| Figure panel scripts (`scripts/figures/papers/`) | Partial | 1b–5a pass; 5b, 6a, 6b open — [figures/paper_1.md](../figures/paper_1.md) |
+| Figure panel scripts (`scripts/figures/papers/`) | Partial | Paper 1: 1b–5b pass, 6a/6b open — [figures/paper_1.md](../figures/paper_1.md); Paper 2: Fig 3–7 open — [figures/paper_2.md](../figures/paper_2.md) |
 
-**Scheduling axis:** figure replication ([figures/paper_1.md](../figures/paper_1.md)) — open: Fig 6a, 6b.
+**Scheduling axis:** parallel figure tracks — Mehregan ([figures/paper_1.md](../figures/paper_1.md): 6a/6b) and Nguyen ([figures/paper_2.md](../figures/paper_2.md): start at Fig 3).
 
-**Phase map (reference):** Phases 1–4 infrastructure largely **complete**; Phase 5+ deferred until Mehregan panels close or a task explicitly needs them. **Setup scripts:** WSL python-only verified 2026-07-18; fresh VMs and MATLAB path outstanding ([setup.md](../setup.md) § Setup script verification status, [fresh-validation.md](fresh-validation.md)).
+**Phase map (reference):** Phases 1–4 infrastructure largely **complete**; Phase 5 (Nguyen) **active in parallel**; Phase 6+ deferred. **Setup scripts:** WSL python-only verified 2026-07-18; fresh VMs and MATLAB path outstanding ([setup.md](../setup.md) § Setup script verification status, [fresh-validation.md](fresh-validation.md)).
 
 ---
 
@@ -155,7 +163,8 @@ Phases 9+ are intentionally open; prioritize equivalence and replication paths b
 
 | Doc | Role |
 |-----|------|
-| [figures/paper_1.md](../figures/paper_1.md) | Mehregan panel replication — primary goal tracker |
+| [figures/paper_1.md](../figures/paper_1.md) | Mehregan panel replication — paper 1 tracker |
+| [figures/paper_2.md](../figures/paper_2.md) | Nguyen DSQN panel replication — paper 2 tracker |
 | [replication-fidelity.md](replication-fidelity.md) | Mehregan verified / divergent / added |
 | [setup.md](../setup.md) | Setup and how to use the repo |
 | [testing.md](testing.md) | pytest layout, markers, what to test |
