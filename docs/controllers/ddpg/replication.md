@@ -15,7 +15,7 @@ Mehregan DDPG work is validated **panel-by-panel**, not by â€œPhase 3 complete.â
 | Fig 4a | Training $P_\beta$ vs step; Algorithm 1 + exploration defaults | `scripts/figures/papers/1/4a/plot.py` | Pass |
 | Fig 4b | Episode reward + PSD trends | `scripts/figures/papers/1/4b/plot.py` | Pass |
 | Fig 5a | Post-train efficacy @ 45 Hz init | `scripts/figures/papers/1/5a/plot.py` | Pass |
-| Fig 5b | Post-train efficacy @ 30 Hz init | `scripts/figures/papers/1/5b/plot.py` | **Open** |
+| Fig 5b | Post-train efficacy @ 30 Hz init | `scripts/figures/papers/1/5b/plot.py` | **Pass** (burst alphabet) |
 | Fig 6a | PTQ / QAT @ 45 Hz | `scripts/figures/papers/1/6a/plot.py` | **Open** |
 | Fig 6b | PTQ / QAT @ 30 Hz | planned | **Open** |
 
