@@ -12,7 +12,7 @@ from rl_adaptive_dbs.env_factory import build_mehregan_env
 from rl_adaptive_dbs.info import CONTROLLER_VARIANTS
 
 
-_CONTROLLER_PHASE: dict[str, int] = {"snn": 5, "sea_dbs": 6}
+_CONTROLLER_PHASE: dict[str, int] = {"sea_dbs": 6}
 
 
 def validate_train_request(controller: str, variant: str) -> None:
@@ -22,11 +22,11 @@ def validate_train_request(controller: str, variant: str) -> None:
     if variant not in CONTROLLER_VARIANTS[controller]:
         msg = f"unknown variant {variant!r} for controller {controller!r}"
         raise KeyError(msg)
-    if controller != "ddpg":
+    if controller in _CONTROLLER_PHASE:
         phase = _CONTROLLER_PHASE[controller]
         msg = f"training for {controller!r} is not implemented (Phase {phase})"
         raise NotImplementedError(msg)
-    if is_ptq_variant(variant):
+    if controller == "ddpg" and is_ptq_variant(variant):
         msg = (
             f"variant {variant!r} is PTQ (post-training quantization, eval-only); "
             "train variant 'paper' first, then eval with "
@@ -58,15 +58,25 @@ def train_controller(
     summaries: list[dict[str, Any]] = []
 
     for seed in seeds:
-        config = DDPGConfig(variant=variant, seed=int(seed))
-        if episodes is not None:
-            config = replace(config, num_episodes=int(episodes))
+        if controller == "snn":
+            from controllers.snn.config import SNNConfig
+
+            config: Any = SNNConfig(variant=variant, seed=int(seed), log_episodes=True)
+            if episodes is not None:
+                config = replace(config, num_episodes=int(episodes))
+            n_episodes = config.num_episodes
+        else:
+            config = DDPGConfig(variant=variant, seed=int(seed))
+            if episodes is not None:
+                config = replace(config, num_episodes=int(episodes))
+            n_episodes = config.num_episodes
+
         ckpt_path = out_dir / f"{variant}_train{seed}.pt"
         plan = {
             "controller": controller,
             "variant": variant,
             "seed": seed,
-            "episodes": config.num_episodes,
+            "episodes": n_episodes,
             "checkpoint": ckpt_path.as_posix(),
         }
         if dry_run:
@@ -93,10 +103,28 @@ def train_controller(
         return run_in_parallel(jobs, train_seed_worker, parallel)
 
     for seed in seeds:
+        ckpt_path = out_dir / f"{variant}_train{seed}.pt"
+        if controller == "snn":
+            from controllers.snn.config import SNNConfig
+            from controllers.snn.trainer import train_dsqn
+
+            config = SNNConfig(variant=variant, seed=int(seed), log_episodes=True)
+            if episodes is not None:
+                config = replace(config, num_episodes=int(episodes))
+            plan = {
+                "controller": controller,
+                "variant": variant,
+                "seed": seed,
+                "episodes": config.num_episodes,
+                "checkpoint": ckpt_path.as_posix(),
+            }
+            train_dsqn(config=config, checkpoint_path=ckpt_path)
+            summaries.append({**plan, "status": "ok"})
+            continue
+
         config = DDPGConfig(variant=variant, seed=int(seed))
         if episodes is not None:
             config = replace(config, num_episodes=int(episodes))
-        ckpt_path = out_dir / f"{variant}_train{seed}.pt"
         plan = {
             "controller": controller,
             "variant": variant,
