@@ -4,18 +4,18 @@
 
 Side-by-side **paper panel** vs **our replication** for qualitative checks. Plot scripts write replication PNGs to `figures/papers/`; JSON caches to `artifacts/figures/papers/`.
 
-**Passed panels** (1b, 2a, 2b, 4a, 4b, 5a) use a short **Status** block. **Open panels** keep a full side-by-side checklist until gates pass.
+**Passed panels** (1b, 2a, 2b, 4b, 5a) use a short **Status** block. **Open / needs-work panels** keep a full side-by-side checklist until gates pass.
 
 | Panel | Script | Spec | Status |
 |-------|--------|------|--------|
 | Fig 1b — GPi PSD | `scripts/figures/papers/1/1b/plot.py` | [plant.md](../plant.md) | Pass |
 | Fig 2a — GPi $P_\beta$ time series | `scripts/figures/papers/1/2a/plot.py` | [plant.md](../plant.md) | Pass |
 | Fig 2b — Error Index time series | `scripts/figures/papers/1/2b/plot.py` | [plant.md](../plant.md) | Pass |
-| Fig 4a — training $P_\beta$ vs step | `scripts/figures/papers/1/4a/plot.py` | [environment.md](../environment.md), [ddpg/replication.md](../controllers/ddpg/replication.md) | Pass (v4) |
+| Fig 4a — training $P_\beta$ vs step | `scripts/figures/papers/1/4a/plot.py` | [environment.md](../environment.md), [ddpg/replication.md](../controllers/ddpg/replication.md) | Needs work |
 | Fig 4b — training reward vs episode | `scripts/figures/papers/1/4b/plot.py` | [environment.md](../environment.md), [ddpg/replication.md](../controllers/ddpg/replication.md) | Pass |
 | Fig 5a — post-train efficacy @ 45 Hz | `scripts/figures/papers/1/5a/plot.py` | [environment.md](../environment.md), [ddpg/replication.md](../controllers/ddpg/replication.md) | Pass |
-| Fig 5b — post-train efficacy @ 30 Hz | `scripts/figures/papers/1/5b/plot.py` | [environment.md](../environment.md), [ddpg/replication.md](../controllers/ddpg/replication.md) | Open (retrain in progress) |
-| Fig 6a — PTQ / QAT @ 45 Hz | `scripts/figures/papers/1/6a/plot.py` | [controllers/ddpg/replication.md](../controllers/ddpg/replication.md) | Open |
+| Fig 5b — post-train efficacy @ 30 Hz | `scripts/figures/papers/1/5b/plot.py` | [environment.md](../environment.md), [ddpg/replication.md](../controllers/ddpg/replication.md) | Pass (burst alphabet, v3) |
+| Fig 6a — PTQ / QAT @ 45 Hz | `scripts/figures/papers/1/6a/plot.py` | [controllers/ddpg/replication.md](../controllers/ddpg/replication.md) | Open (trailing v5) |
 | Fig 6b — PTQ / QAT @ 30 Hz | `scripts/figures/papers/1/6b/plot.py` (planned) | [controllers/ddpg/replication.md](../controllers/ddpg/replication.md) | Open |
 
 Replication PNGs: `figures/papers/`. JSON caches: `artifacts/figures/papers/`.
@@ -140,7 +140,7 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 **Manifest:** `artifacts/figures/papers/1/4a/manifest.json`
 <!-- caption-4a:end -->
 
-**Status:** Pass (v4) — same seed-0 training run as v3; plot y-limits extended to show the full trace. Qualitative shape match (noisy early, drop ~130–150, lower late). Late mean sits a bit below the paper’s ~0.35–0.45 band; accepted as polish, not a blocker.
+**Status:** Needs work — v4 still the best locked seed-0 trace (noisy early, drop ~130–150, lower late), but the panel is not closed: late mean sits below the paper’s ~0.35–0.45 band, and further training/plot polish is still required before treating this as Pass.
 
 **Run:**
 
@@ -272,25 +272,27 @@ Key paper claim: **periodic 30 Hz elevates** beta (stimulation rate inside the b
 
 ### Replication
 
-![Replication Fig 5b](papers/1/5b/efficacy_30hz_v1.png)
+![Replication Fig 5b](papers/1/5b/efficacy_30hz_v3.png)
 
 <!-- caption-5b:start -->
-**Caption:** 30 Hz paper-protocol eval, seed 0, checkpoint=checkpoint.pt, 0.2s trailing, v1, trained_mean=578, no_stim_mean=498, periodic_mean=655, gates open (2026-07-16)
+**Caption:** 30 Hz paper-protocol eval, seed 0, checkpoint=checkpoint.pt, 0.2s trailing, v3, trained_mean=367, no_stim_mean=488, periodic_mean=638, trained<both, gates pass (2026-07-23)
 
 **Manifest:** `artifacts/figures/papers/1/5b/manifest.json`
 <!-- caption-5b:end -->
 
-**Status:** Open — 30 Hz retrain + trailing eval in flight; prior interim run failed trained `<` no-stim (see [replication-fidelity.md](../development/replication-fidelity.md)).
+**Status:** Pass — burst-alphabet retrain (seed 0) + trailing eval **v3**. Gates: shared baseline, periodic **>** no-stim, trained **<** no-stim, trained **<** periodic (trained≈367, no-stim≈488, periodic≈639). Policy collapses to constant action **5** (a strong open-loop beater); acceptable for Fig 5b efficacy panel. Y-limits auto-fit from traces (override with `--y-min` / `--y-max`).
+
+**Convention (burst alphabet, 2026-07-23):** The default ±1/3 ISI jitter alphabet has **0/41** open-loop patterns with $P_\beta$ below no-stim at `plant.dt_ms=0.02` (TASK-176; switching oracle also failed). Periodic 14–34 Hz is a plant dead zone (TASK-177). Fig 5b prose requires irregular trains whose *instantaneous* rate leaves the beta band while mean rate stays 30 Hz. **Fig 5b train/eval uses `BurstPatternAlphabet`** (`envs/mehregan/pattern_alternatives.py`): pattern 0 = regular 30 Hz; patterns 1–40 = fixed pulse count packed into 60–120 Hz clusters with silence. 1-step oracle: **32/41** beat no-stim (best ≈331 vs no-stim ≈503). Artifact: `artifacts/ddpg/fig5b_alphabet_redesign_oracle_30hz.json`. ±1/3 ISI remains the default for other panels (e.g. Fig 5a).
 
 ### Side-by-side checklist
 
 | Check | Paper | Replication | Match? |
 |-------|-------|-------------|--------|
-| **Protocol** | 2 s baseline + post-onset stim; fixed seed | Trailing 0.2 s / 2 s window (Fig 2a); 14 s integrate | — |
-| **Periodic 30 Hz vs no stim** | Periodic **>** no stim after $t=2$ | TBD | — |
-| **Trained vs no stim** | Trained **<** no stim after $t=2$ | TBD | — |
-| **Trained vs periodic 30 Hz** | Trained **<** periodic 30 Hz | TBD | — |
-| **Qualitative shape** | Green low band ~350–430; orange high ~580–650 | TBD | — |
+| **Protocol** | 2 s baseline + post-onset stim; fixed seed | Trailing 0.2 s / 2 s window (Fig 2a); 14 s integrate | Yes |
+| **Periodic 30 Hz vs no stim** | Periodic **>** no stim after $t=2$ | ≈639 vs ≈488 | Yes |
+| **Trained vs no stim** | Trained **<** no stim after $t=2$ | ≈367 vs ≈488 | Yes |
+| **Trained vs periodic 30 Hz** | Trained **<** periodic 30 Hz | ≈367 vs ≈639 | Yes |
+| **Qualitative shape** | Green low band ~350–430; orange high ~580–650 | Green ~320–370; orange ~630–680 | Yes (levels) |
 
 **Run (panel script — default trailing eval + versioned PNG):**
 
@@ -306,7 +308,7 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/1/5b/plot.py --plot-
 
 Legacy 2 s segment plot: `--sampling segment`.
 
-**Defaults:** seed `0`, **41 patterns** (no skip_regular), **trailing** sampling, Python plant, `plant.dt_ms=0.02`, checkpoint `artifacts/figures/papers/1/5b/checkpoint.pt`.
+**Defaults:** seed `0`, **BurstPatternAlphabet** (41 patterns), **trailing** sampling, Python plant, `plant.dt_ms=0.02`, checkpoint `artifacts/figures/papers/1/5b/checkpoint.pt`.
 
 **Acceptance (automation):** trained mean $P_\beta$ `<` no-stim **and** `<` periodic 30 Hz (`_fig5b_pass` in training scripts).
 
@@ -329,35 +331,44 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 
 ### Replication
 
-![Replication Fig 6a](papers/1/6a/ptq_qat_45hz_v3.png)
+![Replication Fig 6a](papers/1/6a/ptq_qat_45hz_v5.png)
 
 <!-- caption-6a:start -->
-**Caption:** 45 Hz paper-protocol eval, seed 1, fp32_post=449, qat_post=284, PTQ tracks fp32, 2026-07-13
+**Caption:** 45 Hz paper-protocol eval, seed 0, 0.2s trailing, fp32_post=405, qat_post=406, PTQ tracks fp32, QAT elevated, 2026-07-23
 
 **Manifest:** `artifacts/figures/papers/1/6a/manifest.json`
 <!-- caption-6a:end -->
 
-**Status:** Open — paired with Fig 4a checkpoint (`artifacts/figures/papers/1/4a/checkpoint.pt`); trains QAT only by default. Qualitative gates: PTQ fp16/int8 track fp32 after onset; QAT stays elevated.
+**Status:** Open — trailing v5 generated (0.2 s protocol); automated gates pass but QAT elevation is marginal vs paper (see panel). Paired with Fig 5a Pass checkpoint (`artifacts/figures/papers/1/4a/checkpoint_skip_regular_02s.pt`); trains QAT only by default under the same **skip_regular** alphabet (40 irregular patterns) and **0.2 s** train step. Default eval uses **0.2 s trailing / 2 s window** (same as Fig 5a); `--sampling segment` keeps legacy 2 s steps. `skip_regular=True`. Qualitative gates: PTQ fp16/int8 track fp32 after onset; QAT stays elevated; fp32 suppresses vs pre-stim baseline.
+
+**Convention (skip_regular, same as Fig 5a):** At 45 Hz, pattern 0 (regular periodic) is the open-loop optimum. Fig 6a uses the skip_regular fp32 policy so the fully-trained trace actually suppresses beta; otherwise PTQ/QAT ordering is meaningless.
 
 **Run:**
 
 ```bash
-uv run python scripts/figures/papers/1/4a/plot.py --seed 1
-uv run python scripts/figures/papers/1/6a/plot.py --seed 1
-uv run python scripts/figures/papers/1/6a/plot.py --plot-only
-uv run python scripts/figures/papers/1/6a/plot.py --skip-train \
-  --fp32-checkpoint artifacts/figures/papers/1/4a/checkpoint.pt \
-  --qat-checkpoint artifacts/figures/papers/1/6a/qat_train1.pt
+# Once, if skip_regular fp32 is missing:
+uv run python scripts/retrain_45hz_skip_regular.py
+
+uv run python -m rl_adaptive_dbs.run --max-threads 2 \
+  scripts/figures/papers/1/6a/plot.py --seed 0
+uv run python -m rl_adaptive_dbs.run --max-threads 2 \
+  scripts/figures/papers/1/6a/plot.py --plot-only
+uv run python -m rl_adaptive_dbs.run --max-threads 2 \
+  scripts/figures/papers/1/6a/plot.py --skip-train \
+  --fp32-checkpoint artifacts/figures/papers/1/4a/checkpoint_skip_regular_02s.pt \
+  --qat-checkpoint artifacts/figures/papers/1/6a/qat_skip_regular_02s.pt
 ```
 
-QAT train only (~30–60 min). Use tmux:
+QAT train only (~30–60 min). Use tmux (cap plant threads at 2):
 
 ```bash
 tmux new-session -d -s fig6a-train \
- "setsid nohup uv run python scripts/figures/papers/1/6a/plot.py >> logs/fig6a-train.log 2>&1 < /dev/null"
+ "setsid nohup uv run python -m rl_adaptive_dbs.run --max-threads 2 \
+   scripts/figures/papers/1/6a/plot.py --seed 0 \
+   >> logs/fig6a-train.log 2>&1 < /dev/null"
 ```
 
-**Defaults:** fp32 from Fig 4a `checkpoint.pt`; QAT 10-episode train; eval protocol matches Fig 5a; raw PSD y-axis.
+**Defaults:** fp32 from Fig 5a `checkpoint_skip_regular_02s.pt`; QAT 10-episode train (`qat_skip_regular_02s.pt`); seed `0`; raw PSD y-axis.
 
 ### Side-by-side checklist
 
@@ -402,7 +413,7 @@ Same quantization panel layout as Fig 6a for the **30 Hz** trained model (§IV.A
 **Manifest:** `artifacts/figures/papers/1/6b/manifest.json` (planned)
 <!-- caption-6b:end -->
 
-**Status:** Open — blocked on passing 30 Hz trained policy (Fig 5b); QAT failure mode should reproduce even if fp32 is weak.
+**Status:** Open — Fig 5b fp32 now passes (burst alphabet); 30 Hz PTQ/QAT panel not yet built.
 
 ### Side-by-side checklist
 

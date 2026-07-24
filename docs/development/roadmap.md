@@ -12,7 +12,7 @@ Phases and implementation status for **rl-adaptive-dbs**. Contributor rules: [co
 |----------------|--------|----------------|
 | Fig 1b, 2a, 2b | **Pass** | Plant / biomarker gates — [plant.md](../plant.md) |
 | Fig 4a, 4b, 5a | **Pass** | Training + 45 Hz efficacy — [environment.md](../environment.md), [ddpg/replication.md](../controllers/ddpg/replication.md) |
-| Fig 5b | **Open** | 30 Hz post-train efficacy; pattern-mode retrain |
+| Fig 5b | **Pass** | 30 Hz post-train efficacy; `BurstPatternAlphabet` |
 | Fig 6a, 6b | **Open** | PTQ/QAT panels — [ddpg/replication.md](../controllers/ddpg/replication.md) §6 |
 
 **How this relates to phases:** Phases 1–3 (specs, environment, DDPG) and most Phase 4 **infrastructure** (benchmark runner, `rl-dbs`, `rl-dbs-tui`, PTQ/QAT hooks) are **done**. **Setup scripts:** Python-only path **re-verified on maintainer WSL** (2026-07-18); Multipass / Sandbox and `--with-matlab` still pending — [setup.md](../setup.md) § Setup script verification status. Remaining Mehregan work is **closing open panels** — which may require plant conventions, training protocol, or quantization fixes documented in [replication-fidelity.md](replication-fidelity.md), not ticking a phase box. Phases 5–9 (SNN, SEA-DBS, cross-controller comparison, fusion, native plant) stay on the long-term plan and start when Mehregan figure replication is in good shape (or when a panel explicitly needs them).
@@ -145,7 +145,7 @@ Phases 9+ are intentionally open; prioritize equivalence and replication paths b
 | Thread limits (`thread_limits.py`, `run.py`) | Done | Default 3-thread cap for plant-heavy CLI + `python -m rl_adaptive_dbs.run` |
 | Figure panel scripts (`scripts/figures/papers/`) | Partial | 1b–5a pass; 5b, 6a, 6b open — [figures/paper_1.md](../figures/paper_1.md) |
 
-**Scheduling axis:** figure replication ([figures/paper_1.md](../figures/paper_1.md)) — open: Fig 5b, 6a, 6b.
+**Scheduling axis:** figure replication ([figures/paper_1.md](../figures/paper_1.md)) — open: Fig 6a, 6b.
 
 **Phase map (reference):** Phases 1–4 infrastructure largely **complete**; Phase 5+ deferred until Mehregan panels close or a task explicitly needs them. **Setup scripts:** WSL python-only verified 2026-07-18; fresh VMs and MATLAB path outstanding ([setup.md](../setup.md) § Setup script verification status, [fresh-validation.md](fresh-validation.md)).
 

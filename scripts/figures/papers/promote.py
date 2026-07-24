@@ -1,7 +1,12 @@
 """Refresh ``docs/figures/paper_1.md`` after paper figure plot scripts run.
 
 Plot scripts write replication PNGs under ``figures/papers/`` and JSON caches under
-``artifacts/figures/papers/``. This module only updates caption markers in the comparison doc.
+``artifacts/figures/papers/``. This module updates caption markers + replication image
+links in the comparison doc.
+
+When run from a git worktree under ``.worktrees/``, shared doc/figure paths resolve to
+the **main checkout** (vault symlink for ``paper_1.md``) so promote does not leave a
+detached worktree copy of the index.
 """
 
 from __future__ import annotations
@@ -11,8 +16,33 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-PAPER_1_DOC = REPO_ROOT / "docs" / "figures" / "paper_1.md"
+
+def main_checkout_root(checkout: Path | None = None) -> Path:
+    """Return the main repo checkout if ``checkout`` is ``.../.worktrees/<name>``."""
+    resolved = (checkout or Path(__file__).resolve().parents[3]).resolve()
+    parts = resolved.parts
+    if ".worktrees" in parts:
+        idx = parts.index(".worktrees")
+        if idx > 0:
+            return Path(*parts[:idx])
+    return resolved
+
+
+CHECKOUT_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = main_checkout_root(CHECKOUT_ROOT)
+
+
+def resolve_paper_1_doc(checkout: Path | None = None) -> Path:
+    """Path to ``docs/figures/paper_1.md`` that plot/promote should update.
+
+    Prefers the main checkout path (usually a vault symlink) so worktree runs update
+    the shared doc the main branch and Obsidian see.
+    """
+    root = main_checkout_root(checkout or CHECKOUT_ROOT)
+    return root / "docs" / "figures" / "paper_1.md"
+
+
+PAPER_1_DOC = resolve_paper_1_doc()
 
 PAPER_1B_PNG = "figures/papers/1/1b/gpi_psd.png"
 PAPER_1B_MANIFEST = "artifacts/figures/papers/1/1b/manifest.json"
@@ -88,6 +118,7 @@ def _doc_figure_link(repo_rel: str) -> str:
     return f"../../{repo_rel}"
 
 
+# Mirror PNGs into the main checkout (vault-backed) even when plotting from a worktree.
 DOCS_FIGURE_PAPERS = REPO_ROOT / "docs" / "figures" / "papers"
 CANONICAL_FIGURE_PAPERS = REPO_ROOT / "figures" / "papers"
 

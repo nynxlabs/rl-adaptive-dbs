@@ -167,6 +167,10 @@ The actor emits logits over a discrete STN pattern set, but §IV.A.1 does not st
 
 **Implemented (`envs/mehregan/patterns.py`):** 41 actions → Kumaravelu `pick_dbs_freq` 1…41 (`freqs = 0:5:200`); action `0` is no DBS (`pick_dbs_freq == 1`).
 
+**Fixed-mean pattern mode (`FixedMeanPatternAlphabet`):** 41 patterns at a constant mean rate (paper Option C); pattern 0 = regular train; patterns 1–40 = ±1/3 ISI jitter. Default for Fig 4a / Fig 5a.
+
+**Fig 5b convention (`BurstPatternAlphabet`):** same 41-cardinality / fixed 30 Hz pulse count, but irregular patterns are **high-rate clusters (60–120 Hz) with silence** so the instantaneous rate leaves the beta band (paper §IV.A.2). Needed because at `plant.dt_ms=0.02` the ±1/3 ISI alphabet has **0/41** open-loop beaters vs no-stim (TASK-176); burst construction yields **32/41** beaters. See [figures/paper_1.md](figures/paper_1.md) Fig 5b.
+
 ### 4. Observation normalization for reward Eq. (8)
 
 Eq. (8) uses threshold $\beta_t = 0.35$ on averaged state entries $s(i)$, but the paper never defines the **monotone mapping** from raw $P_\beta$ (order hundreds in Figure 4) to $s(i)$. **Fixed:** reward shape (linear below $\beta_t$, quadratic at/above). **Open:** normalization pipeline shared by observation and reward. **Decide in** the environment implementation with a single documented transform.
