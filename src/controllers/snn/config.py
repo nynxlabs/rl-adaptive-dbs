@@ -52,11 +52,17 @@ class SNNConfig:
     replay_capacity: int = 10_000
     replay_update_cadence: int = REPLAY_UPDATE_CADENCE
     batch_size: int = 32
+    # Hard-copy target network every N gradient updates (paper silent — convention).
+    target_update_period: int = 100
 
     # Exploration (ε-greedy on spike-count argmax)
     epsilon_start: float = 1.0
     epsilon_end: float = 0.05
-    epsilon_decay_steps: int = 50_000
+    # ~100 episodes × 25 steps ≈ shift toward exploitation (Fig. 4 qualitative).
+    epsilon_decay_steps: int = 2_500
+
+    # Logging
+    log_episodes: bool = False
 
     # Action selection: ``factored`` (3× argmax over ternary groups) or ``joint`` (9-way)
     action_scheme: str = "factored"

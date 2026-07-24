@@ -11,7 +11,14 @@ from controllers.snn.encoder import SpikeObservationEncoder
 from controllers.snn.energy import dbs_energy_index
 from controllers.snn.networks import DSQN, LIFLayer, LIFOutput
 from controllers.snn.reward import alpha_beta_power, nguyen_reward
-from controllers.snn.trainer import DSQNTrainer, TrainMetrics
+from controllers.snn.trainer import (
+    DSQNTrainer,
+    TrainMetrics,
+    TrainResult,
+    load_checkpoint,
+    save_checkpoint,
+    train_dsqn,
+)
 
 __all__ = [
     "DBSParameterState",
@@ -24,12 +31,16 @@ __all__ = [
     "SNNConfig",
     "SpikeObservationEncoder",
     "TrainMetrics",
+    "TrainResult",
     "Transition",
     "TransitionBatch",
     "alpha_beta_power",
     "dbs_energy_index",
     "decode_factored_action",
     "decode_joint_action",
+    "load_checkpoint",
     "nguyen_reward",
+    "save_checkpoint",
     "select_action",
+    "train_dsqn",
 ]

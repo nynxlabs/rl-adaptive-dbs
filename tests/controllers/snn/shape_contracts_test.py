@@ -161,10 +161,42 @@ def test_adapter_spaces_and_step_shapes() -> None:
         env.close()
 
 
-def test_trainer_scaffold_raises_on_train_step() -> None:
-    cfg = SNNConfig(sequence_steps=2, neurons_per_region=2)
-    trainer = DSQNTrainer(DSQN(cfg), ReplayBuffer(cfg), cfg)
-    trainer.note_step()
-    assert trainer.current_epsilon() <= cfg.epsilon_start
-    with pytest.raises(NotImplementedError):
-        trainer.train_step()
+def test_trainer_train_step_and_mock_episodes() -> None:
+    cfg = SNNConfig(
+        sequence_steps=2,
+        neurons_per_region=2,
+        n_regions=1,
+        num_episodes=2,
+        max_episode_steps=4,
+        batch_size=8,
+        replay_update_cadence=8,
+        replay_capacity=64,
+        target_update_period=2,
+        log_episodes=False,
+        seed=0,
+    )
+    env = NguyenEnvAdapter(plant=_SpikeMockPlant(), config=cfg)
+    try:
+        from controllers.snn.trainer import train_dsqn
+
+        result = train_dsqn(env, cfg)
+        assert len(result.episode_rewards) == 2
+        assert result.update_count >= 0
+        # Force a train_step once the buffer is warm.
+        trainer = DSQNTrainer(result.dsqn, ReplayBuffer(cfg, seed=1), cfg)
+        dim = cfg.flat_observation_dim
+        for idx in range(cfg.batch_size + 1):
+            state = np.zeros(dim, dtype=np.float32)
+            trainer.buffer.add(
+                Transition(
+                    state=state,
+                    action=idx % 27,
+                    reward=0.1,
+                    next_state=state,
+                    done=False,
+                )
+            )
+        loss = trainer.train_step()
+        assert isinstance(loss, float)
+    finally:
+        env.close()
