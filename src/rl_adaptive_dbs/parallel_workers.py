@@ -46,6 +46,7 @@ class TrainSeedJob:
     episodes: int | None
     checkpoint_dir: Path
     config_path: Path | None = None
+    smoke: bool = False
 
 
 def train_seed_worker(job: TrainSeedJob) -> dict[str, Any]:
@@ -59,7 +60,12 @@ def train_seed_worker(job: TrainSeedJob) -> dict[str, Any]:
         from controllers.snn.trainer import train_dsqn
 
         config = SNNConfig(variant=job.variant, seed=int(job.seed), log_episodes=True)
-        if job.episodes is not None:
+        if job.smoke:
+            config = config.for_smoke(
+                episodes=int(job.episodes) if job.episodes is not None else 2,
+                max_steps=10,
+            )
+        elif job.episodes is not None:
             config = replace(config, num_episodes=int(job.episodes))
         plan: dict[str, Any] = {
             "controller": job.controller,

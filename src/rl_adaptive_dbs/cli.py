@@ -31,6 +31,11 @@ def _build_parser() -> argparse.ArgumentParser:
     train.add_argument("--variant", required=True)
     train.add_argument("--seeds", help="Comma-separated training seeds")
     train.add_argument("--episodes", type=int, help="Override training episode count")
+    train.add_argument(
+        "--smoke",
+        action="store_true",
+        help="Tiny network and short rollouts (snn: 2×10 steps by default)",
+    )
     train.add_argument("--checkpoint-dir", type=Path)
     train.add_argument("--dry-run", action="store_true")
     train.add_argument(
@@ -46,6 +51,12 @@ def _build_parser() -> argparse.ArgumentParser:
     eval_cmd.add_argument("--variant", required=True)
     eval_cmd.add_argument("--checkpoint", type=Path)
     eval_cmd.add_argument("--seeds", help="Comma-separated eval seeds")
+    eval_cmd.add_argument("--episodes", type=int, help="Override eval episode count")
+    eval_cmd.add_argument(
+        "--smoke",
+        action="store_true",
+        help="Tiny network and short rollouts (snn: 2×10 steps by default)",
+    )
     eval_cmd.add_argument("--suite", help="Suite name for protocol defaults")
     eval_cmd.add_argument("--results-dir", type=Path)
     eval_cmd.add_argument("--run-id")
@@ -156,6 +167,7 @@ def _cmd_train(args: argparse.Namespace) -> int:
             dry_run=args.dry_run,
             parallel=parallel,
             config_path=args.config,
+            smoke=bool(getattr(args, "smoke", False)),
         )
     except ValueError as exc:
         print(f"rl-dbs train: {exc}", file=sys.stderr)
@@ -190,6 +202,8 @@ def _cmd_eval(args: argparse.Namespace) -> int:
             write_timeseries=not args.no_timeseries,
             parallel=parallel,
             config_path=args.config,
+            episodes=getattr(args, "episodes", None),
+            smoke=bool(getattr(args, "smoke", False)),
         )
     except ValueError as exc:
         print(f"rl-dbs eval: {exc}", file=sys.stderr)

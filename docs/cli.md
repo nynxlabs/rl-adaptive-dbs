@@ -407,7 +407,8 @@ CI smoke tests may invoke `rl-dbs info` and `rl-dbs benchmark --dry-run` expecti
 | Entry point + `info`, `config show`, `config set --persist`, `summary` | 4 | Done |
 | `benchmark` suite runner | 4 | Done |
 | `train` / `eval` for `ddpg` (incl. PTQ/QAT variants) | 4 | Done |
-| `train` / `eval` for `snn`, `sea_dbs` | 5 | Not started |
+| `train` / `eval` for `snn` | 5 | **Implemented** (`rl-dbs train --controller snn`, `--smoke` for short runs) |
+| `train` / `eval` for `sea_dbs` | 6 | Not started |
 | Cross-platform packaging polish | 8+ | Not started |
 
 Prefer thin `rl_adaptive_dbs/*.py` modules (`cli.py`, `train_cmd.py`, `eval_cmd.py`, …) that call into `controllers.*` and `envs` per [benchmarking.md](benchmarking.md) §7.
