@@ -273,7 +273,7 @@ Eq. (7) combines energy penalty $\delta E$, threshold indicator $\theta_u$, squa
 
 ### 9. Shared `envs/` adapter vs Nguyen timing
 
-The unified Gym API follows Mehregan **2 s** steps and Eq. (8) reward; Nguyen requires **100 ms** steps, spike observations, $\alpha$–$\beta$ feedback, and Eq. (7) reward. **Fixed:** **100 ms** step, Eq. (7), ternary parameter deltas, early termination on $\alpha$–$\beta$. **Open:** subsampling/integration strategy on the shared plant wrapper. **Decide in** `NguyenEnvAdapter`; do not use Mehregan reward or step duration silently.
+The unified Gym API follows Mehregan **2 s** steps and Eq. (8) reward; Nguyen requires **100 ms** steps, spike observations, $\alpha$–$\beta$ feedback, and Eq. (7) reward. **Fixed:** **100 ms** step via `NguyenEnvAdapter` calling `PythonPlant.integrate(duration_s=0.1)` each transition; Eq. (7) reward; ternary parameter deltas; early termination on $\alpha$–$\beta$. **Chosen (v1):** GPi spike trains from each 100 ms segment are binned into a $(10 \times 10)$ matrix (`sequence_steps=10`, `neurons_per_region=10`); unstable DBS triples that crash the Kumaravelu integrator roll back to the previous triple (`plant_guard` in step info).
 
 ### 10. Evaluation horizon extensions
 

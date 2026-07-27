@@ -28,11 +28,19 @@ class DBSParameterState:
 
     @classmethod
     def from_config(cls, config: SNNConfig | None = None) -> DBSParameterState:
-        cfg = (config or SNNConfig()).with_variant_defaults()
+        del config  # episode resets always use the paper §IV triple
         return cls(
             amplitude=INIT_AMPLITUDE_NA_PER_CM2,
             frequency_hz=INIT_FREQUENCY_HZ,
             pulse_width_ms=INIT_PULSE_WIDTH_MS,
+        )
+
+    def copy(self) -> DBSParameterState:
+        """Shallow copy of the current triple (for plant-guard rollback)."""
+        return DBSParameterState(
+            amplitude=self.amplitude,
+            frequency_hz=self.frequency_hz,
+            pulse_width_ms=self.pulse_width_ms,
         )
 
     def apply_delta(

@@ -1,4 +1,8 @@
-"""Nguyen et al. environment adapter (100 ms steps, spike obs, α–β feedback)."""
+"""Nguyen et al. environment adapter (100 ms steps, spike obs, α–β feedback).
+
+Ternary DBS sensitivities (``SNNConfig`` defaults, replication.md §4.2):
+amplitude **10** nA/cm², frequency **5** Hz, pulse width **0.05** ms per ``+1`` action.
+"""
 
 from __future__ import annotations
 
@@ -146,16 +150,28 @@ class NguyenEnvAdapter(gym.Env):
         }
         return obs, info
 
-    def step(
-        self,
-        action: np.ndarray | int,
-    ) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
-        ternary = self._apply_action(action)
-        result = self._plant.integrate(
+    def _integrate_current_dbs(self) -> IntegrateResult:
+        return self._plant.integrate(
             self.config.step_duration_s,
             self._dbs.to_dbs_spec(duration_s=self.config.step_duration_s),
             record_spikes=True,
         )
+
+    def step(
+        self,
+        action: np.ndarray | int,
+    ) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
+        prev_dbs = self._dbs.copy()
+        ternary = self._apply_action(action)
+        plant_guard = False
+        try:
+            result = self._integrate_current_dbs()
+        except (ZeroDivisionError, ValueError, FloatingPointError):
+            # Some DBS triples destabilize the Kumaravelu HH integrator; keep the
+            # previous parameters and re-integrate so RL rollouts can continue.
+            self._dbs = prev_dbs
+            plant_guard = True
+            result = self._integrate_current_dbs()
         obs = self._encode_observation(result)
         alpha_beta = alpha_beta_power(
             self._gpi_spike_trains(result),
@@ -186,5 +202,6 @@ class NguyenEnvAdapter(gym.Env):
             "adapter": True,
             "step_duration_ms": self.config.step_duration_ms,
             "subthreshold_streak": self._subthreshold_streak,
+            "plant_guard": plant_guard,
         }
         return obs, reward, terminated, truncated, info

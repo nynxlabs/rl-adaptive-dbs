@@ -52,6 +52,7 @@ def train_controller(
     dry_run: bool = False,
     parallel: int = 1,
     config_path: Path | None = None,
+    smoke: bool = False,
 ) -> list[dict[str, Any]]:
     validate_train_request(controller, variant)
     out_dir = checkpoint_dir or default_checkpoint_dir(controller, variant)
@@ -62,7 +63,12 @@ def train_controller(
             from controllers.snn.config import SNNConfig
 
             config: Any = SNNConfig(variant=variant, seed=int(seed), log_episodes=True)
-            if episodes is not None:
+            if smoke:
+                config = config.for_smoke(
+                    episodes=int(episodes) if episodes is not None else 2,
+                    max_steps=10,
+                )
+            elif episodes is not None:
                 config = replace(config, num_episodes=int(episodes))
             n_episodes = config.num_episodes
         else:
@@ -97,6 +103,7 @@ def train_controller(
                 episodes=episodes,
                 checkpoint_dir=out_dir,
                 config_path=config_path,
+                smoke=smoke,
             )
             for seed in seeds
         ]
@@ -109,7 +116,12 @@ def train_controller(
             from controllers.snn.trainer import train_dsqn
 
             config = SNNConfig(variant=variant, seed=int(seed), log_episodes=True)
-            if episodes is not None:
+            if smoke:
+                config = config.for_smoke(
+                    episodes=int(episodes) if episodes is not None else 2,
+                    max_steps=10,
+                )
+            elif episodes is not None:
                 config = replace(config, num_episodes=int(episodes))
             plan = {
                 "controller": controller,
@@ -117,6 +129,8 @@ def train_controller(
                 "seed": seed,
                 "episodes": config.num_episodes,
                 "checkpoint": ckpt_path.as_posix(),
+                "metrics": ckpt_path.with_suffix(".metrics.json").as_posix(),
+                "smoke": smoke,
             }
             train_dsqn(config=config, checkpoint_path=ckpt_path)
             summaries.append({**plan, "status": "ok"})

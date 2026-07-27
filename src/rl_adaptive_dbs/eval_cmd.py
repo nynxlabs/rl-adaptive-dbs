@@ -77,6 +77,8 @@ def eval_controller(
     write_timeseries: bool = True,
     parallel: int = 1,
     config_path: Path | None = None,
+    episodes: int | None = None,
+    smoke: bool = False,
 ) -> list[RunRecord]:
     validate_eval_request(controller, variant)
     repo_root = find_repo_root()
@@ -94,11 +96,15 @@ def eval_controller(
                 msg = f"checkpoint not found: {ckpt}"
                 raise FileNotFoundError(msg)
             cfg = SNNConfig(variant=variant, seed=int(seed))
+            if smoke:
+                cfg = cfg.for_smoke(episodes=int(episodes) if episodes is not None else 2, max_steps=10)
+            eval_episodes = int(episodes) if episodes is not None else EVAL_EPISODES
+            eval_steps = 10 if smoke else EVAL_MAX_STEPS
             payload = evaluate_snn(
                 ckpt,
                 config=cfg,
-                episodes=EVAL_EPISODES,
-                max_steps=EVAL_MAX_STEPS,
+                episodes=eval_episodes,
+                max_steps=eval_steps,
             )
             rid = run_id or make_run_id()
             planned = PlannedRun(

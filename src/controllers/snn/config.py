@@ -110,3 +110,29 @@ class SNNConfig:
         if self.variant == "paper":
             return self
         return replace(self)
+
+    def for_smoke(
+        self,
+        *,
+        episodes: int = 2,
+        max_steps: int = 10,
+    ) -> SNNConfig:
+        """Tiny DSQN + short rollouts for CLI/pytest smoke (Python plant)."""
+        return replace(
+            self,
+            sequence_steps=4,
+            neurons_per_region=4,
+            n_regions=1,
+            hidden_size=16,
+            internal_unroll_steps=2,
+            num_episodes=int(episodes),
+            max_episode_steps=int(max_steps),
+            batch_size=8,
+            replay_update_cadence=8,
+            replay_capacity=128,
+            target_update_period=2,
+            epsilon_decay_steps=max(1, int(episodes) * int(max_steps)),
+            log_episodes=True,
+            frequency_min=10.0,
+            amplitude_min=50.0,
+        )

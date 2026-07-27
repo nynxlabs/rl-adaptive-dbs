@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
+
+import json
 
 import numpy as np
 import torch
@@ -21,6 +23,8 @@ from controllers.snn.networks import DSQN
 @dataclass(frozen=True)
 class TrainMetrics:
     episode: int
+    episode_reward: float
+    episode_length: int
     epsilon: float
     buffer_size: int
     loss: float | None = None
@@ -230,6 +234,8 @@ class DSQNTrainer:
 
             metrics = TrainMetrics(
                 episode=episode,
+                episode_reward=episode_reward,
+                episode_length=steps,
                 epsilon=self.current_epsilon(),
                 buffer_size=len(self.buffer),
                 loss=self._last_loss,
@@ -247,6 +253,29 @@ class DSQNTrainer:
 
         result.update_count = self._update_count
         return result
+
+
+def train_metrics_to_dict(metrics: TrainMetrics) -> dict[str, Any]:
+    return asdict(metrics)
+
+
+def write_train_metrics(result: TrainResult, path: str | Path) -> Path:
+    """Write per-episode training metrics as JSON beside the checkpoint."""
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    payload: dict[str, Any] = {
+        "controller": "snn",
+        "variant": result.config.variant,
+        "seed": result.config.seed,
+        "num_episodes": result.config.num_episodes,
+        "max_episode_steps": result.config.max_episode_steps,
+        "update_count": result.update_count,
+        "episode_rewards": result.episode_rewards,
+        "episode_lengths": result.episode_lengths,
+        "episodes": [train_metrics_to_dict(m) for m in result.metrics],
+    }
+    out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return out
 
 
 def save_checkpoint(
@@ -309,6 +338,8 @@ def train_dsqn(
                     "update_count": result.update_count,
                 },
             )
+            metrics_path = Path(checkpoint_path).with_suffix(".metrics.json")
+            write_train_metrics(result, metrics_path)
         return result
     finally:
         if owns_env:

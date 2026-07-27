@@ -11,6 +11,7 @@ from controllers.snn.encoder import SpikeObservationEncoder
 from controllers.snn.energy import dbs_energy_index
 from controllers.snn.networks import DSQN, LIFLayer, LIFOutput
 from controllers.snn.reward import alpha_beta_power, nguyen_reward
+from controllers.snn.eval import evaluate
 from controllers.snn.trainer import (
     DSQNTrainer,
     TrainMetrics,
@@ -18,6 +19,8 @@ from controllers.snn.trainer import (
     load_checkpoint,
     save_checkpoint,
     train_dsqn,
+    train_metrics_to_dict,
+    write_train_metrics,
 )
 
 __all__ = [
@@ -36,6 +39,7 @@ __all__ = [
     "TransitionBatch",
     "alpha_beta_power",
     "dbs_energy_index",
+    "evaluate",
     "decode_factored_action",
     "decode_joint_action",
     "load_checkpoint",
@@ -43,4 +47,6 @@ __all__ = [
     "save_checkpoint",
     "select_action",
     "train_dsqn",
+    "train_metrics_to_dict",
+    "write_train_metrics",
 ]
