@@ -4,7 +4,7 @@ This document specifies the **SEA-DBS** (sample-efficient actor–critic) contro
 
 **Companion spec:** The shared **Kumaravelu et al. (2016)** plant — [plant.md](../../plant.md). **Mehregan et al.** Gymnasium API — [environment.md](../../environment.md). **This document is authoritative for the Ravivarapu controller**—binary actions, predictive reward modeling, Gumbel-Softmax exploration, timing, reward shape, and training—unless the others explicitly describe the same quantity.
 
-**Scheduling:** SEA-DBS replication is **Phase 6** on the long-term roadmap ([roadmap.md](../../development/roadmap.md)). Active work follows **Mehregan figure panels** ([figures/paper_1.md](../../figures/paper_1.md)) first; implement `controllers/sea_dbs/` when Mehregan panels close or a task explicitly needs this adapter.
+**Scheduling:** SEA-DBS replication is **Phase 6** on the long-term roadmap ([roadmap.md](../../development/roadmap.md)). Active work follows **Mehregan figure panels** ([figures/mehregan/replications.md](../../figures/mehregan/replications.md)) first; implement `controllers/sea_dbs/` when Mehregan panels close or a task explicitly needs this adapter.
 
 ---
 

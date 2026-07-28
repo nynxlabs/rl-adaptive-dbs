@@ -150,19 +150,19 @@ Qualitative replication of Mehregan et al. Fig. 2a — GPi beta-band power ($P_\
 
 | Item | Convention |
 |------|------------|
-| **Script** | `scripts/figures/papers/1/2a/plot.py` |
-| **Artifacts** | `artifacts/figures/papers/1/2a/` (`series.json`, `manifest.json`); PNG `figures/papers/1/2a/beta_power.png` |
+| **Script** | `scripts/figures/papers/mehregan/2a/plot.py` |
+| **Artifacts** | `artifacts/figures/papers/mehregan/2a/` (`series.json`, `manifest.json`); PNG `figures/mehregan/images/2a/beta_power.png` |
 | **Backend** | `PythonPlant` (default) |
 | **Protocol** | **14 s** simulate (2 s pre-roll + 12 s display); plot axis = sim **− 2 s**; DBS at **sim 4 s**; **0.2 s** trailing / **2 s** backward window; windows end at **sim 14 s** (display $t=12$ → `[12, 14]`) |
 | **Spike buffer** | Fig 2a alone passes `gpi_spike_buffer_size` ≈ **904** (`ceil(14 s × 60 Hz) + 64`) — Numba default **512**/neuron truncates GPi spikes on long integrates and caused an artificial end-of-trace cliff (see `scripts/probes/fig2a_spike_buffer_probe.py`) |
 | **Plot** | Dense line trace 0–12 s; dashed vertical at **2 s**; y-axis label **PSD** |
 | **Alt mode** | `--sampling segment` — six whole-segment **2 s** bins (step plot) |
 | **Seeds** | Default **0**; `--seeds` for mean across multiple IC draws |
-| **Comparison** | [docs/figures/paper_1.md](figures/paper_1.md) |
+| **Comparison** | [figures/mehregan/replications.md](figures/mehregan/replications.md) |
 
 ```bash
-uv run python scripts/figures/papers/1/2a/plot.py
-uv run python scripts/figures/papers/1/2a/plot.py --plot-only
+uv run python scripts/figures/papers/mehregan/2a/plot.py
+uv run python scripts/figures/papers/mehregan/2a/plot.py --plot-only
 ```
 
 ### Mehregan Fig 2b — Error Index time series (2026-07-12)
@@ -171,19 +171,19 @@ Windowed Error Index (EI, Mehregan Eq. 2 / Gao Eq. 6) over **12 s** for **PD no 
 
 | Item | Convention |
 |------|------------|
-| **Script** | `scripts/figures/papers/1/2b/plot.py` |
-| **Artifacts** | `artifacts/figures/papers/1/2b/`; PNG `figures/papers/1/2b/error_index_v2.png` (canonical; plot auto-versions) |
+| **Script** | `scripts/figures/papers/mehregan/2b/plot.py` |
+| **Artifacts** | `artifacts/figures/papers/mehregan/2b/`; PNG `figures/mehregan/images/2b/error_index_v2.png` (canonical; plot auto-versions) |
 | **Protocol** | Same trailing-window timing as Fig 2a; **2 s** EI window; TH spike buffer enlarged for 14 s integrates |
 | **Path A (default)** | So-style SMC **into TH** (So et al., 2012): `smc_site='thalamic'`, `iappth_baseline=0` (no Kumaravelu cerebellar bias), `ggith=0.112`, BoC amp **3.5** µA/cm², 5 ms pulses. Restores blue-below-red ordering. |
 | **SMC drive** | `PlantConfig(smc_schedule='boc', smc_site='thalamic'|'cortical', iappth_baseline=..., ggith=...)` — TH path is Fig 2b default; cortical `Iappco` remains for probes (does not match paper EI ordering). |
 | **SMCτ source** | `smc_pulse_source='drive'` (default) or `'cor_spikes'` |
 | **EI definition** | `envs.plant.biomarkers.error_index` — Mehregan Eq. (2) / Gao et al. (ICCPS 2020) Eqs. (4)–(6): misfires / (n · |SMC|); 25 ms TH response window |
 | **Plot** | Dense line 0–12 s; y-axis **Error Index** 0–0.4; dashed vertical at **2 s** |
-| **Comparison** | [docs/figures/paper_1.md](figures/paper_1.md) |
+| **Comparison** | [figures/mehregan/replications.md](figures/mehregan/replications.md) |
 
 ```bash
-uv run --group figures python scripts/figures/papers/1/2b/plot.py
-uv run --group figures python scripts/figures/papers/1/2b/plot.py --plot-only
+uv run --group figures python scripts/figures/papers/mehregan/2b/plot.py
+uv run --group figures python scripts/figures/papers/mehregan/2b/plot.py --plot-only
 ```
 
 **Biomarkers (implemented):** `error_index`, `smc_pulse_times_from_trace` / `smc_pulse_times_from_iappco`, `smc_pulse_times_from_cor_spikes`, `resolve_smc_pulse_times`; TH spikes via `record_th_spikes=True` on `integrate`.

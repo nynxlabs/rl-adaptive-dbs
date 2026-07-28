@@ -1,0 +1,1 @@
+/home/nynxbox/knowledge-base/neuroengineering/brain-stimulation-engineering/effort/docs/figures/papers/ravivarapu.md

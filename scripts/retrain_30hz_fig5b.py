@@ -37,7 +37,7 @@ STEPS_PER_EPISODE = 30
 PAPER_DT_MS = 0.02
 ALPHABET_NAME = "burst"  # BurstPatternAlphabet — Fig 5b redesign
 
-OUTPUT_DIR = Path("artifacts/figures/papers/1/5b")
+OUTPUT_DIR = Path("artifacts/figures/papers/mehregan/5b")
 CHECKPOINT_PATH = OUTPUT_DIR / "checkpoint.pt"
 
 

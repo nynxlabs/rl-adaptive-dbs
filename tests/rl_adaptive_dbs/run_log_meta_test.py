@@ -25,7 +25,7 @@ def test_run_log_header_round_trip() -> None:
         command="uv run python plot.py",
         started_at="2026-07-09T20:00:00+00:00",
         tmux_session="fig2a",
-        pid_file="artifacts/figures/papers/1/2a/run.pid",
+        pid_file="artifacts/figures/papers/mehregan/2a/run.pid",
         repo_root="/tmp/repo",
         cpus="0-2",
     )

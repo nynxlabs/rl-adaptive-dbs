@@ -6,7 +6,7 @@ import importlib.util
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-_PLOT_PATH = ROOT / "scripts/figures/papers/1/2a/plot.py"
+_PLOT_PATH = ROOT / "scripts/figures/papers/mehregan/2a/plot.py"
 _spec = importlib.util.spec_from_file_location("fig2a_plot", _PLOT_PATH)
 assert _spec and _spec.loader
 fig2a = importlib.util.module_from_spec(_spec)

@@ -10,7 +10,7 @@ Replication of published **adaptive DBS** reinforcement-learning work on one sha
 
 | Focus | Doc | Entry points |
 |-------|-----|--------------|
-| Mehregan et al. panel checklist | [docs/figures/paper_1.md](docs/figures/paper_1.md) | `scripts/figures/papers/<paper>/<panel>/plot.py` |
+| Mehregan et al. panel checklist | [figures/mehregan/replications.md](figures/mehregan/replications.md) | `scripts/figures/papers/<paper>/<panel>/plot.py` |
 | What matches / diverges from the paper | [docs/development/replication-fidelity.md](docs/development/replication-fidelity.md) | Specs under `docs/plant.md`, `docs/environment.md`, `docs/controllers/` |
 
 **Open panels (Mehregan):** Fig 6a (PTQ/QAT @ 45 Hz), Fig 6b (PTQ/QAT @ 30 Hz, planned). Seven panels pass (1b, 2a, 2b, 4a, 4b, 5a, 5b); Fig 5b uses `BurstPatternAlphabet`.
@@ -21,7 +21,7 @@ The **phase roadmap** ([docs/development/roadmap.md](docs/development/roadmap.md
 
 Architecturally, the repo has three layers (built out in [docs/development/roadmap.md](docs/development/roadmap.md) phases 1–9):
 
-1. **Environment (single source of truth)** — Replicate the **computational RL environment** from Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning*: Kumaravelu et al. (2016) **cortex–basal ganglia–thalamus** dynamics, GPi **beta-band** biomarker, 2 s steps, reward Eq. (8), and a Gymnasium-style API that `ddpg` uses directly. Other papers connect through **adapters** on the same plant. Spec: [docs/environment.md](docs/environment.md). **Current focus:** pass remaining **figure panels** ([docs/figures/paper_1.md](docs/figures/paper_1.md)); plant panels 1b–2b gate on [docs/plant.md](docs/plant.md), training panels on [docs/environment.md](docs/environment.md) + [docs/controllers/ddpg/replication.md](docs/controllers/ddpg/replication.md).
+1. **Environment (single source of truth)** — Replicate the **computational RL environment** from Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning*: Kumaravelu et al. (2016) **cortex–basal ganglia–thalamus** dynamics, GPi **beta-band** biomarker, 2 s steps, reward Eq. (8), and a Gymnasium-style API that `ddpg` uses directly. Other papers connect through **adapters** on the same plant. Spec: [docs/environment.md](docs/environment.md). **Current focus:** pass remaining **figure panels** ([figures/mehregan/replications.md](figures/mehregan/replications.md)); plant panels 1b–2b gate on [docs/plant.md](docs/plant.md), training panels on [docs/environment.md](docs/environment.md) + [docs/controllers/ddpg/replication.md](docs/controllers/ddpg/replication.md).
 
 2. **Controllers (one per paper)** — Replicate each paper’s **learning-based controller** under `controllers/`, all driving the **same plant** (no duplicated CBGT dynamics):
 
@@ -51,10 +51,10 @@ Python packages live under **`src/`** (editable install via `uv sync`):
 - **`suites/`** — Versioned eval configs (`mehregan_eval.yaml`, smoke variant for CI).
 - **`src/rl_adaptive_dbs/`** — CLI (`rl-dbs`), TUI (`rl-dbs-tui`), and shared entry helpers.
 
-- `docs/` — [setup.md](docs/setup.md) (setup & use), [development/](docs/development/) (roadmap, conventions, `uv`, pytest), [figures/paper_1.md](docs/figures/paper_1.md) (panel replication tracker), [plant.md](docs/plant.md), [environment.md](docs/environment.md), [controllers/](docs/controllers/), [benchmarking.md](docs/benchmarking.md), [cli.md](docs/cli.md), [tui.md](docs/tui.md).
+- `docs/` — [setup.md](docs/setup.md) (setup & use), [development/](docs/development/) (roadmap, conventions, `uv`, pytest), [figures/mehregan/replications.md](figures/mehregan/replications.md) (panel replication tracker), [plant.md](docs/plant.md), [environment.md](docs/environment.md), [controllers/](docs/controllers/), [benchmarking.md](docs/benchmarking.md), [cli.md](docs/cli.md), [tui.md](docs/tui.md).
 - `results/` — benchmark outputs from `rl-dbs benchmark` (local, gitignored).
 - `reference-material/` — Third-party models and scripts. Kumaravelu et al. (2016) MATLAB network: `reference-material/KumaraveluEtAl2016/` ([`readme.txt`](reference-material/KumaraveluEtAl2016/readme.txt) for citation and provenance).
-- `scripts/` — **`scripts/setup.sh`**, panel scripts under **`scripts/figures/papers/`** ([docs/figures/paper_1.md](docs/figures/paper_1.md)), **`scripts/matlab/`** (`setup.sh`, `install.sh`, `verify.sh`); diagnostic probes under `scripts/probes/` (promote findings into panel scripts before ship).
+- `scripts/` — **`scripts/setup.sh`**, panel scripts under **`scripts/figures/papers/`** ([figures/mehregan/replications.md](figures/mehregan/replications.md)), **`scripts/matlab/`** (`setup.sh`, `install.sh`, `verify.sh`); diagnostic probes under `scripts/probes/` (promote findings into panel scripts before ship).
 
 ```python
 from envs import MehreganEnv
@@ -67,7 +67,7 @@ from controllers.ddpg import train
 
 **[docs/development/roadmap.md](docs/development/roadmap.md)** — phases and status. **[docs/development/conventions.md](docs/development/conventions.md)** — contributor rules.
 
-Specs: [plant.md](docs/plant.md), [environment.md](docs/environment.md), [controllers/](docs/controllers/), [figures/paper_1.md](docs/figures/paper_1.md), [benchmarking.md](docs/benchmarking.md), [cli.md](docs/cli.md), [tui.md](docs/tui.md). Tooling: [development/](docs/development/) (`venv.md`, `testing.md`).
+Specs: [plant.md](docs/plant.md), [environment.md](docs/environment.md), [controllers/](docs/controllers/), [figures/mehregan/replications.md](figures/mehregan/replications.md), [benchmarking.md](docs/benchmarking.md), [cli.md](docs/cli.md), [tui.md](docs/tui.md). Tooling: [development/](docs/development/) (`venv.md`, `testing.md`).
 
 ## Benchmarking
 

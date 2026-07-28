@@ -34,7 +34,7 @@ from envs.plant.python_backend import PythonPlant
 from rl_adaptive_dbs.user_config import resolve_config
 
 ARTIFACTS = Path("artifacts/probes")
-OUT_PNG = Path("figures/papers/1/4a/three_trace_diagnostic.png")
+OUT_PNG = Path("figures/mehregan/images/4a/three_trace_diagnostic.png")
 OUT_JSON = ARTIFACTS / "fig4a_three_trace_diagnostic.json"
 
 PAPER_DT_MS = 0.02
