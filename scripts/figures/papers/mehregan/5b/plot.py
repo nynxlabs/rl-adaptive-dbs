@@ -14,10 +14,11 @@ Three series on the **raw PSD** scale:
 **Paired workflow (default):** eval + plot from 30 Hz checkpoint
 (``artifacts/figures/papers/mehregan/5b/checkpoint.pt``). **BurstPatternAlphabet**
 (41 patterns; pattern 0 = regular 30 Hz; irregulars = 60–120 Hz clusters at
-fixed mean rate — Fig 5b redesign). Train with ``scripts/retrain_30hz_fig5b.py``.
+fixed mean rate — Fig 5b redesign). Train with ``--train`` or pass ``--checkpoint``.
 
 Run:
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/5b/plot.py
+  uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/5b/plot.py --train
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/5b/plot.py --plot-only
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/5b/plot.py --sampling segment
 
@@ -45,7 +46,7 @@ from envs.mehregan.pattern_alternatives import BurstPatternAlphabet
 from envs.plant import DbsSpec, PlantConfig, PythonPlant
 from envs.plant.dbs import create_dbs_current
 
-from scripts.run_task108_paper_protocol_eval import run_eval
+from scripts.lib.paper_protocol_eval import run_eval
 
 _FIG2A_PATH = Path(__file__).resolve().parents[1] / "2a" / "plot.py"
 _fig2a_spec = importlib.util.spec_from_file_location("fig2a_plot", _FIG2A_PATH)
@@ -70,6 +71,8 @@ DEFAULT_MANIFEST = CACHE_DIR / "manifest.json"
 MEAN_HZ = 30.0
 PAPER_DT_MS = 0.02
 DEFAULT_SEED = 0
+NUM_EPISODES = 10
+STEPS_PER_EPISODE = 30
 EVAL_STEPS = 5
 
 SEGMENT_S = 2.0
@@ -682,6 +685,57 @@ def _run_paper_eval(
     return payload
 
 
+def _train_checkpoint(*, seed: int, checkpoint_path: Path) -> dict[str, Any]:
+    from dataclasses import replace
+
+    from controllers.ddpg import train
+    from controllers.ddpg.config import fig4a_ddpg_config
+    from envs.mehregan.config import MehreganEnvConfig
+    from envs.mehregan.env import MehreganEnv
+    from envs.plant.python_backend import PythonPlant
+    from rl_adaptive_dbs.user_config import resolve_config
+
+    resolved = resolve_config()
+    plant_cfg = replace(resolved.plant, dt_ms=PAPER_DT_MS)
+    env_cfg = MehreganEnvConfig(
+        state_length=1,
+        step_duration_s=TRAILING_RL_STEP_S,
+        action_space_mode="fixed_mean_pattern",
+        pattern_mean_hz=MEAN_HZ,
+        max_episode_steps=STEPS_PER_EPISODE,
+        skip_regular=False,
+    )
+    alphabet = BurstPatternAlphabet(
+        mean_hz=MEAN_HZ,
+        step_duration_s=TRAILING_RL_STEP_S,
+        dt_ms=plant_cfg.dt_ms,
+    )
+    env = MehreganEnv(
+        plant=PythonPlant(config=plant_cfg),
+        config=env_cfg,
+        alphabet=alphabet,
+    )
+    checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        config = fig4a_ddpg_config(
+            seed=seed,
+            num_episodes=NUM_EPISODES,
+            max_episode_steps=STEPS_PER_EPISODE,
+            pattern_mean_hz=MEAN_HZ,
+        )
+        print(
+            f"Fig 5b train — burst alphabet, {NUM_EPISODES} ep × {STEPS_PER_EPISODE}, seed {seed}",
+            flush=True,
+        )
+        t0 = time.time()
+        train(config=config, env=env, checkpoint_path=checkpoint_path)
+        elapsed = time.time() - t0
+        print(f"wrote checkpoint {checkpoint_path} ({elapsed:.0f}s)", flush=True)
+        return {"checkpoint": str(checkpoint_path), "elapsed_s": elapsed}
+    finally:
+        env.close()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
@@ -714,6 +768,11 @@ def main() -> int:
         help="Biomarker sampling: trailing 0.2 s (Fig 2a default) or 2 s RL segment steps",
     )
     parser.add_argument("--plot-only", action="store_true")
+    parser.add_argument(
+        "--train",
+        action="store_true",
+        help="Train burst-alphabet actor into --checkpoint, then eval + plot",
+    )
     parser.add_argument("--no-update-docs", dest="update_docs", action="store_false")
     parser.set_defaults(update_docs=True)
     args = parser.parse_args()
@@ -724,18 +783,27 @@ def main() -> int:
     else:
         png_version = _figure_promote.parse_png_version(args.out)
 
+    train_meta: dict[str, Any] | None = None
     if args.plot_only:
         if not args.eval_json.exists():
             print(f"missing eval JSON: {args.eval_json}", file=sys.stderr)
             return 2
         payload = json.loads(args.eval_json.read_text())
+    elif args.train:
+        train_meta = _train_checkpoint(seed=args.seed, checkpoint_path=args.checkpoint)
+        payload = _run_paper_eval(
+            seed=args.seed,
+            landscape=args.landscape,
+            checkpoints=[args.checkpoint],
+            eval_path=args.eval_json,
+            sampling=args.sampling,
+        )
     else:
         if not args.checkpoint.exists():
             print(f"missing checkpoint: {args.checkpoint}", file=sys.stderr)
             print(
-                "Train first: tmux new-session -d -s retrain-30hz "
-                '"setsid nohup uv run python scripts/retrain_30hz_fig5b.py '
-                '>> logs/retrain-30hz.log 2>&1 < /dev/null"',
+                "Train first: uv run python -m rl_adaptive_dbs.run "
+                "scripts/figures/papers/mehregan/5b/plot.py --train",
                 file=sys.stderr,
             )
             return 2

@@ -109,7 +109,7 @@ Naming: files `*_test.py`, functions `test_*` (pytest default discovery).
 | **Unit** | `tests/` | reward math, observation windows, adapter shapes |
 | **Integration** | `tests/` | `reset` / `step`, episode length, baseline policies |
 | **Equivalence / regression** | `tests/` with `@pytest.mark.matlab` or `slow` | GPi spikes (`matlab_plant_test.py`); $P_\beta$ vs MATLAB (`matlab_biomarkers_test.py`, needs `dpss`) |
-| **Paper replication** | Figure panel scripts + [figures/mehregan/replications.md](../figures/mehregan/replications.md) | train+plot under `scripts/figures/papers/`; qualitative gates |
+| **Paper replication** | Figure panel scripts + [figures/paper_1.md](../figures/paper_1.md) | train+plot under `scripts/figures/papers/`; qualitative gates |
 | **Benchmark suites** | `rl-dbs benchmark` + `results/` | full suites per [benchmarking.md](../benchmarking.md); smoke subsets in pytest only |
 
 Keep CI fast: default runs should pass without MATLAB; skip or mark heavy checks.

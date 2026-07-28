@@ -1,6 +1,6 @@
 # Benchmarking and cross-controller comparison
 
-This document defines how to **compare controllers and variants** (iterations) on the **same** computational environment. The suite runner, `results/` layout, and [`rl-dbs benchmark`](cli.md) / [`rl-dbs-tui`](tui.md) integration are **done** (Phase 4 infrastructure). **Mehregan validation** is driven by figure panels ([figures/mehregan/replications.md](figures/mehregan/replications.md)); status: [development/roadmap.md](development/roadmap.md).
+This document defines how to **compare controllers and variants** (iterations) on the **same** computational environment. The suite runner, `results/` layout, and [`rl-dbs benchmark`](cli.md) / [`rl-dbs-tui`](tui.md) integration are **done** (Phase 4 infrastructure). **Mehregan validation** is driven by figure panels ([figures/paper_1.md](figures/paper_1.md)); status: [development/roadmap.md](development/roadmap.md).
 
 **Related specs:** Shared plant — [plant.md](plant.md); Mehregan Gym API — [environment.md](environment.md); per-controller training — [controllers/](controllers/); CLI — [cli.md](cli.md); TUI — [tui.md](tui.md).
 

@@ -237,11 +237,8 @@ Dashed vertical at **2 s** (stimulation onset). Paper claims: trained stimulatio
 **Run:**
 
 ```bash
-# Step 1 — train skip_regular actor (~60 min):
-uv run python scripts/retrain_45hz_skip_regular.py
-
-# Step 2 — eval + plot (paper protocol, 5×2 s steps):
-uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/5a/plot.py
+# Train skip_regular actor (~60 min), then eval + plot:
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/5a/plot.py --train
 uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/5a/plot.py --plot-only
 ```
 
@@ -251,7 +248,7 @@ Long train — use tmux:
 
 ```bash
 tmux new-session -d -s fig5a-train \
- "setsid nohup uv run python scripts/retrain_45hz_skip_regular.py >> logs/retrain-45hz.log 2>&1 < /dev/null"
+ "setsid nohup uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/5a/plot.py --train >> logs/fig5a-train.log 2>&1 < /dev/null"
 ```
 
 **Defaults:** seed `0`, **skip_regular** on, **trailing** sampling (0.2 s / 2 s window, 14 s integrate), Python plant, `plant.dt_ms=0.02`, checkpoint `artifacts/figures/papers/mehregan/4a/checkpoint_skip_regular_02s.pt`. Legacy 2 s segment plot: `--sampling segment`. Legacy 41-pattern eval: `--no-skip-regular --checkpoint artifacts/figures/papers/mehregan/4a/checkpoint.pt --seed 1`.
@@ -299,12 +296,8 @@ Key paper claim: **periodic 30 Hz elevates** beta (stimulation rate inside the b
 **Run (panel script — default trailing eval + versioned PNG):**
 
 ```bash
-# Train (once; ~30–60 min)
-tmux new-session -d -s retrain-30hz \
- "setsid nohup uv run python scripts/retrain_30hz_fig5b.py >> logs/retrain-30hz.log 2>&1 < /dev/null"
-
-# Eval + plot (writes efficacy_30hz_vN.png)
-uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/5b/plot.py
+# Train (once; ~30–60 min), then eval + plot:
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/5b/plot.py --train
 uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/5b/plot.py --plot-only
 ```
 
@@ -346,7 +339,7 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 
 **Manifest:** `artifacts/figures/papers/mehregan/6a/manifest.json`
 
-**Honest n=256 experiment (2026-07-26):** burst `n_patterns=256` / skip_regular (255 actions); reused soft-fp32 n=256 ckpt; real 10-ep QAT (no weak lock); PTQ weight noise **0**. Non-QAT fp32/fp16/int8 all locked to action **61** (`shared_constant_non_qat_lock`); QAT used `[0, 4, 21]`. Eval: `artifacts/figures/papers/mehregan/6a/eval_burst_n256_6a_honest.json`. Script: `scripts/figures/papers/mehregan/6a/plot_n256_6a_honest.py`.
+**Honest n=256 experiment (2026-07-26):** burst `n_patterns=256` / skip_regular (255 actions); reused soft-fp32 n=256 ckpt; real 10-ep QAT (no weak lock); PTQ weight noise **0**. Non-QAT fp32/fp16/int8 all locked to action **61** (`shared_constant_non_qat_lock`); QAT used `[0, 4, 21]`. Eval: `artifacts/figures/papers/mehregan/6a/eval_burst_n256_6a_honest.json`. Archived experiment — use `scripts/figures/papers/mehregan/6a/plot.py` for current work.
 <!-- caption-6a:end -->
 
 **Status:** Open — promoted replication remains **v9** (soft-fp32 + PTQ noise + weak QAT). Honest large-alphabet panel above: larger $n$ alone did **not** split PTQ from fp32 without weight noise.
@@ -366,10 +359,6 @@ Automated mirrors (panel / manifest): shared pre-onset agreement; `fp32_suppress
 **Run:**
 
 ```bash
-# fp32 burst skip_regular (~30–60 min):
-uv run python -m rl_adaptive_dbs.run --max-threads 2 \
-  scripts/retrain_45hz_fig6a_burst.py
-
 uv run python -m rl_adaptive_dbs.run --max-threads 2 \
   scripts/figures/papers/mehregan/6a/plot.py --seed 0
 uv run python -m rl_adaptive_dbs.run --max-threads 2 \
@@ -383,12 +372,10 @@ uv run python -m rl_adaptive_dbs.run --max-threads 2 \
 QAT train only (~30–60 min) after fp32 exists. Use tmux (cap plant threads at 2):
 
 ```bash
-tmux new-session -d -s fig6a-burst-retrain \
- "setsid nohup bash -c 'uv run python -m rl_adaptive_dbs.run --max-threads 2 \
-   scripts/retrain_45hz_fig6a_burst.py && \
-   uv run python -m rl_adaptive_dbs.run --max-threads 2 \
-   scripts/figures/papers/mehregan/6a/plot.py --seed 0' \
-   >> logs/fig6a-burst-retrain.log 2>&1 < /dev/null"
+tmux new-session -d -s fig6a-train \
+ "setsid nohup uv run python -m rl_adaptive_dbs.run --max-threads 2 \
+   scripts/figures/papers/mehregan/6a/plot.py --seed 0 \
+   >> logs/fig6a-train.log 2>&1 < /dev/null"
 ```
 
 **Defaults:** fp32 `checkpoint_burst_skip_regular_02s.pt`; QAT `qat_burst_skip_regular_02s.pt`; seed `0`; raw PSD y-axis; alphabet **burst**.
@@ -403,11 +390,14 @@ tmux new-session -d -s fig6a-burst-retrain \
 | **QAT ~500 / elevated** | High band ~450–520 | QAT suppresses (~334) | No |
 | **Onset marker** | Dashed vertical at **2 s** | Yes | Yes |
 
-**Run:**
+**Interim run:**
 
 ```bash
-uv run python scripts/figures/papers/1/6a/plot.py --seed 1
-uv run python scripts/figures/papers/1/6a/plot.py --plot-only
+# After fp32 checkpoint + paper-protocol eval JSON exist:
+uv run python scripts/figures/plot_beta_psd_paper_figures.py \
+  --fig6-json artifacts/ddpg/<eval_45hz_ptq_int8>.json \
+  --fig6-json artifacts/ddpg/<eval_45hz_ptq_fp16>.json \
+  --fig6-json artifacts/ddpg/<eval_45hz_qat>.json
 ```
 
 Benchmark slugs: `ptq-fp16`, `ptq-int8`, `qat` ([benchmarking.md](images/../../benchmarking.md)).

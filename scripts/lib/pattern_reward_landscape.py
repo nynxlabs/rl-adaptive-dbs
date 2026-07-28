@@ -1,12 +1,4 @@
-#!/usr/bin/env python3
-"""Sweep all fixed-mean patterns for single-step reward / beta (TASK-105).
-
-Runs one 2 s RL step per pattern (41 actions at 45 Hz mean) from a common
-plant reset, ranks outcomes vs pattern 0 (regular periodic train — paper init,
-not no-stimulation).
-
-Run: uv run python scripts/pattern_reward_landscape.py
-"""
+"""Single-step pattern reward / beta landscape for fixed-mean alphabets."""
 
 from __future__ import annotations
 
@@ -67,7 +59,6 @@ def run_landscape(
         msg = "expected FixedMeanPatternAlphabet in fixed_mean_pattern mode"
         raise TypeError(msg)
 
-    # Pre-warm idbs cache so the sweep timing reflects plant integration only.
     for i in range(alphabet.n_actions):
         alphabet.idbs_for_pattern(i)
 
@@ -103,8 +94,8 @@ def run_landscape(
 
     rewards = [r.reward for r in rows]
     betas = [r.p_beta_norm for r in rows]
-    reward_order = np.argsort(rewards)[::-1]  # higher reward is better
-    beta_order = np.argsort(betas)  # lower beta is better
+    reward_order = np.argsort(rewards)[::-1]
+    beta_order = np.argsort(betas)
 
     def rank_of(action: int, order: np.ndarray) -> int:
         return int(np.where(order == action)[0][0]) + 1
