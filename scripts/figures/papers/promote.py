@@ -86,6 +86,10 @@ PAPER_6A_PNG = "figures/mehregan/images/6a/ptq_qat_45hz.png"
 PAPER_6A_MANIFEST = "artifacts/figures/papers/mehregan/6a/manifest.json"
 PAPER_6A_REF = "figures/mehregan/images/6a/paper.png"
 PAPER_6A_REPLICATION_ALT = "Replication Fig 6a"
+PAPER_6B_PNG = "figures/mehregan/images/6b/ptq_qat_30hz.png"
+PAPER_6B_MANIFEST = "artifacts/figures/papers/mehregan/6b/manifest.json"
+PAPER_6B_REF = "figures/mehregan/images/6b/paper.png"
+PAPER_6B_REPLICATION_ALT = "Replication Fig 6b"
 
 _VERSIONED_PNG_RE = re.compile(r"^(?P<stem>.+)_v(?P<ver>\d+)\.png$")
 
@@ -870,6 +874,75 @@ def promote_6a(
         "png": str(png_path),
         "png_repo_rel": repo_rel,
         "manifest": PAPER_6A_MANIFEST,
+        "eval": str(eval_path),
+        "caption": caption,
+        "doc": str(PAPER_1_DOC),
+    }
+
+
+def _caption_6b(manifest: dict[str, Any]) -> str:
+    seed = manifest.get("seed", 0)
+    panel = manifest.get("panel") or {}
+    gates = panel.get("gates") or {}
+    bits = [
+        "30 Hz paper-protocol eval",
+        f"seed {seed}",
+        f"fp32_post={panel.get('fp32_post_mean', 0):.0f}",
+        f"qat_post={panel.get('qat_post_mean', 0):.0f}",
+    ]
+    if gates.get("ptq-fp16_tracks_fp32") and gates.get("ptq-int8_tracks_fp32"):
+        bits.append("PTQ tracks fp32")
+    if gates.get("qat_elevated_vs_fp32"):
+        bits.append("QAT elevated")
+    bits.append(_today())
+    return ", ".join(bits)
+
+
+def _ensure_paper_1_doc_6b(*, caption_6b: str) -> None:
+    if not PAPER_1_DOC.exists():
+        return
+    text = PAPER_1_DOC.read_text()
+    if "<!-- caption-6b:start -->" not in text:
+        return
+    text = _replace_marker(
+        text,
+        "caption-6b",
+        _caption_block(caption_6b, PAPER_6B_MANIFEST),
+    )
+    PAPER_1_DOC.write_text(text)
+
+
+def promote_6b(
+    *,
+    manifest: dict[str, Any],
+    eval_path: Path,
+    png_path: Path,
+    update_docs: bool = True,
+) -> dict[str, str]:
+    """Refresh Fig 6b caption + replication image link in ``figures/mehregan/replications.md``."""
+    caption = _caption_6b(manifest)
+    repo_rel = repo_rel_posix(png_path)
+    if update_docs:
+        _ensure_paper_1_doc_6b(caption_6b=caption)
+        text = PAPER_1_DOC.read_text()
+        repl_old = "*Not yet generated.* Target: `figures/mehregan/images/6b/ptq_qat_30hz.png`"
+        if repl_old in text:
+            text = text.replace(
+                repl_old,
+                f"![Replication Fig 6b]({_doc_figure_link(repo_rel)})",
+                1,
+            )
+        text = _set_markdown_image_link(
+            text,
+            alt=PAPER_6B_REPLICATION_ALT,
+            repo_rel=repo_rel,
+        )
+        PAPER_1_DOC.write_text(text)
+    materialize_docs_figure_papers()
+    return {
+        "png": str(png_path),
+        "png_repo_rel": repo_rel,
+        "manifest": PAPER_6B_MANIFEST,
         "eval": str(eval_path),
         "caption": caption,
         "doc": str(PAPER_1_DOC),
