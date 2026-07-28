@@ -13,7 +13,7 @@ Portability gate: confirm the repo **installs and passes basic checks** on clean
 | Use Multipass / Sandbox for | Use your persistent dev machine (WSL) for |
 |-----------------------------|-------------------------------------------|
 | “Can a stranger clone and set up?” | `rl-dbs train`, `replicate_mehregan_ddpg.py` |
-| `bash scripts/validate-fresh.sh` (pytest + CLI smoke) | Checkpoints under `artifacts/` |
+| `bash scripts/validation/validate-fresh.sh` (pytest + CLI smoke) | Checkpoints under `artifacts/` |
 | Occasional portability sign-off (Phase 4) | MATLAB + Kumaravelu plant (`scripts/matlab/`) |
 | Tiny training smokes **via pytest** (mock env, 1 episode) | Long rollouts, benchmarks, TUI over `results/` |
 
@@ -25,7 +25,7 @@ Portability gate: confirm the repo **installs and passes basic checks** on clean
 
 **Recommended on Windows hosts:** **Multipass** (fresh **Linux**) + **Windows Sandbox** (fresh **Windows**, Git Bash, **no WSL**). **macOS** is deferred until hardware is available.
 
-**Where commands run:** launchers (`run-multipass-linux-validation.ps1`, `launch-windows-sandbox-validation.ps1`, `check-windows-host.ps1`) run on the **Windows desktop** in **PowerShell** — not inside WSL. Validation itself runs **`bash scripts/validate-fresh.sh`** (Git Bash in Sandbox; bash in the Multipass guest).
+**Where commands run:** launchers (`run-multipass-linux-validation.ps1`, `launch-windows-sandbox-validation.ps1`, `check-windows-host.ps1`) run on the **Windows desktop** in **PowerShell** — not inside WSL. Validation itself runs **`bash scripts/validation/validate-fresh.sh`** (Git Bash in Sandbox; bash in the Multipass guest).
 
 ### One-time host setup
 
@@ -33,30 +33,30 @@ Install on the **Windows desktop** (Administrator PowerShell), not inside WSL:
 
 ```powershell
 # Both (default)
-pwsh -ExecutionPolicy Bypass -File scripts/install-fresh-validation-host.ps1
+pwsh -ExecutionPolicy Bypass -File scripts/validation/install-fresh-validation-host.ps1
 
 # One environment only
-pwsh -ExecutionPolicy Bypass -File scripts/install-fresh-validation-host.ps1 -Sandbox
-pwsh -ExecutionPolicy Bypass -File scripts/install-fresh-validation-host.ps1 -Multipass
+pwsh -ExecutionPolicy Bypass -File scripts/validation/install-fresh-validation-host.ps1 -Sandbox
+pwsh -ExecutionPolicy Bypass -File scripts/validation/install-fresh-validation-host.ps1 -Multipass
 ```
 
 From **WSL** (raises UAC on Windows):
 
 ```bash
-bash scripts/install-fresh-validation-host.sh
-bash scripts/install-fresh-validation-host.sh --sandbox
-bash scripts/install-fresh-validation-host.sh --multipass
-bash scripts/install-fresh-validation-host.sh --check
+bash scripts/validation/install-fresh-validation-host.sh
+bash scripts/validation/install-fresh-validation-host.sh --sandbox
+bash scripts/validation/install-fresh-validation-host.sh --multipass
+bash scripts/validation/install-fresh-validation-host.sh --check
 ```
 
 Requires **Windows Pro/Enterprise**, firmware virtualization, and **Hyper-V**. Reboot if the installer exits with code **3010**, then rerun or install the remaining component.
 
-Legacy alias: `scripts/prepare-desktop-host.ps1` (installs both, no flags).
+Legacy alias: `scripts/validation/prepare-desktop-host.ps1` (installs both, no flags).
 
 Check readiness any time:
 
 ```powershell
-pwsh -File scripts/check-windows-host.ps1
+pwsh -File scripts/validation/check-windows-host.ps1
 ```
 
 ### Scripts
@@ -64,21 +64,21 @@ pwsh -File scripts/check-windows-host.ps1
 | Script | Role |
 |--------|------|
 | `scripts/setup.sh` | Install deps, import check, pytest; optional MATLAB; `--validate` for report |
-| `scripts/validate-fresh.sh` | Fresh-host run: setup + CLI smoke + **report block** (Multipass / Sandbox) |
-| `scripts/check-windows-host.ps1` | Hyper-V, Sandbox, Multipass readiness on Windows |
-| `scripts/install-fresh-validation-host.ps1` | **Admin:** install `-Sandbox` and/or `-Multipass` (default both) |
-| `scripts/install-fresh-validation-host.sh` | **WSL:** elevated wrapper for the `.ps1` installer |
-| `scripts/prepare-desktop-host.ps1` | **Admin:** legacy alias (both; use install script for flags) |
-| `scripts/refresh-multipass-catalog.ps1` | **Admin:** fix stale Multipass catalog (see Troubleshooting) |
-| `scripts/repair-multipass.ps1` | **Admin:** unstick hung Multipass CLI / service (`repair-multipass.sh` from WSL) |
-| `scripts/run-multipass-linux-validation.ps1` | **Desktop:** Multipass VM, **git clone**, validation |
-| `scripts/launch-windows-sandbox-validation.ps1` | **Desktop:** Sandbox validate (`-Clone` recommended; 4:3 window resize) |
-| `scripts/run-sandbox-validation-background.sh` | **WSL:** background `-Clone` launch + log sync (`nohup`) |
-| `scripts/sandbox-window.ps1` | **Desktop:** resize running Sandbox window (no relaunch) |
-| `scripts/run-parallel-fresh-validation.ps1` | **Desktop:** Multipass then Sandbox in parallel (staggered launch) |
-| `scripts/validation-repo.ps1` | WSL repo path for host logs + Sandbox folder map |
-| `scripts/bootstrap-fresh-linux.sh` | Inside Multipass: apt + uv + clone + validate |
-| `scripts/bootstrap-fresh-windows.ps1` | Inside Sandbox: Git (GitHub release installer) + uv + validate |
+| `scripts/validation/validate-fresh.sh` | Fresh-host run: setup + CLI smoke + **report block** (Multipass / Sandbox) |
+| `scripts/validation/check-windows-host.ps1` | Hyper-V, Sandbox, Multipass readiness on Windows |
+| `scripts/validation/install-fresh-validation-host.ps1` | **Admin:** install `-Sandbox` and/or `-Multipass` (default both) |
+| `scripts/validation/install-fresh-validation-host.sh` | **WSL:** elevated wrapper for the `.ps1` installer |
+| `scripts/validation/prepare-desktop-host.ps1` | **Admin:** legacy alias (both; use install script for flags) |
+| `scripts/validation/refresh-multipass-catalog.ps1` | **Admin:** fix stale Multipass catalog (see Troubleshooting) |
+| `scripts/validation/repair-multipass.ps1` | **Admin:** unstick hung Multipass CLI / service (`repair-multipass.sh` from WSL) |
+| `scripts/validation/run-multipass-linux-validation.ps1` | **Desktop:** Multipass VM, **git clone**, validation |
+| `scripts/validation/launch-windows-sandbox-validation.ps1` | **Desktop:** Sandbox validate (`-Clone` recommended; 4:3 window resize) |
+| `scripts/validation/run-sandbox-validation-background.sh` | **WSL:** background `-Clone` launch + log sync (`nohup`) |
+| `scripts/validation/sandbox-window.ps1` | **Desktop:** resize running Sandbox window (no relaunch) |
+| `scripts/validation/run-parallel-fresh-validation.ps1` | **Desktop:** Multipass then Sandbox in parallel (staggered launch) |
+| `scripts/validation/validation-repo.ps1` | WSL repo path for host logs + Sandbox folder map |
+| `scripts/validation/bootstrap-fresh-linux.sh` | Inside Multipass: apt + uv + clone + validate |
+| `scripts/validation/bootstrap-fresh-windows.ps1` | Inside Sandbox: Git (GitHub release installer) + uv + validate |
 
 ### Host logs (WSL repo, gitignored)
 
@@ -97,11 +97,11 @@ tail -f .validation-logs/sandbox.log
 tail -f .validation-logs/multipass.log
 ```
 
-Manual: `bash scripts/validate-fresh.sh --log-file .validation-logs/manual.log`
+Manual: `bash scripts/validation/validate-fresh.sh --log-file .validation-logs/manual.log`
 
-On another machine, edit the default WSL path in `scripts/validation-repo.ps1`.
+On another machine, edit the default WSL path in `scripts/validation/validation-repo.ps1`.
 
-**Pass (Python-only):** `bash scripts/validate-fresh.sh` exits 0 and prints a report block. Shorthand after setup on an existing clone: `bash scripts/setup.sh --python-only --non-interactive --validate`. **With MATLAB (optional, on WSL — not in Sandbox):** `bash scripts/matlab/verify.sh` after `source scripts/matlab/env.sh` — [matlab.md](../matlab.md).
+**Pass (Python-only):** `bash scripts/validation/validate-fresh.sh` exits 0 and prints a report block. Shorthand after setup on an existing clone: `bash scripts/setup.sh --python-only --non-interactive --validate`. **With MATLAB (optional, on WSL — not in Sandbox):** `bash scripts/matlab/verify.sh` after `source scripts/matlab/env.sh` — [matlab.md](../matlab.md).
 
 **What `validate-fresh.sh` runs:** `setup.sh --python-only --non-interactive --skip-tests`, then import check, `pytest -m "not matlab"`, and CLI smoke (`rl-dbs info`, `rl-dbs benchmark --dry-run`). It does **not** run full training or MATLAB suites.
 
@@ -125,7 +125,7 @@ Record OS version, blockers, and doc fixes in [roadmap.md](roadmap.md) or [matla
 **One command (Windows desktop PowerShell)** — clones from GitHub inside a fresh Ubuntu VM (tests published repo, not uncommitted WSL changes):
 
 ```powershell
-pwsh -ExecutionPolicy Bypass -File scripts/run-multipass-linux-validation.ps1
+pwsh -ExecutionPolicy Bypass -File scripts/validation/run-multipass-linux-validation.ps1
 ```
 
 Options: `-Memory 3G` (default; raise to `4G` if the host has plenty of free RAM), `-KeepVm` (leave VM for debugging). **Host log:** `.validation-logs/multipass.log`.
@@ -146,7 +146,7 @@ source ~/.bashrc
 
 git clone https://github.com/wilzen3476/rl-adaptive-dbs.git
 cd rl-adaptive-dbs
-bash scripts/validate-fresh.sh
+bash scripts/validation/validate-fresh.sh
 ```
 
 When finished: `exit`, then on the host `multipass delete rl-dbs-linux --purge` for a clean slate next time.
@@ -160,7 +160,7 @@ When finished: `exit`, then on the host `multipass delete rl-dbs-linux --purge` 
 ### Quick start (WSL)
 
 ```bash
-bash scripts/run-sandbox-validation-background.sh
+bash scripts/validation/run-sandbox-validation-background.sh
 tail -f .validation-logs/sandbox.log
 ```
 
@@ -169,18 +169,18 @@ This kills any prior Sandbox, stages bootstrap scripts onto **NTFS** (`%LOCALAPP
 ### Desktop PowerShell
 
 ```powershell
-pwsh -ExecutionPolicy Bypass -File scripts/launch-windows-sandbox-validation.ps1 -Clone
+pwsh -ExecutionPolicy Bypass -File scripts/validation/launch-windows-sandbox-validation.ps1 -Clone
 ```
 
-Default launcher window size is **1280×960 (4:3)** — applied after boot by resizing the host `WindowsSandboxClient` window. Override with `-WindowWidth` / `-WindowHeight`, or `-NoWindowResize`. Running instance: `pwsh -File scripts/sandbox-window.ps1`.
+Default launcher window size is **1280×960 (4:3)** — applied after boot by resizing the host `WindowsSandboxClient` window. Override with `-WindowWidth` / `-WindowHeight`, or `-NoWindowResize`. Running instance: `pwsh -File scripts/validation/sandbox-window.ps1`.
 
 **Mapped WSL tree (dev only):**
 
 ```powershell
-pwsh -File scripts/launch-windows-sandbox-validation.ps1
+pwsh -File scripts/validation/launch-windows-sandbox-validation.ps1
 ```
 
-From WSL mapped mode: `bash scripts/run-sandbox-validation-background.sh --mapped`. Legacy UNC paths: `--no-stage`.
+From WSL mapped mode: `bash scripts/validation/run-sandbox-validation-background.sh --mapped`. Legacy UNC paths: `--no-stage`.
 
 ### `-Clone` flow
 
@@ -204,7 +204,7 @@ From WSL mapped mode: `bash scripts/run-sandbox-validation-background.sh --mappe
     uv/                        # Windows wheels (prefetch via native host uv, not WSL)
 ```
 
-Bump the pinned Git release in `scripts/validation-repo.ps1` when validating against a newer Git for Windows.
+Bump the pinned Git release in `scripts/validation/validation-repo.ps1` when validating against a newer Git for Windows.
 
 **Inside Sandbox:** `bootstrap-fresh-windows.ps1` installs Git from the host cache, **uv**, and **Microsoft VC++ Redistributable** (required for `torch` DLLs). Then `validate-fresh.sh` on `C:\rl-adaptive-dbs` (`-Clone`). **Host log:** `.validation-logs/sandbox.log` (or NTFS stage path when using the background launcher).
 
@@ -216,8 +216,8 @@ Bump the pinned Git release in `scripts/validation-repo.ps1` when validating aga
 
 | Symptom | What to try |
 |---------|-------------|
-| `launch failed: Remote "" is unknown or unreachable` | **Admin:** `pwsh -File scripts/refresh-multipass-catalog.ps1` |
-| Multipass CLI hangs / service won't stop | **Admin:** `pwsh -File scripts/repair-multipass.ps1` (from WSL: `bash scripts/repair-multipass.sh`) |
+| `launch failed: Remote "" is unknown or unreachable` | **Admin:** `pwsh -File scripts/validation/refresh-multipass-catalog.ps1` |
+| Multipass CLI hangs / service won't stop | **Admin:** `pwsh -File scripts/validation/repair-multipass.ps1` (from WSL: `bash scripts/validation/repair-multipass.sh`) |
 | Multipass VM stuck `Starting`, no IP | Boot can be slow under RAM load — wait, or close heavy apps; `repair-multipass.ps1`; retry after reboot; one validation at a time if RAM is tight |
 | `Running` but IPv4 `N/A`, SSH timeout to `*.mshome.net` | `multipass delete rl-dbs-linux --purge`, then **Admin:** `repair-multipass.ps1` (clears stale `hosts.ics` lease), then relaunch |
 | `Not enough memory` starting VM | Default `-Memory 3G`; free RAM on the host (close apps). Do **not** run `wsl --shutdown` from automation — only if **you** choose to |

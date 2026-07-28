@@ -94,7 +94,7 @@ def resolve_init_draws(
         import importlib.util
         spec = importlib.util.spec_from_file_location(
             "export_plant_init_draws",
-            Path(__file__).resolve().parents[2] / "scripts" / "export_plant_init_draws.py",
+            Path(__file__).resolve().parents[4] / "scripts" / "plant" / "export_plant_init_draws.py",
         )
         if spec is None or spec.loader is None:
             return None

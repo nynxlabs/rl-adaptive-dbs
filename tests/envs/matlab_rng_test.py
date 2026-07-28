@@ -31,7 +31,7 @@ def test_cached_init_draws_gsngen_matches_matlab_export() -> None:
     if not matlab_engine_available():
         pytest.skip("MATLAB Python engine not installed (uv sync --group matlab)")
 
-    from scripts.export_plant_init_draws import export_matlab_init_draws
+    from scripts.plant.export_plant_init_draws import export_matlab_init_draws
 
     draws = load_cached_init_draws(42)
     assert draws is not None
