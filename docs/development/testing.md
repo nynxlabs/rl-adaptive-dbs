@@ -158,7 +158,7 @@ Automated tests do **not** replace a clean-machine run. After changing `scripts/
 
 1. **Linux:** Multipass Ubuntu 24.04 on a Windows host.
 2. **Windows (no WSL):** Windows Sandbox + Git Bash.
-3. Run `bash scripts/validate-fresh.sh` (or `bash scripts/setup.sh --python-only --non-interactive --validate`) and save the printed report block.
+3. Run `bash scripts/validation/validate-fresh.sh` (or `bash scripts/setup.sh --python-only --non-interactive --validate`) and save the printed report block.
 4. MATLAB verify (`bash scripts/matlab/verify.sh`) stays on **WSL**, not in Sandbox.
 5. File doc or script fixes when prompts, paths, or dependencies drift.
 
