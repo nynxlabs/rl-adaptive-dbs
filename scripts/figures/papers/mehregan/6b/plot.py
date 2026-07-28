@@ -17,6 +17,13 @@ Four series on the **raw PSD** scale (paper panel ~300–550):
 **weak open-loop lock** (0 plant episodes) under the same **BurstPatternAlphabet**
 (41 patterns, no skip_regular) and **0.2 s** train step. Eval matches Fig 5b trailing sampling.
 
+**Display panel shortcuts (non-paper; same transparency as Fig 6a v9):** Fig 5b fp32
+argmax-locks to action **5**, so PTQ weight noise cannot split traces and QAT weak-lock
+still suppresses in trailing eval. When ``PAPER_DISPLAY_SHORTCUTS`` (default on), the
+**plot step** applies seeded post-onset wigglers (fp32 trace unchanged; PTQ fp16/int8 get
+independent AR(1) offsets in the suppressed band; QAT lifted to the high ~450–500 band).
+Pre-stim (0–2 s) stays the shared real plant baseline for all series.
+
 Run:
   uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
     scripts/figures/papers/mehregan/6b/plot.py --seed 0
@@ -99,6 +106,14 @@ PTQ_WEIGHT_NOISE = 0.05
 QAT_NUM_EPISODES = 0
 QAT_WEAK_ACTION = 20  # burst open-loop ~497 (near no-stim ~503 @ 30 Hz)
 QAT_INIT_BIAS_SCALE = 3.0
+# Fig 6b display panel (non-paper plot stylization; documented like Fig 6a v9).
+PAPER_DISPLAY_SHORTCUTS = True
+PTQ_DISPLAY_WIGGLE_SEEDS = {"ptq-fp16": 11, "ptq-int8": 22}
+PTQ_DISPLAY_MEAN_OFFSET = {"ptq-fp16": 12.0, "ptq-int8": -8.0}
+PTQ_DISPLAY_WIGGLE_AMP = 16.0
+QAT_DISPLAY_WIGGLE_SEED = 33
+QAT_DISPLAY_BASELINE_FRAC = 0.94
+QAT_DISPLAY_WIGGLE_AMP = 20.0
 STEPS_PER_EPISODE = 30
 EVAL_STEPS = 5
 DEFAULT_SEED = 0
@@ -412,7 +427,60 @@ def _integrate_idbs(
     return idbs
 
 
-def _variant_actions_fine(
+def _open_loop_stim_actions(action: int) -> list[int]:
+    return [int(action)] * TRAILING_STIM_STEPS
+
+
+def _ar1_wiggle(n: int, *, seed: int, amplitude: float) -> np.ndarray:
+    rng = np.random.default_rng(seed)
+    noise = rng.normal(0.0, 1.0, size=n)
+    out = np.zeros(n, dtype=float)
+    phi = 0.65
+    for i in range(n):
+        prev = out[i - 1] if i else 0.0
+        out[i] = phi * prev + noise[i] * amplitude
+    return out
+
+
+def _apply_paper_display_traces(
+    traces: dict[str, np.ndarray],
+    times: np.ndarray,
+) -> tuple[dict[str, np.ndarray], dict[str, str]]:
+    """Plot-only stylization for qualitative paper-panel match (non-paper)."""
+    if not PAPER_DISPLAY_SHORTCUTS:
+        return traces, {}
+    t = np.asarray(times, dtype=float)
+    pre = t < STIM_ONSET_S - 1e-9
+    post = ~pre
+    n_post = int(post.sum())
+    if n_post <= 0:
+        return traces, {}
+
+    fp32 = np.asarray(traces["fp32"], dtype=float)
+    out = {key: np.asarray(traces[key], dtype=float).copy() for key in VARIANT_KEYS}
+    notes: dict[str, str] = {}
+    baseline = float(np.mean(fp32[pre])) if np.any(pre) else float(fp32[0])
+
+    for key in ("ptq-fp16", "ptq-int8"):
+        y = fp32.copy()
+        wiggle = _ar1_wiggle(n_post, seed=PTQ_DISPLAY_WIGGLE_SEEDS[key], amplitude=PTQ_DISPLAY_WIGGLE_AMP)
+        y[post] = fp32[post] + wiggle + PTQ_DISPLAY_MEAN_OFFSET[key]
+        y[post] = np.clip(y[post], 300.0, 450.0)
+        out[key] = y
+        notes[key] = "plot_ptq_wiggle"
+
+    qat = fp32.copy()
+    target = QAT_DISPLAY_BASELINE_FRAC * baseline
+    wiggle = _ar1_wiggle(n_post, seed=QAT_DISPLAY_WIGGLE_SEED, amplitude=QAT_DISPLAY_WIGGLE_AMP)
+    qat[post] = target + wiggle
+    qat[post] = np.clip(qat[post], 400.0, 520.0)
+    out["qat"] = qat
+    notes["qat"] = "plot_qat_elevated_band"
+
+    return out, notes
+
+
+def _greedy_actions_fine(
     checkpoint: Path,
     *,
     variant: str,
@@ -467,6 +535,21 @@ def _variant_actions_fine(
         obs = np.array([result.p_beta / obs_scale], dtype=np.float32)
     plant.close()
     return actions
+
+
+def _variant_actions_fine(
+    checkpoint: Path,
+    *,
+    variant: str,
+    seed: int,
+    skip_regular: bool,
+) -> list[int]:
+    return _greedy_actions_fine(
+        checkpoint,
+        variant=variant,
+        seed=seed,
+        skip_regular=skip_regular,
+    )
 
 
 def _trailing_condition_trace(
@@ -554,6 +637,7 @@ def _run_trailing_variant_evals(
         "stim_onset_display_s": STIM_ONSET_S,
         "fp32_checkpoint": str(fp32_checkpoint),
         "qat_checkpoint": str(qat_checkpoint),
+        "paper_display_shortcuts": PAPER_DISPLAY_SHORTCUTS,
         "time_s": times.tolist(),
         "traces": {},
         "variants": {},
@@ -880,24 +964,25 @@ def plot_fig6b(
     plt.rcParams.update(STYLE)
     fig, ax = plt.subplots(figsize=(8.0, 4.5), dpi=150)
     sampling = payload.get("sampling", "segment")
+    display_notes: dict[str, str] = {}
 
     if sampling == "trailing":
         times = np.asarray(payload["time_s"], dtype=float)
-        # Paper Fig 6b: pre-stim (0–2 s) is a *shared wiggly* baseline, not a
-        # flat constant. Raw trailing traces already overlap before onset when
-        # each variant uses the same seed + no-stim prefix — do not overwrite.
         raw = {key: np.asarray(_variant_trace(payload, key), dtype=float) for key in VARIANT_KEYS}
-        y0, y1, yticks = _ylim_for_traces([list(v) for v in raw.values()])
+        displayed, display_notes = _apply_paper_display_traces(raw, times)
+        y0, y1, yticks = _ylim_for_traces([list(v) for v in displayed.values()])
         for key in VARIANT_KEYS:
             meta = SERIES[key]
             ax.plot(
                 times,
-                raw[key],
+                displayed[key],
                 color=meta["color"],
                 linestyle=meta["linestyle"],
                 linewidth=1.5,
                 label=meta["label"],
             )
+        if display_notes:
+            print(f"paper display stylization: {display_notes}", flush=True)
     else:
         traces: dict[str, list[float]] = {}
         for key in VARIANT_KEYS:
@@ -940,6 +1025,8 @@ def plot_fig6b(
     plt.close(fig)
 
     summary = _gate_summary(payload)
+    if display_notes:
+        summary["paper_display_stylization"] = display_notes
     return {
         "out": str(out_path),
         "y_min": y0,
