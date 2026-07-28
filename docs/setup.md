@@ -1,6 +1,6 @@
 # Setup
 
-Install, verify, and use **rl-adaptive-dbs** day to day. For **priorities and status**, see [development/roadmap.md](development/roadmap.md) (figure-first) and [figures/paper_1.md](figures/paper_1.md); for **conventions**, [development/conventions.md](development/conventions.md). For scope and architecture, see [README.md](../README.md).
+Install, verify, and use **rl-adaptive-dbs** day to day. For **priorities and status**, see [development/roadmap.md](development/roadmap.md) (figure-first) and [figures/mehregan/replications.md](figures/mehregan/replications.md); for **conventions**, [development/conventions.md](development/conventions.md). For scope and architecture, see [README.md](../README.md).
 
 ---
 
@@ -108,7 +108,7 @@ uv run pytest -m "not matlab"
 - Expect `ok` from the import check.
 - Expect passing tests from the fast pytest subset. Details: [development/testing.md](development/testing.md).
 
-**Phase 3 (complete):** DDPG in `controllers/ddpg/` — train, eval, replication workflow (full-precision). **Phase 4 infrastructure (complete):** benchmark runner, CLI/TUI, PTQ/QAT hooks, `mehregan_eval` suite. **Current work:** close remaining **Mehregan figure panels** (5b, 6a, 6b) per [figures/paper_1.md](figures/paper_1.md) — not “start Phase 5.” Roadmap: [development/roadmap.md](development/roadmap.md).
+**Phase 3 (complete):** DDPG in `controllers/ddpg/` — train, eval, replication workflow (full-precision). **Phase 4 infrastructure (complete):** benchmark runner, CLI/TUI, PTQ/QAT hooks, `mehregan_eval` suite. **Current work:** close remaining **Mehregan figure panels** (5b, 6a, 6b) per [figures/mehregan/replications.md](figures/mehregan/replications.md) — not “start Phase 5.” Roadmap: [development/roadmap.md](development/roadmap.md).
 
 ```python
 from envs import MehreganEnv, run_baseline_rollout

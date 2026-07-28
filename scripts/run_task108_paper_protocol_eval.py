@@ -8,7 +8,7 @@ optional trained DDPG checkpoints.
 Run:
   uv run python scripts/run_task108_paper_protocol_eval.py --mean-hz 45 \\
     --landscape artifacts/ddpg/pattern_reward_landscape_45hz.json \\
-    --checkpoint artifacts/figures/papers/1/4a/checkpoint.pt
+    --checkpoint artifacts/figures/papers/mehregan/4a/checkpoint.pt
 """
 from __future__ import annotations
 

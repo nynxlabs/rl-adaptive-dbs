@@ -36,7 +36,7 @@ NUM_EPISODES = 10
 STEPS_PER_EPISODE = 30  # 30 × 0.2s = 6s per episode
 EVAL_STEPS = 50  # 50 × 0.2s = 10s stimulation + 2s baseline = 12s display
 
-OUTPUT_DIR = Path("artifacts/figures/papers/1/4a")
+OUTPUT_DIR = Path("artifacts/figures/papers/mehregan/4a")
 CHECKPOINT_PATH = OUTPUT_DIR / "checkpoint_skip_regular_02s.pt"
 
 
