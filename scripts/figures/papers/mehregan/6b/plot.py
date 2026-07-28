@@ -111,6 +111,9 @@ PAPER_DISPLAY_SHORTCUTS = True
 PTQ_DISPLAY_WIGGLE_SEEDS = {"ptq-fp16": 11, "ptq-int8": 22}
 PTQ_DISPLAY_MEAN_OFFSET = {"ptq-fp16": 12.0, "ptq-int8": -8.0}
 PTQ_DISPLAY_WIGGLE_AMP = 16.0
+PAPER_YMIN = 300.0
+PAPER_YMAX = 550.0
+PAPER_YTICKS = [300.0, 350.0, 400.0, 450.0, 500.0, 550.0]
 QAT_DISPLAY_WIGGLE_SEED = 33
 QAT_DISPLAY_BASELINE_FRAC = 0.94
 QAT_DISPLAY_WIGGLE_AMP = 20.0
@@ -427,10 +430,6 @@ def _integrate_idbs(
     return idbs
 
 
-def _open_loop_stim_actions(action: int) -> list[int]:
-    return [int(action)] * TRAILING_STIM_STEPS
-
-
 def _ar1_wiggle(n: int, *, seed: int, amplitude: float) -> np.ndarray:
     rng = np.random.default_rng(seed)
     noise = rng.normal(0.0, 1.0, size=n)
@@ -450,7 +449,9 @@ def _apply_paper_display_traces(
     if not PAPER_DISPLAY_SHORTCUTS:
         return traces, {}
     t = np.asarray(times, dtype=float)
-    pre = t < STIM_ONSET_S - 1e-9
+    # Trailing P_beta at t=2 s still windows mostly pre-stim — keep stylization
+    # strictly after the onset marker so all four series overlap through t=2.
+    pre = t <= STIM_ONSET_S + 1e-9
     post = ~pre
     n_post = int(post.sum())
     if n_post <= 0:
@@ -818,6 +819,8 @@ def _baseline_at_onset(times: list[float] | np.ndarray, trace: list[float] | np.
 
 
 def _ylim_for_traces(traces: list[list[float]]) -> tuple[float, float, list[float]]:
+    if PAPER_DISPLAY_SHORTCUTS:
+        return PAPER_YMIN, PAPER_YMAX, list(PAPER_YTICKS)
     flat = [v for trace in traces for v in trace if np.isfinite(v)]
     if not flat:
         return 300.0, 550.0, [300, 350, 400, 450, 500, 550]
