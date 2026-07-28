@@ -112,7 +112,7 @@ PTQ_DISPLAY_MEAN_OFFSET = {"ptq-fp16": 12.0, "ptq-int8": -8.0}
 PTQ_DISPLAY_WIGGLE_AMP = 16.0
 PAPER_YMIN = 225.0
 PAPER_YMAX = 550.0
-PAPER_YTICKS = [225.0, 275.0, 325.0, 375.0, 425.0, 475.0, 525.0, 550.0]
+PAPER_YTICK_STEP = 25.0
 QAT_DISPLAY_WIGGLE_SEED = 33
 QAT_DISPLAY_BASELINE_FRAC = 0.94
 QAT_DISPLAY_WIGGLE_AMP = 20.0
@@ -798,9 +798,16 @@ def _baseline_at_onset(times: list[float] | np.ndarray, trace: list[float] | np.
     return float(y[idx])
 
 
+def _paper_ylim() -> tuple[float, float, list[float]]:
+    ticks = [float(t) for t in np.arange(PAPER_YMIN, PAPER_YMAX + 1e-9, PAPER_YTICK_STEP)]
+    if not ticks or ticks[-1] < PAPER_YMAX - 1e-9:
+        ticks.append(PAPER_YMAX)
+    return PAPER_YMIN, PAPER_YMAX, ticks
+
+
 def _ylim_for_traces(traces: list[list[float]]) -> tuple[float, float, list[float]]:
     if PAPER_DISPLAY_SHORTCUTS:
-        return PAPER_YMIN, PAPER_YMAX, list(PAPER_YTICKS)
+        return _paper_ylim()
     flat = [v for trace in traces for v in trace if np.isfinite(v)]
     if not flat:
         return 300.0, 550.0, [300, 350, 400, 450, 500, 550]
