@@ -1,9 +1,9 @@
 # Repair wedged Multipass on Windows (hung CLI, stuck VM, stale clients).
 # Run as Administrator on the Windows desktop:
-#   pwsh -ExecutionPolicy Bypass -File scripts/repair-multipass.ps1
+#   pwsh -ExecutionPolicy Bypass -File scripts/validation/repair-multipass.ps1
 #
 # From WSL (UAC prompt):
-#   bash scripts/repair-multipass.ps1
+#   bash scripts/validation/repair-multipass.ps1
 
 #Requires -RunAsAdministrator
 $ErrorActionPreference = 'Continue'

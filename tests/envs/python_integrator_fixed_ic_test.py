@@ -38,7 +38,7 @@ def matlab_plant() -> Iterator[MatlabPlant]:
 @pytest.fixture(scope="module")
 def matlab_init_draws() -> NetworkInitDraws:
     if not FIXTURE.is_file():
-        pytest.skip(f"fixture missing: {FIXTURE} (run scripts/export_plant_init_draws.py)")
+        pytest.skip(f"fixture missing: {FIXTURE} (run scripts/plant/export_plant_init_draws.py)")
     return NetworkInitDraws.from_npz(FIXTURE)
 
 

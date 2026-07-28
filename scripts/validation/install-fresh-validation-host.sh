@@ -2,15 +2,15 @@
 # Install Multipass and/or Windows Sandbox on the Windows desktop (Admin UAC).
 # Run from WSL:
 #
-#   bash scripts/install-fresh-validation-host.sh
-#   bash scripts/install-fresh-validation-host.sh --sandbox
-#   bash scripts/install-fresh-validation-host.sh --multipass
-#   bash scripts/install-fresh-validation-host.sh --check
+#   bash scripts/validation/install-fresh-validation-host.sh
+#   bash scripts/validation/install-fresh-validation-host.sh --sandbox
+#   bash scripts/validation/install-fresh-validation-host.sh --multipass
+#   bash scripts/validation/install-fresh-validation-host.sh --check
 #
 set -euo pipefail
 
 _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-repo_root="$(cd "$_script_dir/.." && pwd)"
+repo_root="$(cd "$_script_dir/../.." && pwd)"
 
 install_sandbox=0
 install_multipass=0
@@ -23,7 +23,7 @@ while [[ $# -gt 0 ]]; do
     --check) check_only=1; shift ;;
     -h | --help)
       cat <<'EOF'
-Usage: bash scripts/install-fresh-validation-host.sh [options]
+Usage: bash scripts/validation/install-fresh-validation-host.sh [options]
 
 Install Windows Sandbox and/or Multipass on the desktop host (Administrator).
 
@@ -35,7 +35,7 @@ Options:
 
 Default (no flags): install both. Accept the UAC prompt on Windows.
 
-After install: bash scripts/install-fresh-validation-host.sh --check
+After install: bash scripts/validation/install-fresh-validation-host.sh --check
 See docs/development/fresh-validation.md
 EOF
       exit 0
@@ -49,8 +49,8 @@ done
 
 distro="${WSL_DISTRO_NAME:-Ubuntu}"
 repo_unc="\\\\wsl.localhost\\${distro}${repo_root//\//\\}"
-install_ps1="${repo_unc}\\scripts\\install-fresh-validation-host.ps1"
-check_ps1="${repo_unc}\\scripts\\check-windows-host.ps1"
+install_ps1="${repo_unc}\\scripts\\validation\\install-fresh-validation-host.ps1"
+check_ps1="${repo_unc}\\scripts\\validation\\check-windows-host.ps1"
 
 pwsh='pwsh'
 if ! command -v pwsh >/dev/null 2>&1; then

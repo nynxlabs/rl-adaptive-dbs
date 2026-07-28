@@ -27,7 +27,7 @@ P_BETA_ABS_TOL: float = 0.01
 
 # Phase B parity (2026-07-03): ``PythonPlant.reset(seed)`` loads ``plant_init_seed{seed}.npz``
 # from ``tests/fixtures/`` (MATLAB ``plant_init_export`` — ``randperm(n,k)`` for gsngen/gsngea/gsngi).
-# Export missing seeds: ``uv run python scripts/export_plant_init_draws.py --seed N``.
+# Export missing seeds: ``uv run python scripts/plant/export_plant_init_draws.py --seed N``.
 
 
 def matlab_available() -> bool:

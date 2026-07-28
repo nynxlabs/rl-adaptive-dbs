@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Repair wedged Multipass on Windows (elevated). See scripts/repair-multipass.ps1
+# Repair wedged Multipass on Windows (elevated). See scripts/validation/repair-multipass.ps1
 set -euo pipefail
 _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-repo_root="$(cd "$_script_dir/.." && pwd)"
+repo_root="$(cd "$_script_dir/../.." && pwd)"
 distro="${WSL_DISTRO_NAME:-Ubuntu}"
-repair_ps1="\\\\wsl.localhost\\${distro}${repo_root//\//\\}\\scripts\\repair-multipass.ps1"
+repair_ps1="\\\\wsl.localhost\\${distro}${repo_root//\//\\}\\scripts\\validation\\repair-multipass.ps1"
 
 echo "=== repair-multipass.sh ==="
 echo "  Accept the Windows Administrator (UAC) prompt."

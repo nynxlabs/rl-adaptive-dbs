@@ -263,7 +263,7 @@ export UV_CACHE_DIR='$uvCacheBash'
 export UV_LINK_MODE=copy
 set -o pipefail
 cd '$bashRepo'
-bash scripts/validate-fresh.sh 2>&1 | tee -a '$logBash'
+bash scripts/validation/validate-fresh.sh 2>&1 | tee -a '$logBash'
 exit `$?
 "@
 

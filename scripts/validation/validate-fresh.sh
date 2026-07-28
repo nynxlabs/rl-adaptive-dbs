@@ -5,7 +5,7 @@
 set -euo pipefail
 
 _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-repo_root="$(cd "$_script_dir/.." && pwd)"
+repo_root="$(cd "$_script_dir/../.." && pwd)"
 cd "$repo_root"
 
 RUN_SETUP=1
@@ -22,7 +22,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     -h | --help)
       cat <<'EOF'
-Usage: bash scripts/validate-fresh.sh [options]
+Usage: bash scripts/validation/validate-fresh.sh [options]
 
 Run project setup (optional) and print a copy-paste validation report.
 
@@ -34,11 +34,11 @@ Options:
 Typical flow (Multipass or Windows Sandbox):
   git clone https://github.com/wilzen3476/rl-adaptive-dbs.git
   cd rl-adaptive-dbs
-  bash scripts/validate-fresh.sh
+  bash scripts/validation/validate-fresh.sh
 
 Windows host prerequisites (run on desktop PowerShell):
-  pwsh -File scripts/check-windows-host.ps1
-  pwsh -File scripts/refresh-multipass-catalog.ps1   # if Multipass launch fails (Admin)
+  pwsh -File scripts/validation/check-windows-host.ps1
+  pwsh -File scripts/validation/refresh-multipass-catalog.ps1   # if Multipass launch fails (Admin)
 
 See docs/development/fresh-validation.md (timing, troubleshooting).
 

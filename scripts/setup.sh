@@ -22,7 +22,7 @@ Options:
   --python-only    Skip MATLAB (default in non-interactive mode)
   --with-matlab    Run scripts/matlab/setup.sh (interactive MATLAB flow)
   --skip-tests     Skip pytest after Python setup
-  --validate       After setup, run scripts/validate-fresh.sh --checks-only
+  --validate       After setup, run scripts/validation/validate-fresh.sh --checks-only
   --non-interactive
                    No prompts; implies --python-only unless --with-matlab
   -h, --help       Show this help
@@ -33,9 +33,9 @@ Examples:
   bash scripts/setup.sh --with-matlab
   bash scripts/setup.sh --python-only --non-interactive --validate
 
-Fresh Multipass / Sandbox hosts: bash scripts/validate-fresh.sh
+Fresh Multipass / Sandbox hosts: bash scripts/validation/validate-fresh.sh
   (see docs/development/fresh-validation.md — validation only, not training)
-Windows host prerequisites: pwsh -File scripts/check-windows-host.ps1
+Windows host prerequisites: pwsh -File scripts/validation/check-windows-host.ps1
 EOF
 }
 
@@ -149,12 +149,12 @@ fi
 
 if [[ "$RUN_VALIDATE" -eq 1 ]]; then
   say "=== extended validation (validate-fresh.sh) ==="
-  bash "$_script_dir/validate-fresh.sh" --checks-only
+  bash "$_script_dir/validation/validate-fresh.sh" --checks-only
   say ""
 fi
 
 say "=== setup complete ==="
 if [[ "$RUN_VALIDATE" -eq 0 ]]; then
-  say "Fresh-host report: bash scripts/validate-fresh.sh"
+  say "Fresh-host report: bash scripts/validation/validate-fresh.sh"
 fi
 say "Next: docs/setup.md §5 (day-to-day commands)"

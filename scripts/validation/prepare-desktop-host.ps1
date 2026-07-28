@@ -1,8 +1,8 @@
 # Enable Windows Sandbox + install Multipass. Run as Administrator on the Windows desktop.
-# Prefer: pwsh -ExecutionPolicy Bypass -File scripts/install-fresh-validation-host.ps1
+# Prefer: pwsh -ExecutionPolicy Bypass -File scripts/validation/install-fresh-validation-host.ps1
 #   (supports -Sandbox / -Multipass flags)
 #
-#   pwsh -ExecutionPolicy Bypass -File scripts/prepare-desktop-host.ps1
+#   pwsh -ExecutionPolicy Bypass -File scripts/validation/prepare-desktop-host.ps1
 
 #Requires -RunAsAdministrator
 $ErrorActionPreference = 'Stop'

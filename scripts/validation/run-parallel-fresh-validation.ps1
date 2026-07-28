@@ -1,5 +1,5 @@
 # Run Multipass Linux + Windows Sandbox fresh validation in parallel.
-#   pwsh -ExecutionPolicy Bypass -File scripts/run-parallel-fresh-validation.ps1
+#   pwsh -ExecutionPolicy Bypass -File scripts/validation/run-parallel-fresh-validation.ps1
 #
 # Multipass memory is sized from host available RAM before Sandbox starts (3G floor for parallel).
 # Sandbox has no MemoryInMB cap; Windows manages memory dynamically.
