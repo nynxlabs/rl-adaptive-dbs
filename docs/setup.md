@@ -20,7 +20,7 @@ Packages install in editable mode so local changes are importable immediately af
 
 ## Setup script verification status
 
-Phase 4 expanded the install surface (benchmark runner, `rl-dbs` / `rl-dbs-tui`, PTQ/QAT deps, `scripts/validate-fresh.sh`, Multipass / Windows Sandbox host scripts, and the `--validate` flag on `scripts/setup.sh`). A **re-verification pass** started 2026-07-18 after that expansion.
+Phase 4 expanded the install surface (benchmark runner, `rl-dbs` / `rl-dbs-tui`, PTQ/QAT deps, `scripts/validation/validate-fresh.sh`, Multipass / Windows Sandbox host scripts, and the `--validate` flag on `scripts/setup.sh`). A **re-verification pass** started 2026-07-18 after that expansion.
 
 | Area | Status |
 |------|--------|
@@ -90,9 +90,9 @@ Details: activation, `uv add`, pinning Python → [development/venv.md](developm
 
 Periodic **portability** check on clean Linux (Multipass) and Windows (Sandbox) — **testing only**, not for DDPG training or MATLAB plant work. Full procedure, scripts, timing, and troubleshooting: [development/fresh-validation.md](development/fresh-validation.md).
 
-**Host install (desktop Admin):** `pwsh -File scripts/install-fresh-validation-host.ps1` (`-Sandbox` / `-Multipass` optional). From WSL: `bash scripts/install-fresh-validation-host.sh`. Logs: `.validation-logs/` (gitignored).
+**Host install (desktop Admin):** `pwsh -File scripts/validation/install-fresh-validation-host.ps1` (`-Sandbox` / `-Multipass` optional). From WSL: `bash scripts/validation/install-fresh-validation-host.sh`. Logs: `.validation-logs/` (gitignored).
 
-From **Windows desktop PowerShell**: `pwsh -File scripts/check-windows-host.ps1`, then the Multipass or Sandbox launcher in that doc. Inside the guest: `bash scripts/validate-fresh.sh`.
+From **Windows desktop PowerShell**: `pwsh -File scripts/validation/check-windows-host.ps1`, then the Multipass or Sandbox launcher in that doc. Inside the guest: `bash scripts/validation/validate-fresh.sh`.
 
 ---
 
