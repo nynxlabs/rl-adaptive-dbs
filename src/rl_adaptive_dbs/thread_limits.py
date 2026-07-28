@@ -3,7 +3,7 @@
 Set limits **before** NumPy/NumPy-dependent imports when possible:
 
 - ``uv run python -m rl_adaptive_dbs.run scripts/probes/foo.py`` (default cap: 3 threads)
-- ``uv run python -m rl_adaptive_dbs.run scripts/training/foo.py``
+- ``uv run python -m rl_adaptive_dbs.run scripts/figures/papers/1/4a/plot.py``
 - ``rl-dbs train ...`` (default cap: 3 threads for train/eval/benchmark)
 - ``RL_DBS_MAX_THREADS=3`` in the environment (override fallback)
 

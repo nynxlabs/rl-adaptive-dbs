@@ -154,7 +154,7 @@ Qualitative replication of Mehregan et al. Fig. 2a — GPi beta-band power ($P_\
 | **Artifacts** | `artifacts/figures/papers/mehregan/2a/` (`series.json`, `manifest.json`); PNG `figures/mehregan/images/2a/beta_power.png` |
 | **Backend** | `PythonPlant` (default) |
 | **Protocol** | **14 s** simulate (2 s pre-roll + 12 s display); plot axis = sim **− 2 s**; DBS at **sim 4 s**; **0.2 s** trailing / **2 s** backward window; windows end at **sim 14 s** (display $t=12$ → `[12, 14]`) |
-| **Spike buffer** | Fig 2a alone passes `gpi_spike_buffer_size` ≈ **904** (`ceil(14 s × 60 Hz) + 64`) — Numba default **512**/neuron truncates GPi spikes on long integrates and caused an artificial end-of-trace cliff (see `scripts/probes/fig2a_spike_buffer_probe.py`) |
+| **Spike buffer** | Fig 2a alone passes `gpi_spike_buffer_size` ≈ **904** (`ceil(14 s × 60 Hz) + 64`) — Numba default **512**/neuron truncates GPi spikes on long integrates and caused an artificial end-of-trace cliff |
 | **Plot** | Dense line trace 0–12 s; dashed vertical at **2 s**; y-axis label **PSD** |
 | **Alt mode** | `--sampling segment` — six whole-segment **2 s** bins (step plot) |
 | **Seeds** | Default **0**; `--seeds` for mean across multiple IC draws |
