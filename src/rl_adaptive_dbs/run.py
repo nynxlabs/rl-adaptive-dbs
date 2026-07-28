@@ -37,7 +37,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "script",
         type=Path,
-        help="Script path (e.g. scripts/probes/run_task177_continuous_freq_probe.py)",
+        help="Script path (e.g. scripts/probes/fig4a_three_trace_diagnostic.py)",
     )
     parser.add_argument(
         "script_args",
