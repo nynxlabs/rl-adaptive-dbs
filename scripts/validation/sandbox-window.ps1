@@ -2,8 +2,8 @@
 # Microsoft .wsb files do not support display size; this adjusts outer window chrome via Win32.
 #
 # Standalone (running Sandbox instance — does not launch or restart Sandbox):
-#   pwsh -File scripts/sandbox-window.ps1
-#   pwsh -File scripts/sandbox-window.ps1 -WindowWidth 1024 -WindowHeight 768
+#   pwsh -File scripts/validation/sandbox-window.ps1
+#   pwsh -File scripts/validation/sandbox-window.ps1 -WindowWidth 1024 -WindowHeight 768
 #
 # Dot-sourced by launch-windows-sandbox-validation.ps1 after Start-Process on the .wsb file.
 

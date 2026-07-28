@@ -1,11 +1,11 @@
 # Install Windows Sandbox and/or Multipass for fresh-validation (Phase 4).
 # Run as Administrator on the Windows desktop (not inside WSL).
 #
-#   pwsh -ExecutionPolicy Bypass -File scripts/install-fresh-validation-host.ps1
-#   pwsh -ExecutionPolicy Bypass -File scripts/install-fresh-validation-host.ps1 -Sandbox
-#   pwsh -ExecutionPolicy Bypass -File scripts/install-fresh-validation-host.ps1 -Multipass
+#   pwsh -ExecutionPolicy Bypass -File scripts/validation/install-fresh-validation-host.ps1
+#   pwsh -ExecutionPolicy Bypass -File scripts/validation/install-fresh-validation-host.ps1 -Sandbox
+#   pwsh -ExecutionPolicy Bypass -File scripts/validation/install-fresh-validation-host.ps1 -Multipass
 #
-# After reboot (if prompted): pwsh -File scripts/check-windows-host.ps1
+# After reboot (if prompted): pwsh -File scripts/validation/check-windows-host.ps1
 
 #Requires -RunAsAdministrator
 param(
@@ -95,10 +95,10 @@ if ($rebootNeeded) {
     Write-Host 'Reboot required before remaining steps work.'
     if ($installMultipass -and -not (Test-MultipassInstalled)) {
         Write-Host 'After reboot, install Multipass:'
-        Write-Host '  pwsh -ExecutionPolicy Bypass -File scripts/install-fresh-validation-host.ps1 -Multipass'
+        Write-Host '  pwsh -ExecutionPolicy Bypass -File scripts/validation/install-fresh-validation-host.ps1 -Multipass'
         Write-Host 'Or rerun without flags to finish both.'
     }
-    Write-Host 'Then: pwsh -File scripts/check-windows-host.ps1'
+    Write-Host 'Then: pwsh -File scripts/validation/check-windows-host.ps1'
     exit 3010
 }
 
@@ -108,11 +108,11 @@ if ($installMultipass) {
 
 Write-Host ''
 Write-Host '=== done ==='
-Write-Host 'Verify: pwsh -File scripts/check-windows-host.ps1'
+Write-Host 'Verify: pwsh -File scripts/validation/check-windows-host.ps1'
 Write-Host 'Guide:  docs/development/fresh-validation.md'
 if ($installMultipass) {
-    Write-Host 'Linux validation:  pwsh -File scripts/run-multipass-linux-validation.ps1'
+    Write-Host 'Linux validation:  pwsh -File scripts/validation/run-multipass-linux-validation.ps1'
 }
 if ($installSandbox) {
-    Write-Host 'Windows validation: pwsh -File scripts/launch-windows-sandbox-validation.ps1'
+    Write-Host 'Windows validation: pwsh -File scripts/validation/launch-windows-sandbox-validation.ps1'
 }

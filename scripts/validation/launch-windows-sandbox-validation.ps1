@@ -1,12 +1,12 @@
 # Generate and launch Windows Sandbox validation.
-#   pwsh -ExecutionPolicy Bypass -File scripts/launch-windows-sandbox-validation.ps1
-#   pwsh -ExecutionPolicy Bypass -File scripts/launch-windows-sandbox-validation.ps1 -Clone
+#   pwsh -ExecutionPolicy Bypass -File scripts/validation/launch-windows-sandbox-validation.ps1
+#   pwsh -ExecutionPolicy Bypass -File scripts/validation/launch-windows-sandbox-validation.ps1 -Clone
 #
-# Requires: Windows Sandbox enabled (scripts/install-fresh-validation-host.ps1 -Sandbox)
+# Requires: Windows Sandbox enabled (scripts/validation/install-fresh-validation-host.ps1 -Sandbox)
 # Default: maps WSL working tree. -Clone: git clone inside Sandbox (tests GitHub main).
 # Logs -> <repo>/.validation-logs/sandbox.log (gitignored).
 # Window: default 1280x960 (4:3) via post-launch resize; -NoWindowResize to skip.
-# Resize a running instance without relaunch: pwsh -File scripts/sandbox-window.ps1
+# Resize a running instance without relaunch: pwsh -File scripts/validation/sandbox-window.ps1
 
 param(
     [string]$RepoPath = '',
@@ -24,7 +24,7 @@ $sandboxExe = "$env:WINDIR\System32\WindowsSandbox.exe"
 if (-not (Test-Path $sandboxExe)) {
     Write-Error @"
 Windows Sandbox is not available (WindowsSandbox.exe missing).
-Run as Administrator: pwsh -File scripts/install-fresh-validation-host.ps1 -Sandbox
+Run as Administrator: pwsh -File scripts/validation/install-fresh-validation-host.ps1 -Sandbox
 Then reboot if prompted.
 "@
 }
@@ -38,7 +38,7 @@ if (-not (Test-Path -LiteralPath $repoRoot)) {
     Write-Error @"
 WSL repo path is not reachable from Windows: $repoRoot
 Start WSL (open a WSL shell) and retry. From WSL:
-  bash scripts/install-fresh-validation-host.sh --check
+  bash scripts/validation/install-fresh-validation-host.sh --check
 Or use -Clone (maps only scripts + logs; clones repo inside Sandbox).
 "@
 }
@@ -60,7 +60,7 @@ if ($Clone) {
 $wsbPath = Join-Path $env:TEMP 'rl-adaptive-dbs-sandbox.wsb'
 
 if ($Clone) {
-    $scriptsDir = Join-Path $repoRoot 'scripts'
+    $scriptsDir = Join-Path $repoRoot 'scripts/validation'
     if (-not (Test-Path -LiteralPath $scriptsDir)) {
         Write-Error "Missing scripts dir: $scriptsDir"
     }
@@ -99,7 +99,7 @@ if ($Clone) {
     </MappedFolder>
   </MappedFolders>
   <LogonCommand>
-    <Command>powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\rl-adaptive-dbs\scripts\bootstrap-fresh-windows.ps1 -LogDir C:\host-logs</Command>
+    <Command>powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\rl-adaptive-dbs\scripts\validation\bootstrap-fresh-windows.ps1 -LogDir C:\host-logs</Command>
   </LogonCommand>
 </Configuration>
 "@

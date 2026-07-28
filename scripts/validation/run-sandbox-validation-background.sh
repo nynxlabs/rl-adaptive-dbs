@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Launch Windows Sandbox validation in the background (from WSL).
-#   bash scripts/run-sandbox-validation-background.sh          # -Clone (recommended)
-#   bash scripts/run-sandbox-validation-background.sh --mapped # WSL tree mapped (dev only)
+#   bash scripts/validation/run-sandbox-validation-background.sh          # -Clone (recommended)
+#   bash scripts/validation/run-sandbox-validation-background.sh --mapped # WSL tree mapped (dev only)
 #
 # Clone mode stages scripts + .validation-logs onto NTFS (LOCALAPPDATA) so Sandbox
 # folder maps work when \\wsl.localhost\... is flaky.
 set -euo pipefail
 
 _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-repo_root="$(cd "$_script_dir/.." && pwd)"
+repo_root="$(cd "$_script_dir/../.." && pwd)"
 log_dir="$repo_root/.validation-logs"
 launcher_log="$log_dir/sandbox-launcher.log"
 
@@ -40,7 +40,7 @@ rm -f "$log_dir/sandbox.log"
 pwsh='/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe'
 
 if [[ -n "$repo_path_arg" ]]; then
-  script_win="$(wslpath -w "$stage_root/scripts/launch-windows-sandbox-validation.ps1")"
+  script_win="$(wslpath -w "$stage_root/scripts/validation/launch-windows-sandbox-validation.ps1")"
 else
   script_win="$(wslpath -w "$_script_dir/launch-windows-sandbox-validation.ps1")"
 fi

@@ -1,6 +1,6 @@
 # Refresh Multipass image catalog (fixes "Remote is unknown or unreachable" on launch).
 # Run on Windows desktop — Administrator PowerShell:
-#   pwsh -ExecutionPolicy Bypass -File scripts/refresh-multipass-catalog.ps1
+#   pwsh -ExecutionPolicy Bypass -File scripts/validation/refresh-multipass-catalog.ps1
 #
 # See docs/development/fresh-validation.md — Troubleshooting.
 
@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 
 $mp = 'C:\Program Files\Multipass\bin\multipass.exe'
 if (-not (Test-Path $mp)) {
-    Write-Error 'multipass not found. Run: pwsh -File scripts/install-fresh-validation-host.ps1 -Multipass'
+    Write-Error 'multipass not found. Run: pwsh -File scripts/validation/install-fresh-validation-host.ps1 -Multipass'
 }
 
 Write-Host 'Stopping multipassd...'

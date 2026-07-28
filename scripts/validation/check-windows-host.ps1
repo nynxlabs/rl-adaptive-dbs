@@ -1,8 +1,8 @@
 # Check Windows host prerequisites for Multipass + Windows Sandbox validation.
 # Run on Windows (PowerShell as Administrator for full feature status):
-#   pwsh -File scripts/check-windows-host.ps1
+#   pwsh -File scripts/validation/check-windows-host.ps1
 # From WSL:
-#   /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -ExecutionPolicy Bypass -File scripts/check-windows-host.ps1
+#   /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -ExecutionPolicy Bypass -File scripts/validation/check-windows-host.ps1
 
 $ErrorActionPreference = 'Continue'
 
@@ -89,15 +89,15 @@ Write-Host ("Multipass: {0}" -f $(if ($mpOk) { 'OK' } else { 'INSTALL — https:
 if (-not $sandboxOk) {
     Write-Host ''
     Write-Host 'Install Sandbox (Administrator PowerShell):'
-    Write-Host '  pwsh -ExecutionPolicy Bypass -File scripts/install-fresh-validation-host.ps1 -Sandbox'
+    Write-Host '  pwsh -ExecutionPolicy Bypass -File scripts/validation/install-fresh-validation-host.ps1 -Sandbox'
 }
 
 if (-not $mpOk) {
     Write-Host ''
     Write-Host 'Install Multipass (Administrator PowerShell):'
-    Write-Host '  pwsh -ExecutionPolicy Bypass -File scripts/install-fresh-validation-host.ps1 -Multipass'
+    Write-Host '  pwsh -ExecutionPolicy Bypass -File scripts/validation/install-fresh-validation-host.ps1 -Multipass'
 }
 
 Write-Host ''
 Write-Host 'Next: docs/development/fresh-validation.md'
-Write-Host '      bash scripts/validate-fresh.sh (inside Multipass or Sandbox Git Bash)'
+Write-Host '      bash scripts/validation/validate-fresh.sh (inside Multipass or Sandbox Git Bash)'
