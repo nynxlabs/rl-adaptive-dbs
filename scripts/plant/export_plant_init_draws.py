@@ -17,7 +17,7 @@ def _repo_model_dir() -> Path:
     root = os.environ.get("RL_ADAPTIVE_DBS_ROOT")
     if root:
         return Path(root).resolve() / "reference-material" / "KumaraveluEtAl2016"
-    return Path(__file__).resolve().parents[1] / "reference-material" / "KumaraveluEtAl2016"
+    return Path(__file__).resolve().parents[2] / "reference-material" / "KumaraveluEtAl2016"
 
 
 def _matlab_vec(raw: object) -> np.ndarray:

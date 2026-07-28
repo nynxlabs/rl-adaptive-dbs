@@ -1,5 +1,5 @@
 # Launch Multipass Ubuntu, clone from GitHub, run validate-fresh.sh. Run on Windows desktop PowerShell.
-#   pwsh -ExecutionPolicy Bypass -File scripts/run-multipass-linux-validation.ps1
+#   pwsh -ExecutionPolicy Bypass -File scripts/validation/run-multipass-linux-validation.ps1
 #
 # Options:
 #   -Memory 3G     # default; raise to 4G if host has plenty of free RAM
@@ -22,7 +22,7 @@ function Get-Multipass {
     if (-not $cmd) {
         $default = 'C:\Program Files\Multipass\bin\multipass.exe'
         if (Test-Path $default) { return $default }
-        Write-Error 'multipass not found. Run: pwsh -File scripts/install-fresh-validation-host.ps1 -Multipass'
+        Write-Error 'multipass not found. Run: pwsh -File scripts/validation/install-fresh-validation-host.ps1 -Multipass'
     }
     return $cmd.Source
 }

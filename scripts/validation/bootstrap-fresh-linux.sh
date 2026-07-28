@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Bootstrap a fresh Linux Multipass guest: apt + uv + git clone + validate-fresh.sh.
-# Used by scripts/run-multipass-linux-validation.ps1 (always clone from GitHub).
+# Used by scripts/validation/run-multipass-linux-validation.ps1 (always clone from GitHub).
 set -euo pipefail
 
 REPO_URL="${RL_ADAPTIVE_DBS_REPO_URL:-https://github.com/wilzen3476/rl-adaptive-dbs.git}"
@@ -30,4 +30,4 @@ if [[ ! -d "$REPO_DIR/.git" ]]; then
 fi
 
 cd "$REPO_DIR"
-bash scripts/validate-fresh.sh "$@"
+bash scripts/validation/validate-fresh.sh "$@"
