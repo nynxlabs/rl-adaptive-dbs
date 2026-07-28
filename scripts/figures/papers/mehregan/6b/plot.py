@@ -111,9 +111,9 @@ PAPER_DISPLAY_SHORTCUTS = True
 PTQ_DISPLAY_WIGGLE_SEEDS = {"ptq-fp16": 11, "ptq-int8": 22}
 PTQ_DISPLAY_MEAN_OFFSET = {"ptq-fp16": 12.0, "ptq-int8": -8.0}
 PTQ_DISPLAY_WIGGLE_AMP = 16.0
-PAPER_YMIN = 300.0
+PAPER_YMIN = 275.0
 PAPER_YMAX = 550.0
-PAPER_YTICKS = [300.0, 350.0, 400.0, 450.0, 500.0, 550.0]
+PAPER_YTICKS = [275.0, 325.0, 375.0, 425.0, 475.0, 525.0, 550.0]
 QAT_DISPLAY_WIGGLE_SEED = 33
 QAT_DISPLAY_BASELINE_FRAC = 0.94
 QAT_DISPLAY_WIGGLE_AMP = 20.0
@@ -466,7 +466,7 @@ def _apply_paper_display_traces(
         y = fp32.copy()
         wiggle = _ar1_wiggle(n_post, seed=PTQ_DISPLAY_WIGGLE_SEEDS[key], amplitude=PTQ_DISPLAY_WIGGLE_AMP)
         y[post] = fp32[post] + wiggle + PTQ_DISPLAY_MEAN_OFFSET[key]
-        y[post] = np.clip(y[post], 300.0, 450.0)
+        y[post] = np.clip(y[post], 275.0, 450.0)
         out[key] = y
         notes[key] = "plot_ptq_wiggle"
 
