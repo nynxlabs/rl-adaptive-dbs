@@ -1,6 +1,6 @@
 # Command-line interface specification
 
-This document defines the **`rl-dbs`** CLI: training, evaluation, benchmarking, configuration, and repository introspection. Implemented in Phase 4; **Mehregan replication exit criteria** are figure panels ([figures/paper_1.md](figures/paper_1.md)), not CLI completeness alone. Broader controller coverage continues in later roadmap phases ([development/roadmap.md](development/roadmap.md)).
+This document defines the **`rl-dbs`** CLI: training, evaluation, benchmarking, configuration, and repository introspection. Implemented in Phase 4; **Mehregan replication exit criteria** are figure panels ([figures/mehregan/replications.md](figures/mehregan/replications.md)), not CLI completeness alone. Broader controller coverage continues in later roadmap phases ([development/roadmap.md](development/roadmap.md)).
 
 **Related specs:** [development/roadmap.md](development/roadmap.md) (phases), [benchmarking.md](benchmarking.md) (suites, results layout), [tui.md](tui.md) (read-only monitor), [environment.md](environment.md) (Mehregan Gym API), [plant.md](plant.md) (plant config), [controllers/](controllers/) (per-paper training). Tooling: [development/venv.md](development/venv.md) (`uv run`).
 

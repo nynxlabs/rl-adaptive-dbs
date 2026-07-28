@@ -4,7 +4,7 @@ This document specifies the **deep spiking Q-network (DSQN)** controller from *C
 
 **Companion spec:** The shared **Kumaravelu et al. (2016)** plant — [plant.md](../../plant.md). **Mehregan et al.** Gymnasium API — [environment.md](../../environment.md). **This document is authoritative for the Nguyen controller**—observation, action, reward, timing, and DSQN training—unless the others explicitly describe the same quantity.
 
-**Scheduling:** Nguyen replication is **Phase 5** and is **active in parallel** with Mehregan ([roadmap.md](../../development/roadmap.md)). Panel tracker: [figures/paper_2.md](../../figures/paper_2.md). Prefer adapter-local conventions over changing Mehregan env defaults.
+**Scheduling:** Nguyen replication is **Phase 5** and is **active in parallel** with Mehregan ([roadmap.md](../../development/roadmap.md)). Panel tracker: [figures/nguyen/replications.md](../../figures/nguyen/replications.md). Prefer adapter-local conventions over changing Mehregan env defaults.
 
 ---
 
