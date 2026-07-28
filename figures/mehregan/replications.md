@@ -232,7 +232,7 @@ Dashed vertical at **2 s** (stimulation onset). Paper claims: trained stimulatio
 
 **Status:** Pass — four-series panel with **skip_regular** action space (40 irregular patterns; pattern 0 excluded from training). **0.2 s trailing / 2 s window** biomarker sampling (same protocol as Fig 2a). Qualitative gates: shared baseline, **130 Hz** lowest, trained **< no stim**, trained **> periodic 45 Hz** (seed 0; greedy action 7 → pattern 8). Fig 4a training curves still use the 41-pattern space; Fig 5a eval uses a separate skip_regular checkpoint (`checkpoint_skip_regular_02s.pt`).
 
-**Convention (skip_regular, 2026-07-16):** At 45 Hz, pattern 0 (regular periodic) is the global open-loop optimum — a 41-pattern agent correctly collapses to it. Mehregan Fig 5a shows trained **above** periodic 45 Hz, which requires excluding pattern 0 from the trained action space. Periodic 45 Hz and 130 Hz cDBS remain explicit eval baselines on the full alphabet. Sweep: `scripts/sweep_45hz_patterns.py`.
+**Convention (skip_regular, 2026-07-16):** At 45 Hz, pattern 0 (regular periodic) is the global open-loop optimum — a 41-pattern agent correctly collapses to it. Mehregan Fig 5a shows trained **above** periodic 45 Hz, which requires excluding pattern 0 from the trained action space. Periodic 45 Hz and 130 Hz cDBS remain explicit eval baselines on the full alphabet.
 
 **Run:**
 
@@ -403,14 +403,11 @@ tmux new-session -d -s fig6a-burst-retrain \
 | **QAT ~500 / elevated** | High band ~450–520 | QAT suppresses (~334) | No |
 | **Onset marker** | Dashed vertical at **2 s** | Yes | Yes |
 
-**Interim run:**
+**Run:**
 
 ```bash
-# After fp32 checkpoint + paper-protocol eval JSON exist:
-uv run python scripts/figures/plot_beta_psd_paper_figures.py \
-  --fig6-json artifacts/ddpg/<eval_45hz_ptq_int8>.json \
-  --fig6-json artifacts/ddpg/<eval_45hz_ptq_fp16>.json \
-  --fig6-json artifacts/ddpg/<eval_45hz_qat>.json
+uv run python scripts/figures/papers/1/6a/plot.py --seed 1
+uv run python scripts/figures/papers/1/6a/plot.py --plot-only
 ```
 
 Benchmark slugs: `ptq-fp16`, `ptq-int8`, `qat` ([benchmarking.md](images/../../benchmarking.md)).

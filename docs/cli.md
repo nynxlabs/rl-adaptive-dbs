@@ -97,7 +97,7 @@ Global flags apply before the subcommand and affect logging only unless noted.
 Repo scripts under `scripts/` that import NumPy at module load should be launched through the runner so thread limits apply **before** those imports:
 
 ```bash
-uv run python -m rl_adaptive_dbs.run scripts/probes/run_task177_continuous_freq_probe.py --continuous-only
+uv run python -m rl_adaptive_dbs.run scripts/probes/fig4a_three_trace_diagnostic.py --episodes 5
 ```
 
 By default the runner caps in-process thread pools at **3** (same budget as the TUI Run tab for plant-heavy scripts). Override with `--max-threads N` or `RL_DBS_MAX_THREADS`. Pair with `taskset` when you need a hard logical-CPU pin.
