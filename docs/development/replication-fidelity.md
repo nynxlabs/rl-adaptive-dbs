@@ -91,7 +91,7 @@ Repo features that are **intentionally not** Mehregan replication. Disable or do
 | **`obs_normalize` / running stats** | Experimental obs preprocessing | **Off** |
 | **`init_bias_scale` tuning** | Faster convergence experiments (e.g. learning_v1) | Paper default **2.0** for benchmark checkpoints |
 | **Softmax exploration mode** | Alternative to ε-greedy | Not paper-specified |
-| **Longer training / custom episode scripts** | Panel `plot.py --train` or `rl-dbs train` | Label as extension; compare at 10 episodes separately |
+| **Longer training / custom episode scripts** | `run_pattern_train*.py`, resilient trainers | Label as extension; compare at 10 episodes separately |
 | **Native Python plant + Numba** | ~10× speed vs MATLAB | Same dynamics when init fixtures match; default backend `python` since TASK-63 |
 
 ---

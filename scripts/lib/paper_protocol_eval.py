@@ -1,20 +1,9 @@
-#!/usr/bin/env python3
-"""TASK-108: Fig 5-style paper-protocol eval for pattern-mode policies.
+"""Paper-protocol eval for Mehregan Fig 5/6-style pattern policies."""
 
-Protocol: 2 s baseline (env.reset) + 5 repeated 2 s stimulation steps (§IV.A.2).
-Compares constant pattern 0, best open-loop irregular from landscape JSON, and
-optional trained DDPG checkpoints.
-
-Run:
-  uv run python scripts/run_task108_paper_protocol_eval.py --mean-hz 45 \\
-    --landscape artifacts/ddpg/pattern_reward_landscape_45hz.json \\
-    --checkpoint artifacts/figures/papers/mehregan/4a/checkpoint.pt
-"""
 from __future__ import annotations
 
 import argparse
 import json
-import sys
 import time
 from dataclasses import replace
 from pathlib import Path
@@ -33,7 +22,7 @@ from envs.mehregan.env import MehreganEnv
 from envs.mehregan.fixed_mean_patterns import FixedMeanPatternAlphabet
 from envs.plant.python_backend import PythonPlant
 from rl_adaptive_dbs.user_config import resolve_config
-from scripts.pattern_reward_landscape import describe_pattern
+from scripts.lib.pattern_reward_landscape import describe_pattern
 
 PAPER_DT_MS = 0.02
 
@@ -125,7 +114,6 @@ def _constant_action_eval(
 
 
 def _no_stim_probe(*, seed: int, plant_dt_ms: float | None = PAPER_DT_MS) -> dict[str, Any]:
-    """Single 2 s segment with no stimulation (scalar-frequency action 0)."""
     env = _make_scalar_env(plant_dt_ms=plant_dt_ms)
     try:
         env.reset(seed=seed)
@@ -286,7 +274,7 @@ def run_eval(
                 payload["checkpoint"] = str(ckpt_path)
                 payload["skip_regular"] = skip_regular
                 policies[payload["label"]] = payload
-            except Exception as exc:  # noqa: BLE001 — report eval failures in artifact
+            except Exception as exc:  # noqa: BLE001
                 policies[f"error_{ckpt_path.stem}"] = {
                     "checkpoint": str(ckpt_path),
                     "error": repr(exc),
@@ -311,7 +299,7 @@ def run_eval(
     no_stim = _no_stim_probe(seed=seed, plant_dt_ms=plant_dt_ms)
 
     return {
-        "task": "TASK-108",
+        "task": "paper_protocol_eval",
         "mean_hz": mean_hz,
         "seed": seed,
         "eval_steps": eval_steps,
@@ -333,34 +321,14 @@ def main() -> int:
     parser.add_argument("--landscape", type=Path, required=True)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--eval-steps", type=int, default=5)
-    parser.add_argument(
-        "--plant-dt-ms",
-        type=float,
-        default=PAPER_DT_MS,
-        help="Plant integrator step (default 0.02 for paper figures)",
-    )
-    parser.add_argument(
-        "--no-scalar-baselines",
-        action="store_true",
-        help="Skip no-stim and 130 Hz cDBS scalar-frequency baselines",
-    )
-    parser.add_argument(
-        "--checkpoint",
-        type=Path,
-        action="append",
-        default=[],
-        help="Trained DDPG checkpoint (repeatable)",
-    )
-    parser.add_argument(
-        "--out",
-        type=Path,
-        default=None,
-        help="Output JSON (default: artifacts/ddpg/task108_paper_protocol_{mean}hz.json)",
-    )
+    parser.add_argument("--plant-dt-ms", type=float, default=PAPER_DT_MS)
+    parser.add_argument("--no-scalar-baselines", action="store_true")
+    parser.add_argument("--checkpoint", type=Path, action="append", default=[])
+    parser.add_argument("--out", type=Path, default=None)
     args = parser.parse_args()
 
     out = args.out or Path(
-        f"artifacts/ddpg/task108_paper_protocol_{int(args.mean_hz)}hz.json"
+        f"artifacts/ddpg/paper_protocol_{int(args.mean_hz)}hz.json"
     )
     out.parent.mkdir(parents=True, exist_ok=True)
 
@@ -394,4 +362,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

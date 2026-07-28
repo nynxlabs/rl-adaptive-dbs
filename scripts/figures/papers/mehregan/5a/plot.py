@@ -16,13 +16,13 @@ Four series on the **raw PSD** scale (paper panel ~100–600):
 (``artifacts/figures/papers/mehregan/4a/checkpoint_skip_regular_02s.pt``). The 45 Hz
 action space excludes pattern 0 (regular periodic) so the trained policy sits
 **above** periodic 45 Hz on raw P_beta, matching the paper panel. Train with
-``scripts/retrain_45hz_skip_regular.py`` or pass ``--checkpoint`` explicitly.
+``--train`` (skip_regular, 0.2 s steps) or pass ``--checkpoint`` explicitly.
 
 Modes:
   default — paper-protocol eval + plot (--skip-regular, seed 0)
   --plot-only — replot from cached eval JSON
   --no-skip-regular — legacy 41-pattern eval (trained may collapse to pattern 0)
-  --train — standalone train (legacy; prefer skip_regular retrain script)
+  --train — train skip_regular actor into ``--checkpoint``
 
 Run:
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/5a/plot.py
@@ -53,7 +53,7 @@ from envs.plant import DbsSpec, PlantConfig, PythonPlant
 from envs.plant.dbs import create_dbs_current
 from envs.mehregan.fixed_mean_patterns import FixedMeanPatternAlphabet
 
-from scripts.run_task108_paper_protocol_eval import run_eval
+from scripts.lib.paper_protocol_eval import run_eval
 
 _FIG2A_PATH = Path(__file__).resolve().parents[1] / "2a" / "plot.py"
 _fig2a_spec = importlib.util.spec_from_file_location("fig2a_plot", _FIG2A_PATH)
@@ -689,32 +689,41 @@ def plot_fig5a(
     return panel
 
 
-def _train_checkpoint(*, seed: int, checkpoint_path: Path) -> dict[str, Any]:
+def _train_checkpoint(
+    *,
+    seed: int,
+    checkpoint_path: Path,
+    skip_regular: bool,
+) -> dict[str, Any]:
     from dataclasses import replace
 
-    from controllers.ddpg.checkpoint import save_checkpoint
+    from controllers.ddpg import train
     from controllers.ddpg.config import fig4a_ddpg_config
-    from controllers.ddpg.trainer import train_ddpg
     from envs.mehregan.config import MehreganEnvConfig
     from envs.mehregan.env import MehreganEnv
     from envs.mehregan.fixed_mean_patterns import FixedMeanPatternAlphabet
     from envs.plant.python_backend import PythonPlant
     from rl_adaptive_dbs.user_config import resolve_config
 
+    step_duration_s = TRAILING_RL_STEP_S if skip_regular else SEGMENT_S
     resolved = resolve_config()
     plant_cfg = replace(resolved.plant, dt_ms=PAPER_DT_MS)
     env_cfg = MehreganEnvConfig(
         state_length=1,
+        step_duration_s=step_duration_s,
         action_space_mode="fixed_mean_pattern",
         pattern_mean_hz=MEAN_HZ,
         max_episode_steps=STEPS_PER_EPISODE,
+        skip_regular=skip_regular,
     )
     alphabet = FixedMeanPatternAlphabet(
         mean_hz=MEAN_HZ,
-        step_duration_s=env_cfg.step_duration_s,
+        step_duration_s=step_duration_s,
         dt_ms=plant_cfg.dt_ms,
+        skip_regular=skip_regular,
     )
     env = MehreganEnv(plant=PythonPlant(config=plant_cfg), config=env_cfg, alphabet=alphabet)
+    checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
     try:
         config = fig4a_ddpg_config(
             seed=seed,
@@ -722,24 +731,20 @@ def _train_checkpoint(*, seed: int, checkpoint_path: Path) -> dict[str, Any]:
             max_episode_steps=STEPS_PER_EPISODE,
         )
         print(
-            f"Fig 5a standalone train — {NUM_EPISODES} ep × {STEPS_PER_EPISODE}, seed {seed}",
+            f"Fig 5a train — skip_regular={skip_regular}, "
+            f"{NUM_EPISODES} ep × {STEPS_PER_EPISODE} @ {step_duration_s}s, seed {seed}",
             flush=True,
         )
         t0 = time.time()
-        result = train_ddpg(env, config)
+        train(config=config, env=env, checkpoint_path=checkpoint_path)
         elapsed = time.time() - t0
-        save_checkpoint(
-            checkpoint_path,
-            actor=result.actor,
-            config=result.config,
-            state_length=1,
-            n_actions=env.action_space.n,
-            policy=result.policy,
-            critic=result.critic,
-            extra={"figure": "mehregan_fig5a_standalone", "seed": seed},
-        )
         print(f"wrote checkpoint {checkpoint_path} ({elapsed:.0f}s)", flush=True)
-        return {"checkpoint": str(checkpoint_path), "elapsed_s": elapsed}
+        return {
+            "checkpoint": str(checkpoint_path),
+            "elapsed_s": elapsed,
+            "skip_regular": skip_regular,
+            "step_duration_s": step_duration_s,
+        }
     finally:
         env.close()
 
@@ -835,7 +840,11 @@ def main() -> int:
             return 2
         payload = json.loads(args.eval_json.read_text())
     elif args.train:
-        train_meta = _train_checkpoint(seed=args.seed, checkpoint_path=args.checkpoint)
+        train_meta = _train_checkpoint(
+            seed=args.seed,
+            checkpoint_path=args.checkpoint,
+            skip_regular=args.skip_regular,
+        )
         payload = _run_paper_eval(
             seed=args.seed,
             landscape=args.landscape,
@@ -849,7 +858,8 @@ def main() -> int:
             print(f"missing checkpoint: {args.checkpoint}", file=sys.stderr)
             if args.skip_regular:
                 print(
-                    "Train first: uv run python scripts/retrain_45hz_skip_regular.py",
+                    "Train first: uv run python -m rl_adaptive_dbs.run "
+                    "scripts/figures/papers/mehregan/5a/plot.py --train",
                     file=sys.stderr,
                 )
             else:
