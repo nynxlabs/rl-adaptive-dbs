@@ -142,6 +142,8 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 
 **Status:** Needs work — v4 still the best locked seed-0 trace (noisy early, drop ~130–150, lower late), but the panel is not closed: late mean sits below the paper’s ~0.35–0.45 band, and further training/plot polish is still required before treating this as Pass.
 
+**Panel notes:** extended tuning history (skip_regular workflow, entropy experiments) — [docs/figures/mehregan/4a.md](../../docs/figures/mehregan/4a.md).
+
 **Run:**
 
 ```bash
