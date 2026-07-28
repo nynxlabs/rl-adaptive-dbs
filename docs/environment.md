@@ -78,19 +78,6 @@ Values from **§IV.A.1 (computational setup)** unless noted.
 - `reset()` → new parkinsonian initial conditions (and optional noise seed); integrate for duration **$l$** (2 s) per Algorithm 1 step 7, compute **$P_\beta$** over the biomarker window, form initial observation **$s_0$**, and return it (plus optional initial **$R$** and info). The first `step` then applies an action for another **$l$**.
 - `step(action)` → apply selected **pattern** to STN for **2 s** simulated time, integrate the network, compute **$P_\beta$** over the window policy, return observation, reward, terminated, truncated, info.
 
-### 5.1 Plant integration across RL steps
-
-`MehreganEnvConfig.plant_integration_mode`: **`disconnected`** (default) | **`continuous`** (Fig 5a-style stitched `idbs` after pre-stim; `envs/mehregan/plant_integration.py`). Optional `pre_stim_duration_s` (default = `step_duration_s`). Continuous mode requires **PythonPlant**.
-
-**Within-step L=16 burst ablations (2026-07-27, do not promote Fig 6a):** burst `skip_regular` @ 45 Hz, `dt_ms=0.02`, greedy+logits, 10 ep — both **fail** Fig 6a diversity gates (`constant_greedy_lock`, `ptq_noise0_can_flip=false`):
-
-| `plant_integration_mode` | Greedy action | Mean logit margin | Artifact |
-|--------------------------|---------------|-------------------|----------|
-| `disconnected` | **6** only | ≈681 | `artifacts/ddpg/within_step_L16_burst_train.json` |
-| `continuous` | **0** only | ≈363 | `artifacts/ddpg/within_step_L16_burst_train_continuous.json` |
-
-Continuous integration fixes train/eval plant mismatch (`plant_continuity_probe.json`, `continuity_matters`) and **lowers** logit margins, but does **not** yield multi-action greedy rollouts or PTQ argmax flips at noise 0. Fig 6a honest PTQ still needs accepted extensions (v9-style) or a different lever — not more alphabet sweeps alone.
-
 ---
 
 ## 6. Reward
