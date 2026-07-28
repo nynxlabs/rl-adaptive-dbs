@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import platform
 
 import torch
@@ -13,6 +14,9 @@ PTQ_VARIANTS = frozenset({"ptq-fp16", "ptq-int8"})
 QUANTIZED_VARIANTS = PTQ_VARIANTS | {"qat"}
 
 _QAT_LAYER_TYPES = (nn.Conv1d, nn.Linear)
+
+# Default seeds when Fig 6a/6b applies weight noise before PTQ (distinct non-QAT paths).
+_PTQ_NOISE_SEEDS = {"ptq-fp16": 11, "ptq-int8": 22}
 
 
 def is_ptq_variant(variant: str) -> bool:
@@ -95,6 +99,35 @@ def is_qat_prepared(module: nn.Module) -> bool:
     return isinstance(module, QATActor) and hasattr(module.quant, "activation_post_process")
 
 
+def perturb_float_parameters(
+    module: nn.Module,
+    *,
+    scale: float,
+    seed: int,
+) -> nn.Module:
+    """Deep-copy ``module`` and add Gaussian noise to floating parameters."""
+    if scale < 0:
+        msg = f"ptq weight noise scale must be >= 0, got {scale}"
+        raise ValueError(msg)
+    out = copy.deepcopy(module)
+    if scale == 0:
+        return out
+    generator = torch.Generator()
+    generator.manual_seed(int(seed))
+    with torch.no_grad():
+        for param in out.parameters():
+            if not torch.is_floating_point(param):
+                continue
+            noise = torch.randn(
+                param.shape,
+                generator=generator,
+                dtype=param.dtype,
+                device=param.device,
+            )
+            param.add_(noise * scale)
+    return out
+
+
 def apply_ptq(actor: Actor, variant: str) -> nn.Module:
     """Post-training quantization for inference-only eval."""
     if variant == "ptq-fp16":
@@ -116,10 +149,28 @@ def prepare_actor_for_eval(
     *,
     device: str = "cpu",
     qat_state_dict: dict[str, torch.Tensor] | None = None,
+    ptq_weight_noise: float = 0.0,
+    ptq_noise_seed: int | None = None,
 ) -> nn.Module:
-    """Return an actor module ready for ``run_mehregan_eval``."""
+    """Return an actor module ready for ``run_mehregan_eval``.
+
+    ``ptq_weight_noise`` (Fig 6a/6b): optional Gaussian weight perturbation applied
+    *before* PTQ, with a stable per-variant seed unless ``ptq_noise_seed`` is set.
+    """
     if variant in PTQ_VARIANTS:
-        prepared = apply_ptq(actor, variant)
+        actor_for_ptq: nn.Module = actor
+        if ptq_weight_noise > 0:
+            seed = (
+                int(ptq_noise_seed)
+                if ptq_noise_seed is not None
+                else _PTQ_NOISE_SEEDS[variant]
+            )
+            actor_for_ptq = perturb_float_parameters(
+                actor,
+                scale=float(ptq_weight_noise),
+                seed=seed,
+            )
+        prepared = apply_ptq(actor_for_ptq, variant)  # type: ignore[arg-type]
         if variant == "ptq-int8":
             return prepared
         return prepared.to(device)

@@ -263,22 +263,29 @@ def _build_alternating_idbs(
 
 @dataclass(frozen=True)
 class BurstPatternAlphabet:
-    """Burst clusters at fixed mean rate (probe-only, TASK-177)."""
+    """Burst clusters at fixed mean rate (Fig 5b; Fig 6a with ``skip_regular``)."""
 
     mean_hz: float
     step_duration_s: float = 2.0
     dt_ms: float = 0.02
     n_patterns: int = 41
+    skip_regular: bool = False  # True → hide pattern 0 (regular); agent sees 40 irregular
     pulse_width_ms: float = DBS_PULSE_WIDTH_MS
     amplitude: float = DBS_AMPLITUDE_NA_PER_CM2
 
     @property
     def n_actions(self) -> int:
-        return self.n_patterns
+        return self.n_patterns - 1 if self.skip_regular else self.n_patterns
+
+    def _pattern_index(self, action: int) -> int:
+        """Map agent action → internal pattern index (0 = regular)."""
+        if self.skip_regular:
+            return int(action) + 1
+        return int(action)
 
     def idbs_for_pattern(self, index: int) -> np.ndarray:
-        if index < 0 or index >= self.n_actions:
-            msg = f"pattern index {index} outside [0, {self.n_actions})"
+        if index < 0 or index >= self.n_patterns:
+            msg = f"pattern index {index} outside [0, {self.n_patterns})"
             raise ValueError(msg)
         return _build_burst_idbs(
             index=index,
@@ -290,16 +297,18 @@ class BurstPatternAlphabet:
         )
 
     def idbs_for_action(self, action: int) -> np.ndarray:
-        return self.idbs_for_pattern(int(action))
+        return self.idbs_for_pattern(self._pattern_index(action))
 
     def to_dbs_spec(self, action: int) -> DbsSpec:
         return DbsSpec(
             pick_dbs_freq=DbsSpec.from_frequency_hz(self.mean_hz).pick_dbs_freq,
-            idbs=self.idbs_for_pattern(int(action)),
+            idbs=self.idbs_for_action(int(action)),
             mean_hz=self.mean_hz,
         )
 
     def action_for_dbs_spec(self, spec: DbsSpec) -> int:
+        if self.skip_regular:
+            return 0  # first irregular — regular is outside the agent space
         return self.action_for_frequency_hz(spec.frequency_hz)
 
     def action_for_frequency_hz(self, hz: float) -> int:
