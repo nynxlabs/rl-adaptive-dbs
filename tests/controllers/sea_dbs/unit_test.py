@@ -6,9 +6,23 @@ import numpy as np
 import pytest
 import torch
 
+from controllers.sea_dbs.adapter import SEA_DBSEnvAdapter
 from controllers.sea_dbs.config import SEADBSConfig
 from controllers.sea_dbs.networks import gumbel_softmax_sample
 from controllers.sea_dbs.reward import sea_dbs_reward
+
+
+def test_adapter_reset_nonzero_p_beta() -> None:
+    env = SEA_DBSEnvAdapter(config=SEADBSConfig(seed=0))
+    try:
+        _obs, info = env.reset(seed=0)
+        assert info["p_beta_raw"] > 0.0
+        assert info["mean_p_beta"] > 0.0
+        obs, _reward, _term, _trunc, step_info = env.step(1)
+        assert step_info["p_beta_raw"] > 0.0
+        assert float(obs[0]) > 0.0
+    finally:
+        env.close()
 
 
 def test_reward_eq7_below_threshold_positive() -> None:

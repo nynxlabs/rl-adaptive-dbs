@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-# Paper §V.A / Table I (fixed).
+# Paper §V.A / Table I (fixed RL cadence metadata).
 STEP_DURATION_MS: float = 2.0
+# Minimum plant segment for multitaper P_beta (Kumaravelu GPi spikes); 2 ms yields zero PSD.
+BIOMARKER_WINDOW_S: float = 0.1
 MAX_EPISODE_STEPS: int = 30
 TRAIN_EPISODES: int = 150
 BETA_THRESHOLD: float = 0.35
@@ -28,6 +30,7 @@ class SEADBSConfig:
 
     # RL timing (§5)
     step_duration_ms: float = STEP_DURATION_MS
+    biomarker_window_s: float = BIOMARKER_WINDOW_S
     max_episode_steps: int = MAX_EPISODE_STEPS
     num_episodes: int = TRAIN_EPISODES
 
@@ -73,6 +76,11 @@ class SEADBSConfig:
     @property
     def step_duration_s(self) -> float:
         return self.step_duration_ms / 1000.0
+
+    @property
+    def integration_duration_s(self) -> float:
+        """Plant integrate duration per RL step (≥ biomarker_window_s for valid P_beta)."""
+        return max(self.step_duration_s, self.biomarker_window_s)
 
     @property
     def use_predictive_model(self) -> bool:

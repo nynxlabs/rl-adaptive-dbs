@@ -77,6 +77,8 @@ Values from **§V.A (Experiment setup)** unless noted.
 
 The shared repo environment spec follows **Mehregan timing** for a single Gym API. **SEA-DBS replication requires either** (i) a **sea_dbs-specific env config** / adapter that subsamples or re-integrates at **2 ms** RL steps, or (ii) an agreed project convention that maps Ravivarapu steps onto longer segments—**intentionally open** until `envs/` implements both profiles; do not silently use 2 s steps while claiming SEA-DBS parity.
 
+**Repo convention (Fig 4a+):** Ravivarapu reports **2 ms** RL cadence (Table I / §V.A), but multitaper GPi $P_\beta$ on the Kumaravelu plant needs **≥ ~100 ms** of spike data per integrate (see `scripts/probes/` biomarker probes). `SEA_DBSEnvAdapter` therefore integrates **`biomarker_window_s = 0.1`** per RL step while logging **`step_duration_ms = 2`** for paper metadata. Episode length remains **30 steps**; simulated time per episode is **3 s** (not 60 ms) under this convention—documented here and in `SEAADBSConfig.integration_duration_s`.
+
 **Progression / non-stationarity eval (Table II):** For some experiments, the **environment seed** changes every $n \in \{10, 20, 50, 75\}$ **steps** to simulate varying PD progression. This is an **evaluation protocol** on top of the base step loop—implement in the benchmark harness or adapter, not inside the core policy networks.
 
 ---
@@ -308,6 +310,8 @@ Fig. 5 compares **50 Hz** vs **30 Hz** carrier during inference; this is not a p
 ### 11. Beta normalization scale
 
 $\beta_t = 0.35$ implies consistent scaling of $\bar{P}_\beta$ between observations and reward, as with Mehregan. **Fixed:** Eq. (7) reward shape. **Open:** shared vs controller-specific normalization when both pipelines use the same plant wrapper. **Decide in** adapter; document scale if diverging from [environment.md](../../environment.md) §6.
+
+**Fixed (adapter):** `observation_scale = 1000` (same as Mehregan); raw unstimulated $P_\beta \approx 200$–500 on 100 ms integrates. **`biomarker_window_s = 0.1`** per RL step for valid multitaper estimates (§5 convention).
 
 ---
 
