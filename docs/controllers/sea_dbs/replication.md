@@ -313,6 +313,8 @@ $\beta_t = 0.35$ implies consistent scaling of $\bar{P}_\beta$ between observati
 
 **Fixed (adapter):** `observation_scale = 1000` (same as Mehregan); raw unstimulated $P_\beta \approx 200$–500 on 100 ms integrates. **`biomarker_window_s = 0.1`** per RL step for valid multitaper estimates (§5 convention).
 
+**Fig 4a gate tuning (v5+):** Paper variant uses moderate GS anneal (`gs_lambda = 2\times 10^{-3}`, `gs_tau_min = 0.08`) and `update_frequency = 2`. Baseline uses higher exploration (`epsilon_start = 0.55`, `epsilon_end = 0.2`) so its episode-mean PSD slope stays flatter vs full SEA-DBS. Actor updates **freeze critic grads** (same as Mehregan DDPG). Per-episode plant seeds stay at `seed + episode` (fixed seed collapsed paper to no-pulse). Chosen in `fig4_ravivarapu_config()`; revisit if qualitative Fig 4a gates fail after full 150-episode runs.
+
 ---
 
 ## 15. References
