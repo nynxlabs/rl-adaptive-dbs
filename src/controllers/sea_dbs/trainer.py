@@ -198,9 +198,13 @@ class SEA_DBSTrainer:
             actor_action_oh = probs
         actor_q = self.critic(states, actor_action_oh)
         actor_loss = -actor_q.mean()
+        for param in self.critic.parameters():
+            param.requires_grad_(False)
         self.actor_optimizer.zero_grad(set_to_none=True)
         actor_loss.backward()
         self.actor_optimizer.step()
+        for param in self.critic.parameters():
+            param.requires_grad_(True)
 
         pred_loss_val: float | None = None
         if self.predictive_model is not None and self.pred_optimizer is not None:
@@ -235,7 +239,8 @@ class SEA_DBSTrainer:
         )
 
         for episode in range(cfg.num_episodes):
-            state, info = self.env.reset(seed=cfg.seed + episode)
+            ep_seed = cfg.seed if cfg.fixed_episode_seed else cfg.seed + episode
+            state, info = self.env.reset(seed=ep_seed)
             episode_reward = 0.0
             episode_p_beta: list[float] = [float(info.get("p_beta_norm", 0.0))]
 
