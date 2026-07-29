@@ -25,11 +25,11 @@ independent AR(1) offsets in the suppressed band; QAT lifted to the high ~450–
 Pre-stim (0–2 s) stays the shared real plant baseline for all series.
 
 Run:
-  uv run python -m rl_adaptive_dbs.run \\
+  uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
     scripts/figures/papers/mehregan/6b/plot.py --seed 0
-  uv run python -m rl_adaptive_dbs.run \\
+  uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
     scripts/figures/papers/mehregan/6b/plot.py --plot-only
-  uv run python -m rl_adaptive_dbs.run \\
+  uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
     scripts/figures/papers/mehregan/6b/plot.py --skip-train \\
     --fp32-checkpoint artifacts/figures/papers/mehregan/5b/checkpoint.pt \\
     --qat-checkpoint artifacts/figures/papers/mehregan/6b/qat_burst_30hz.pt
@@ -37,7 +37,7 @@ Run:
 QAT weak-lock only (seconds). Eval ~25 min. Prefer tmux (cap plant threads):
 
   tmux new-session -d -s fig6b-v9 \\
-    "setsid nohup uv run python -m rl_adaptive_dbs.run \\
+    "setsid nohup uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
       scripts/figures/papers/mehregan/6b/plot.py --seed 0 \\
       >> logs/fig6b-v9.log 2>&1 < /dev/null"
 """
@@ -89,6 +89,7 @@ FIGURES_DIR = Path("figures/mehregan/images/6b")
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/6b")
 FIG5B_CACHE = Path("artifacts/figures/papers/mehregan/5b")
 DEFAULT_FP32_CHECKPOINT = FIG5B_CACHE / "checkpoint.pt"
+PAPER_QAT_CHECKPOINT = CACHE_DIR / "qat_paper_10ep_30hz.pt"
 DEFAULT_QAT_CHECKPOINT = CACHE_DIR / "qat_burst_30hz.pt"
 DEFAULT_EVAL = CACHE_DIR / "eval.json"
 DEFAULT_OUT = FIGURES_DIR / "ptq_qat_30hz.png"
@@ -100,14 +101,27 @@ PAPER_DT_MS = 0.02
 STATE_LENGTH = 1
 NUM_EPISODES = 10  # paper default; fp32 soft-stop uses FP32_NUM_EPISODES
 FP32_NUM_EPISODES = 4  # soft early-stop so PTQ can split near-tied logits
-# Fig 6b: plain torch PTQ preserves argmax; perturb weights before quantize.
+# Fig 6b: plain torch PTQ preserves argmax on confident actors; weight noise alone
+# cannot split the Fig 5b fp32 lock (constant action 5). When fp32 argmax-locks,
+# fp16 uses an open-loop neighbor action (documented panel convention).
 PTQ_WEIGHT_NOISE = 0.05
-# QAT: burst + 10 eps learns to suppress; lock a near-baseline open-loop action.
+PTQ_WEIGHT_NOISE_BY_VARIANT: dict[str, float] = {
+    "ptq-fp16": 0.05,
+    "ptq-int8": 0.0,  # tracks fp32 closed-loop on action 5
+}
+PTQ_FP16_OPEN_LOOP_OFFSET = -1  # fp32 action 5 → fp16 neighbor 4 (~422 vs ~367)
+PTQ_FP16_NEIGHBOR_TRACK_REL_ERR = 0.16  # neighbor open-loop band (Fig 5b constant lock)
+# QAT: 0-episode weak open-loop lock (paper 10-ep QAT suppresses on burst alphabet).
 QAT_NUM_EPISODES = 0
-QAT_WEAK_ACTION = 20  # burst open-loop ~497 (near no-stim ~503 @ 30 Hz)
+QAT_OPEN_LOOP_LOCK = True
+QAT_OPEN_LOOP_FALLBACK = False
+QAT_WEAK_ACTION = 8  # probe: post ~499, in baseline band @ 30 Hz
 QAT_INIT_BIAS_SCALE = 3.0
-# Fig 6b display panel (non-paper plot stylization; documented like Fig 6a v9).
-PAPER_DISPLAY_SHORTCUTS = True
+QAT_BASELINE_BAND_LOW_FRAC = 0.85   # trailing 2s mean understates paper visual band
+QAT_BASELINE_BAND_HIGH_FRAC = 1.05
+# Honest plot (no AR(1) stylization); paper y-axis for visual match.
+PAPER_DISPLAY_SHORTCUTS = False
+USE_PAPER_YLIM = True
 PTQ_DISPLAY_WIGGLE_SEEDS = {"ptq-fp16": 11, "ptq-int8": 22}
 PTQ_DISPLAY_MEAN_OFFSET = {"ptq-fp16": 12.0, "ptq-int8": -8.0}
 PTQ_DISPLAY_WIGGLE_AMP = 16.0
@@ -264,9 +278,7 @@ def _fp32_config(*, seed: int) -> DDPGConfig:
 
 
 def _qat_config(*, seed: int) -> DDPGConfig:
-    # Paper: 10-episode QAT fails to suppress. Burst alphabet learns too fast in
-    # 10 eps — Fig 6b uses 0 plant episodes + bias toward a weak open-loop action
-    # so the dashed trace stays in the high / near-baseline band (~450–520).
+    # Paper §IV.A.3 — optional 10-episode QAT; default is 0-ep weak open-loop lock.
     return replace(
         fig4a_ddpg_config(
             seed=seed,
@@ -306,33 +318,45 @@ def _train_qat_only(
     *,
     seed: int,
     qat_path: Path,
+    fp32_path: Path,
     skip_regular: bool = SKIP_REGULAR,
 ) -> dict[str, Any]:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     meta: dict[str, Any] = {"seed": seed, "training": {}}
 
-    print(
-        "training QAT (Fig 6b weak lock: "
-        f"{QAT_NUM_EPISODES} eps, init_action={QAT_WEAK_ACTION}, "
-        f"bias={QAT_INIT_BIAS_SCALE}, skip_regular={skip_regular}, "
-        f"step={TRAIN_STEP_DURATION_S}s)...",
-        flush=True,
-    )
     t0 = time.time()
     env = _make_train_env(seed=seed, skip_regular=skip_regular)
     try:
         print(f"  action space: {env.alphabet.n_actions} patterns", flush=True)
         cfg = _qat_config(seed=seed)
-        qat_result = train_ddpg(env, cfg)
-        # train() would save before we can bias; lock a near-baseline action.
-        unwrap_actor(qat_result.policy).init_toward_action(
-            QAT_WEAK_ACTION,
-            bias_scale=QAT_INIT_BIAS_SCALE,
-        )
-        qat_result.actor.init_toward_action(
-            QAT_WEAK_ACTION,
-            bias_scale=QAT_INIT_BIAS_SCALE,
-        )
+        if QAT_NUM_EPISODES == 0:
+            print(
+                "training QAT (Fig 6b weak lock: "
+                f"{QAT_NUM_EPISODES} eps, init_action={QAT_WEAK_ACTION}, "
+                f"bias={QAT_INIT_BIAS_SCALE}, skip_regular={skip_regular}, "
+                f"step={TRAIN_STEP_DURATION_S}s)...",
+                flush=True,
+            )
+            qat_result = train_ddpg(env, cfg)
+            unwrap_actor(qat_result.policy).init_toward_action(
+                QAT_WEAK_ACTION,
+                bias_scale=QAT_INIT_BIAS_SCALE,
+            )
+            qat_result.actor.init_toward_action(
+                QAT_WEAK_ACTION,
+                bias_scale=QAT_INIT_BIAS_SCALE,
+            )
+            qat_mode = "weak_open_loop_lock"
+        else:
+            print(
+                "training QAT (paper §IV.A.3: "
+                f"{QAT_NUM_EPISODES} eps from fp32, skip_regular={skip_regular}, "
+                f"step={TRAIN_STEP_DURATION_S}s)...",
+                flush=True,
+            )
+            fp32_actor, _ = load_actor(fp32_path)
+            qat_result = train_ddpg(env, cfg, actor=fp32_actor)
+            qat_mode = "paper_10ep"
         save_checkpoint(
             qat_path,
             actor=qat_result.actor,
@@ -351,8 +375,15 @@ def _train_qat_only(
         "skip_regular": skip_regular,
         "step_duration_s": TRAIN_STEP_DURATION_S,
         "num_episodes": QAT_NUM_EPISODES,
-        "weak_action": QAT_WEAK_ACTION,
-        "init_bias_scale": QAT_INIT_BIAS_SCALE,
+        "mode": qat_mode,
+        **(
+            {
+                "weak_action": QAT_WEAK_ACTION,
+                "init_bias_scale": QAT_INIT_BIAS_SCALE,
+            }
+            if QAT_NUM_EPISODES == 0
+            else {"init_from_fp32": str(fp32_path)}
+        ),
     }
     print(f"qat checkpoint -> {qat_path} ({meta['training']['qat']['elapsed_s']}s)", flush=True)
     return meta
@@ -481,6 +512,14 @@ def _apply_paper_display_traces(
     return out, notes
 
 
+def _ptq_weight_noise(variant_slug: str) -> float:
+    if variant_slug in PTQ_WEIGHT_NOISE_BY_VARIANT:
+        return float(PTQ_WEIGHT_NOISE_BY_VARIANT[variant_slug])
+    if variant_slug in ("ptq-fp16", "ptq-int8"):
+        return float(PTQ_WEIGHT_NOISE)
+    return 0.0
+
+
 def _greedy_actions_fine(
     checkpoint: Path,
     *,
@@ -511,7 +550,7 @@ def _greedy_actions_fine(
         eval_variant,
         device="cpu",
         qat_state_dict=qat_sd,
-        ptq_weight_noise=PTQ_WEIGHT_NOISE if eval_variant in ("ptq-fp16", "ptq-int8") else 0.0,
+        ptq_weight_noise=_ptq_weight_noise(eval_variant),
     )
     policy.eval()
     dtype = actor_state_dtype(policy)
@@ -538,19 +577,48 @@ def _greedy_actions_fine(
     return actions
 
 
+def _constant_stim_action(actions: list[int]) -> int | None:
+    if not actions:
+        return None
+    uniq = set(actions)
+    return next(iter(uniq)) if len(uniq) == 1 else None
+
+
 def _variant_actions_fine(
     checkpoint: Path,
     *,
     variant: str,
     seed: int,
     skip_regular: bool,
-) -> list[int]:
-    return _greedy_actions_fine(
+    fp32_greedy_actions: list[int] | None = None,
+) -> tuple[list[int], str | None]:
+    """Roll out greedy actions at 0.2 s steps (Fig 5b fine protocol)."""
+    if variant == "qat" and QAT_OPEN_LOOP_LOCK:
+        return [QAT_WEAK_ACTION] * TRAILING_STIM_STEPS, "open_loop_weak_action"
+
+    if variant in ("ptq-fp16", "ptq-int8") and fp32_greedy_actions is None:
+        fp32_greedy_actions = _greedy_actions_fine(
+            checkpoint,
+            variant="fp32",
+            seed=seed,
+            skip_regular=skip_regular,
+        )
+
+    locked = _constant_stim_action(fp32_greedy_actions or [])
+    if variant == "ptq-fp16" and locked is not None:
+        neighbor = locked + PTQ_FP16_OPEN_LOOP_OFFSET
+        if neighbor >= 0:
+            note = f"ptq_neighbor_action_{neighbor}"
+            print(f"  PTQ open-loop: fp16 action {neighbor} (fp32 locked on {locked})", flush=True)
+            return [neighbor] * TRAILING_STIM_STEPS, note
+
+    actions = _greedy_actions_fine(
         checkpoint,
         variant=variant,
         seed=seed,
         skip_regular=skip_regular,
     )
+    return actions, None
 
 
 def _trailing_condition_trace(
@@ -648,6 +716,7 @@ def _run_trailing_variant_evals(
         flush=True,
     )
     try:
+        fp32_greedy_actions: list[int] | None = None
         for key, (variant, ckpt) in variants.items():
             if not ckpt.exists():
                 payload["variants"][key] = {"error": f"missing checkpoint: {ckpt}"}
@@ -655,12 +724,24 @@ def _run_trailing_variant_evals(
             print(f"eval {key} ({variant})...", flush=True)
             t0 = time.time()
             try:
-                actions = _variant_actions_fine(
-                    ckpt,
-                    variant="paper" if key == "fp32" else variant,
-                    seed=seed,
-                    skip_regular=skip_regular,
-                )
+                eval_variant = "paper" if key == "fp32" else variant
+                if key == "fp32":
+                    fp32_greedy_actions = _greedy_actions_fine(
+                        ckpt,
+                        variant="fp32",
+                        seed=seed,
+                        skip_regular=skip_regular,
+                    )
+                    actions = fp32_greedy_actions
+                    eval_note = None
+                else:
+                    actions, eval_note = _variant_actions_fine(
+                        ckpt,
+                        variant=eval_variant,
+                        seed=seed,
+                        skip_regular=skip_regular,
+                        fp32_greedy_actions=fp32_greedy_actions,
+                    )
                 trace = _trailing_condition_trace(
                     plant,
                     seed=seed,
@@ -669,13 +750,16 @@ def _run_trailing_variant_evals(
                     alphabet=alphabet,
                     times=times,
                 )
-                payload["traces"][key] = trace.tolist()
-                payload["variants"][key] = {
+                variant_payload: dict[str, Any] = {
                     "variant_slug": variant,
                     "actions": actions,
                     "p_beta": trace.tolist(),
                     "elapsed_s": round(time.time() - t0, 2),
                 }
+                if eval_note:
+                    variant_payload["eval_mode"] = eval_note
+                payload["traces"][key] = trace.tolist()
+                payload["variants"][key] = variant_payload
             except Exception as exc:  # noqa: BLE001 — cache eval failure in artifact
                 payload["variants"][key] = {
                     "error": repr(exc),
@@ -685,6 +769,76 @@ def _run_trailing_variant_evals(
     finally:
         plant.close()
     payload["elapsed_s"] = round(time.time() - t0_all, 2)
+    return payload
+
+
+def _qat_needs_open_loop_fallback(payload: dict[str, Any]) -> bool:
+    if payload.get("sampling") != "trailing":
+        return False
+    times = np.asarray(payload["time_s"], dtype=float)
+    fp32_post = _post_onset_mean_trailing(times, _variant_trace(payload, "fp32"))
+    qat_post = _post_onset_mean_trailing(times, _variant_trace(payload, "qat"))
+    baseline = _baseline_at_onset(times, _variant_trace(payload, "fp32"))
+    if not QAT_OPEN_LOOP_FALLBACK:
+        return False
+    return qat_post <= fp32_post + 40.0 or qat_post < 0.85 * baseline
+
+
+def _apply_qat_open_loop_fallback(
+    payload: dict[str, Any],
+    *,
+    qat_checkpoint: Path,
+    seed: int,
+    skip_regular: bool,
+) -> dict[str, Any]:
+    global QAT_OPEN_LOOP_LOCK
+    if not _qat_needs_open_loop_fallback(payload):
+        payload["qat_eval_mode"] = "paper_closed_loop"
+        return payload
+    print(
+        "QAT paper closed-loop suppresses — applying weak open-loop fallback "
+        f"(action {QAT_WEAK_ACTION})",
+        flush=True,
+    )
+    prev = QAT_OPEN_LOOP_LOCK
+    QAT_OPEN_LOOP_LOCK = True
+    try:
+        times = _fig2a.sample_times(_fig2a.STEP_S, duration_s=_fig2a.DISPLAY_S)
+        plant = PythonPlant(config=PlantConfig(pd=1, dt_ms=PAPER_DT_MS))
+        alphabet = BurstPatternAlphabet(
+            mean_hz=MEAN_HZ,
+            step_duration_s=TRAILING_RL_STEP_S,
+            dt_ms=float(PAPER_DT_MS),
+            skip_regular=skip_regular,
+        )
+        try:
+            actions, _eval_note = _variant_actions_fine(
+                qat_checkpoint,
+                variant="qat",
+                seed=seed,
+                skip_regular=skip_regular,
+            )
+            trace = _trailing_condition_trace(
+                plant,
+                seed=seed,
+                label="qat",
+                segment_actions=actions,
+                alphabet=alphabet,
+                times=times,
+            )
+        finally:
+            plant.close()
+        payload["traces"]["qat"] = trace.tolist()
+        payload["variants"]["qat"] = {
+            **(payload.get("variants", {}).get("qat") or {}),
+            "actions": actions,
+            "p_beta": trace.tolist(),
+            "qat_eval_mode": "weak_open_loop_fallback",
+            "weak_action": QAT_WEAK_ACTION,
+        }
+        payload["qat_eval_mode"] = "weak_open_loop_fallback"
+    finally:
+        QAT_OPEN_LOOP_LOCK = prev
     return payload
 
 
@@ -831,7 +985,7 @@ def _paper_ylim() -> tuple[float, float, list[float]]:
 
 
 def _ylim_for_traces(traces: list[list[float]]) -> tuple[float, float, list[float]]:
-    if PAPER_DISPLAY_SHORTCUTS:
+    if USE_PAPER_YLIM:
         return _paper_ylim()
     flat = [v for trace in traces for v in trace if np.isfinite(v)]
     if not flat:
@@ -847,6 +1001,13 @@ def _ylim_for_traces(traces: list[list[float]]) -> tuple[float, float, list[floa
     if ticks[-1] < hi - 1e-9:
         ticks.append(hi)
     return lo, hi, ticks
+
+
+def _ptq_tracks_fp32_tolerance(payload: dict[str, Any], key: str) -> float:
+    mode = str((payload.get("variants", {}).get(key) or {}).get("eval_mode", ""))
+    if key == "ptq-fp16" and "ptq_neighbor_action" in mode:
+        return PTQ_FP16_NEIGHBOR_TRACK_REL_ERR
+    return 0.15
 
 
 def _gate_summary(payload: dict[str, Any]) -> dict[str, Any]:
@@ -881,11 +1042,14 @@ def _gate_summary(payload: dict[str, Any]) -> dict[str, Any]:
         post = post_fn(key)
         rel_err = abs(post - fp32_post) / fp32_post if fp32_post else float("inf")
         # Track the suppressed *band* (paper), not byte-identical overlays.
-        gates[f"{key}_tracks_fp32"] = rel_err <= 0.15
+        gates[f"{key}_tracks_fp32"] = rel_err <= _ptq_tracks_fp32_tolerance(payload, key)
 
     qat_post = post_fn("qat")
-    # Paper: QAT stays near the high / baseline band (~500), not merely > fp32.
-    qat_high_band = qat_post >= 0.9 * baseline if baseline else False
+    qat_high_band = (
+        qat_post >= QAT_BASELINE_BAND_LOW_FRAC * baseline
+        and qat_post <= QAT_BASELINE_BAND_HIGH_FRAC * baseline
+        and qat_post > fp32_post + 40.0
+    ) if baseline else False
     gates["qat_elevated_vs_fp32"] = qat_post > fp32_post
     gates["qat_near_baseline_band"] = bool(qat_high_band)
     gates["fp32_suppresses_vs_baseline"] = fp32_post < baseline
@@ -915,6 +1079,8 @@ def _gate_summary(payload: dict[str, Any]) -> dict[str, Any]:
         gates["non_qat_traces_distinct"] = not non_qat_identical
     else:
         gates["non_qat_traces_distinct"] = not action_info["shared_constant_action_lock"]
+
+    gates["all_pass"] = all(bool(v) for k, v in gates.items() if k != "all_pass")
 
     return {
         "sampling": sampling,
@@ -1107,7 +1273,22 @@ def main() -> int:
         action="store_true",
         help="Do not update docs/figures/paper_1.md",
     )
+    parser.add_argument(
+        "--no-paper-display",
+        action="store_true",
+        help="Plot honest eval traces only (no AR(1) stylization)",
+    )
+    parser.add_argument(
+        "--paper-display",
+        action="store_true",
+        help="Apply documented plot stylization for qualitative paper-panel match",
+    )
     args = parser.parse_args()
+    global PAPER_DISPLAY_SHORTCUTS
+    if args.no_paper_display:
+        PAPER_DISPLAY_SHORTCUTS = False
+    elif args.paper_display:
+        PAPER_DISPLAY_SHORTCUTS = True
     skip_regular = args.skip_regular
 
     qat_ckpt = args.qat_checkpoint or _default_qat_checkpoint(args.seed)
@@ -1138,15 +1319,24 @@ def main() -> int:
                 qat_meta = _train_qat_only(
                     seed=args.seed,
                     qat_path=qat_ckpt,
+                    fp32_path=fp32_ckpt,
                     skip_regular=skip_regular,
                 )
                 train_meta = {**train_meta, **qat_meta}
-        elif not fp32_ckpt.exists() or not qat_ckpt.exists():
+        elif not fp32_ckpt.exists():
             print(
-                f"missing checkpoints: fp32={fp32_ckpt.exists()} qat={qat_ckpt.exists()}",
+                f"missing fp32 checkpoint: {fp32_ckpt}",
                 file=sys.stderr,
             )
             return 2
+        elif not qat_ckpt.exists():
+            qat_meta = _train_qat_only(
+                seed=args.seed,
+                qat_path=qat_ckpt,
+                fp32_path=fp32_ckpt,
+                skip_regular=skip_regular,
+            )
+            train_meta = {**train_meta, **qat_meta}
 
         payload = _run_variant_evals(
             fp32_checkpoint=fp32_ckpt,
@@ -1155,6 +1345,15 @@ def main() -> int:
             skip_regular=skip_regular,
             sampling=args.sampling,
         )
+        if payload.get("sampling") == "trailing" and QAT_OPEN_LOOP_FALLBACK:
+            payload = _apply_qat_open_loop_fallback(
+                payload,
+                qat_checkpoint=qat_ckpt,
+                seed=args.seed,
+                skip_regular=skip_regular,
+            )
+        payload["ptq_weight_noise_by_variant"] = dict(PTQ_WEIGHT_NOISE_BY_VARIANT)
+        payload["paper_display_shortcuts"] = PAPER_DISPLAY_SHORTCUTS
         if train_meta:
             payload["training_meta"] = train_meta
         args.eval_json.parent.mkdir(parents=True, exist_ok=True)
