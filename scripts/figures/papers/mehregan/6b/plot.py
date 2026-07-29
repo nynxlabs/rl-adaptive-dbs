@@ -25,11 +25,11 @@ independent AR(1) offsets in the suppressed band; QAT lifted to the high ~450–
 Pre-stim (0–2 s) stays the shared real plant baseline for all series.
 
 Run:
-  uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
+  uv run python -m rl_adaptive_dbs.run \\
     scripts/figures/papers/mehregan/6b/plot.py --seed 0
-  uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
+  uv run python -m rl_adaptive_dbs.run \\
     scripts/figures/papers/mehregan/6b/plot.py --plot-only
-  uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
+  uv run python -m rl_adaptive_dbs.run \\
     scripts/figures/papers/mehregan/6b/plot.py --skip-train \\
     --fp32-checkpoint artifacts/figures/papers/mehregan/5b/checkpoint.pt \\
     --qat-checkpoint artifacts/figures/papers/mehregan/6b/qat_burst_30hz.pt
@@ -37,7 +37,7 @@ Run:
 QAT weak-lock only (seconds). Eval ~25 min. Prefer tmux (cap plant threads):
 
   tmux new-session -d -s fig6b-v9 \\
-    "setsid nohup uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
+    "setsid nohup uv run python -m rl_adaptive_dbs.run \\
       scripts/figures/papers/mehregan/6b/plot.py --seed 0 \\
       >> logs/fig6b-v9.log 2>&1 < /dev/null"
 """

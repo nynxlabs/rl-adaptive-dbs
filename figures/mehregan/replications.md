@@ -373,11 +373,11 @@ Automated mirrors (panel / manifest): shared pre-onset agreement; `fp32_suppress
 **Run:**
 
 ```bash
-uv run python -m rl_adaptive_dbs.run --max-threads 2 \
+uv run python -m rl_adaptive_dbs.run \
   scripts/figures/papers/mehregan/6a/plot.py --seed 0
-uv run python -m rl_adaptive_dbs.run --max-threads 2 \
+uv run python -m rl_adaptive_dbs.run \
   scripts/figures/papers/mehregan/6a/plot.py --plot-only
-uv run python -m rl_adaptive_dbs.run --max-threads 2 \
+uv run python -m rl_adaptive_dbs.run \
   scripts/figures/papers/mehregan/6a/plot.py --skip-train \
   --fp32-checkpoint artifacts/figures/papers/mehregan/6a/checkpoint_burst_skip_regular_02s.pt \
   --qat-checkpoint artifacts/figures/papers/mehregan/6a/qat_burst_skip_regular_02s.pt
@@ -387,7 +387,7 @@ QAT train only (~30–60 min) after fp32 exists. Use tmux (cap plant threads at 
 
 ```bash
 tmux new-session -d -s fig6a-train \
- "setsid nohup uv run python -m rl_adaptive_dbs.run --max-threads 2 \
+ "setsid nohup uv run python -m rl_adaptive_dbs.run \
    scripts/figures/papers/mehregan/6a/plot.py --seed 0 \
    >> logs/fig6a-train.log 2>&1 < /dev/null"
 ```
@@ -445,9 +445,9 @@ Same quantization panel layout as Fig 6a for the **30 Hz** trained model (§IV.A
 **Run:**
 
 ```bash
-uv run python -m rl_adaptive_dbs.run --max-threads 2 \
+uv run python -m rl_adaptive_dbs.run \
   scripts/figures/papers/mehregan/6b/plot.py --seed 0
-uv run python -m rl_adaptive_dbs.run --max-threads 2 \
+uv run python -m rl_adaptive_dbs.run \
   scripts/figures/papers/mehregan/6b/plot.py --plot-only
 ```
 

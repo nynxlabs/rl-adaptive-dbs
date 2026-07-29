@@ -2,12 +2,13 @@
 
 Set limits **before** NumPy/NumPy-dependent imports when possible:
 
-- ``uv run python -m rl_adaptive_dbs.run scripts/probes/foo.py`` (default cap: 3 threads)
+- ``uv run python -m rl_adaptive_dbs.run scripts/probes/foo.py`` (default cap: 1 thread)
 - ``uv run python -m rl_adaptive_dbs.run scripts/figures/papers/1/4a/plot.py``
-- ``rl-dbs train ...`` (default cap: 3 threads for train/eval/benchmark)
-- ``RL_DBS_MAX_THREADS=3`` in the environment (override fallback)
+- ``rl-dbs train ...`` (default cap: 1 thread for train/eval/benchmark)
+- ``RL_DBS_MAX_THREADS=1`` in the environment (override fallback)
 
-``taskset`` pins logical CPUs; ``--max-threads`` caps in-process thread pools.
+``taskset`` pins logical CPUs; ``--max-threads`` caps in-process thread pools
+(one worker per pool — typically one logical CPU worth of parallel math per process).
 Use both for a hard resource budget.
 """
 
@@ -29,7 +30,7 @@ ENV_VAR = "RL_DBS_MAX_THREADS"
 
 # Default in-process thread cap for plant-heavy standalone scripts and CLI runs.
 # Override with ``--max-threads N`` or ``RL_DBS_MAX_THREADS``.
-DEFAULT_PLANT_HEAVY_MAX_THREADS = 3
+DEFAULT_PLANT_HEAVY_MAX_THREADS = 1
 DEFAULT_PROBE_MAX_THREADS = DEFAULT_PLANT_HEAVY_MAX_THREADS
 DEFAULT_TRAIN_MAX_THREADS = DEFAULT_PLANT_HEAVY_MAX_THREADS
 

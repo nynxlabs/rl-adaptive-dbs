@@ -4,7 +4,6 @@ set -euo pipefail
 cd "$(dirname "$0")/../../.."
 MAIN_LOG="logs/within-step-l16-train.log"
 PROBE_LOG="logs/plant-continuity-probe.log"
-export RL_DBS_MAX_THREADS=2
 
 echo "=== waiting for within-step-l16-train ===" | tee -a "$PROBE_LOG"
 while true; do
@@ -29,7 +28,7 @@ while true; do
 done
 
 echo "=== within_step train finished; starting continuity probe ===" | tee -a "$PROBE_LOG"
-uv run python -m rl_adaptive_dbs.run --max-threads 2 \
+uv run python -m rl_adaptive_dbs.run \
   scripts/probes/alphabet_diversity/run_plant_continuity_probe.py \
   2>&1 | tee -a "$PROBE_LOG"
 

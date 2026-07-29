@@ -17,7 +17,7 @@ auto-increments), caches training series + checkpoint under
 Long run (~hours). Prefer tmux:
 
   tmux new-session -d -s fig2-4-train \\
-    "setsid nohup uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
+    "setsid nohup uv run python -m rl_adaptive_dbs.run \\
       scripts/figures/papers/nguyen/4/plot.py >> logs/fig2-4-train.log 2>&1 < /dev/null"
 """
 from __future__ import annotations

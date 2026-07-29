@@ -4,7 +4,7 @@
 Tests whether temporal CNN input + continuous plant integration breaks constant-policy lock.
 
   tmux new-session -d -s within-step-l16-continuous \\
-    \"setsid nohup uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
+    \"setsid nohup uv run python -m rl_adaptive_dbs.run \\
       scripts/probes/alphabet_diversity/run_within_step_L16_burst_train.py --plant-integration continuous \\
       >> logs/within-step-l16-continuous.log 2>&1 < /dev/null\"
 """

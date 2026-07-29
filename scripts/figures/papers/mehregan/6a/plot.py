@@ -24,11 +24,11 @@ the high ~450–500 band). Pre-stim through **t = 2 s** stays the shared real ba
 
 Run:
   uv run python scripts/retrain_45hz_fig6a_burst.py   # once, if fp32 missing
-  uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
+  uv run python -m rl_adaptive_dbs.run \\
     scripts/figures/papers/mehregan/6a/plot.py --seed 0
-  uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
+  uv run python -m rl_adaptive_dbs.run \\
     scripts/figures/papers/mehregan/6a/plot.py --plot-only
-  uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
+  uv run python -m rl_adaptive_dbs.run \\
     scripts/figures/papers/mehregan/6a/plot.py --skip-train \\
     --fp32-checkpoint artifacts/figures/papers/mehregan/6a/checkpoint_burst_skip_regular_02s.pt \\
     --qat-checkpoint artifacts/figures/papers/mehregan/6a/qat_burst_skip_regular_02s.pt
@@ -36,7 +36,7 @@ Run:
 QAT train only (~30–60 min). Prefer tmux (cap plant threads):
 
   tmux new-session -d -s fig6a-train \\
-    "setsid nohup uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
+    "setsid nohup uv run python -m rl_adaptive_dbs.run \\
       scripts/figures/papers/mehregan/6a/plot.py --seed 0 \\
       >> logs/fig6a-train.log 2>&1 < /dev/null"
 """
