@@ -11,7 +11,6 @@ from gymnasium import spaces
 
 from controllers.sea_dbs.config import SEADBSConfig
 from controllers.sea_dbs.reward import sea_dbs_reward
-from envs.plant.biomarkers import p_beta
 from envs.plant.dbs import DbsSpec
 from envs.plant.matlab_backend import IntegrateResult
 
@@ -86,22 +85,11 @@ class SEA_DBSEnvAdapter(gym.Env):
         mean_norm = self._mean_p_beta()
         return np.array([mean_norm], dtype=np.float32)
 
-    def _gpi_spikes(self, result: IntegrateResult) -> list[np.ndarray]:
-        spikes = result.gpi_spikes
-        n = 10
-        if len(spikes) >= n:
-            return spikes[:n]
-        padded = list(spikes)
-        while len(padded) < n:
-            padded.append(np.array([], dtype=float))
-        return padded
-
     def _raw_p_beta(self, result: IntegrateResult) -> float:
-        return p_beta(
-            self._gpi_spikes(result),
-            dt_ms=result.dt_ms,
-            segment_duration_s=self.config.step_duration_s,
-        )
+        if result.p_beta is not None:
+            return float(result.p_beta)
+        msg = "plant integrate did not return p_beta"
+        raise RuntimeError(msg)
 
     def _dbs_spec_for_action(self, action: int) -> DbsSpec:
         if int(action) == 0:
@@ -123,7 +111,7 @@ class SEA_DBSEnvAdapter(gym.Env):
         self._carrier_hz = float(self.config.carrier_hz)
 
         result = self._plant.integrate(
-            self.config.step_duration_s,
+            self.config.integration_duration_s,
             self._dbs_spec_for_action(0),
             record_spikes=True,
         )
@@ -137,6 +125,7 @@ class SEA_DBSEnvAdapter(gym.Env):
             "mean_p_beta": mean_norm,
             "adapter": True,
             "step_duration_ms": self.config.step_duration_ms,
+            "integration_duration_ms": self.config.integration_duration_s * 1000.0,
             "carrier_hz": self._carrier_hz,
         }
         return obs, info
@@ -146,7 +135,7 @@ class SEA_DBSEnvAdapter(gym.Env):
         action: int,
     ) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
         result = self._plant.integrate(
-            self.config.step_duration_s,
+            self.config.integration_duration_s,
             self._dbs_spec_for_action(int(action)),
             record_spikes=True,
         )
@@ -171,6 +160,7 @@ class SEA_DBSEnvAdapter(gym.Env):
             "action": int(action),
             "adapter": True,
             "step_duration_ms": self.config.step_duration_ms,
+            "integration_duration_ms": self.config.integration_duration_s * 1000.0,
             "carrier_hz": self._carrier_hz,
             "dw": dw,
         }
