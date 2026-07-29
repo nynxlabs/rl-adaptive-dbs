@@ -3,10 +3,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/../../.."
 mkdir -p logs artifacts/ddpg
-export RL_DBS_MAX_THREADS=2
 
 echo "=== near-hub diversity @ 45 Hz ==="
-uv run python -m rl_adaptive_dbs.run --max-threads 2 \
+uv run python -m rl_adaptive_dbs.run \
   scripts/probes/alphabet_diversity/run_alphabet_diversity_sweep.py \
   --hz 45 \
   --only near_hub_n257 \
@@ -42,7 +41,7 @@ if [ "$(cat artifacts/ddpg/.near_hub_run_margin)" != "1" ]; then
 fi
 
 echo "=== near-hub soft-fp32 + logit margin ==="
-uv run python -m rl_adaptive_dbs.run --max-threads 2 \
+uv run python -m rl_adaptive_dbs.run \
   scripts/probes/alphabet_diversity/run_near_hub_margin_probe.py \
   --diversity-json artifacts/ddpg/alphabet_diversity_near_hub.json
 

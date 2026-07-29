@@ -33,15 +33,15 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 
 ### Replication
 
-*Not yet generated.* Target: `figures/ravivarapu/images/4a/training_psd.png`
+![Replication Fig 4a](images/4a/training_psd_v1.png)
 
 <!-- caption-4a:start -->
-**Caption:** TBD
+**Caption:** Training mean GPi beta PSD vs episode (seed 0); Baseline vs full SEA-DBS (PM+GS). (v3)
 
-**Manifest:** `artifacts/figures/papers/ravivarapu/4a/manifest.json` (planned)
+**Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`
 <!-- caption-4a:end -->
 
-**Status:** Open — needs SEA-DBS trainer + Baseline ablation.
+**Status:** Pass — see manifest gates.
 
 **Qualitative gates (paper Fig 4a — exit criteria):**
 
@@ -83,15 +83,15 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4a/plot.p
 
 ### Replication
 
-*Not yet generated.* Target: `figures/ravivarapu/images/4b/training_reward.png`
+![Replication Fig 4b](images/4b/training_reward_v1.png)
 
 <!-- caption-4b:start -->
-**Caption:** TBD
+**Caption:** Training episode reward vs episode (seed 0); paired with Fig 4a cache. (v1)
 
-**Manifest:** `artifacts/figures/papers/ravivarapu/4b/manifest.json` (planned)
+**Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4b.json`
 <!-- caption-4b:end -->
 
-**Status:** Open — pair with Fig 4a locked run.
+**Status:** Pass — see manifest gates.
 
 **Qualitative gates (paper Fig 4b — exit criteria):**
 

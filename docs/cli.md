@@ -100,7 +100,7 @@ Repo scripts under `scripts/` that import NumPy at module load should be launche
 uv run python -m rl_adaptive_dbs.run scripts/probes/run_task177_continuous_freq_probe.py --continuous-only
 ```
 
-By default the runner caps in-process thread pools at **3** (same budget as the TUI Run tab for plant-heavy scripts). Override with `--max-threads N` or `RL_DBS_MAX_THREADS`. Pair with `taskset` when you need a hard logical-CPU pin.
+By default the runner caps in-process thread pools at **1** (one OpenMP/OpenBLAS/Numba worker per process — typically one logical CPU of parallel math). Override with `--max-threads N` or `RL_DBS_MAX_THREADS`. Pair with `taskset` when you need a hard logical-CPU pin.
 
 `rl-dbs train`, `eval`, and `benchmark` apply the same default at console entry (before heavy imports). `scripts.lib.train_runtime_guard.run_main` and `scripts.lib.probe_runtime.run_main` apply it when scripts defer heavy imports until `main()` — prefer the runner when NumPy loads at import time.
 

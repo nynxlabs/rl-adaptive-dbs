@@ -4,7 +4,7 @@
 Reads ``artifacts/ddpg/alphabet_diversity_large_n.json`` and writes a side-by-side
 45 Hz skip_regular ranking for burst n=41 / 128 / 256 — no training, no PTQ nudges.
 
-  uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
+  uv run python -m rl_adaptive_dbs.run \\
     scripts/probes/alphabet_diversity/plot_large_alphabet_landscape.py
 """
 from __future__ import annotations
