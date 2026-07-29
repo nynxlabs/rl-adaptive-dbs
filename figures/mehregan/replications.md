@@ -330,7 +330,7 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 
 **v15** (promoted — trailing eval + plot stylization; paper y-axis):
 
-![Replication Fig 6a](images/6a/ptq_qat_45hz_v15.png)
+![Replication Fig 6a](images/6a/ptq_qat_45hz_v19.png)
 
 **v11** (archive — prior promoted panel):
 
@@ -349,7 +349,7 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 ![Honest continuous Fig 6a v2](images/6a/ptq_qat_45hz_honest_v2.png)
 
 <!-- caption-6a:start -->
-**Caption:** 45 Hz paper-protocol eval, seed 0, fp32_post=336, qat_post=432, PTQ tracks fp32, QAT elevated, 2026-07-28
+**Caption:** 45 Hz paper-protocol eval, seed 0, fp32_post=336, qat_post=345, PTQ tracks fp32, QAT elevated, 2026-07-28
 
 **Manifest:** `artifacts/figures/papers/mehregan/6a/manifest.json`
 <!-- caption-6a:end -->
@@ -430,7 +430,7 @@ Same quantization panel layout as Fig 6a for the **30 Hz** trained model (§IV.A
 
 ### Replication
 
-![Replication Fig 6b](images/6b/ptq_qat_30hz_v8.png)
+![Replication Fig 6b](images/6b/ptq_qat_30hz_v12.png)
 
 <!-- caption-6b:start -->
 **Caption:** 30 Hz paper-protocol eval, seed 0, fp32_post=367, qat_post=420, QAT elevated, 2026-07-28

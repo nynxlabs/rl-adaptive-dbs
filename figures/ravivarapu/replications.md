@@ -4,7 +4,7 @@
 
 Side-by-side **paper panel** vs **our replication** for qualitative checks. Plot scripts write replication PNGs to `figures/ravivarapu/images/`; JSON caches to `artifacts/figures/papers/`.
 
-Controller / adapter spec: [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md). Shared plant: [plant.md](../../docs/plant.md). Schematics (paper Figs 1, 3) are **out of scope** for this tracker. Fig 2 (reward curve of Eq. (7)) is optional polish, not a gate.
+Controller / adapter spec: [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md). Shared plant: [plant.md](../../docs/plant.md). **Qualitative gates (exit criteria):** [docs/figures/papers/ravivarapu.md](../../docs/figures/papers/ravivarapu.md). Schematics (paper Figs 1, 3) are **out of scope** for this tracker. Fig 2 (reward curve of Eq. (7)) is optional polish, not a gate.
 
 | Panel | Script | Spec | Status |
 |-------|--------|------|--------|
@@ -42,6 +42,16 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 <!-- caption-4a:end -->
 
 **Status:** Open — needs SEA-DBS trainer + Baseline ablation.
+
+**Qualitative gates (paper Fig 4a — exit criteria):**
+
+| # | Gate | Paper look | Fail if |
+|---|------|------------|---------|
+| 1 | **Series** | Baseline vs SEA-DBS (two curves) | Missing either series or wrong variant labels |
+| 2 | **SEA-DBS vs Baseline PSD** | SEA-DBS **lower** episode-mean beta PSD over training | SEA-DBS ≥ Baseline at most episodes or flat ordering |
+| 3 | **Suppression trend** | SEA-DBS **steeper, more consistent** decline; Baseline only **modest** decline | SEA-DBS flat/noisy without downward trend, or Baseline matches SEA-DBS slope |
+| 4 | **Episode axis** | Training episodes (paper uses **150**) | Wrong episode count or unlabeled x-axis |
+| 5 | **Paired with Fig 4b** | Same training run / checkpoint lineage | 4a and 4b from mismatched trains |
 
 ### Side-by-side checklist
 
@@ -82,6 +92,16 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4a/plot.p
 <!-- caption-4b:end -->
 
 **Status:** Open — pair with Fig 4a locked run.
+
+**Qualitative gates (paper Fig 4b — exit criteria):**
+
+| # | Gate | Paper look | Fail if |
+|---|------|------------|---------|
+| 1 | **Series** | Baseline vs SEA-DBS | Missing either series |
+| 2 | **SEA-DBS vs Baseline reward** | SEA-DBS **higher** cumulative/episode reward | SEA-DBS ≤ Baseline over most of training |
+| 3 | **Early learning** | SEA-DBS **faster initial rise** than Baseline | Baseline catches up immediately or leads early |
+| 4 | **Paired with Fig 4a** | Same training run as Fig 4a | Different seeds, hyperparameters, or checkpoints |
+| 5 | **Reward–PSD consistency** | Reward ↑ as PSD ↓ (with Fig 4a) | Opposite trends with no documented convention break |
 
 ### Side-by-side checklist
 
@@ -125,6 +145,16 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 
 **Status:** Open — needs trained `paper` + `baseline` actors and adapter carrier-frequency knob.
 
+**Qualitative gates (paper Fig 5a — exit criteria):**
+
+| # | Gate | Paper look | Fail if |
+|---|------|------------|---------|
+| 1 | **Carrier** | **50 Hz** fixed at inference | Wrong carrier or conflated with RL action |
+| 2 | **SEA-DBS vs Baseline PSD** | SEA-DBS **lower** beta PSD than Baseline | SEA-DBS ≥ Baseline on episode/step means |
+| 3 | **vs Fig 5b (50 > 30)** | **50 Hz** yields **stronger** suppression than 30 Hz panel | 30 Hz panel beats 50 Hz when protocols match except carrier |
+| 4 | **Trained actors** | Post-train policies from Fig 4 train | Untrained or mismatched checkpoints |
+| 5 | **Protocol** | Inference trace length/window documented and locked | Unstated eval length or drifting window |
+
 ### Side-by-side checklist
 
 | Check | Paper | Replication | Match? |
@@ -164,6 +194,16 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 <!-- caption-5b:end -->
 
 **Status:** Open — pair protocol with Fig 5a; only carrier differs.
+
+**Qualitative gates (paper Fig 5b — exit criteria):**
+
+| # | Gate | Paper look | Fail if |
+|---|------|------------|---------|
+| 1 | **Carrier** | **30 Hz** fixed at inference | Wrong carrier |
+| 2 | **SEA-DBS vs Baseline PSD** | SEA-DBS **lower** than Baseline | SEA-DBS ≥ Baseline |
+| 3 | **vs Fig 5a (30 < 50)** | **Weaker** suppression than 50 Hz panel | 30 Hz beats 50 Hz with shared protocol |
+| 4 | **Shared protocol** | Same eval length, seeding, checkpoints as Fig 5a | Only carrier differs from 5a |
+| 5 | **Biological read** | 30 Hz overlaps pathological beta band → less effective | Claim 30 Hz “better” without convention note |
 
 ### Side-by-side checklist
 
@@ -207,6 +247,16 @@ QAT is **out of scope** for SEA-DBS (not reported).
 
 **Status:** Open — needs FP16 PTQ path on SEA-DBS actor after full-precision train.
 
+**Qualitative gates (paper Fig 6 — exit criteria):**
+
+| # | Gate | Paper look | Fail if |
+|---|------|------------|---------|
+| 1 | **Eval length** | **10** stimulation steps | Wrong step count |
+| 2 | **Carrier** | **50 Hz** | Wrong carrier |
+| 3 | **PTQ tracks FP32 (SEA-DBS)** | Quantized SEA-DBS **closely tracks** full-precision SEA-DBS PSD path | PTQ diverges to Baseline band or opposite trend |
+| 4 | **SEA-DBS PTQ vs Baseline** | SEA-DBS PTQ still **beats** Baseline on PSD | PTQ SEA-DBS ≥ Baseline |
+| 5 | **Series labels** | Baseline, SEA-DBS FP32, SEA-DBS FP16 PTQ (as paper panel) | Missing PTQ line or wrong quantization mode |
+
 ### Side-by-side checklist
 
 | Check | Paper | Replication | Match? |
@@ -248,6 +298,17 @@ Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper` ([se
 <!-- caption-7:end -->
 
 **Status:** Open — needs all four variants trainable and a shared 10-step eval harness.
+
+**Qualitative gates (paper Fig 7 — exit criteria):**
+
+| # | Gate | Paper look | Fail if |
+|---|------|------------|---------|
+| 1 | **Four series** | Baseline, Baseline+PM, Baseline+GS, SEA-DBS (PM+GS) | Missing variant or wrong ablation mapping |
+| 2 | **Ordering** | SEA-DBS **lowest / most stable** PSD | Another variant clearly below SEA-DBS |
+| 3 | **+PM early noise** | Baseline+PM **noisy / limited** early (~**4,500** samples cited) | +PM identical to full SEA-DBS from step 0 |
+| 4 | **+GS alone** | Baseline+GS **limited** gains over Baseline | +GS matches full SEA-DBS without PM |
+| 5 | **Eval length** | **10** stimulation steps | Wrong step count |
+| 6 | **Shared train budget** | Comparable training episodes / Table I hyperparameters across variants | Unfair train length or hparams |
 
 ### Side-by-side checklist
 
