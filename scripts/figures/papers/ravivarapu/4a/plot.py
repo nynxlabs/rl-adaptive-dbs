@@ -67,8 +67,7 @@ def train_variant(
     smoke: bool,
     num_episodes: int | None,
 ) -> dict[str, Any]:
-    cfg = fig4_ravivarapu_config(seed=seed)
-    cfg = replace(cfg, variant=variant, log_episodes=True)
+    cfg = fig4_ravivarapu_config(seed=seed, variant=variant)
     if smoke:
         cfg = cfg.for_smoke(episodes=3, max_steps=5)
     elif num_episodes is not None:

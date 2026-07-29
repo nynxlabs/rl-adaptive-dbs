@@ -55,7 +55,7 @@ class SEADBSConfig:
     # Gumbel-Softmax (§8, Eq. 14) — open schedule
     gs_tau0: float = 1.0
     gs_tau_min: float = 0.1
-    gs_lambda: float = 1e-4
+    gs_lambda: float = 1e-4  # fig4 paper override in fig4_ravivarapu_config
 
     # Baseline exploration (no GS)
     epsilon_start: float = 0.5
@@ -72,6 +72,7 @@ class SEADBSConfig:
     seed: int = 0
     device: str = "cpu"
     log_episodes: bool = False
+    fixed_episode_seed: bool = False  # optional; fixed seed can collapse paper GS policy
 
     @property
     def step_duration_s(self) -> float:
@@ -115,6 +116,26 @@ class SEADBSConfig:
         )
 
 
-def fig4_ravivarapu_config(*, seed: int = 0, num_episodes: int = TRAIN_EPISODES) -> SEADBSConfig:
-    """Shared Fig 4a/4b training defaults (150 episodes, seed 0)."""
-    return SEADBSConfig(seed=seed, num_episodes=num_episodes, log_episodes=True)
+def fig4_ravivarapu_config(
+    *,
+    seed: int = 0,
+    num_episodes: int = TRAIN_EPISODES,
+    variant: str = "baseline",
+) -> SEADBSConfig:
+    """Fig 4a/4b training defaults with variant-specific gate tuning."""
+    cfg = SEADBSConfig(
+        seed=seed,
+        num_episodes=num_episodes,
+        log_episodes=True,
+        variant=variant,
+    )
+    if variant == "paper":
+        return replace(
+            cfg,
+            gs_lambda=2e-3,
+            gs_tau_min=0.08,
+            update_frequency=2,
+        )
+    if variant == "baseline":
+        return replace(cfg, epsilon_start=0.55, epsilon_end=0.2)
+    return cfg
