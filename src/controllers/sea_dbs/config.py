@@ -132,10 +132,10 @@ def fig4_ravivarapu_config(
     if variant == "paper":
         return replace(
             cfg,
-            gs_lambda=2e-3,
-            gs_tau_min=0.08,
+            gs_lambda=3e-3,
+            gs_tau_min=0.05,
             update_frequency=2,
         )
     if variant == "baseline":
-        return replace(cfg, epsilon_start=0.55, epsilon_end=0.2)
+        return replace(cfg, epsilon_end=0.15)
     return cfg
