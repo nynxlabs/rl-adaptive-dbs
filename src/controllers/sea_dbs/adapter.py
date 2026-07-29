@@ -1,0 +1,177 @@
+"""Ravivarapu environment adapter (2 ms steps, binary pulse, Eq. (7) reward)."""
+
+from __future__ import annotations
+
+from collections import deque
+from typing import Any, Protocol
+
+import gymnasium as gym
+import numpy as np
+from gymnasium import spaces
+
+from controllers.sea_dbs.config import SEADBSConfig
+from controllers.sea_dbs.reward import sea_dbs_reward
+from envs.plant.biomarkers import p_beta
+from envs.plant.dbs import DbsSpec
+from envs.plant.matlab_backend import IntegrateResult
+
+
+class PlantBackend(Protocol):
+    def reset(self, seed: int | None = None) -> Any: ...
+
+    def integrate(
+        self,
+        duration_s: float,
+        dbs_spec: DbsSpec | None = None,
+        *,
+        record_spikes: bool = True,
+    ) -> IntegrateResult: ...
+
+    def close(self) -> None: ...
+
+
+class SEA_DBSEnvAdapter(gym.Env):
+    """Wraps Kumaravelu plant with Ravivarapu I/O (replication.md §3, §5–§6)."""
+
+    metadata = {"render_modes": []}
+
+    def __init__(
+        self,
+        *,
+        plant: PlantBackend | None = None,
+        config: SEADBSConfig | None = None,
+        render_mode: str | None = None,
+    ) -> None:
+        super().__init__()
+        self.config = (config or SEADBSConfig()).with_variant_defaults()
+        self._owns_plant = plant is None
+        if plant is None:
+            from envs.plant.python_backend import PythonPlant
+
+            self._plant: PlantBackend = PythonPlant()
+        else:
+            self._plant = plant
+        self.render_mode = render_mode
+
+        self.observation_space = spaces.Box(
+            low=-np.finfo(np.float32).max,
+            high=np.finfo(np.float32).max,
+            shape=(self.config.state_dim,),
+            dtype=np.float32,
+        )
+        self.action_space = spaces.Discrete(self.config.n_actions)
+
+        self._rng: np.random.Generator | None = None
+        self._step_count = 0
+        self._obs_window: deque[float] = deque(maxlen=self.config.n_obs)
+        self._carrier_hz = float(self.config.carrier_hz)
+
+    def close(self) -> None:
+        if self._owns_plant:
+            self._plant.close()
+
+    def set_carrier_hz(self, hz: float) -> None:
+        """Fixed eval knob for inference (Fig 5a/5b); not an RL action."""
+        self._carrier_hz = float(hz)
+
+    def _normalize_p_beta(self, raw: float) -> float:
+        return raw / self.config.observation_scale
+
+    def _mean_p_beta(self) -> float:
+        if not self._obs_window:
+            return 0.0
+        return float(np.mean(self._obs_window))
+
+    def _observation_from_window(self) -> np.ndarray:
+        mean_norm = self._mean_p_beta()
+        return np.array([mean_norm], dtype=np.float32)
+
+    def _gpi_spikes(self, result: IntegrateResult) -> list[np.ndarray]:
+        spikes = result.gpi_spikes
+        n = 10
+        if len(spikes) >= n:
+            return spikes[:n]
+        padded = list(spikes)
+        while len(padded) < n:
+            padded.append(np.array([], dtype=float))
+        return padded
+
+    def _raw_p_beta(self, result: IntegrateResult) -> float:
+        return p_beta(
+            self._gpi_spikes(result),
+            dt_ms=result.dt_ms,
+            segment_duration_s=self.config.step_duration_s,
+        )
+
+    def _dbs_spec_for_action(self, action: int) -> DbsSpec:
+        if int(action) == 0:
+            return DbsSpec.none()
+        return DbsSpec.from_frequency_hz(self._carrier_hz)
+
+    def reset(
+        self,
+        *,
+        seed: int | None = None,
+        options: dict[str, Any] | None = None,
+    ) -> tuple[np.ndarray, dict[str, Any]]:
+        super().reset(seed=seed)
+        if seed is not None:
+            self._rng = np.random.default_rng(seed)
+        self._plant.reset(seed=seed)
+        self._step_count = 0
+        self._obs_window.clear()
+        self._carrier_hz = float(self.config.carrier_hz)
+
+        result = self._plant.integrate(
+            self.config.step_duration_s,
+            self._dbs_spec_for_action(0),
+            record_spikes=True,
+        )
+        raw = self._raw_p_beta(result)
+        self._obs_window.append(self._normalize_p_beta(raw))
+        obs = self._observation_from_window()
+        mean_norm = self._mean_p_beta()
+        info = {
+            "p_beta_raw": raw,
+            "p_beta_norm": mean_norm,
+            "mean_p_beta": mean_norm,
+            "adapter": True,
+            "step_duration_ms": self.config.step_duration_ms,
+            "carrier_hz": self._carrier_hz,
+        }
+        return obs, info
+
+    def step(
+        self,
+        action: int,
+    ) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
+        result = self._plant.integrate(
+            self.config.step_duration_s,
+            self._dbs_spec_for_action(int(action)),
+            record_spikes=True,
+        )
+        raw = self._raw_p_beta(result)
+        self._obs_window.append(self._normalize_p_beta(raw))
+        obs = self._observation_from_window()
+        mean_norm = self._mean_p_beta()
+        reward = sea_dbs_reward(
+            mean_norm,
+            beta_threshold=self.config.beta_threshold,
+            reward_scale=self.config.reward_scale,
+        )
+
+        self._step_count += 1
+        truncated = self._step_count >= self.config.max_episode_steps
+        terminated = False
+        dw = 1.0 if truncated else 0.0
+        info = {
+            "p_beta_raw": raw,
+            "p_beta_norm": mean_norm,
+            "mean_p_beta": mean_norm,
+            "action": int(action),
+            "adapter": True,
+            "step_duration_ms": self.config.step_duration_ms,
+            "carrier_hz": self._carrier_hz,
+            "dw": dw,
+        }
+        return obs, reward, terminated, truncated, info
