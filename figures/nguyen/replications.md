@@ -74,7 +74,7 @@ Panel **(b)** open circles are **outliers** — individual iterations whose α�
 
 ```bash
 tmux new-session -d -s fig2-3 \
- "setsid nohup uv run python -m rl_adaptive_dbs.run --max-threads 2 \
+ "setsid nohup uv run python -m rl_adaptive_dbs.run \
    scripts/figures/papers/nguyen/3/plot.py >> logs/fig2-3.log 2>&1 < /dev/null"
 uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/3/plot.py --n-iterations 50
 uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/3/plot.py --plot-only
@@ -129,7 +129,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes (§IV
 
 ```bash
 tmux new-session -d -s fig2-4-train \
- "setsid nohup uv run python -m rl_adaptive_dbs.run --max-threads 2 \
+ "setsid nohup uv run python -m rl_adaptive_dbs.run \
    scripts/figures/papers/nguyen/4/plot.py >> logs/fig2-4-train.log 2>&1 < /dev/null"
 uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/4/plot.py --plot-only
 ```

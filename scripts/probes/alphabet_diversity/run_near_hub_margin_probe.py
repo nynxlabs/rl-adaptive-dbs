@@ -9,7 +9,7 @@ Gates (Fig 6a candidacy — do not promote on fail):
   - optional: plain PTQ (noise=0) can flip argmax on ≥1 probe state
 
   tmux new-session -d -s near-hub-margin \\
-    \"setsid nohup uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
+    \"setsid nohup uv run python -m rl_adaptive_dbs.run \\
       scripts/probes/alphabet_diversity/run_near_hub_margin_probe.py \\
       >> logs/near-hub-margin.log 2>&1 < /dev/null\"
 """

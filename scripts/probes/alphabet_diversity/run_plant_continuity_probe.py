@@ -5,7 +5,7 @@ Compares WithinStepMehreganEnv-style integration (each step cold-restarts from t
 IC draw) against Fig 5a-style continuous simulation (one long idbs timeline).
 
 Run standalone:
-  uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
+  uv run python -m rl_adaptive_dbs.run \\
     scripts/probes/alphabet_diversity/run_plant_continuity_probe.py
 
 Chained after within_step train:

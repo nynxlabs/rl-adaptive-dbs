@@ -15,7 +15,7 @@ Constructions reuse TASK-177 families in ``pattern_alternatives`` plus jitter wi
 
 Run (tmux, 2 threads):
   tmux new-session -d -s alphabet-diversity \\
-    \"setsid nohup uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
+    \"setsid nohup uv run python -m rl_adaptive_dbs.run \\
       scripts/probes/alphabet_diversity/run_alphabet_diversity_sweep.py \\
       >> logs/alphabet-diversity.log 2>&1 < /dev/null\"
 """
