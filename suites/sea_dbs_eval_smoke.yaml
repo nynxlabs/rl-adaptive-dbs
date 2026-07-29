@@ -1,0 +1,9 @@
+# Fast smoke suite for SEA-DBS adapter + trainer.
+name: sea_dbs_eval_smoke
+version: 1
+protocol: sea_dbs
+eval_steps: 5
+seeds: [0]
+controllers:
+  - { controller: sea_dbs, variant: baseline, adapter: true }
+  - { controller: sea_dbs, variant: paper, adapter: true }

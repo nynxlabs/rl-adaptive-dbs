@@ -23,7 +23,7 @@ from envs.mehregan.baselines import default_baselines, run_baseline_mehregan_eva
 from envs.mehregan.env import MehreganEnv
 
 
-_CONTROLLER_PHASE: dict[str, int] = {"snn": 5, "sea_dbs": 6}
+_CONTROLLER_PHASE: dict[str, int] = {"snn": 5}
 
 
 @dataclass

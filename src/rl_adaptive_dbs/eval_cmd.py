@@ -18,7 +18,7 @@ from controllers.ddpg.quantization import fp_source_variant, is_ptq_variant
 from rl_adaptive_dbs.info import CONTROLLER_VARIANTS
 
 
-_CONTROLLER_PHASE: dict[str, int] = {"sea_dbs": 6}
+_CONTROLLER_PHASE: dict[str, int] = {}
 
 
 def validate_eval_request(controller: str, variant: str) -> None:
@@ -82,6 +82,65 @@ def eval_controller(
 ) -> list[RunRecord]:
     validate_eval_request(controller, variant)
     repo_root = find_repo_root()
+
+    if controller == "sea_dbs":
+        from controllers.sea_dbs.config import SEADBSConfig
+        from controllers.sea_dbs.eval import evaluate as evaluate_sea_dbs
+
+        records: list[RunRecord] = []
+        for seed in seeds:
+            ckpt = _resolve_checkpoint(
+                controller, variant, checkpoint, repo_root=repo_root, train_seed=int(seed)
+            )
+            if ckpt is None or not ckpt.is_file():
+                msg = f"checkpoint not found: {ckpt}"
+                raise FileNotFoundError(msg)
+            cfg = SEADBSConfig(variant=variant, seed=int(seed))
+            if smoke:
+                cfg = cfg.for_smoke(episodes=1, max_steps=5)
+            eval_steps = 5 if smoke else cfg.max_episode_steps
+            payload = evaluate_sea_dbs(
+                ckpt,
+                config=cfg,
+                episodes=1,
+                max_steps=eval_steps,
+            )
+            rid = run_id or make_run_id()
+            planned = PlannedRun(
+                controller=controller,
+                variant=variant,
+                seed=int(seed),
+                entry=ControllerEntry(
+                    controller=controller, variant=variant, checkpoint=ckpt, adapter=True
+                ),
+                checkpoint=ckpt,
+            )
+            records.append(
+                RunRecord(
+                    planned=planned,
+                    run_id=rid,
+                    run_dir=Path("results") / "adhoc_eval" / "runs" / run_dir_name(planned, rid),
+                    metrics={
+                        "controller": controller,
+                        "variant": variant,
+                        "seed": int(seed),
+                        "run_id": rid,
+                        "protocol": "sea_dbs_eval",
+                        "p_beta_mean": payload["p_beta_mean"],
+                        "reward_sum": payload["reward_sum"],
+                        "n_episodes": payload["n_episodes"],
+                    },
+                    config={
+                        "controller": controller,
+                        "variant": variant,
+                        "seed": int(seed),
+                        "checkpoint": ckpt.as_posix(),
+                        "protocol": "sea_dbs_eval",
+                    },
+                    timeseries=None,
+                )
+            )
+        return records
 
     if controller == "snn":
         from controllers.snn.config import EVAL_EPISODES, EVAL_MAX_STEPS, SNNConfig

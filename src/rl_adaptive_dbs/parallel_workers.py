@@ -55,6 +55,28 @@ def train_seed_worker(job: TrainSeedJob) -> dict[str, Any]:
 
     ckpt_path = job.checkpoint_dir / f"{job.variant}_train{job.seed}.pt"
 
+    if job.controller == "sea_dbs":
+        from controllers.sea_dbs.config import SEADBSConfig
+        from controllers.sea_dbs.trainer import train_sea_dbs
+
+        config = SEADBSConfig(variant=job.variant, seed=int(job.seed), log_episodes=True)
+        if job.smoke:
+            config = config.for_smoke(
+                episodes=int(job.episodes) if job.episodes is not None else 2,
+                max_steps=5,
+            )
+        elif job.episodes is not None:
+            config = replace(config, num_episodes=int(job.episodes))
+        plan = {
+            "controller": job.controller,
+            "variant": job.variant,
+            "seed": job.seed,
+            "episodes": config.num_episodes,
+            "checkpoint": ckpt_path.as_posix(),
+        }
+        train_sea_dbs(config=config, checkpoint_path=ckpt_path)
+        return {**plan, "status": "ok"}
+
     if job.controller == "snn":
         from controllers.snn.config import SNNConfig
         from controllers.snn.trainer import train_dsqn
