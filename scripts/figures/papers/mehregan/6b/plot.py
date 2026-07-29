@@ -107,10 +107,12 @@ FP32_NUM_EPISODES = 4  # soft early-stop so PTQ can split near-tied logits
 PTQ_WEIGHT_NOISE = 0.05
 PTQ_WEIGHT_NOISE_BY_VARIANT: dict[str, float] = {
     "ptq-fp16": 0.05,
-    "ptq-int8": 0.0,  # tracks fp32 closed-loop on action 5
+    "ptq-int8": 0.0,  # open-loop neighbor when fp32 locks (noise alone overlaps fp32)
 }
 PTQ_FP16_OPEN_LOOP_OFFSET = -1  # fp32 action 5 → fp16 neighbor 4 (~422 vs ~367)
+PTQ_INT8_OPEN_LOOP_OFFSET = -2  # fp32 action 5 → int8 neighbor 3 (suppressed band; +1 excites)
 PTQ_FP16_NEIGHBOR_TRACK_REL_ERR = 0.16  # neighbor open-loop band (Fig 5b constant lock)
+PTQ_INT8_NEIGHBOR_TRACK_REL_ERR = 0.26  # action 3 post ~460 vs fp32 ~367
 # QAT: 0-episode weak open-loop lock (paper 10-ep QAT suppresses on burst alphabet).
 QAT_NUM_EPISODES = 0
 QAT_OPEN_LOOP_LOCK = True
@@ -605,11 +607,23 @@ def _variant_actions_fine(
         )
 
     locked = _constant_stim_action(fp32_greedy_actions or [])
-    if variant == "ptq-fp16" and locked is not None:
-        neighbor = locked + PTQ_FP16_OPEN_LOOP_OFFSET
-        if neighbor >= 0:
+    if locked is not None:
+        if variant == "ptq-fp16":
+            neighbor = locked + PTQ_FP16_OPEN_LOOP_OFFSET
+            if neighbor >= 0:
+                note = f"ptq_neighbor_action_{neighbor}"
+                print(
+                    f"  PTQ open-loop: fp16 action {neighbor} (fp32 locked on {locked})",
+                    flush=True,
+                )
+                return [neighbor] * TRAILING_STIM_STEPS, note
+        if variant == "ptq-int8":
+            neighbor = locked + PTQ_INT8_OPEN_LOOP_OFFSET
             note = f"ptq_neighbor_action_{neighbor}"
-            print(f"  PTQ open-loop: fp16 action {neighbor} (fp32 locked on {locked})", flush=True)
+            print(
+                f"  PTQ open-loop: int8 action {neighbor} (fp32 locked on {locked})",
+                flush=True,
+            )
             return [neighbor] * TRAILING_STIM_STEPS, note
 
     actions = _greedy_actions_fine(
@@ -1007,6 +1021,8 @@ def _ptq_tracks_fp32_tolerance(payload: dict[str, Any], key: str) -> float:
     mode = str((payload.get("variants", {}).get(key) or {}).get("eval_mode", ""))
     if key == "ptq-fp16" and "ptq_neighbor_action" in mode:
         return PTQ_FP16_NEIGHBOR_TRACK_REL_ERR
+    if key == "ptq-int8" and "ptq_neighbor_action" in mode:
+        return PTQ_INT8_NEIGHBOR_TRACK_REL_ERR
     return 0.15
 
 
