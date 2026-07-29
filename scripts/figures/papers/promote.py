@@ -1042,3 +1042,62 @@ def promote_nguyen_4(
         "caption": caption,
         "doc": str(PAPER_NGUYEN_DOC),
     }
+
+
+def resolve_ravivarapu_doc(checkout: Path | None = None) -> Path:
+    root = main_checkout_root(checkout or CHECKOUT_ROOT)
+    return root / "figures" / "ravivarapu" / "replications.md"
+
+
+PAPER_RAVIVARAPU_DOC = resolve_ravivarapu_doc()
+
+
+def promote_ravivarapu_4a(*, manifest: dict[str, Any], png_path: Path, update_docs: bool = True) -> dict[str, str]:
+    del update_docs
+    caption = manifest.get("caption") or "see manifest"
+    if manifest.get("png_version") is not None:
+        caption = f"{caption} (v{manifest['png_version']})"
+    link = repo_rel_posix(png_path)
+    if PAPER_RAVIVARAPU_DOC.exists():
+        text = PAPER_RAVIVARAPU_DOC.read_text()
+        if "<!-- caption-4a:start -->" in text:
+            text = _replace_marker(
+                text,
+                "caption-4a",
+                _caption_block(caption, "artifacts/figures/papers/ravivarapu/4/manifest_4a.json"),
+            )
+        text = text.replace(
+            "*Not yet generated.* Target: `figures/ravivarapu/images/4a/training_psd.png`",
+            f"![Replication Fig 4a](images/4a/{png_path.name})",
+        )
+        text = text.replace(
+            "**Status:** Open — needs SEA-DBS trainer + Baseline ablation.",
+            f"**Status:** {'Pass' if manifest.get('gates', {}).get('pass') else 'Open'} — see manifest gates.",
+        )
+        PAPER_RAVIVARAPU_DOC.write_text(text)
+    return {"png": str(png_path), "caption": caption, "doc": str(PAPER_RAVIVARAPU_DOC)}
+
+
+def promote_ravivarapu_4b(*, manifest: dict[str, Any], png_path: Path, update_docs: bool = True) -> dict[str, str]:
+    del update_docs
+    caption = manifest.get("caption") or "see manifest"
+    if manifest.get("png_version") is not None:
+        caption = f"{caption} (v{manifest['png_version']})"
+    if PAPER_RAVIVARAPU_DOC.exists():
+        text = PAPER_RAVIVARAPU_DOC.read_text()
+        if "<!-- caption-4b:start -->" in text:
+            text = _replace_marker(
+                text,
+                "caption-4b",
+                _caption_block(caption, "artifacts/figures/papers/ravivarapu/4/manifest_4b.json"),
+            )
+        text = text.replace(
+            "*Not yet generated.* Target: `figures/ravivarapu/images/4b/training_reward.png`",
+            f"![Replication Fig 4b](images/4b/{png_path.name})",
+        )
+        text = text.replace(
+            "**Status:** Open — pair with Fig 4a locked run.",
+            f"**Status:** {'Pass' if manifest.get('gates', {}).get('pass') else 'Open'} — see manifest gates.",
+        )
+        PAPER_RAVIVARAPU_DOC.write_text(text)
+    return {"png": str(png_path), "caption": caption, "doc": str(PAPER_RAVIVARAPU_DOC)}
