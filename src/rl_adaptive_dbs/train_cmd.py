@@ -12,7 +12,7 @@ from rl_adaptive_dbs.env_factory import build_mehregan_env
 from rl_adaptive_dbs.info import CONTROLLER_VARIANTS
 
 
-_CONTROLLER_PHASE: dict[str, int] = {"sea_dbs": 6}
+_CONTROLLER_PHASE: dict[str, int] = {}
 
 
 def validate_train_request(controller: str, variant: str) -> None:
@@ -59,10 +59,22 @@ def train_controller(
     summaries: list[dict[str, Any]] = []
 
     for seed in seeds:
-        if controller == "snn":
+        if controller == "sea_dbs":
+            from controllers.sea_dbs.config import SEADBSConfig
+
+            config = SEADBSConfig(variant=variant, seed=int(seed), log_episodes=True)
+            if smoke:
+                config = config.for_smoke(
+                    episodes=int(episodes) if episodes is not None else 2,
+                    max_steps=5,
+                )
+            elif episodes is not None:
+                config = replace(config, num_episodes=int(episodes))
+            n_episodes = config.num_episodes
+        elif controller == "snn":
             from controllers.snn.config import SNNConfig
 
-            config: Any = SNNConfig(variant=variant, seed=int(seed), log_episodes=True)
+            config = SNNConfig(variant=variant, seed=int(seed), log_episodes=True)
             if smoke:
                 config = config.for_smoke(
                     episodes=int(episodes) if episodes is not None else 2,
@@ -111,6 +123,31 @@ def train_controller(
 
     for seed in seeds:
         ckpt_path = out_dir / f"{variant}_train{seed}.pt"
+        if controller == "sea_dbs":
+            from controllers.sea_dbs.config import SEADBSConfig
+            from controllers.sea_dbs.trainer import train_sea_dbs
+
+            config = SEADBSConfig(variant=variant, seed=int(seed), log_episodes=True)
+            if smoke:
+                config = config.for_smoke(
+                    episodes=int(episodes) if episodes is not None else 2,
+                    max_steps=5,
+                )
+            elif episodes is not None:
+                config = replace(config, num_episodes=int(episodes))
+            plan = {
+                "controller": controller,
+                "variant": variant,
+                "seed": seed,
+                "episodes": config.num_episodes,
+                "checkpoint": ckpt_path.as_posix(),
+                "metrics": ckpt_path.with_suffix(".metrics.json").as_posix(),
+                "smoke": smoke,
+            }
+            train_sea_dbs(config=config, checkpoint_path=ckpt_path)
+            summaries.append({**plan, "status": "ok"})
+            continue
+
         if controller == "snn":
             from controllers.snn.config import SNNConfig
             from controllers.snn.trainer import train_dsqn
