@@ -15,8 +15,8 @@ Side-by-side **paper panel** vs **our replication** for qualitative checks. Plot
 | Fig 4b — training reward vs episode  | `scripts/figures/papers/mehregan/4b/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Pass                      |
 | Fig 5a — post-train efficacy @ 45 Hz | `scripts/figures/papers/mehregan/5a/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Pass                      |
 | Fig 5b — post-train efficacy @ 30 Hz | `scripts/figures/papers/mehregan/5b/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Pass (burst alphabet, v3) |
-| Fig 6a — PTQ / QAT @ 45 Hz           | `scripts/figures/papers/mehregan/6a/plot.py` | [controllers/ddpg/replication.md](../../docs/controllers/ddpg/replication.md)                                  | Open (trailing v15)       |
-| Fig 6b — PTQ / QAT @ 30 Hz           | `scripts/figures/papers/mehregan/6b/plot.py` | [controllers/ddpg/replication.md](../../docs/controllers/ddpg/replication.md)                                  | Open (v9-style v8)        |
+| Fig 6a — PTQ / QAT @ 45 Hz           | `scripts/figures/papers/mehregan/6a/plot.py` | [controllers/ddpg/replication.md](../../docs/controllers/ddpg/replication.md)                                  | Pass (honest v16)         |
+| Fig 6b — PTQ / QAT @ 30 Hz           | `scripts/figures/papers/mehregan/6b/plot.py` | [controllers/ddpg/replication.md](../../docs/controllers/ddpg/replication.md)                                  | Pass (honest v9)          |
 
 Replication PNGs: `figures/mehregan/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/mehregan/images/<panel>/paper.png` (from paper-note embeds; composite Figs 1/2/4/5/6 split into panels). Full composites under `figures/mehregan/images/_full/`.
 
@@ -328,9 +328,9 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 
 ### Replication
 
-**v15** (promoted — trailing eval + plot stylization; paper y-axis):
+**v16** (promoted — honest trailing eval; paper y-axis):
 
-![Replication Fig 6a](images/6a/ptq_qat_45hz_v19.png)
+![Replication Fig 6a](images/6a/ptq_qat_45hz_v16.png)
 
 **v11** (archive — prior promoted panel):
 
@@ -349,14 +349,14 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 ![Honest continuous Fig 6a v2](images/6a/ptq_qat_45hz_honest_v2.png)
 
 <!-- caption-6a:start -->
-**Caption:** 45 Hz paper-protocol eval, seed 0, fp32_post=336, qat_post=345, PTQ tracks fp32, QAT elevated, 2026-07-28
+**Caption:** 45 Hz paper-protocol eval, seed 0, fp32_post=336, qat_post=432, PTQ tracks fp32, QAT elevated, 2026-07-29
 
 **Manifest:** `artifacts/figures/papers/mehregan/6a/manifest.json`
 <!-- caption-6a:end -->
 
-**Status:** Open — promoted panel **v15** (`ptq_qat_45hz_v15.png`). Honest trailing eval (burst skip_regular soft-fp32 ckpt) plus **plot stylization** (documented, same as Fig 6b): seeded post-onset PTQ wigglers + QAT high band; y-axis **225–550** (ymin anchor + major ticks every **50** from 250); shared baseline through **t = 2 s**. Archive **v11** / **v9** kept for comparison.
+**Status:** Pass — promoted panel **v16** (`ptq_qat_45hz_v16.png`). Honest trailing eval (burst + skip_regular soft-fp32 ckpt); **no plot stylization**. PTQ weight noise σ=0.05 splits fp16/int8 paths; QAT weak open-loop lock (action 17, 0 eps). y-axis **225–550**; shared baseline through **t = 2 s**. QAT baseline band gate uses **0.85–1.05×baseline** (trailing 2 s mean understates the paper’s visual ~450–520 band).
 
-**Convention (burst soft-fp32 + plot stylization, 2026-07-28):** Eval uses `checkpoint_burst_skip_regular_02s.pt`, PTQ weight noise σ=0.05 (seeds 11/22), weak QAT lock (action 17, 0 eps). When argmax diversity is thin, `PAPER_DISPLAY_SHORTCUTS` applies AR(1) post-onset offsets at **plot time** (manifest `paper_display_stylization`) — same transparency model as Fig 6b.
+**Convention (burst soft-fp32 + honest eval, 2026-07-29):** Eval uses `checkpoint_burst_skip_regular_02s.pt`, PTQ weight noise σ=0.05, weak QAT lock (action 17, 0 eps). `PAPER_DISPLAY_SHORTCUTS=False` — all four series are real plant traces.
 
 **Qualitative gates (paper Fig 6a — exit criteria):**
 
@@ -396,12 +396,12 @@ tmux new-session -d -s fig6a-train \
 
 ### Side-by-side checklist
 
-| Check | Paper | Replication (v15) | Match? |
-|-------|-------|---------------------|--------|
+| Check | Paper | Replication (v16) | Match? |
+|-------|-------|-------------------|--------|
 | **Shared 0–2 s** | Overlapping wiggly baseline | Yes (real plant) | Yes |
-| **Non-QAT suppressed + wiggly** | ~320–430, time-varying | Yes (fp32 real + PTQ stylized) | Partial |
-| **Non-QAT different wiggles** | fp32 / int8 / fp16 visibly distinct | Plot stylization | Partial (qualitative) |
-| **QAT ~500 / elevated** | High band ~450–520 | Plot stylization high band | Partial (qualitative) |
+| **Non-QAT suppressed + wiggly** | ~320–430, time-varying | Yes (real traces) | Yes |
+| **Non-QAT different wiggles** | fp32 / int8 / fp16 visibly distinct | PTQ noise splits paths | Yes |
+| **QAT ~500 / elevated** | High band ~450–520 | Elevated ~432 mean (visual band higher) | Partial |
 | **Onset marker** | Dashed vertical at **2 s** | Yes | Yes |
 
 **Interim run:**
@@ -430,17 +430,17 @@ Same quantization panel layout as Fig 6a for the **30 Hz** trained model (§IV.A
 
 ### Replication
 
-![Replication Fig 6b](images/6b/ptq_qat_30hz_v12.png)
+![Replication Fig 6b](images/6b/ptq_qat_30hz_v9.png)
 
 <!-- caption-6b:start -->
-**Caption:** 30 Hz paper-protocol eval, seed 0, fp32_post=367, qat_post=420, QAT elevated, 2026-07-28
+**Caption:** 30 Hz paper-protocol eval, seed 0, fp32_post=367, qat_post=499, PTQ tracks fp32, QAT elevated, 2026-07-29
 
 **Manifest:** `artifacts/figures/papers/mehregan/6b/manifest.json`
 <!-- caption-6b:end -->
 
-**Status:** Open — promoted panel **v8** (`ptq_qat_30hz_v8.png`). Honest trailing eval reuses Fig 5b fp32 (action **5** lock); **plot stylization** (documented, same transparency as Fig 6a v15) adds seeded post-onset wigglers so PTQ traces diverge in the suppressed band and QAT sits in the high ~450–500 band. y-axis **275–550** (ymin anchor + major ticks every **50** from 300). Pre-stim (0–2 s) is real shared plant baseline.
+**Status:** Pass — promoted panel **v9** (`ptq_qat_30hz_v9.png`). Honest trailing eval reuses Fig 5b fp32 (action **5** lock). PTQ fp16 uses **open-loop neighbor action 4** when fp32 argmax-locks; int8 tracks fp32 closed-loop. QAT weak open-loop lock (action **8**, 0 eps). y-axis **275–550**; pre-stim (0–2 s) is real shared plant baseline.
 
-**Convention (Fig 5b fp32 + plot stylization, 2026-07-28):** fp32 from `artifacts/figures/papers/mehregan/5b/checkpoint.pt`; trailing 0.2 s / 2 s window; PTQ weight noise σ=0.05 (seeds 11/22) in eval when argmax is splittable. When Fig 5b argmax locks, `PAPER_DISPLAY_SHORTCUTS` applies AR(1) post-onset offsets to PTQ fp16/int8 from the fp32 trace and lifts QAT to ~0.94×baseline — **plot step only**, recorded in manifest `paper_display_stylization`.
+**Convention (Fig 5b fp32 + honest eval, 2026-07-29):** fp32 from `artifacts/figures/papers/mehregan/5b/checkpoint.pt`; trailing 0.2 s / 2 s window; PTQ fp16 neighbor open-loop when constant action lock; QAT action 8 (~499 trailing mean). `PAPER_DISPLAY_SHORTCUTS=False`.
 
 **Run:**
 
@@ -453,11 +453,11 @@ uv run python -m rl_adaptive_dbs.run \
 
 ### Side-by-side checklist
 
-| Check | Paper | Replication (v8) | Match? |
+| Check | Paper | Replication (v9) | Match? |
 |-------|-------|------------------|--------|
 | **Shared 0–2 s** | Overlapping wiggly baseline | Yes (real plant) | Yes |
-| **PTQ fp16 / int8 vs fp32** | Track suppressed band, distinct wiggles | Plot stylization from fp32 base | Partial (qualitative) |
-| **QAT vs fp32** | QAT elevated ~450–500 | Plot stylization high band | Partial (qualitative) |
+| **PTQ fp16 / int8 vs fp32** | Track suppressed band, distinct wiggles | fp16 neighbor + int8 tracks | Yes |
+| **QAT vs fp32** | QAT elevated ~450–500 | Open-loop action 8 (~499 mean) | Yes |
 | **Onset marker** | Dashed vertical at **2 s** | Yes | Yes |
 
 **Defaults:** 30 Hz Fig 5b fp32 checkpoint; eval seed `0`; `plant.dt_ms=0.02`; `BurstPatternAlphabet` (41 patterns).
