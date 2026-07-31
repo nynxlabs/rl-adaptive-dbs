@@ -138,6 +138,7 @@ def _train_trace(
     temperature_start: float = 3.0,
     temperature_end: float = 1.0,
     logit_noise_std: float = 0.1,
+    entropy_coeff: float = 0.01,
     critic_action_input: str = "one_hot",
 ) -> tuple[list[float], list[int], list[float], dict[str, Any], DDPGTrainer, DDPGConfig]:
     """Train and return beta_norm per step, actions, episode rewards, and trainer."""
@@ -150,6 +151,7 @@ def _train_trace(
         exploration_temperature_start=temperature_start,
         exploration_temperature_end=temperature_end,
         logit_noise_std=logit_noise_std,
+        entropy_coeff=entropy_coeff,
         critic_action_input=critic_action_input,
     )
     trainer = DDPGTrainer(env, config)
@@ -200,6 +202,7 @@ def _train_trace(
         "temperature_start": config.exploration_temperature_start,
         "temperature_end": config.exploration_temperature_end,
         "logit_noise_std": config.logit_noise_std,
+        "entropy_coeff": config.entropy_coeff,
         "critic_action_input": config.critic_action_input,
         "unique_actions": len(counts),
         "dominant_action": int(dominant),
@@ -458,6 +461,12 @@ def main() -> int:
         help="Gaussian noise on actor logits during training",
     )
     parser.add_argument(
+        "--entropy-coeff",
+        type=float,
+        default=0.01,
+        help="Policy entropy bonus (v4 default 0.01; paper-silent anti-collapse knob)",
+    )
+    parser.add_argument(
         "--critic-action-input",
         choices=("one_hot", "logits"),
         default="one_hot",
@@ -524,6 +533,7 @@ def main() -> int:
                 temperature_start=args.temperature_start,
                 temperature_end=args.temperature_end,
                 logit_noise_std=args.logit_noise_std,
+                entropy_coeff=args.entropy_coeff,
                 critic_action_input=args.critic_action_input,
             )
             )
@@ -572,6 +582,7 @@ def main() -> int:
             "temperature_start": args.temperature_start,
             "temperature_end": args.temperature_end,
             "logit_noise_std": args.logit_noise_std,
+            "entropy_coeff": args.entropy_coeff,
             "critic_action_input": args.critic_action_input,
             "elapsed_s": elapsed,
             "beta_norm_trace": beta_trace,
@@ -616,6 +627,7 @@ def main() -> int:
         "temperature_start": cache.get("temperature_start"),
         "temperature_end": cache.get("temperature_end"),
         "logit_noise_std": cache.get("logit_noise_std"),
+        "entropy_coeff": cache.get("entropy_coeff", 0.01),
         "critic_action_input": cache.get("critic_action_input", "logits"),
         "elapsed_s": cache.get("elapsed_s"),
         "png_version": png_version,
