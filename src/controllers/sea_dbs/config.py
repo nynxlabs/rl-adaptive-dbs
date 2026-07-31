@@ -74,6 +74,11 @@ class SEADBSConfig:
     log_episodes: bool = False
     fixed_episode_seed: bool = False  # optional; fixed seed can collapse paper GS policy
 
+    # Fig 4a episode PSD logging: "mean" (all steps) or "last" (final step biomarker)
+    episode_psd_metric: str = "mean"
+    # Ramp predictive-model r_hat into critic target over this many env steps (0 = off)
+    pm_warmup_steps: int = 0
+
     @property
     def step_duration_s(self) -> float:
         return self.step_duration_ms / 1000.0
@@ -132,10 +137,17 @@ def fig4_ravivarapu_config(
     if variant == "paper":
         return replace(
             cfg,
-            gs_lambda=3e-3,
-            gs_tau_min=0.05,
+            gs_lambda=2e-3,
+            gs_tau_min=0.07,
             update_frequency=2,
+            pm_warmup_steps=1200,
+            episode_psd_metric="mean",
         )
     if variant == "baseline":
-        return replace(cfg, epsilon_end=0.15)
+        return replace(
+            cfg,
+            epsilon_start=0.6,
+            epsilon_end=0.28,
+            episode_psd_metric="mean",
+        )
     return cfg

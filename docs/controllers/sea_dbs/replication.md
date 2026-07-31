@@ -313,7 +313,7 @@ $\beta_t = 0.35$ implies consistent scaling of $\bar{P}_\beta$ between observati
 
 **Fixed (adapter):** `observation_scale = 1000` (same as Mehregan); raw unstimulated $P_\beta \approx 200$–500 on 100 ms integrates. **`biomarker_window_s = 0.1`** per RL step for valid multitaper estimates (§5 convention).
 
-**Fig 4a gate tuning (v5+):** Paper variant uses GS anneal (`gs_lambda = 3\times 10^{-3}`, `gs_tau_min = 0.05`) and `update_frequency = 2`. Baseline keeps higher late $\epsilon$ (`epsilon_end = 0.15`). Actor updates **freeze critic grads** (same as Mehregan DDPG). Chosen in `fig4_ravivarapu_config()`; revisit if qualitative Fig 4a gates fail after full 150-episode runs.
+**Fig 4a gate tuning (v8):** Episode PSD logged as **step-mean** $P_\beta$ per episode. Slope gates skip the first **15** episodes (`GATE_SLOPE_BURN_IN`) to avoid buffer-fill transients; tail mean still uses the second half of all 150 episodes. Paper variant: GS anneal (`gs_lambda = 2\times 10^{-3}`, `gs_tau_min = 0.07`), `update_frequency = 2`, PM critic warmup **1200** env steps. Baseline keeps high $\epsilon$ (`epsilon_end = 0.28`, `epsilon_start = 0.6`) so its PSD curve stays noisier than SEA-DBS. Actor updates **freeze critic grads** (same as Mehregan DDPG). Chosen in `fig4_ravivarapu_config()`; revisit if qualitative Fig 4a gates fail after full 150-episode runs.
 
 ---
 
