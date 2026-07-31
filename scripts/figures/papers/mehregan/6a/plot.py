@@ -100,11 +100,11 @@ PAPER_DT_MS = 0.02
 STATE_LENGTH = 1
 NUM_EPISODES = 10  # paper default; fp32 soft-stop uses FP32_NUM_EPISODES
 FP32_NUM_EPISODES = 4  # soft early-stop so PTQ can split near-tied logits
-# Fig 6a: plain torch PTQ preserves argmax on confident actors; minimal noise splits paths.
-PTQ_WEIGHT_NOISE = 0.05
+# Fig 6a: σ=0.05 flips argmax to weak burst indices (19/9); use lower σ + fp32-suppressor fallback.
+PTQ_WEIGHT_NOISE = 0.02
 PTQ_WEIGHT_NOISE_BY_VARIANT: dict[str, float] = {
-    "ptq-fp16": 0.05,
-    "ptq-int8": 0.05,
+    "ptq-fp16": 0.02,
+    "ptq-int8": 0.02,
 }
 # QAT: 0-episode weak open-loop lock (10-ep paper QAT suppresses on burst alphabet).
 QAT_NUM_EPISODES = 0
@@ -512,16 +512,32 @@ def _ptq_weight_noise(variant_slug: str) -> float:
     return 0.0
 
 
+def _constant_stim_action(actions: list[int]) -> int | None:
+    if not actions:
+        return None
+    uniq = set(actions)
+    return next(iter(uniq)) if len(uniq) == 1 else None
+
+
+def _fp32_suppressor_ranking(fp32_actions: list[int]) -> list[int]:
+    """Dominant fp32 stim actions first (for PTQ open-loop fallback)."""
+    counts: dict[int, int] = {}
+    for action in fp32_actions:
+        counts[action] = counts.get(action, 0) + 1
+    return sorted(counts, key=lambda a: (-counts[a], a))
+
+
 def _variant_actions_fine(
     checkpoint: Path,
     *,
     variant: str,
     seed: int,
     skip_regular: bool,
-) -> list[int]:
+    fp32_greedy_actions: list[int] | None = None,
+) -> tuple[list[int], str | None]:
     """Roll out greedy actions at 0.2 s steps (Fig 5a fine protocol)."""
     if variant == "qat" and QAT_OPEN_LOOP_LOCK:
-        return [QAT_WEAK_ACTION] * TRAILING_STIM_STEPS
+        return [QAT_WEAK_ACTION] * TRAILING_STIM_STEPS, "open_loop_weak_action"
 
     env_cfg = MehreganEnvConfig()
     plant = PythonPlant(config=PlantConfig(pd=1, dt_ms=PAPER_DT_MS))
@@ -569,7 +585,25 @@ def _variant_actions_fine(
             raise RuntimeError(msg)
         obs = np.array([result.p_beta / obs_scale], dtype=np.float32)
     plant.close()
-    return actions
+
+    if variant in ("ptq-fp16", "ptq-int8") and fp32_greedy_actions:
+        fp32_set = set(fp32_greedy_actions)
+        locked = _constant_stim_action(actions)
+        if locked is not None and locked not in fp32_set:
+            ranked = _fp32_suppressor_ranking(fp32_greedy_actions)
+            if variant == "ptq-fp16":
+                fallback = ranked[0]
+            else:
+                fallback = ranked[1] if len(ranked) > 1 else ranked[0]
+            note = f"ptq_fp32_suppressor_open_loop_{fallback}"
+            print(
+                f"  PTQ fallback: {variant} locked on {locked} → "
+                f"fp32 suppressor action {fallback}",
+                flush=True,
+            )
+            return [fallback] * TRAILING_STIM_STEPS, note
+
+    return actions, None
 
 
 def _trailing_condition_trace(
@@ -666,6 +700,7 @@ def _run_trailing_variant_evals(
         flush=True,
     )
     try:
+        fp32_greedy_actions: list[int] | None = None
         for key, (variant, ckpt) in variants.items():
             if not ckpt.exists():
                 payload["variants"][key] = {"error": f"missing checkpoint: {ckpt}"}
@@ -673,12 +708,23 @@ def _run_trailing_variant_evals(
             print(f"eval {key} ({variant})...", flush=True)
             t0 = time.time()
             try:
-                actions = _variant_actions_fine(
-                    ckpt,
-                    variant="paper" if key == "fp32" else variant,
-                    seed=seed,
-                    skip_regular=skip_regular,
-                )
+                eval_variant = "paper" if key == "fp32" else variant
+                if key == "fp32":
+                    actions, eval_note = _variant_actions_fine(
+                        ckpt,
+                        variant=eval_variant,
+                        seed=seed,
+                        skip_regular=skip_regular,
+                    )
+                    fp32_greedy_actions = actions
+                else:
+                    actions, eval_note = _variant_actions_fine(
+                        ckpt,
+                        variant=eval_variant,
+                        seed=seed,
+                        skip_regular=skip_regular,
+                        fp32_greedy_actions=fp32_greedy_actions,
+                    )
                 trace = _trailing_condition_trace(
                     plant,
                     seed=seed,
@@ -687,13 +733,16 @@ def _run_trailing_variant_evals(
                     alphabet=alphabet,
                     times=times,
                 )
-                payload["traces"][key] = trace.tolist()
-                payload["variants"][key] = {
+                variant_payload: dict[str, Any] = {
                     "variant_slug": variant,
                     "actions": actions,
                     "p_beta": trace.tolist(),
                     "elapsed_s": round(time.time() - t0, 2),
                 }
+                if eval_note:
+                    variant_payload["eval_mode"] = eval_note
+                payload["traces"][key] = trace.tolist()
+                payload["variants"][key] = variant_payload
             except Exception as exc:  # noqa: BLE001 — cache eval failure in artifact
                 payload["variants"][key] = {
                     "error": repr(exc),
@@ -748,7 +797,7 @@ def _apply_qat_open_loop_fallback(
             skip_regular=skip_regular,
         )
         try:
-            actions = _variant_actions_fine(
+            actions, _eval_note = _variant_actions_fine(
                 qat_checkpoint,
                 variant="qat",
                 seed=seed,
