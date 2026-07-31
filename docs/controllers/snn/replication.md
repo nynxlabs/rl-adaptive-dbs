@@ -166,6 +166,8 @@ $$
 - **$I_{\mathrm{DBS}}$:** Stimulation current samples in the step (function of amplitude, frequency, pulse width).
 - **$n$:** Pulses per time step (§III.C).
 
+**Chosen (Fig. 4–6):** $N = 1$ (single STN stimulation contact) so per-episode energy matches paper Fig. 5 panel (b) scale (~500–3000 a.u.).
+
 Energy enters the **reward** (§8) and reported **~22%** reduction vs. open-loop **130 Hz** DBS after training (§IV).
 
 ---
