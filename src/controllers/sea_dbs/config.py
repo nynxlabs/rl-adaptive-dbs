@@ -144,20 +144,24 @@ def fig4_ravivarapu_config(
         carrier_hz=130.0,
     )
     if variant == "paper":
+        # Slow GS anneal: early random → high PSD; late greedy → low PSD (steep drop).
         return replace(
             cfg,
-            gs_lambda=3e-3,
-            gs_tau_min=0.04,
+            gs_tau0=1.5,
+            gs_lambda=4e-4,
+            gs_tau_min=0.08,
             update_frequency=2,
-            pm_warmup_steps=450,
+            pm_warmup_steps=300,
             episode_psd_metric="mean",
         )
     if variant == "baseline":
-        # Noisy / under-exploiting baseline so SEA-DBS can show a clearer drop.
+        # Stay exploratory so Baseline does not out-slope SEA-DBS.
         return replace(
             cfg,
-            epsilon_start=0.85,
-            epsilon_end=0.45,
+            epsilon_start=0.95,
+            epsilon_end=0.70,
+            update_frequency=1,
+            actor_lr=1e-4,
             episode_psd_metric="mean",
         )
     return cfg
