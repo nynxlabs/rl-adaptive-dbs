@@ -103,7 +103,10 @@ def main() -> None:
     args = parser.parse_args()
 
     t0 = time.time()
-    if not args.plot_only and not SHARED_SERIES.is_file():
+    if args.plot_only:
+        if not SHARED_SERIES.is_file():
+            raise SystemExit(f"missing paired cache from Fig 4a: {SHARED_SERIES}")
+    elif not SHARED_SERIES.is_file():
         cmd = [
             sys.executable,
             "-m",
@@ -116,19 +119,7 @@ def main() -> None:
             cmd.extend(["--episodes", str(args.episodes)])
         cmd.extend(["--seed", str(args.seed)])
         subprocess.run(cmd, check=True)
-    elif not args.plot_only:
-        cmd = [
-            sys.executable,
-            "-m",
-            "rl_adaptive_dbs.run",
-            str(PLOT_4A),
-        ]
-        if args.smoke:
-            cmd.append("--smoke")
-        if args.episodes is not None:
-            cmd.extend(["--episodes", str(args.episodes)])
-        cmd.extend(["--seed", str(args.seed)])
-        subprocess.run(cmd, check=True)
+    # else: reuse existing Fig 4a series.json (paired lineage)
 
     if not SHARED_SERIES.is_file():
         raise SystemExit(f"missing paired cache from Fig 4a: {SHARED_SERIES}")
