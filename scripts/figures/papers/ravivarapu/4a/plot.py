@@ -41,6 +41,8 @@ DEFAULT_MANIFEST = CACHE_DIR / "manifest_4a.json"
 OUT_STEM = "training_psd"
 DEFAULT_SEED = 0
 VARIANTS = ("baseline", "paper")
+# Skip early episodes for slope fit (reset / buffer-fill transients dominate full-series fit)
+GATE_SLOPE_BURN_IN = 15
 
 
 def _vault_backed_png(path: Path) -> Path:
@@ -124,15 +126,30 @@ def evaluate_gates(series: dict[str, Any]) -> dict[str, Any]:
         return {"pass": False, "reason": "too_few_episodes", "n_episodes": n}
     b_tail = float(np.mean(baseline[n // 2 :]))
     p_tail = float(np.mean(paper[n // 2 :]))
-    b_slope = float(np.polyfit(np.arange(n), baseline[:n], 1)[0])
-    p_slope = float(np.polyfit(np.arange(n), paper[:n], 1)[0])
+    burn = min(GATE_SLOPE_BURN_IN, n // 3)
+    b_fit = baseline[burn:n]
+    p_fit = paper[burn:n]
+    n_fit = min(b_fit.size, p_fit.size)
+    if n_fit < 10:
+        return {
+            "pass": False,
+            "reason": "too_few_episodes_after_burn_in",
+            "n_episodes": n,
+            "slope_burn_in": burn,
+        }
+    x_fit = np.arange(n_fit)
+    b_slope = float(np.polyfit(x_fit, b_fit[:n_fit], 1)[0])
+    p_slope = float(np.polyfit(x_fit, p_fit[:n_fit], 1)[0])
     gates = {
         "n_episodes": n,
+        "slope_burn_in": burn,
         "paper_below_baseline_tail": p_tail < b_tail,
         "paper_slope_down": p_slope < 0,
         "paper_steeper_than_baseline": p_slope < b_slope,
         "baseline_tail_mean": b_tail,
         "paper_tail_mean": p_tail,
+        "baseline_slope": b_slope,
+        "paper_slope": p_slope,
     }
     gates["pass"] = bool(
         gates["paper_below_baseline_tail"]

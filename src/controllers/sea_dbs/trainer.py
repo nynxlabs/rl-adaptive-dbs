@@ -123,6 +123,12 @@ class SEA_DBSTrainer:
         cfg = self.config
         return max(cfg.gs_tau_min, cfg.gs_tau0 * np.exp(-cfg.gs_lambda * self._total_steps))
 
+    def pm_warmup_scale(self) -> float:
+        steps = int(self.config.pm_warmup_steps)
+        if steps <= 0:
+            return 1.0
+        return min(1.0, self._total_steps / steps)
+
     def epsilon(self) -> float:
         total = self.config.num_episodes * self.config.max_episode_steps
         if total <= 0:
@@ -175,7 +181,10 @@ class SEA_DBSTrainer:
             next_action = torch.argmax(next_logits, dim=-1)
             next_oh = action_one_hot(next_action, cfg.n_actions).to(self.device)
             next_q = self.critic_target(next_states, next_oh)
-            pm_term = r_hat_batch if cfg.use_predictive_model else torch.zeros_like(rewards)
+            pm_scale = self.pm_warmup_scale()
+            pm_term = (
+                pm_scale * r_hat_batch if cfg.use_predictive_model else torch.zeros_like(rewards)
+            )
             target = rewards + pm_term + cfg.gamma * (1.0 - dw) * next_q
 
         q_pred = self.critic(states, action_oh)
@@ -282,16 +291,20 @@ class SEA_DBSTrainer:
                 if truncated:
                     break
 
-            mean_psd = float(np.mean(episode_p_beta)) if episode_p_beta else 0.0
+            if cfg.episode_psd_metric == "last":
+                episode_psd_val = float(episode_p_beta[-1]) if episode_p_beta else 0.0
+            else:
+                episode_psd_val = float(np.mean(episode_p_beta)) if episode_p_beta else 0.0
             result.episode_rewards.append(episode_reward)
-            result.episode_psd.append(mean_psd)
+            result.episode_psd.append(episode_psd_val)
             self.metrics.episode_rewards.append(episode_reward)
-            self.metrics.episode_psd.append(mean_psd)
+            self.metrics.episode_psd.append(episode_psd_val)
 
             if cfg.log_episodes:
                 print(
                     f"episode {episode + 1}/{cfg.num_episodes} "
-                    f"reward={episode_reward:.3f} mean_p_beta={mean_psd:.4f}",
+                    f"reward={episode_reward:.3f} "
+                    f"{'last' if cfg.episode_psd_metric == 'last' else 'mean'}_p_beta={episode_psd_val:.4f}",
                     flush=True,
                 )
 
