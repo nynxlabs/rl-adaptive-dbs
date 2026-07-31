@@ -11,7 +11,7 @@ function Resolve-ValidationRepoPath {
     }
 
     # Preferred: WSL checkout (nynxbox default; override with -RepoPath on other machines).
-    $wslUnc = '\\wsl.localhost\Ubuntu\home\nynxbox\neuroengineering\rl-adaptive-dbs'
+    $wslUnc = '\\wsl.localhost\Ubuntu\home\nynxbox\bme\rl-adaptive-dbs'
     if (Test-Path -LiteralPath $wslUnc) {
         return (Get-Item -LiteralPath $wslUnc).FullName
     }

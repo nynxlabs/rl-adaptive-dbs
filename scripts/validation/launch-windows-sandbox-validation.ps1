@@ -113,7 +113,7 @@ if ($Clone) {
     Write-Host '  Mode:      WSL repo mapped into Sandbox'
 }
 Write-Host "  Repo (WSL):  $repoRoot"
-Write-Host "  WSL log:     ~/neuroengineering/rl-adaptive-dbs/.validation-logs/sandbox.log"
+Write-Host "  WSL log:     ~/bme/rl-adaptive-dbs/.validation-logs/sandbox.log"
 Write-Host "  Host log:    $hostLog"
 Write-Host "  WSB:         $wsbPath"
 if (-not $NoWindowResize) {
