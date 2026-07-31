@@ -309,11 +309,9 @@ Fig. 5 compares **50 Hz** vs **30 Hz** carrier during inference; this is not a p
 
 ### 11. Beta normalization scale
 
-$\beta_t = 0.35$ implies consistent scaling of $\bar{P}_\beta$ between observations and reward, as with Mehregan. **Fixed:** Eq. (7) reward shape. **Open:** shared vs controller-specific normalization when both pipelines use the same plant wrapper. **Decide in** adapter; document scale if diverging from [environment.md](../../environment.md) §6.
+$\beta_t = 0.35$ implies consistent scaling of $\bar{P}_\beta$ between observations and reward, as with Mehregan. **Fixed:** Eq. (7) reward shape. **Chosen (SEA-DBS adapter):** `observation_scale = 425` (not Mehregan's 1000). On the **100 ms** biomarker window, unstimulated raw $P_\beta \approx 196$; scale 1000 maps that to $\approx 0.20$ already below $\beta_t$ and removes learning pressure. Scale **425** maps the same raw onto the paper Fig 4a band ($\approx 0.46$) so Eq. (7) can teach. **`biomarker_window_s = 0.1`** per RL step for valid multitaper estimates (§5 convention).
 
-**Fixed (adapter):** `observation_scale = 1000` (same as Mehregan); raw unstimulated $P_\beta \approx 200$–500 on 100 ms integrates. **`biomarker_window_s = 0.1`** per RL step for valid multitaper estimates (§5 convention).
-
-**Fig 4a gate tuning (v10):** Slope burn-in **15** episodes; step-mean episode PSD. Paper: `gs_lambda = 2\times 10^{-3}`, `gs_tau_min = 0.065`, PM warmup **1200** steps (v8 slope-passing GS). Baseline: `epsilon_end = 0.32`, `epsilon_start = 0.65` (raise noisy tail above paper). v8 passed slopes, missed tail; v9 passed tail, missed slopes — v10 combines both levers.
+**Fig 4a gate tuning (v11):** Slope burn-in **15** episodes; step-mean episode PSD. Paper: `gs_lambda = 1.5\times 10^{-3}`, `gs_tau_min = 0.05`, PM warmup **600** steps. Baseline: `epsilon_start = 0.7`, `epsilon_end = 0.35`. Observation scale **425** (see above).
 
 ---
 

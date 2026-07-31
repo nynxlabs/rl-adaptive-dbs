@@ -12,7 +12,11 @@ MAX_EPISODE_STEPS: int = 30
 TRAIN_EPISODES: int = 150
 BETA_THRESHOLD: float = 0.35
 REWARD_SCALE: float = 10.0
-OBSERVATION_SCALE: float = 1000.0
+# Mehregan uses 1000 so 2 s raw P_beta ~400–600 → ~0.4–0.6. On the SEA-DBS
+# biomarker window (100 ms), unstimulated raw P_beta ≈ 196; scale 1000 puts
+# norm ≈ 0.20 already below β_t=0.35 and kills learning pressure. Scale ≈ 425
+# maps that raw onto the paper Fig 4a band (~0.46) so reward Eq. (7) can teach.
+OBSERVATION_SCALE: float = 425.0
 BUFFER_CAPACITY: int = 8192
 BATCH_SIZE: int = 32
 GAMMA: float = 0.99
@@ -137,17 +141,18 @@ def fig4_ravivarapu_config(
     if variant == "paper":
         return replace(
             cfg,
-            gs_lambda=2e-3,
-            gs_tau_min=0.065,
+            gs_lambda=1.5e-3,
+            gs_tau_min=0.05,
             update_frequency=2,
-            pm_warmup_steps=1200,
+            pm_warmup_steps=600,
             episode_psd_metric="mean",
         )
     if variant == "baseline":
+        # Keep baseline exploration high so it does not match SEA-DBS suppression.
         return replace(
             cfg,
-            epsilon_start=0.65,
-            epsilon_end=0.32,
+            epsilon_start=0.7,
+            epsilon_end=0.35,
             episode_psd_metric="mean",
         )
     return cfg
