@@ -139,6 +139,8 @@ def train_series(
             "episode_lengths": result.episode_lengths,
             "episode_spike_totals": result.episode_spike_totals,
             "episode_energies": result.episode_energies,
+            "episode_alpha_beta_means": result.episode_alpha_beta_means,
+            "episode_early_stops": result.episode_early_stops,
             "update_count": result.update_count,
             "smoke": smoke,
             "config": {
