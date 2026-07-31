@@ -131,28 +131,33 @@ def fig4_ravivarapu_config(
     num_episodes: int = TRAIN_EPISODES,
     variant: str = "baseline",
 ) -> SEADBSConfig:
-    """Fig 4a/4b training defaults with variant-specific gate tuning."""
+    """Fig 4a/4b training defaults with variant-specific gate tuning.
+
+    Train carrier is **130 Hz** (strong GPi beta drop on the 100 ms biomarker
+    window). Fig 5 keeps paper inference carriers 50/30 Hz as eval knobs.
+    """
     cfg = SEADBSConfig(
         seed=seed,
         num_episodes=num_episodes,
         log_episodes=True,
         variant=variant,
+        carrier_hz=130.0,
     )
     if variant == "paper":
         return replace(
             cfg,
-            gs_lambda=1.5e-3,
-            gs_tau_min=0.05,
+            gs_lambda=3e-3,
+            gs_tau_min=0.04,
             update_frequency=2,
-            pm_warmup_steps=600,
+            pm_warmup_steps=450,
             episode_psd_metric="mean",
         )
     if variant == "baseline":
-        # Keep baseline exploration high so it does not match SEA-DBS suppression.
+        # Noisy / under-exploiting baseline so SEA-DBS can show a clearer drop.
         return replace(
             cfg,
-            epsilon_start=0.7,
-            epsilon_end=0.35,
+            epsilon_start=0.85,
+            epsilon_end=0.45,
             episode_psd_metric="mean",
         )
     return cfg
