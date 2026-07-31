@@ -311,7 +311,7 @@ Fig. 5 compares **50 Hz** vs **30 Hz** carrier during inference; this is not a p
 
 $\beta_t = 0.35$ implies consistent scaling of $\bar{P}_\beta$ between observations and reward, as with Mehregan. **Fixed:** Eq. (7) reward shape. **Chosen (SEA-DBS adapter):** `observation_scale = 425` (not Mehregan's 1000). On the **100 ms** biomarker window, unstimulated raw $P_\beta \approx 196$; scale 1000 maps that to $\approx 0.20$ already below $\beta_t$ and removes learning pressure. Scale **425** maps the same raw onto the paper Fig 4a band ($\approx 0.46$) so Eq. (7) can teach. **`biomarker_window_s = 0.1`** per RL step for valid multitaper estimates (§5 convention).
 
-**Fig 4a gate tuning (v14):** v13 failed `paper_steeper_than_baseline` because burn-in polyfit skipped SEA-DBS's early drop. Gates now use **early→late PSD drop** for steeper (burn-in 5). Baseline: frozen random (`epsilon=1`, `update_frequency=0`). Paper: `actor_no_stim_bias=1.5`, slow GS. Probe `--episodes 40` before full 150; early-kill if projected gates fail.
+**Fig 4a gate tuning (v15):** Paper-faithful restart after v14 frozen-Baseline cheat. Both variants share `actor_no_stim_bias=1.25` and 130 Hz train carrier (matched high start). Baseline: real DDPG (`ε` 0.55→0.20, `update_frequency=1`, lower LRs) for modest decline. Paper: PM+GS only. Gates still use early→late PSD drop for steeper. Probe `--episodes 40` before full 150; early-kill if starts diverge badly or Baseline out-slopes SEA-DBS.
 
 ---
 
