@@ -17,7 +17,7 @@ auto-increments), caches training series + checkpoint under
 Long run (~hours). Prefer tmux:
 
   tmux new-session -d -s fig2-4-train \\
-    "setsid nohup uv run python -m rl_adaptive_dbs.run \\
+    "setsid nohup uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
       scripts/figures/papers/nguyen/4/plot.py >> logs/fig2-4-train.log 2>&1 < /dev/null"
 """
 from __future__ import annotations
@@ -60,6 +60,10 @@ DEFAULT_EPISODES = 500
 SMOOTH_WINDOW = 20
 EARLY_END = 100
 LATE_START = 150
+# Paper Fig. 4 panel (a): rewards in millions, converging toward 0 from below.
+PAPER_REWARD_EARLY_MAG = 5e4
+PAPER_REWARD_LATE_FLOOR = -2e5
+PAPER_LENGTH_LATE_MAX = 12.0
 
 STYLE = {
     "figure.facecolor": "white",
@@ -133,6 +137,8 @@ def train_series(
             "max_episode_steps": cfg.max_episode_steps,
             "episode_rewards": result.episode_rewards,
             "episode_lengths": result.episode_lengths,
+            "episode_spike_totals": result.episode_spike_totals,
+            "episode_energies": result.episode_energies,
             "update_count": result.update_count,
             "smoke": smoke,
             "config": {
@@ -185,8 +191,11 @@ def evaluate_gates(
     gates = {
         "n_episodes": n,
         "early_high_variance": early_std > 0.05 * max(abs(early_mean), 1.0),
+        "reward_scale_paper": abs(first50_mean) >= PAPER_REWARD_EARLY_MAG,
         "late_reward_above_early": late_mean_reward > first50_mean,
+        "late_reward_near_zero": late_mean_reward > PAPER_REWARD_LATE_FLOOR,
         "length_decreases": float(np.mean(late_lengths)) < float(np.mean(early_lengths)) - 1.0,
+        "late_length_paper_band": float(np.mean(late_lengths)) <= PAPER_LENGTH_LATE_MAX,
         "early_near_max_length": float(np.median(early_lengths[: min(50, n)])) >= max_episode_steps - 2,
         "early_reward_mean": early_mean,
         "late_reward_mean": late_mean_reward,
@@ -194,8 +203,11 @@ def evaluate_gates(
         "late_length_mean": float(np.mean(late_lengths)),
     }
     gates["pass"] = bool(
-        gates["late_reward_above_early"]
+        gates["reward_scale_paper"]
+        and gates["late_reward_above_early"]
+        and gates["late_reward_near_zero"]
         and gates["length_decreases"]
+        and gates["late_length_paper_band"]
         and gates["early_near_max_length"]
     )
     if series.get("smoke"):
@@ -226,6 +238,8 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
     )
     ax0.set_ylabel("Reward")
     ax0.set_title("Episode Rewards")
+    ax0.set_ylim(-1.05e6, 0.05e6)
+    ax0.ticklabel_format(axis="y", style="sci", scilimits=(-6, 6))
     ax0.legend(frameon=False, fontsize=8, loc="lower right")
     ax0.grid(True, linestyle="--", alpha=0.6)
 
@@ -241,6 +255,7 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
     ax1.set_xlabel("Episode")
     ax1.set_ylabel("Length")
     ax1.set_title("Episode Lengths")
+    ax1.set_ylim(5.0, 26.0)
     ax1.legend(frameon=False, fontsize=8, loc="lower right")
     ax1.grid(True, linestyle="--", alpha=0.6)
 
@@ -330,6 +345,8 @@ def main(argv: list[str] | None = None) -> int:
                 extra={
                     "episode_rewards": series["episode_rewards"],
                     "episode_lengths": series["episode_lengths"],
+                    "episode_spike_totals": series.get("episode_spike_totals", []),
+                    "episode_energies": series.get("episode_energies", []),
                     "update_count": series["update_count"],
                 },
             )

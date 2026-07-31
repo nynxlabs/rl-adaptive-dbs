@@ -84,8 +84,8 @@ class SNNConfig:
     pulse_width_min: float = 0.05
     pulse_width_max: float = 2.0
 
-    # Stimulated neuron count for Eq. (6) energy index
-    stimulated_neurons: int = 10
+    # Stimulated neuron count N in Eq. (6) — single STN contact (paper Fig. 5 scale).
+    stimulated_neurons: int = 1
 
     variant: str = "paper"
     seed: int = 0
@@ -136,3 +136,27 @@ class SNNConfig:
             frequency_min=10.0,
             amplitude_min=50.0,
         )
+
+
+def fig4_nguyen_config(
+    seed: int = 0,
+    *,
+    num_episodes: int = TRAIN_EPISODES,
+) -> SNNConfig:
+    """Nguyen Fig. 4 train defaults (figures/nguyen/replications.md § Fig 4).
+
+    Paper-faithful: raw Eq. (7) distance, τ=1, δ=0.01, t_u=3, default ternary
+    sensitivities. Init DBS 40 Hz / 0.3 ms / 300 nA/cm²; max 25 steps/episode.
+    """
+    return SNNConfig(
+        seed=seed,
+        num_episodes=num_episodes,
+        max_episode_steps=EVAL_MAX_STEPS,
+        alpha_beta_threshold=BIOMARKER_THRESHOLD,
+        subthreshold_steps_required=3,
+        epsilon_decay_steps=2_500,
+        learning_rate=1e-3,
+        threshold_reward=1.0,
+        energy_penalty=0.01,
+        stimulated_neurons=1,
+    )

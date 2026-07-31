@@ -39,6 +39,8 @@ class TrainResult:
     metrics: list[TrainMetrics] = field(default_factory=list)
     episode_rewards: list[float] = field(default_factory=list)
     episode_lengths: list[int] = field(default_factory=list)
+    episode_spike_totals: list[int] = field(default_factory=list)
+    episode_energies: list[float] = field(default_factory=list)
     update_count: int = 0
 
 
@@ -207,14 +209,18 @@ class DSQNTrainer:
         result = TrainResult(config=cfg, dsqn=self.dsqn)
 
         for episode in range(cfg.num_episodes):
-            obs, _info = env.reset(seed=cfg.seed + episode)
+            obs, reset_info = env.reset(seed=cfg.seed + episode)
             episode_reward = 0.0
+            episode_spikes = int(reset_info.get("cbgt_spike_count", 0))
+            episode_energy = float(reset_info.get("step_energy", 0.0))
             steps = 0
             for _ in range(cfg.max_episode_steps):
                 flat = np.asarray(obs, dtype=np.float32).reshape(-1)
                 action_index, indices = self.act(obs, explore=True)
-                next_obs, reward, terminated, truncated, _step_info = env.step(indices)
+                next_obs, reward, terminated, truncated, step_info = env.step(indices)
                 done = bool(terminated or truncated)
+                episode_spikes += int(step_info.get("cbgt_spike_count", 0))
+                episode_energy += float(step_info.get("step_energy", 0.0))
                 self.buffer.add(
                     Transition(
                         state=flat,
@@ -243,6 +249,8 @@ class DSQNTrainer:
             result.metrics.append(metrics)
             result.episode_rewards.append(episode_reward)
             result.episode_lengths.append(steps)
+            result.episode_spike_totals.append(episode_spikes)
+            result.episode_energies.append(episode_energy)
             if cfg.log_episodes:
                 print(
                     f"episode {episode + 1}/{cfg.num_episodes} "
@@ -272,6 +280,8 @@ def write_train_metrics(result: TrainResult, path: str | Path) -> Path:
         "update_count": result.update_count,
         "episode_rewards": result.episode_rewards,
         "episode_lengths": result.episode_lengths,
+        "episode_spike_totals": result.episode_spike_totals,
+        "episode_energies": result.episode_energies,
         "episodes": [train_metrics_to_dict(m) for m in result.metrics],
     }
     out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
