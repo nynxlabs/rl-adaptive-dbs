@@ -135,6 +135,8 @@ class NguyenEnvAdapter(gym.Env):
             self.config.step_duration_s,
             self._dbs.to_dbs_spec(duration_s=self.config.step_duration_s),
             record_spikes=True,
+            record_th_spikes=True,
+            record_cor_spikes=True,
         )
         obs = self._encode_observation(result)
         alpha_beta = alpha_beta_power(
@@ -142,11 +144,14 @@ class NguyenEnvAdapter(gym.Env):
             duration_s=self.config.step_duration_s,
             dt_ms=result.dt_ms,
         )
+        spike_count, step_energy = self._step_metrics(result)
         info = {
             "alpha_beta": alpha_beta,
             "dbs": self._dbs,
             "adapter": True,
             "step_duration_ms": self.config.step_duration_ms,
+            "cbgt_spike_count": spike_count,
+            "step_energy": step_energy,
         }
         return obs, info
 
@@ -155,7 +160,25 @@ class NguyenEnvAdapter(gym.Env):
             self.config.step_duration_s,
             self._dbs.to_dbs_spec(duration_s=self.config.step_duration_s),
             record_spikes=True,
+            record_th_spikes=True,
+            record_cor_spikes=True,
         )
+
+    @staticmethod
+    def _cbgt_spike_count(result: IntegrateResult) -> int:
+        """Sum GPi + TH + cortical spike events in one RL step (paper Fig. 5a)."""
+        info = result.info or {}
+        total = 0
+        for key in ("gpi_spike_counts", "th_spike_counts", "cor_spike_counts"):
+            counts = info.get(key)
+            if counts:
+                total += int(np.sum(counts))
+        if total > 0:
+            return total
+        return int(sum(len(times) for times in result.gpi_spikes))
+
+    def _step_metrics(self, result: IntegrateResult) -> tuple[int, float]:
+        return self._cbgt_spike_count(result), self._step_energy()
 
     def step(
         self,
@@ -171,7 +194,13 @@ class NguyenEnvAdapter(gym.Env):
             # previous parameters and re-integrate so RL rollouts can continue.
             self._dbs = prev_dbs
             plant_guard = True
-            result = self._integrate_current_dbs()
+            try:
+                result = self._integrate_current_dbs()
+            except (ZeroDivisionError, ValueError, FloatingPointError):
+                # Rollback triple also failed — reset to paper init and retry once.
+                self._dbs = DBSParameterState.from_config(self.config)
+                plant_guard = True
+                result = self._integrate_current_dbs()
         obs = self._encode_observation(result)
         alpha_beta = alpha_beta_power(
             self._gpi_spike_trains(result),
@@ -195,6 +224,7 @@ class NguyenEnvAdapter(gym.Env):
             remaining_steps=remaining,
             config=self.config,
         )
+        spike_count, step_energy = self._step_metrics(result)
         info = {
             "alpha_beta": alpha_beta,
             "dbs": self._dbs,
@@ -203,5 +233,7 @@ class NguyenEnvAdapter(gym.Env):
             "step_duration_ms": self.config.step_duration_ms,
             "subthreshold_streak": self._subthreshold_streak,
             "plant_guard": plant_guard,
+            "cbgt_spike_count": spike_count,
+            "step_energy": step_energy,
         }
         return obs, reward, terminated, truncated, info
