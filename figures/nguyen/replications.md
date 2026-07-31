@@ -10,7 +10,7 @@ Figs **1–2** are schematics (CBGT circuit diagram; closed-loop block diagram) 
 |-------|--------|------|-------|--------|
 | Fig 3 — GPi α–β distribution (PD Off vs PD On) | `scripts/figures/papers/nguyen/3/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §3 | Set (§ below) | Pass |
 | Fig 4 — training reward + episode length | `scripts/figures/papers/nguyen/4/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §6.5 | Set (§ below) | Open |
-| Fig 5 — CBGT spikes + DBS energy over training | `scripts/figures/papers/nguyen/5/plot.py` (planned) | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Open |
+| Fig 5 — CBGT spikes + DBS energy over training | `scripts/figures/papers/nguyen/5/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Pass |
 | Fig 6 — α–β + DBS params over training | `scripts/figures/papers/nguyen/6/plot.py` (planned) | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Open |
 | Fig 7 — 50-episode eval (25 steps) | `scripts/figures/papers/nguyen/7/plot.py` (planned) | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Open |
 
@@ -148,15 +148,15 @@ Per-episode **CBGT spike counts** (a) and approximate **DBS energy** (b, Eq. (6)
 
 ### Replication
 
-*Not yet generated.* Target: `figures/nguyen/images/5/spikes_energy.png`
+![Replication Fig 5](../../../../../../../../bme/rl-adaptive-dbs/figures/nguyen/images/5/spikes_energy_v2.png)
 
 <!-- caption-5:start -->
-**Caption:** TBD
+**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=1765, energy_mean=4756.1; pass=True (v2)
 
-**Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json` (planned)
+**Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json`
 <!-- caption-5:end -->
 
-**Status:** Open — paired with Fig 4 training logs once the panel script exists.
+**Status:** Pass — shared Fig 4 train cache.
 
 **Qualitative gates (paper Fig 5 — exit criteria):**
 
