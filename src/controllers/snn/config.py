@@ -58,7 +58,6 @@ class SNNConfig:
     # Exploration (ε-greedy on spike-count argmax)
     epsilon_start: float = 1.0
     epsilon_end: float = 0.05
-    # ~100 episodes × 25 steps ≈ shift toward exploitation (Fig. 4 qualitative).
     epsilon_decay_steps: int = 2_500
 
     # Logging
@@ -75,6 +74,13 @@ class SNNConfig:
     # Reward Eq. (7) coefficients (open)
     energy_penalty: float = 0.01  # δ
     threshold_reward: float = 1.0  # τ
+    # Dense shaping when α–β drops but remains above θ (paper-silent; Fig 4 only).
+    alpha_beta_progress_coef: float = 0.0
+    # Bonus when α–β is above θ but within warm_zone_upper (approaching suppression).
+    warm_zone_upper: float = 0.0
+    warm_zone_bonus_coef: float = 0.0
+    # Penalty on max-length timeout without early stop (Fig 4 learnability).
+    truncation_penalty: float = 0.0
 
     # DBS parameter bounds (adapter clamping)
     amplitude_min: float = 0.0
@@ -145,8 +151,8 @@ def fig4_nguyen_config(
 ) -> SNNConfig:
     """Nguyen Fig. 4 train defaults (figures/nguyen/replications.md § Fig 4).
 
-    Paper-faithful: raw Eq. (7) distance, τ=1, δ=0.01, t_u=3, default ternary
-    sensitivities. Init DBS 40 Hz / 0.3 ms / 300 nA/cm²; max 25 steps/episode.
+    Paper Eq. (7) + probe-driven shaping (v9): progress/warm-zone bonuses,
+    truncation penalty for 25-step timeouts, faster freq ramp.
     """
     return SNNConfig(
         seed=seed,
@@ -154,9 +160,17 @@ def fig4_nguyen_config(
         max_episode_steps=EVAL_MAX_STEPS,
         alpha_beta_threshold=BIOMARKER_THRESHOLD,
         subthreshold_steps_required=3,
-        epsilon_decay_steps=2_500,
-        learning_rate=1e-3,
-        threshold_reward=1.0,
-        energy_penalty=0.01,
+        epsilon_decay_steps=3_500,
+        epsilon_end=0.15,
+        learning_rate=5e-4,
+        frequency_sensitivity=15.0,
+        pulse_width_sensitivity=0.1,
+        threshold_reward=300.0,
+        energy_penalty=0.0,
+        alpha_beta_progress_coef=2000.0,
+        warm_zone_upper=220.0,
+        warm_zone_bonus_coef=150.0,
+        truncation_penalty=600_000.0,
         stimulated_neurons=1,
+        log_episodes=True,
     )

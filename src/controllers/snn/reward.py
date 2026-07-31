@@ -32,6 +32,7 @@ def nguyen_reward(
     terminated: bool,
     remaining_steps: int,
     config: SNNConfig | None = None,
+    prev_alpha_beta: float | None = None,
 ) -> float:
     """Nguyen Eq. (7) reward for one RL transition."""
     cfg = (config or SNNConfig()).with_variant_defaults()
@@ -40,7 +41,30 @@ def nguyen_reward(
     # Paper Eq. (7): raw squared distance to θ (no normalization); α–β is O(10²).
     d = float((alpha_beta - theta) ** 2) if theta_u == 0.0 else 0.0
 
+    progress = 0.0
+    if (
+        theta_u == 0.0
+        and prev_alpha_beta is not None
+        and cfg.alpha_beta_progress_coef > 0.0
+    ):
+        progress = cfg.alpha_beta_progress_coef * max(0.0, float(prev_alpha_beta) - alpha_beta)
+
+    warm = 0.0
+    if (
+        theta_u == 0.0
+        and cfg.warm_zone_upper > theta
+        and cfg.warm_zone_bonus_coef > 0.0
+        and alpha_beta < cfg.warm_zone_upper
+    ):
+        warm = cfg.warm_zone_bonus_coef * (cfg.warm_zone_upper - alpha_beta)
+
     if terminated:
         return cfg.threshold_reward * (remaining_steps + 1) - cfg.energy_penalty * energy
     # Above threshold: penalize squared distance; below: τ bonus per step.
-    return -cfg.energy_penalty * energy + cfg.threshold_reward * theta_u - (1.0 - theta_u) * d
+    return (
+        -cfg.energy_penalty * energy
+        + cfg.threshold_reward * theta_u
+        - (1.0 - theta_u) * d
+        + progress
+        + warm
+    )
