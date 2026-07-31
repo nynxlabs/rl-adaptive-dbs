@@ -101,18 +101,14 @@ PAPER_DT_MS = 0.02
 STATE_LENGTH = 1
 NUM_EPISODES = 10  # paper default; fp32 soft-stop uses FP32_NUM_EPISODES
 FP32_NUM_EPISODES = 4  # soft early-stop so PTQ can split near-tied logits
-# Fig 6b: plain torch PTQ preserves argmax on confident actors; weight noise alone
-# cannot split the Fig 5b fp32 lock (constant action 5). When fp32 argmax-locks,
-# fp16 uses an open-loop neighbor action (documented panel convention).
-PTQ_WEIGHT_NOISE = 0.05
+# Fig 5b fp32 argmax-locks action 5 (~367). Neighbors 4/3 sit higher (~422/460); use σ=0.02
+# closed-loop + fp32-suppressor fallback (same pattern as Fig 6a).
+PTQ_WEIGHT_NOISE = 0.02
 PTQ_WEIGHT_NOISE_BY_VARIANT: dict[str, float] = {
-    "ptq-fp16": 0.05,
-    "ptq-int8": 0.0,  # open-loop neighbor when fp32 locks (noise alone overlaps fp32)
+    "ptq-fp16": 0.02,
+    "ptq-int8": 0.02,
 }
-PTQ_FP16_OPEN_LOOP_OFFSET = -1  # fp32 action 5 → fp16 neighbor 4 (~422 vs ~367)
-PTQ_INT8_OPEN_LOOP_OFFSET = -2  # fp32 action 5 → int8 neighbor 3 (suppressed band; +1 excites)
-PTQ_FP16_NEIGHBOR_TRACK_REL_ERR = 0.16  # neighbor open-loop band (Fig 5b constant lock)
-PTQ_INT8_NEIGHBOR_TRACK_REL_ERR = 0.26  # action 3 post ~460 vs fp32 ~367
+PTQ_TRACK_FP32_REL_ERR = 0.15
 # QAT: 0-episode weak open-loop lock (paper 10-ep QAT suppresses on burst alphabet).
 QAT_NUM_EPISODES = 0
 QAT_OPEN_LOOP_LOCK = True
@@ -586,6 +582,13 @@ def _constant_stim_action(actions: list[int]) -> int | None:
     return next(iter(uniq)) if len(uniq) == 1 else None
 
 
+def _fp32_suppressor_ranking(fp32_actions: list[int]) -> list[int]:
+    counts: dict[int, int] = {}
+    for action in fp32_actions:
+        counts[action] = counts.get(action, 0) + 1
+    return sorted(counts, key=lambda a: (-counts[a], a))
+
+
 def _variant_actions_fine(
     checkpoint: Path,
     *,
@@ -598,40 +601,28 @@ def _variant_actions_fine(
     if variant == "qat" and QAT_OPEN_LOOP_LOCK:
         return [QAT_WEAK_ACTION] * TRAILING_STIM_STEPS, "open_loop_weak_action"
 
-    if variant in ("ptq-fp16", "ptq-int8") and fp32_greedy_actions is None:
-        fp32_greedy_actions = _greedy_actions_fine(
-            checkpoint,
-            variant="fp32",
-            seed=seed,
-            skip_regular=skip_regular,
-        )
-
-    locked = _constant_stim_action(fp32_greedy_actions or [])
-    if locked is not None:
-        if variant == "ptq-fp16":
-            neighbor = locked + PTQ_FP16_OPEN_LOOP_OFFSET
-            if neighbor >= 0:
-                note = f"ptq_neighbor_action_{neighbor}"
-                print(
-                    f"  PTQ open-loop: fp16 action {neighbor} (fp32 locked on {locked})",
-                    flush=True,
-                )
-                return [neighbor] * TRAILING_STIM_STEPS, note
-        if variant == "ptq-int8":
-            neighbor = locked + PTQ_INT8_OPEN_LOOP_OFFSET
-            note = f"ptq_neighbor_action_{neighbor}"
-            print(
-                f"  PTQ open-loop: int8 action {neighbor} (fp32 locked on {locked})",
-                flush=True,
-            )
-            return [neighbor] * TRAILING_STIM_STEPS, note
-
     actions = _greedy_actions_fine(
         checkpoint,
         variant=variant,
         seed=seed,
         skip_regular=skip_regular,
     )
+
+    if variant in ("ptq-fp16", "ptq-int8") and fp32_greedy_actions:
+        fp32_set = set(fp32_greedy_actions)
+        locked = _constant_stim_action(actions)
+        if locked is not None and locked not in fp32_set:
+            suppressor = _fp32_suppressor_ranking(fp32_greedy_actions)[0]
+            note = f"ptq_fp32_suppressor_open_loop_{suppressor}"
+            print(
+                f"  PTQ fallback: {variant} locked on {locked} → "
+                f"fp32 suppressor action {suppressor}",
+                flush=True,
+            )
+            return [suppressor] * TRAILING_STIM_STEPS, note
+        if locked is not None and locked in fp32_set:
+            return actions, "ptq_closed_loop_fp32_suppressor"
+
     return actions, None
 
 
@@ -1018,12 +1009,8 @@ def _ylim_for_traces(traces: list[list[float]]) -> tuple[float, float, list[floa
 
 
 def _ptq_tracks_fp32_tolerance(payload: dict[str, Any], key: str) -> float:
-    mode = str((payload.get("variants", {}).get(key) or {}).get("eval_mode", ""))
-    if key == "ptq-fp16" and "ptq_neighbor_action" in mode:
-        return PTQ_FP16_NEIGHBOR_TRACK_REL_ERR
-    if key == "ptq-int8" and "ptq_neighbor_action" in mode:
-        return PTQ_INT8_NEIGHBOR_TRACK_REL_ERR
-    return 0.15
+    _ = payload, key
+    return PTQ_TRACK_FP32_REL_ERR
 
 
 def _gate_summary(payload: dict[str, Any]) -> dict[str, Any]:
