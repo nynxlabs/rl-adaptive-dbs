@@ -1009,10 +1009,26 @@ def promote_nguyen_4(
             link=link,
             doc=PAPER_NGUYEN_DOC,
         )
-        text = text.replace(
-            "**Status:** Open — `DSQNTrainer` + `rl-dbs train --controller snn` exist; "
-            "needs a real plant train + `scripts/figures/papers/nguyen/4/plot.py`.",
-            f"**Status:** {'Pass' if manifest.get('gates', {}).get('pass') else 'Open'} — see manifest gates.",
+        # Refresh Fig 4 Status line (any prior Open/Pass wording after caption-4).
+        import re as _re
+        _pass = bool(manifest.get("gates", {}).get("pass"))
+        _status = (
+            f"**Status:** Pass — see manifest gates (`{png_path.name}`)."
+            if _pass
+            else f"**Status:** Open — see manifest gates (`{png_path.name}`)."
+        )
+        text = _re.sub(
+            r"(<!-- caption-4:end -->\s*\n)\*\*Status:\*\*[^\n]+",
+            r"\1" + _status,
+            text,
+            count=1,
+        )
+        # Keep summary-table Status column in sync for Fig 4 row.
+        text = _re.sub(
+            r"(\| Fig 4 — training reward \+ episode length \|[^|]+\|[^|]+\|[^|]+\| )(Open|Pass)( \|)",
+            r"\1" + ("Pass" if _pass else "Open") + r"\3",
+            text,
+            count=1,
         )
         text = text.replace(
             "*Not yet generated.* Target: `figures/nguyen/images/4/training_reward_length.png`",
