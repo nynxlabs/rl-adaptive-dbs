@@ -82,7 +82,7 @@ pwsh -File scripts/validation/check-windows-host.ps1
 
 ### Host logs (WSL repo, gitignored)
 
-Launchers write validation output under **`/home/nynxbox/neuroengineering/rl-adaptive-dbs/.validation-logs/`** (gitignored). Logs persist after the Multipass VM is deleted or Sandbox closes.
+Launchers write validation output under **`/home/nynxbox/bme/rl-adaptive-dbs/.validation-logs/`** (gitignored). Logs persist after the Multipass VM is deleted or Sandbox closes.
 
 | File | Source |
 |------|--------|
