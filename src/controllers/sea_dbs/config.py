@@ -137,8 +137,9 @@ def fig4_ravivarapu_config(
 
     Both variants share train carrier **130 Hz** and the same no-stim actor bias
     so episode-1 PSD starts in the same high band (paper Fig 4a). Baseline is a
-    real DDPG learner (ε-greedy + updates), not a frozen random control. SEA-DBS
-    adds PM + GS only.
+    real DDPG learner (ε-greedy + updates). SEA-DBS adds PM + GS with a **slow**
+    temperature anneal so the early third stays high before the drop (v15 failed
+    because GS collapsed PSD in the first ~10 episodes).
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -146,28 +147,28 @@ def fig4_ravivarapu_config(
         log_episodes=True,
         variant=variant,
         carrier_hz=130.0,
-        # Shared bias: both start near unstimulated PSD, then learn to stim.
         actor_no_stim_bias=1.25,
         episode_psd_metric="mean",
     )
     if variant == "paper":
         return replace(
             cfg,
-            gs_tau0=1.2,
-            gs_lambda=8e-4,
-            gs_tau_min=0.06,
-            update_frequency=2,
-            pm_warmup_steps=400,
+            gs_tau0=2.0,
+            gs_lambda=2e-4,
+            gs_tau_min=0.12,
+            update_frequency=1,
+            pm_warmup_steps=900,
+            min_buffer_size=64,
         )
     if variant == "baseline":
-        # Modest learning: anneal exploration but keep some noise so decline
-        # stays shallower than full SEA-DBS (paper: "only modest decline").
+        # Real but modest learning — shallower decline than SEA-DBS.
         return replace(
             cfg,
-            epsilon_start=0.55,
-            epsilon_end=0.20,
+            epsilon_start=0.60,
+            epsilon_end=0.35,
             update_frequency=1,
-            actor_lr=2e-4,
-            critic_lr=5e-4,
+            actor_lr=1.5e-4,
+            critic_lr=4e-4,
+            min_buffer_size=64,
         )
     return cfg
