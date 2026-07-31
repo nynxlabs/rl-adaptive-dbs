@@ -311,7 +311,7 @@ Fig. 5 compares **50 Hz** vs **30 Hz** carrier during inference; this is not a p
 
 $\beta_t = 0.35$ implies consistent scaling of $\bar{P}_\beta$ between observations and reward, as with Mehregan. **Fixed:** Eq. (7) reward shape. **Chosen (SEA-DBS adapter):** `observation_scale = 425` (not Mehregan's 1000). On the **100 ms** biomarker window, unstimulated raw $P_\beta \approx 196$; scale 1000 maps that to $\approx 0.20$ already below $\beta_t$ and removes learning pressure. Scale **425** maps the same raw onto the paper Fig 4a band ($\approx 0.46$) so Eq. (7) can teach. **`biomarker_window_s = 0.1`** per RL step for valid multitaper estimates (§5 convention).
 
-**Fig 4a gate tuning (v12):** Slope burn-in **15** episodes; step-mean episode PSD. Observation scale **425**. Train carrier **130 Hz** (100 ms window: unstim ≈0.46, 50 Hz ≈0.39, 130 Hz ≈0.12 — 50 Hz alone is too weak vs $\beta_t$). Paper: `gs_lambda = 3\times 10^{-3}`, `gs_tau_min = 0.04`, PM warmup **450**. Baseline: `epsilon_start = 0.85`, `epsilon_end = 0.45`. Fig 5 inference carriers remain **50/30 Hz**.
+**Fig 4a gate tuning (v13):** After v12 early-kill (paper flat ~0.23; Baseline steeper decline → `paper_steeper_than_baseline` fail). Paper: slow GS (`gs_tau0=1.5`, `gs_lambda=4e-4`, `gs_tau_min=0.08`) so early PSD stays high then drops. Baseline: `epsilon` 0.95→0.70, `actor_lr=1e-4`, `update_frequency=1` so it does not out-slope SEA-DBS. Probe with `--episodes 40` before full 150; kill full runs early if projected gates fail.
 
 ---
 
