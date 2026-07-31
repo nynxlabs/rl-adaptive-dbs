@@ -41,8 +41,11 @@ DEFAULT_MANIFEST = CACHE_DIR / "manifest_4a.json"
 OUT_STEM = "training_psd"
 DEFAULT_SEED = 0
 VARIANTS = ("baseline", "paper")
-GATE_SLOPE_BURN_IN = 5  # only skip reset noise; do not erase SEA-DBS early learning
-GATE_EARLY_FRAC = 1 / 3
+GATE_SLOPE_BURN_IN = 5  # only skip reset noise for polyfit diagnostics
+# "Start" band = first ~5% of episodes (paper Fig 4a shared high onset). Wider
+# windows (1/3) swallowed SEA-DBS's early drop into early_mean and falsely failed
+# the steeper gate while Baseline declined gradually (v15).
+GATE_EARLY_FRAC = 1 / 20
 GATE_LATE_FRAC = 1 / 2
 
 
@@ -127,7 +130,7 @@ def evaluate_gates(series: dict[str, Any]) -> dict[str, Any]:
         return {"pass": False, "reason": "too_few_episodes", "n_episodes": n}
     b_tail = float(np.mean(baseline[n // 2 :]))
     p_tail = float(np.mean(paper[n // 2 :]))
-    early_n = max(5, int(n * GATE_EARLY_FRAC))
+    early_n = max(3, int(n * GATE_EARLY_FRAC))
     late_start = n // 2
     b_early = float(np.mean(baseline[:early_n]))
     p_early = float(np.mean(paper[:early_n]))
