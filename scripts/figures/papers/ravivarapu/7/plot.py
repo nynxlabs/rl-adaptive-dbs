@@ -12,6 +12,7 @@ from pathlib import Path
 os.environ.setdefault("MPLBACKEND", "Agg")
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 from controllers.sea_dbs.config import ABLATION_EVAL_STEPS, SEADBSConfig
 from controllers.sea_dbs.eval import evaluate_ablation_steps
