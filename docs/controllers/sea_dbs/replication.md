@@ -313,7 +313,7 @@ $\beta_t = 0.35$ implies consistent scaling of $\bar{P}_\beta$ between observati
 
 **Fixed (adapter):** `observation_scale = 1000` (same as Mehregan); raw unstimulated $P_\beta \approx 200$–500 on 100 ms integrates. **`biomarker_window_s = 0.1`** per RL step for valid multitaper estimates (§5 convention).
 
-**Fig 4a gate tuning (v9):** Episode PSD logged as **step-mean** $P_\beta$ per episode. Slope gates skip the first **15** episodes (`GATE_SLOPE_BURN_IN`); tail mean uses the second half of all 150 episodes. Paper variant: GS anneal (`gs_lambda = 2.5\times 10^{-3}`, `gs_tau_min = 0.055`), `update_frequency = 2`, PM critic warmup **1200** env steps. Baseline keeps high $\epsilon$ (`epsilon_end = 0.30`, `epsilon_start = 0.62`). v8 passed slope gates but missed tail by ~0.002; v9 blends v7 GS speed with v8 baseline noise.
+**Fig 4a gate tuning (v10):** Slope burn-in **15** episodes; step-mean episode PSD. Paper: `gs_lambda = 2\times 10^{-3}`, `gs_tau_min = 0.065`, PM warmup **1200** steps (v8 slope-passing GS). Baseline: `epsilon_end = 0.32`, `epsilon_start = 0.65` (raise noisy tail above paper). v8 passed slopes, missed tail; v9 passed tail, missed slopes — v10 combines both levers.
 
 ---
 

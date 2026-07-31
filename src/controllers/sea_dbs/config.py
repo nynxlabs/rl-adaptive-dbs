@@ -137,8 +137,8 @@ def fig4_ravivarapu_config(
     if variant == "paper":
         return replace(
             cfg,
-            gs_lambda=2.5e-3,
-            gs_tau_min=0.055,
+            gs_lambda=2e-3,
+            gs_tau_min=0.065,
             update_frequency=2,
             pm_warmup_steps=1200,
             episode_psd_metric="mean",
@@ -146,8 +146,8 @@ def fig4_ravivarapu_config(
     if variant == "baseline":
         return replace(
             cfg,
-            epsilon_start=0.62,
-            epsilon_end=0.30,
+            epsilon_start=0.65,
+            epsilon_end=0.32,
             episode_psd_metric="mean",
         )
     return cfg
