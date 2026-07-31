@@ -41,6 +41,8 @@ class TrainResult:
     episode_lengths: list[int] = field(default_factory=list)
     episode_spike_totals: list[int] = field(default_factory=list)
     episode_energies: list[float] = field(default_factory=list)
+    episode_alpha_beta_means: list[float] = field(default_factory=list)
+    episode_early_stops: list[bool] = field(default_factory=list)
     update_count: int = 0
 
 
@@ -178,6 +180,7 @@ class DSQNTrainer:
         loss = F.mse_loss(q_sa, target)
         self.optimizer.zero_grad(set_to_none=True)
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.dsqn.parameters(), 10.0)
         self.optimizer.step()
 
         self._update_count += 1
@@ -213,7 +216,9 @@ class DSQNTrainer:
             episode_reward = 0.0
             episode_spikes = int(reset_info.get("cbgt_spike_count", 0))
             episode_energy = float(reset_info.get("step_energy", 0.0))
+            alpha_betas: list[float] = [float(reset_info.get("alpha_beta", float("nan")))]
             steps = 0
+            terminated_early = False
             for _ in range(cfg.max_episode_steps):
                 flat = np.asarray(obs, dtype=np.float32).reshape(-1)
                 action_index, indices = self.act(obs, explore=True)
@@ -221,6 +226,7 @@ class DSQNTrainer:
                 done = bool(terminated or truncated)
                 episode_spikes += int(step_info.get("cbgt_spike_count", 0))
                 episode_energy += float(step_info.get("step_energy", 0.0))
+                alpha_betas.append(float(step_info.get("alpha_beta", float("nan"))))
                 self.buffer.add(
                     Transition(
                         state=flat,
@@ -235,6 +241,8 @@ class DSQNTrainer:
                 episode_reward += float(reward)
                 steps += 1
                 obs = next_obs
+                if terminated:
+                    terminated_early = True
                 if done:
                     break
 
@@ -251,10 +259,14 @@ class DSQNTrainer:
             result.episode_lengths.append(steps)
             result.episode_spike_totals.append(episode_spikes)
             result.episode_energies.append(episode_energy)
+            result.episode_alpha_beta_means.append(float(np.nanmean(alpha_betas)))
+            result.episode_early_stops.append(terminated_early)
             if cfg.log_episodes:
                 print(
                     f"episode {episode + 1}/{cfg.num_episodes} "
                     f"reward={episode_reward:.3f} steps={steps} "
+                    f"alpha_beta={result.episode_alpha_beta_means[-1]:.1f} "
+                    f"energy={episode_energy:.1f} early_stop={terminated_early} "
                     f"eps={metrics.epsilon:.3f} loss={metrics.loss}",
                     flush=True,
                 )
@@ -282,6 +294,8 @@ def write_train_metrics(result: TrainResult, path: str | Path) -> Path:
         "episode_lengths": result.episode_lengths,
         "episode_spike_totals": result.episode_spike_totals,
         "episode_energies": result.episode_energies,
+        "episode_alpha_beta_means": result.episode_alpha_beta_means,
+        "episode_early_stops": result.episode_early_stops,
         "episodes": [train_metrics_to_dict(m) for m in result.metrics],
     }
     out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")

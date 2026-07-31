@@ -75,6 +75,7 @@ class NguyenEnvAdapter(gym.Env):
         self._dbs = DBSParameterState.from_config(self.config)
         self._step_count = 0
         self._subthreshold_streak = 0
+        self._prev_alpha_beta: float | None = None
 
     def close(self) -> None:
         if self._owns_plant:
@@ -130,6 +131,7 @@ class NguyenEnvAdapter(gym.Env):
         self._dbs = DBSParameterState.from_config(self.config)
         self._step_count = 0
         self._subthreshold_streak = 0
+        self._prev_alpha_beta = None
 
         result = self._plant.integrate(
             self.config.step_duration_s,
@@ -144,6 +146,7 @@ class NguyenEnvAdapter(gym.Env):
             duration_s=self.config.step_duration_s,
             dt_ms=result.dt_ms,
         )
+        self._prev_alpha_beta = alpha_beta
         spike_count, step_energy = self._step_metrics(result)
         info = {
             "alpha_beta": alpha_beta,
@@ -223,8 +226,12 @@ class NguyenEnvAdapter(gym.Env):
             terminated=terminated,
             remaining_steps=remaining,
             config=self.config,
+            prev_alpha_beta=self._prev_alpha_beta,
         )
+        if truncated and not terminated and self.config.truncation_penalty > 0.0:
+            reward -= self.config.truncation_penalty
         spike_count, step_energy = self._step_metrics(result)
+        self._prev_alpha_beta = alpha_beta
         info = {
             "alpha_beta": alpha_beta,
             "dbs": self._dbs,
