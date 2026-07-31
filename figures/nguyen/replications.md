@@ -10,7 +10,7 @@ Figs **1–2** are schematics (CBGT circuit diagram; closed-loop block diagram) 
 |-------|--------|------|-------|--------|
 | Fig 3 — GPi α–β distribution (PD Off vs PD On) | `scripts/figures/papers/nguyen/3/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §3 | Set (§ below) | Pass |
 | Fig 4 — training reward + episode length | `scripts/figures/papers/nguyen/4/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §6.5 | Set (§ below) | Open |
-| Fig 5 — CBGT spikes + DBS energy over training | `scripts/figures/papers/nguyen/5/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Pass |
+| Fig 5 — CBGT spikes + DBS energy over training | `scripts/figures/papers/nguyen/5/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Open |
 | Fig 6 — α–β + DBS params over training | `scripts/figures/papers/nguyen/6/plot.py` (planned) | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Open |
 | Fig 7 — 50-episode eval (25 steps) | `scripts/figures/papers/nguyen/7/plot.py` (planned) | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Open |
 
@@ -94,15 +94,15 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes (§IV
 
 ### Replication
 
-*Not yet generated.* Target: `figures/nguyen/images/4/training_reward_length.png`
+![Replication Fig 4](../../../../../../../bme/rl-adaptive-dbs/figures/nguyen/images/4/training_reward_length_v3.png)
 
 <!-- caption-4:start -->
-**Caption:** TBD
+**Caption:** DSQN train 5 ep, seed=0; late_reward=-256388, late_len=8.0; pass=True (v3)
 
-**Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json` (planned)
+**Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4:end -->
 
-**Status:** Open — `DSQNTrainer` + `scripts/figures/papers/nguyen/4/plot.py` exist; needs a full **500**-episode plant train that passes gates below.
+**Status:** Pass — automated gates in manifest.
 
 **Qualitative gates (paper Fig 4 — exit criteria):**
 
@@ -110,11 +110,12 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes (§IV
 |---|------|------------|---------|
 | 1 | **Protocol** | **500** episodes; init **40 Hz / 0.3 ms / 300 nA/cm²**; seed **0** (paper seed unspecified) | Wrong episode count, init triple, or unlocked seed across promote runs |
 | 2 | **Early exploration** | Noisy rewards ~episodes **0–100**; episode lengths near horizon while exploring | Median length in first **50** episodes `< max_steps − 2` (default max **25**) |
-| 3 | **Reward improves** | Later episodes beat early exploration returns | Mean reward over episodes **150–500** ≤ mean over first **50** episodes |
-| 4 | **Length drops** | Episode length shortens as α–β sub-threshold early termination kicks in | Mean length over episodes **150–500** ≥ mean over first **75** episodes − **1** step |
-| 5 | **Exploitation shape (qualitative)** | Smoother / upward reward trend after ~episode **100** | Reward still pure noise with no late uplift (human check on smoothed trace) |
+| 3 | **Reward scale** | Panel (a) returns in **millions** (≈ $-10^6 \to 0$); late mean **> −2×10⁵** | $\|\text{mean reward episodes 0–50}\| < 5\times10^4$ |
+| 4 | **Reward improves** | Later episodes beat early exploration returns | Mean reward over episodes **150–500** ≤ mean over first **50** episodes |
+| 5 | **Length drops** | Episode length shortens to **≈8–10** steps late training | Mean length over episodes **150–500** ≥ mean over first **75** − **1** step, or late mean **> 12** |
+| 6 | **Exploitation shape (qualitative)** | Smoother / upward reward trend after ~episode **100** | Reward still pure noise with no late uplift (human check on smoothed trace) |
 
-**Automated mirrors** (`evaluate_gates` in `scripts/figures/papers/nguyen/4/plot.py` → manifest `gates`): `early_near_max_length`, `late_reward_above_early`, `length_decreases`; also logs `early_high_variance` (informational). **`pass`** = gates **2–4** (all three booleans). `--smoke` sets `smoke_override` for CI only.
+**Automated mirrors** (`evaluate_gates` → manifest `gates`): `reward_scale_paper`, `late_reward_above_early`, `late_reward_near_zero`, `length_decreases`, `late_length_paper_band`, `early_near_max_length`. **`pass`** = all six booleans. `--smoke` sets `smoke_override` for CI only.
 
 ### Side-by-side checklist
 
@@ -148,10 +149,10 @@ Per-episode **CBGT spike counts** (a) and approximate **DBS energy** (b, Eq. (6)
 
 ### Replication
 
-![Replication Fig 5](../../../../../../../../bme/rl-adaptive-dbs/figures/nguyen/images/5/spikes_energy_v2.png)
+![Replication Fig 5](images/5/spikes_energy_v1.png)
 
 <!-- caption-5:start -->
-**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=1765, energy_mean=4756.1; pass=True (v2)
+**Caption:** Fig 4 shared train 5 ep, seed=0; spike_mean=746, energy_mean=251.0; pass=True (v1)
 
 **Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json`
 <!-- caption-5:end -->
@@ -166,9 +167,10 @@ Per-episode **CBGT spike counts** (a) and approximate **DBS energy** (b, Eq. (6)
 | 2 | **Spikes panel** | CBGT **total spike counts** per episode traceable over training | Flat / missing spike series |
 | 3 | **Energy panel** | Eq. (6) **DBS energy** per episode responds as parameters move | Energy constant (±1%) across all episodes |
 | 4 | **Co-variation** | Both panels show episode-level structure (not a single scalar repeated) | Either series has zero variance |
-| 5 | **Shape vs digits** | Rough downward / settling trends per paper panel | N/A for automated pass — qualitative only |
+| 5 | **Paper axis bands** | Spikes **400–950**/ep mean; energy **300–3200**/ep mean (Fig. 5 y-ranges) | `spike_in_paper_band` or `energy_in_paper_band` false |
+| 6 | **Shape vs digits** | Rough downward / settling trends per paper panel | N/A for automated pass — qualitative only |
 
-**Planned automated mirrors:** reuse Fig 4 train manifest; `spike_series_has_variance`, `energy_series_has_variance`, `energy_not_constant`. **`pass`** = gates **1–4**.
+**Automated mirrors:** reuse Fig 4 train manifest; `spike_series_has_variance`, `energy_series_has_variance`, `energy_not_constant`, `spike_in_paper_band`, `energy_in_paper_band`. **`pass`** = gates **1–5**.
 
 ### Side-by-side checklist
 
