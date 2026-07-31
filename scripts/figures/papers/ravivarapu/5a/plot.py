@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Ravivarapu Fig 5a — inference @ 50 Hz carrier (post-train eval)."""
+"""Ravivarapu Fig 5a — inference @ 50 Hz carrier (post-train eval).
+
+Paper panel: 10 stimulation steps; SEA-DBS below Baseline; stronger than 30 Hz.
+"""
 from __future__ import annotations
 
 import argparse
@@ -13,7 +16,7 @@ os.environ.setdefault("MPLBACKEND", "Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from controllers.sea_dbs.config import INFERENCE_CARRIER_50HZ, SEADBSConfig
+from controllers.sea_dbs.config import ABLATION_EVAL_STEPS, INFERENCE_CARRIER_50HZ, SEADBSConfig
 from controllers.sea_dbs.eval import evaluate
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
@@ -28,19 +31,46 @@ OUT_STEM = "inference_50hz"
 VARIANTS = ("baseline", "paper")
 
 
+def _ckpt(variant: str, seed: int) -> Path:
+    path = Path("artifacts/figures/papers/ravivarapu/4") / f"{variant}_train{seed}.pt"
+    if path.is_file():
+        return path
+    return Path("artifacts/sea_dbs") / f"{variant}_train{seed}.pt"
+
+
+def evaluate_gates(traces: dict[str, list[float]]) -> dict:
+    base = np.asarray(traces["baseline"], dtype=float)
+    paper = np.asarray(traces["paper"], dtype=float)
+    n = min(base.size, paper.size)
+    if n < 3:
+        return {"pass": False, "reason": "too_few_steps", "n_steps": n}
+    # Compare on steps after shared start (index 0 is reset biomarker).
+    base_tail = float(np.mean(base[max(1, n // 2) : n]))
+    paper_tail = float(np.mean(paper[max(1, n // 2) : n]))
+    gates = {
+        "n_steps": n,
+        "carrier_hz": INFERENCE_CARRIER_50HZ,
+        "paper_below_baseline_tail": paper_tail < base_tail,
+        "paper_end_below_baseline": float(paper[n - 1]) < float(base[n - 1]),
+        "baseline_tail_mean": base_tail,
+        "paper_tail_mean": paper_tail,
+    }
+    gates["pass"] = bool(
+        gates["paper_below_baseline_tail"] and gates["paper_end_below_baseline"]
+    )
+    return gates
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--smoke", action="store_true")
     args = parser.parse_args()
-    steps = 5 if args.smoke else 30
+    steps = 5 if args.smoke else ABLATION_EVAL_STEPS
     traces: dict[str, list[float]] = {}
     for variant in VARIANTS:
-        ckpt = Path("artifacts/figures/papers/ravivarapu/4") / f"{variant}_train{args.seed}.pt"
-        if not ckpt.is_file():
-            ckpt = Path("artifacts/sea_dbs") / f"{variant}_train{args.seed}.pt"
         payload = evaluate(
-            ckpt,
+            _ckpt(variant, args.seed),
             config=SEADBSConfig(variant=variant, seed=args.seed),
             max_steps=steps,
             carrier_hz=INFERENCE_CARRIER_50HZ,
@@ -48,24 +78,30 @@ def main() -> None:
         traces[variant] = payload["p_beta_trajectories"][0]
 
     fig, ax = plt.subplots(figsize=(6, 4))
-    for variant, label in (("baseline", "Baseline"), ("paper", "SEA-DBS")):
+    for variant, label in (("baseline", "Baseline 50Hz"), ("paper", "SEA-DBS 50Hz")):
         ax.plot(traces[variant], label=label)
-    ax.set_xlabel("Inference step")
-    ax.set_ylabel("Mean beta PSD (norm)")
-    ax.set_title("50 Hz carrier")
+    ax.set_xlabel("Steps")
+    ax.set_ylabel("PSD (norm)")
+    ax.set_title("Beta stimulation freq. 50 Hz")
     ax.legend()
     ax.grid(True, alpha=0.3)
     png_path, png_version = _figure_promote.next_versioned_png(FIGURES_DIR, OUT_STEM)
     fig.savefig(png_path, dpi=150)
     plt.close(fig)
+
+    gates = {"pass": True, "smoke_override": True} if args.smoke else evaluate_gates(traces)
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    series_path = CACHE_DIR / "series.json"
+    series_path.write_text(json.dumps({"traces": traces, "steps": steps}, indent=2) + "\n")
     manifest = {
         "panel": "5a",
         "carrier_hz": INFERENCE_CARRIER_50HZ,
+        "n_steps": steps,
         "png": _figure_promote.repo_rel_posix(png_path),
         "png_version": png_version,
-        "gates": {"pass": args.smoke, "smoke_override": args.smoke},
+        "gates": gates,
+        "series_cache": series_path.as_posix(),
     }
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
     (CACHE_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     print(json.dumps(manifest, indent=2))
 
