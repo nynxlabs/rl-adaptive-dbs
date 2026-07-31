@@ -71,6 +71,7 @@ class SEA_DBSTrainer:
             state_dim=state_dim,
             n_actions=n_actions,
             hidden_size=config.hidden_size,
+            no_stim_bias=config.actor_no_stim_bias,
         )
         self.critic = critic or Critic(
             state_dim=state_dim,

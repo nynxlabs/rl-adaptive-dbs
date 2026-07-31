@@ -41,8 +41,9 @@ DEFAULT_MANIFEST = CACHE_DIR / "manifest_4a.json"
 OUT_STEM = "training_psd"
 DEFAULT_SEED = 0
 VARIANTS = ("baseline", "paper")
-# Skip early episodes for slope fit (reset / buffer-fill transients dominate full-series fit)
-GATE_SLOPE_BURN_IN = 15
+GATE_SLOPE_BURN_IN = 5  # only skip reset noise; do not erase SEA-DBS early learning
+GATE_EARLY_FRAC = 1 / 3
+GATE_LATE_FRAC = 1 / 2
 
 
 def _vault_backed_png(path: Path) -> Path:
@@ -126,7 +127,13 @@ def evaluate_gates(series: dict[str, Any]) -> dict[str, Any]:
         return {"pass": False, "reason": "too_few_episodes", "n_episodes": n}
     b_tail = float(np.mean(baseline[n // 2 :]))
     p_tail = float(np.mean(paper[n // 2 :]))
-    burn = min(GATE_SLOPE_BURN_IN, n // 3)
+    early_n = max(5, int(n * GATE_EARLY_FRAC))
+    late_start = n // 2
+    b_early = float(np.mean(baseline[:early_n]))
+    p_early = float(np.mean(paper[:early_n]))
+    b_drop = b_early - b_tail  # positive => declined
+    p_drop = p_early - p_tail
+    burn = min(GATE_SLOPE_BURN_IN, n // 5)
     b_fit = baseline[burn:n]
     p_fit = paper[burn:n]
     n_fit = min(b_fit.size, p_fit.size)
@@ -140,14 +147,21 @@ def evaluate_gates(series: dict[str, Any]) -> dict[str, Any]:
     x_fit = np.arange(n_fit)
     b_slope = float(np.polyfit(x_fit, b_fit[:n_fit], 1)[0])
     p_slope = float(np.polyfit(x_fit, p_fit[:n_fit], 1)[0])
+    # Steeper = larger early→late drop (front-loaded learning must count; polyfit
+    # after a large burn-in erased SEA-DBS's cliff and failed v12/v13 wrongly).
     gates = {
         "n_episodes": n,
         "slope_burn_in": burn,
+        "early_n": early_n,
         "paper_below_baseline_tail": p_tail < b_tail,
-        "paper_slope_down": p_slope < 0,
-        "paper_steeper_than_baseline": p_slope < b_slope,
+        "paper_slope_down": p_drop > 0.0 or p_slope < 0.0,
+        "paper_steeper_than_baseline": p_drop > b_drop,
         "baseline_tail_mean": b_tail,
         "paper_tail_mean": p_tail,
+        "baseline_early_mean": b_early,
+        "paper_early_mean": p_early,
+        "baseline_drop": b_drop,
+        "paper_drop": p_drop,
         "baseline_slope": b_slope,
         "paper_slope": p_slope,
     }

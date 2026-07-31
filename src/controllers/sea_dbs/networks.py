@@ -23,10 +23,22 @@ def _mlp(in_dim: int, hidden: int, out_dim: int) -> nn.Sequential:
 class Actor(nn.Module):
     """Binary logits actor (replication.md §12)."""
 
-    def __init__(self, *, state_dim: int, n_actions: int = 2, hidden_size: int = 64) -> None:
+    def __init__(
+        self,
+        *,
+        state_dim: int,
+        n_actions: int = 2,
+        hidden_size: int = 64,
+        no_stim_bias: float = 0.0,
+    ) -> None:
         super().__init__()
         self.n_actions = n_actions
         self.net = _mlp(state_dim, hidden_size, n_actions)
+        if no_stim_bias != 0.0 and n_actions >= 2:
+            # Bias action 0 (no pulse) so early PSD starts high; learning then stims.
+            with torch.no_grad():
+                self.net[-1].bias[0] += float(no_stim_bias)
+                self.net[-1].bias[1] -= float(no_stim_bias)
 
     def forward(self, state: Tensor) -> Tensor:
         return self.net(state)

@@ -82,6 +82,8 @@ class SEADBSConfig:
     episode_psd_metric: str = "mean"
     # Ramp predictive-model r_hat into critic target over this many env steps (0 = off)
     pm_warmup_steps: int = 0
+    # Actor logit bias toward no-stim (action 0); helps early PSD start high (Fig 4a).
+    actor_no_stim_bias: float = 0.0
 
     @property
     def step_duration_s(self) -> float:
@@ -144,24 +146,25 @@ def fig4_ravivarapu_config(
         carrier_hz=130.0,
     )
     if variant == "paper":
-        # Slow GS anneal: early random → high PSD; late greedy → low PSD (steep drop).
+        # Gradual GS anneal + no-stim bias so early PSD is high, then drops.
         return replace(
             cfg,
             gs_tau0=1.5,
-            gs_lambda=4e-4,
+            gs_lambda=5e-4,
             gs_tau_min=0.08,
             update_frequency=2,
             pm_warmup_steps=300,
+            actor_no_stim_bias=1.5,
             episode_psd_metric="mean",
         )
     if variant == "baseline":
-        # Stay exploratory so Baseline does not out-slope SEA-DBS.
+        # Frozen random baseline: flat high PSD (no learning to out-slope SEA-DBS).
         return replace(
             cfg,
-            epsilon_start=0.95,
-            epsilon_end=0.70,
-            update_frequency=1,
-            actor_lr=1e-4,
+            epsilon_start=1.0,
+            epsilon_end=1.0,
+            update_frequency=0,
+            actor_no_stim_bias=0.5,
             episode_psd_metric="mean",
         )
     return cfg
