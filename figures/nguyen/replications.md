@@ -10,7 +10,7 @@ Figs **1–2** are schematics (CBGT circuit diagram; closed-loop block diagram) 
 |-------|--------|------|-------|--------|
 | Fig 3 — GPi α–β distribution (PD Off vs PD On) | `scripts/figures/papers/nguyen/3/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §3 | Set (§ below) | Pass |
 | Fig 4 — training reward + episode length | `scripts/figures/papers/nguyen/4/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §6.5 | Set (§ below) | Open |
-| Fig 5 — CBGT spikes + DBS energy over training | `scripts/figures/papers/nguyen/5/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Open |
+| Fig 5 — CBGT spikes + DBS energy over training | `scripts/figures/papers/nguyen/5/plot.py` (planned) | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Open |
 | Fig 6 — α–β + DBS params over training | `scripts/figures/papers/nguyen/6/plot.py` (planned) | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Open |
 | Fig 7 — 50-episode eval (25 steps) | `scripts/figures/papers/nguyen/7/plot.py` (planned) | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Open |
 
@@ -94,15 +94,15 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes (§IV
 
 ### Replication
 
-![Replication Fig 4](../../../../../../../bme/rl-adaptive-dbs/figures/nguyen/images/4/training_reward_length_v3.png)
+![Replication Fig 4](images/4/training_reward_length_v4.png)
 
 <!-- caption-4:start -->
-**Caption:** DSQN train 5 ep, seed=0; late_reward=-256388, late_len=8.0; pass=True (v3)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=-638110, late_len=25.0; pass=False (v4)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4:end -->
 
-**Status:** Pass — automated gates in manifest.
+**Status:** Open — latest full train (`training_reward_length_v4.png`) still fails gates: late length stays ~25 (no early-stop exploitation); `late_reward_near_zero` false. Reward scale / early exploration look closer after paper-faithful Eq. (7), but length drop and near-zero late reward remain open.
 
 **Qualitative gates (paper Fig 4 — exit criteria):**
 
@@ -149,15 +149,15 @@ Per-episode **CBGT spike counts** (a) and approximate **DBS energy** (b, Eq. (6)
 
 ### Replication
 
-![Replication Fig 5](images/5/spikes_energy_v1.png)
+*Not yet generated from a passing Fig 4 train.* Target: `figures/nguyen/images/5/spikes_energy_vN.png`
 
 <!-- caption-5:start -->
-**Caption:** Fig 4 shared train 5 ep, seed=0; spike_mean=746, energy_mean=251.0; pass=True (v1)
+**Caption:** TBD
 
-**Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json`
+**Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json` (planned)
 <!-- caption-5:end -->
 
-**Status:** Pass — shared Fig 4 train cache.
+**Status:** Open — needs a Fig 4 train that passes gates, then promote spikes/energy from the shared series cache (`scripts/figures/papers/nguyen/5/plot.py`).
 
 **Qualitative gates (paper Fig 5 — exit criteria):**
 
