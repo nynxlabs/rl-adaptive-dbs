@@ -1,0 +1,28 @@
+{
+  "figure": "mehregan_fig1b",
+  "panel": {
+    "box": [54, 252, 58, 208],
+    "x_range": [0, 50],
+    "y_range": [0, 70],
+    "n_bins": 120,
+    "legend_exclude_frac": 0.18,
+    "legend_exclude_top_frac": 0.14,
+    "series": {
+      "pd": {
+        "r_min": 200, "r_max": 255,
+        "g_min": 130, "g_max": 235,
+        "b_min": 90, "b_max": 200
+      },
+      "healthy": {
+        "r_min": 0, "r_max": 70,
+        "g_min": 0, "g_max": 70,
+        "b_min": 0, "b_max": 70
+      },
+      "pd_130hz": {
+        "r_min": 0, "r_max": 130,
+        "g_min": 0, "g_max": 130,
+        "b_min": 100, "b_max": 255
+      }
+    }
+  }
+}
