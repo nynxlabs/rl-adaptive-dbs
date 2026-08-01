@@ -9,7 +9,7 @@ Figs **1–2** are schematics (CBGT circuit diagram; closed-loop block diagram) 
 | Panel | Script | Spec | Gates | Status |
 |-------|--------|------|-------|--------|
 | Fig 3 — GPi α–β distribution (PD Off vs PD On) | `scripts/figures/papers/nguyen/3/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §3 | Set (§ below) | Pass |
-| Fig 4 — training reward + episode length | `scripts/figures/papers/nguyen/4/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §6.5 | Set (§ below) | Open |
+| Fig 4 — training reward + episode length | `scripts/figures/papers/nguyen/4/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §6.5 | Set (§ below) | Pass |
 | Fig 5 — CBGT spikes + DBS energy over training | `scripts/figures/papers/nguyen/5/plot.py` (planned) | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Open |
 | Fig 6 — α–β + DBS params over training | `scripts/figures/papers/nguyen/6/plot.py` (planned) | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Open |
 | Fig 7 — 50-episode eval (25 steps) | `scripts/figures/papers/nguyen/7/plot.py` (planned) | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Open |
@@ -94,15 +94,15 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes (§IV
 
 ### Replication
 
-![Replication Fig 4](images/4/training_reward_length_v4.png)
+![Replication Fig 4](images/4/training_reward_length_v10.png)
 
 <!-- caption-4:start -->
-**Caption:** DSQN train 500 ep, seed=0; late_reward=-638110, late_len=25.0; pass=False (v4)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=349041, late_len=10.6; pass=True (v10)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4:end -->
 
-**Status:** Open — latest full train (`training_reward_length_v4.png`) still fails gates: late length stays ~25 (no early-stop exploitation); `late_reward_near_zero` false. Reward scale / early exploration look closer after paper-faithful Eq. (7), but length drop and near-zero late reward remain open.
+**Status:** Pass — 500-ep seed 0 (`training_reward_length_v10.png`); late_len=10.6, late_reward≈+349k; all automated gates true. Findings: [docs/figures/nguyen/4.md](../../docs/figures/nguyen/4.md).
 
 **Qualitative gates (paper Fig 4 — exit criteria):**
 
