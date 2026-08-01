@@ -33,6 +33,7 @@ from schema import series_stats
 DEFAULT_SERIES_MAP = {
     "PD no Treatment": "pd",
     "Healthy Control": "healthy",
+    "Healthly Control": "healthy",  # typo seen in morning Downloads export
     "PD 130 Hz Treatment": "pd_130hz",
 }
 
@@ -99,11 +100,16 @@ def main() -> None:
 
     data = apply_series_map(data, series_map)
 
+    series = {}
+    for name, xy in data.items():
+        stats = series_stats(xy[0], xy[1])
+        stats["xy"] = {"x": xy[0].tolist(), "y": xy[1].tolist()}
+        series[name] = stats
     result = {
         "figure": args.figure,
         "method": source,
         "source": str(args.input),
-        "series": {name: series_stats(xy[0], xy[1]) for name, xy in data.items()},
+        "series": series,
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(result, indent=2) + "\n")
