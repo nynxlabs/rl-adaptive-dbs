@@ -36,7 +36,7 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 ![Replication Fig 4a](images/4a/training_psd_v1.png)
 
 <!-- caption-4a:start -->
-**Caption:** Training mean GPi beta PSD vs episode (seed 0); Baseline vs full SEA-DBS (PM+GS). (v7)
+**Caption:** Training mean GPi beta PSD vs episode (seed 0); Baseline vs full SEA-DBS (PM+GS). (v13)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`
 <!-- caption-4a:end -->

@@ -6,16 +6,85 @@ Controller / adapter: [sea_dbs/replication.md](../../controllers/sea_dbs/replica
 
 **Defaults (paper §V.A / Table I):** seed `0` (paper seed unspecified — lock one seed for gates), **2 ms** RL step × **30** steps/episode × **150** training episodes, $\gamma=0.99$, buffer **8192**, batch **32**, $\alpha_a=5\times10^{-4}$, $\alpha_c=10^{-3}$. Variants: `baseline` (DDPG, no PM/GS) vs `paper` (full SEA-DBS).
 
-| Panel | Script (planned) | Status |
-|-------|------------------|--------|
-| Fig 4a — training PSD vs episode | `scripts/figures/papers/ravivarapu/4a/plot.py` | Open |
-| Fig 4b — training reward vs episode | `scripts/figures/papers/ravivarapu/4b/plot.py` | Open |
+| Panel | Script | Status |
+|-------|--------|--------|
+| Fig 4a — training PSD vs episode | `scripts/figures/papers/ravivarapu/4a/plot.py` | Open — **gates under redesign from paper digitization** |
+| Fig 4b — training reward vs episode | `scripts/figures/papers/ravivarapu/4b/plot.py` | Open — paired with 4a |
 | Fig 5a — inference @ 50 Hz | `scripts/figures/papers/ravivarapu/5a/plot.py` | Open |
 | Fig 5b — inference @ 30 Hz | `scripts/figures/papers/ravivarapu/5b/plot.py` | Open |
 | Fig 6 — FP16 PTQ @ 50 Hz | `scripts/figures/papers/ravivarapu/6/plot.py` | Open |
 | Fig 7 — ablation (Baseline / +PM / +GS / SEA-DBS) | `scripts/figures/papers/ravivarapu/7/plot.py` | Open |
 
-**Blocking:** `controllers/sea_dbs/` is placeholder-only until the adapter (2 ms steps, binary pulse, Eq. (7) reward) and trainer variants land.
+**Pause note (2026-07-31):** full trains/probes are paused until gates below are implemented from **paper figure digitization** (color-mask readout of `figures/ravivarapu/images/*/paper.png`). Absolute y values have ~±0.01–0.02 (Fig 4a) / ~±10–15 (Figs 5–7) calibration uncertainty; **ordering, shared starts, relative drops, and cross-panel ratios** are the hard targets.
+
+Digitization cache (local): `artifacts/figures/papers/ravivarapu/paper_digitization/curves.json`.
+
+**Scale note:** Fig 4a y-axis is labeled **(PSD × 10⁻³)** with values ~0.32–0.48. Figs 5–7 use **PSD** on ~300–480. Same biomarker: $0.46$ on Fig 4a ↔ ~$460$ on Figs 5–7.
+
+---
+
+## Paper digitization — readout summary
+
+Color-masked curve extraction from paper crops (axis box + blue/red/magenta/green/black masks). Values are **paper targets for gate design**, not replication means.
+
+### Fig 4a — training PSD (× 10⁻³), episodes 0–150
+
+| Metric | Baseline | SEA-DBS | Paper look |
+|--------|----------|---------|------------|
+| Start (ep ~0) | ~0.47–0.48 | ~0.46–0.47 | **Shared high onset** (within ~0.02) |
+| End (ep ~150) | ~0.36–0.38 | ~0.32–0.35 | SEA lower |
+| Early mean (first ~5%) | ~0.46–0.47 | ~0.46–0.47 | Matched start band |
+| Late mean (2nd half) | ~0.39–0.40 | ~0.37–0.38 | SEA below Baseline |
+| Early→late drop | ~0.06–0.07 | ~0.09–0.10 | SEA **~1.3–1.4×** Baseline drop |
+| Polyfit slope (/ep) | ~−5×10⁻⁴ | ~−7 to −8×10⁻⁴ | SEA steeper |
+| Mid crossover | — | ~ep 40–50 | After crossover SEA stays below |
+| Noise | ±0.01–0.02 | ±0.01–0.02 (larger early) | Both noisy; Baseline **does decline** |
+
+Checkpoint samples (digitized, y-cal ≈ 0.30–0.49):
+
+| Episode | Baseline | SEA-DBS |
+|---------|----------|---------|
+| 0 | 0.479 | 0.471 |
+| 20 | 0.438 | 0.435 |
+| 50 | 0.428 | 0.416 |
+| 100 | 0.402 | 0.385 |
+| 150 | 0.374 | 0.341 |
+
+### Fig 4b — training reward, episodes 0–150
+
+| Metric | Baseline | SEA-DBS | Paper look |
+|--------|----------|---------|------------|
+| Start | ~−1.1 to −1.5 | ~−1.0 to −1.5 | Both low |
+| End | ~−0.05 to −0.10 | ~0.00 | SEA higher (near 0) |
+| Late mean (2nd half) | lower | higher | SEA above Baseline |
+| Pull-ahead | — | ~ep 40+ | Not “SEA higher in first 10%” — early both climb from floor; SEA **pulls ahead mid-run** |
+
+### Fig 5a — inference PSD @ 50 Hz, steps 0–10
+
+| Step | Baseline | SEA-DBS |
+|------|----------|---------|
+| 0 | ~462–468 | ~462–468 (shared) |
+| 5 | ~402–421 | ~334–364 |
+| 10 | ~352–382 | ~308–333 |
+
+SEA early→late drop ≈ **1.7–2×** Baseline. Both decline; SEA steeper with mid plateau ~steps 5–8.
+
+### Fig 5b — inference PSD @ 30 Hz, steps 0–10
+
+| Step | Baseline | SEA-DBS |
+|------|----------|---------|
+| 0 | ~462–471 | shared |
+| 10 | ~398–418 | ~388–408 |
+
+Weaker suppression than 5a; final gap SEA below Baseline only ~10. Cross-panel: **5b end ≫ 5a end** for both variants.
+
+### Fig 6 — four series @ 50 Hz, steps 0–10
+
+Shared start ~462–478. End (digitized): Baseline ~371, Baseline+PTQ ~385, SEA-DBS ~310, SEA-DBS+PTQ ~320. SEA and SEA+PTQ track through mid-run; PTQ more volatile after step ~5 (deep dip then recover). Baseline+PTQ slightly **above** Baseline late.
+
+### Fig 7 — ablation @ 50 Hz, steps 0–10
+
+Shared start ~462–484. End ordering (paper): **SEA-DBS ≪ Baseline ≈ Baseline+PM < Baseline+GS**. GS is the **worst** suppressor (ends ~400+), not a mild Baseline upgrade.
 
 ---
 
@@ -27,108 +96,118 @@ Average **beta-band PSD** across **training episodes** for **Baseline (DDPG)** v
 
 | # | Gate | Paper look | Fail if |
 |---|------|------------|---------|
-| 1 | **Series** | Baseline vs SEA-DBS (two curves) | Missing either series or wrong variant labels |
-| 2 | **SEA-DBS vs Baseline PSD** | SEA-DBS **lower** episode-mean beta PSD over training | SEA-DBS ≥ Baseline at most episodes or flat ordering |
-| 3 | **Suppression trend** | SEA-DBS shows **steeper, more consistent** decline; Baseline only **modest** decline | SEA-DBS flat/noisy without downward trend, or Baseline matches SEA-DBS slope |
-| 4 | **Episode axis** | Training episodes (paper uses **150**) | Wrong episode count or unlabeled x-axis |
-| 5 | **Paired with Fig 4b** | Same training run / checkpoint lineage | 4a and 4b from mismatched trains |
+| 1 | **Series** | Baseline vs SEA-DBS | Missing either series |
+| 2 | **Shared start** | Both onset in high untreated band (~0.46–0.48 on paper scale) | Starts diverge by ≫0.05, or one starts already suppressed |
+| 3 | **Baseline declines** | Modest noisy downward trend (not flat / frozen ε=1) | Baseline flat, rising, or open-loop locked |
+| 4 | **SEA below Baseline (late)** | After ~ep 40–50, SEA stays below Baseline | SEA ≥ Baseline on late half mean |
+| 5 | **SEA steeper drop** | SEA early→late drop **>** Baseline drop (~1.3× paper) | SEA drop ≤ Baseline drop |
+| 6 | **Episode axis** | 150 episodes | Wrong count |
+| 7 | **Paired with Fig 4b** | Same training run | Mismatched lineage |
 
-**Automated mirrors (future `plot.py`):** `sea_dbs_psd_below_baseline`; `sea_dbs_psd_trend_down`; episode count = 150; variant ∈ `{baseline, paper}`.
+**Proposed automated mirrors (redesign — replace current 3-bool gates):**
 
-**Related (not a separate panel gate):** Table II seed-change protocol ($n \in \{10,20,50,75\}$ steps) — track via `sea_dbs_eval` once training exists.
+| Key | Rule (paper-faithful) |
+|-----|------------------------|
+| `shared_start` | $\|p_{\mathrm{early}} - b_{\mathrm{early}}\| < 0.05$ (early = first ~5% episodes, min 3) |
+| `start_in_high_band` | both early means in $[0.40, 0.52]$ on Fig-4a scale (or documented equivalent after `observation_scale`) |
+| `baseline_declines` | $b_{\mathrm{early}} - b_{\mathrm{late}} > 0.02$ |
+| `paper_declines` | $p_{\mathrm{early}} - p_{\mathrm{late}} > 0.04$ |
+| `paper_below_baseline_late` | $p_{\mathrm{late}} < b_{\mathrm{late}}$ (late = 2nd half) |
+| `paper_steeper_drop` | $(p_{\mathrm{early}}-p_{\mathrm{late}}) > (b_{\mathrm{early}}-b_{\mathrm{late}})$ |
+| `late_gap_min` | $b_{\mathrm{late}} - p_{\mathrm{late}} > 0.01$ (paper ~0.02–0.03) |
+
+Do **not** pass a frozen / non-learning Baseline. Do **not** use display hacks to force these levels.
 
 ---
 
 ## Fig 4b — training reward vs episode
 
-**Cumulative / episode reward** during the same training comparison as Fig 4a (§V.B / Fig. 4(b)).
+**Episode reward** during the same training run as Fig 4a (§V.B / Fig. 4(b)).
 
-**Qualitative gates (exit criteria):**
+**Qualitative gates:**
 
 | # | Gate | Paper look | Fail if |
 |---|------|------------|---------|
-| 1 | **Series** | Baseline vs SEA-DBS | Missing either series |
-| 2 | **SEA-DBS vs Baseline reward** | SEA-DBS **higher** cumulative/episode reward | SEA-DBS ≤ Baseline over most of training |
-| 3 | **Early learning** | SEA-DBS **faster initial rise** than Baseline | Baseline catches up immediately or leads early |
-| 4 | **Paired with Fig 4a** | Same training run as Fig 4a | Different seeds, hyperparameters, or checkpoints |
-| 5 | **Reward–PSD consistency** | Reward ↑ as PSD ↓ (with Fig 4a) | Opposite trends with no documented convention break |
+| 1 | **Series** | Baseline vs SEA-DBS | Missing either |
+| 2 | **SEA higher late** | SEA above Baseline on 2nd half | SEA ≤ Baseline late |
+| 3 | **Mid-run pull-ahead** | SEA pulls ahead by ~ep 40+ and stays ahead | Only wins on a tiny tail blip |
+| 4 | **Both rise from low start** | Start near floor (~−1.5 to −1.0), climb toward 0 | Flat at 0 from episode 1 |
+| 5 | **Paired with Fig 4a** | Same `series.json` / checkpoints | Different train |
+| 6 | **Reward–PSD consistency** | Reward ↑ as PSD ↓ | Opposite with no note |
 
-**Automated mirrors:** `sea_dbs_reward_above_baseline`; `sea_dbs_early_rise_faster`; reward from Eq. (7) with $\beta_t=0.35$.
+**Proposed automated mirrors:**
+
+| Key | Rule |
+|-----|------|
+| `paper_above_baseline_late` | $p_{\mathrm{late}} > b_{\mathrm{late}}$ |
+| `paper_pull_ahead_mid` | mean(SEA[40:80]) > mean(Baseline[40:80]) (or frac equivalents) |
+| `both_rise` | both (late − early) > 0.3 |
+| **Remove** | `paper_faster_early_rise` comparing first-10% means — **unfaithful** to paper (both start low; SEA does not clearly lead that early) |
 
 ---
 
 ## Fig 5a — inference @ 50 Hz
 
-Post-train **inference** comparison at **50 Hz** stimulation carrier (Fig. 5(a)). Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_dbs/replication.md](../../controllers/sea_dbs/replication.md) §14.10).
+Post-train **inference** at **50 Hz** over **10 steps** (Fig. 5(a)).
 
-**Qualitative gates (exit criteria):**
+**Qualitative gates:**
 
 | # | Gate | Paper look | Fail if |
 |---|------|------------|---------|
-| 1 | **Carrier** | **50 Hz** fixed at inference | Wrong carrier or conflated with RL action |
-| 2 | **SEA-DBS vs Baseline PSD** | SEA-DBS **lower** beta PSD than Baseline | SEA-DBS ≥ Baseline on episode/step means |
-| 3 | **vs Fig 5b (50 > 30)** | **50 Hz** yields **stronger** suppression than 30 Hz panel | 30 Hz panel beats 50 Hz when protocols match except carrier |
-| 4 | **Trained actors** | Both series use post-train policies from Fig 4 train | Untrained or mismatched checkpoints |
-| 5 | **Protocol** | Inference trace length/window documented and locked | Unstated eval length or drifting window |
+| 1 | **Carrier** | 50 Hz | Wrong carrier |
+| 2 | **Shared step-0** | Both ≈ same PSD at step 0 | Starts diverge |
+| 3 | **Both decline** | Baseline and SEA fall over 10 steps | Flat / frozen Baseline |
+| 4 | **SEA steeper / lower end** | SEA end ≪ Baseline end; drop ~1.7–2× | SEA ≥ Baseline end or similar drop |
+| 5 | **vs Fig 5b** | 50 Hz stronger than 30 Hz | 30 Hz beats 50 Hz |
+| 6 | **Checkpoints** | From Fig 4 train | Untrained / mismatched |
 
-**Automated mirrors:** `carrier_hz == 50`; `sea_dbs_inference_psd_below_baseline`; optional cross-check `psd_50hz < psd_30hz` once Fig 5b exists.
+**Proposed automated mirrors:** `n_steps==10`; `shared_start`; `baseline_declines`; `paper_declines`; `paper_end_below_baseline`; `paper_drop > baseline_drop`; cross-check vs 5b when both exist.
 
 ---
 
 ## Fig 5b — inference @ 30 Hz
 
-Same inference layout at **30 Hz** carrier (Fig. 5(b)).
+Same layout at **30 Hz** (Fig. 5(b)).
 
-**Qualitative gates (exit criteria):**
+**Qualitative gates:** weaker suppression than 5a; SEA still slightly below Baseline at end; shared start; both decline modestly.
 
-| # | Gate | Paper look | Fail if |
-|---|------|------------|---------|
-| 1 | **Carrier** | **30 Hz** fixed at inference | Wrong carrier |
-| 2 | **SEA-DBS vs Baseline PSD** | SEA-DBS **lower** than Baseline | SEA-DBS ≥ Baseline |
-| 3 | **vs Fig 5a (30 < 50)** | **Weaker** suppression than 50 Hz panel | 30 Hz beats 50 Hz with shared protocol |
-| 4 | **Shared protocol** | Same eval length, seeding, checkpoints as Fig 5a | Only carrier differs from 5a |
-| 5 | **Biological read** | 30 Hz overlaps pathological beta band → less effective | Claim 30 Hz “better” without convention note |
-
-**Automated mirrors:** `carrier_hz == 30`; `sea_dbs_inference_psd_below_baseline`; `psd_30hz > psd_50hz` (weaker suppression).
+**Proposed automated mirrors:** `carrier_hz==30`; `paper_end_below_baseline`; `end_psd_30 > end_psd_50` (both variants); absolute end band ≫ Fig 5a floor (~390+ vs ~310–350).
 
 ---
 
 ## Fig 6 — FP16 PTQ @ 50 Hz
 
-**FP16 post-training quantization** of SEA-DBS vs Baseline at **50 Hz** over **10 stimulation steps** (Fig. 6 / §V). QAT is **out of scope**.
+**Four series** over **10 steps** @ **50 Hz**: Baseline, Baseline+PTQ(fp16), SEA-DBS, SEA-DBS+PTQ(fp16). QAT out of scope.
 
-**Qualitative gates (exit criteria):**
+**Qualitative gates:**
 
 | # | Gate | Paper look | Fail if |
 |---|------|------------|---------|
-| 1 | **Eval length** | **10** stimulation steps | Wrong step count |
-| 2 | **Carrier** | **50 Hz** | Wrong carrier |
-| 3 | **PTQ tracks FP32 (SEA-DBS)** | Quantized SEA-DBS **closely tracks** full-precision SEA-DBS PSD path | PTQ diverges to Baseline band or opposite trend |
-| 4 | **SEA-DBS PTQ vs Baseline** | SEA-DBS PTQ still **beats** Baseline on PSD | PTQ SEA-DBS ≥ Baseline |
-| 5 | **Series labels** | Baseline, SEA-DBS FP32, SEA-DBS FP16 PTQ (as paper panel) | Missing PTQ line or wrong quantization mode |
+| 1 | **Four series** | All four present | Missing Baseline+PTQ or SEA+PTQ |
+| 2 | **Shared start** | All ~same at step 0 | Divergent onsets |
+| 3 | **SEA family below Baseline family** | SEA and SEA+PTQ below both Baselines late | PTQ SEA in Baseline band |
+| 4 | **PTQ tracks FP32 (SEA)** | SEA+PTQ follows SEA (allow mid-run PTQ volatility) | Systematic divergence to Baseline |
+| 5 | **Baseline+PTQ** | Slightly worse / above Baseline late (paper) | Required only as soft/report unless we harden |
 
-**Report (not a visual gate):** model size **~65 MB → ~33 MB** after FP16 PTQ.
-
-**Automated mirrors:** `n_steps == 10`; `ptq_tracks_fp32_band`; `sea_dbs_ptq_below_baseline`.
+**Proposed automated mirrors:** four keys present; `sea_below_baseline`; `sea_ptq_below_baseline`; `sea_ptq_tracks_fp32` (rel gap threshold, tolerate mid volatility); optional `baseline_ptq_above_or_near_baseline`.
 
 ---
 
 ## Fig 7 — ablation (Baseline / +PM / +GS / SEA-DBS)
 
-**PSD over 10 stimulation steps** for four variants (Fig. 7). Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper`.
+**PSD over 10 steps.** Variants: `baseline`, `baseline-pm`, `baseline-gs`, `paper`.
 
-**Qualitative gates (exit criteria):**
+**Qualitative gates:**
 
 | # | Gate | Paper look | Fail if |
 |---|------|------------|---------|
-| 1 | **Four series** | Baseline, Baseline+PM, Baseline+GS, SEA-DBS (PM+GS) | Missing variant or wrong ablation mapping |
-| 2 | **Ordering** | SEA-DBS **lowest / most stable** PSD | Another variant clearly below SEA-DBS |
-| 3 | **+PM early noise** | Baseline+PM **noisy / limited** early (~**4,500** samples cited) | +PM identical to full SEA-DBS from step 0 |
-| 4 | **+GS alone** | Baseline+GS **limited** gains over Baseline | +GS matches full SEA-DBS without PM |
-| 5 | **Eval length** | **10** stimulation steps | Wrong step count |
-| 6 | **Shared train budget** | Comparable training episodes / Table I hyperparameters across variants | Unfair train length or hparams |
+| 1 | **Four series** | All four | Missing variant |
+| 2 | **SEA lowest** | SEA most suppressed | Any other below SEA late |
+| 3 | **GS worst / limited** | Baseline+GS **highest** PSD (least suppression) | +GS matches SEA or beats Baseline strongly downward |
+| 4 | **+PM ≈ Baseline class** | +PM near Baseline, not SEA | +PM identical to full SEA |
+| 5 | **Shared start + 10 steps** | — | Wrong protocol |
 
-**Automated mirrors:** four variants present; `ordering_sea_dbs_lowest`; `n_steps == 10`.
+**Proposed automated mirrors:** `sea_dbs_lowest_tail`; `gs_highest_or_near_highest_tail`; `pm_not_sea` (PM late mean closer to Baseline than to SEA).
 
 ---
 
@@ -137,11 +216,11 @@ Same inference layout at **30 Hz** carrier (Fig. 5(b)).
 | Knob | v1 choice |
 |------|-----------|
 | Seed | `0` (lock for one-seed gates) |
-| RL step | **2 ms** × **30** steps/episode |
+| RL step | **2 ms** × **30** steps/episode (biomarker window convention: see sea_dbs replication.md) |
 | Training episodes | **150** |
 | Reward | Eq. (7), $\beta_t = 0.35$ |
-| State input | Mean $\bar{P}_\beta$ over observation window (default until adapter documents $n_{\mathrm{obs}}$) |
-| Baseline variant | `baseline` — DDPG without PM or GS |
+| Baseline variant | `baseline` — learning DDPG **without** PM/GS (not frozen) |
 | Full SEA-DBS | `paper` — PM + GS |
 | Inference carrier | Fixed **50 Hz** or **30 Hz** eval knob (not RL action) |
 | PTQ | **FP16 PTQ only** (no QAT) |
+| Gate redesign source | Digitized `paper.png` crops (this doc + `paper_digitization/curves.json`) |
