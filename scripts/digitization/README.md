@@ -1,7 +1,7 @@
 # digitization pipeline
 
 Reusable paper-curve digitization for figure-quantification gates.
-Two extraction routes, one output schema.
+Multiple extraction routes, one output schema.
 
 ## layout
 
@@ -9,18 +9,24 @@ Two extraction routes, one output schema.
 |------|---------|
 | `schema.py` | shared series stats (`n`, `start`/`end`, `early_mean`/`late_mean`, `drop_early_to_late`, `min`/`max`/`mean`, `at`, `slope`) |
 | `extract_pil.py` | **automated** color-mask tracing from a paper PNG (seconds, repeatable) |
-| `normalize_wpd.py` | **manual** WebPlotDigitizer export → same schema (WPD project JSON or CSV) |
+| `normalize_wpd.py` | **manual / HITL** WebPlotDigitizer export → same schema (WPD project JSON or CSV) |
+| `normalize_engauge.py` | **manual / HITL** Engauge Digitizer CSV → same schema |
+| `compare_curves.py` | compare two schema JSON files (RMSE / Pearson / ordering gates) |
+| `engauge-walkthrough.md` | install, WSLg, color-filter HITL steps |
 | `figs/` | per-figure configs: axis box, tick calibration, series color masks |
 
 ## workflow
 
 1. **fast hypothesis:** run the PIL extractor for a figure config.
-2. **validate:** WebPlotDigitizer spot-check on one panel (see the
-   `webplotdigitizer-walkthrough.md` skill reference for the export
-   validation checklist).
-3. **compare:** run the panel's `compare_paper.py` against the
-   replication curves cache to get RMSE / Pearson r / beta stats /
-   ordering gates.
+2. **HITL digitize:** WebPlotDigitizer (default) or Engauge (desktop) —
+   auto-extract, then clean a few points. See `engauge-walkthrough.md`.
+3. **normalize** the export into the shared schema (`normalize_wpd.py` /
+   `normalize_engauge.py`).
+4. **compare:** `compare_curves.py` (PIL vs WPD, Engauge vs WPD, …) and/or
+   the panel's `compare_paper.py` against the replication curves cache.
+
+**Gate anchors:** prefer a human-validated WPD (or Engauge) export. An
+automated PIL trace is a hypothesis, not ground truth.
 
 ## usage
 
@@ -29,18 +35,25 @@ Two extraction routes, one output schema.
 uv run python scripts/digitization/extract_pil.py \
     --png figures/mehregan/images/1b/paper.png \
     --config scripts/digitization/figs/mehregan_fig1b.json \
-    --out /tmp/curves_pil.json
+    --out artifacts/figures/papers/mehregan/1b/paper_digitization/curves_pil.json
 
 # normalize a WPD project JSON export
 uv run python scripts/digitization/normalize_wpd.py \
     --input artifacts/figures/papers/mehregan/1b/paper_digitization/mehregan_fig_1b.wpd.json \
-    --out /tmp/curves_wpd.json
+    --out artifacts/figures/papers/mehregan/1b/paper_digitization/curves_wpd.json \
+    --figure mehregan_fig1b
 
-# normalize a WPD CSV export (with optional series-name map)
-uv run python scripts/digitization/normalize_wpd.py \
-    --input artifacts/figures/papers/mehregan/1b/paper_digitization/fig1b_paper_digitized.csv \
-    --series-map 'PD no Treatment=pd,Healthy Control=healthy,PD 130 Hz Treatment=pd_130hz' \
-    --out /tmp/curves_wpd.json
+# normalize an Engauge CSV export
+uv run python scripts/digitization/normalize_engauge.py \
+    --input artifacts/figures/papers/mehregan/1b/paper_digitization/fig1b_engauge.csv \
+    --out artifacts/figures/papers/mehregan/1b/paper_digitization/curves_engauge.json \
+    --figure mehregan_fig1b
+
+# compare PIL hypothesis vs WPD anchor
+uv run python scripts/digitization/compare_curves.py \
+    --ref artifacts/figures/papers/mehregan/1b/paper_digitization/curves_wpd.json \
+    --hyp artifacts/figures/papers/mehregan/1b/paper_digitization/curves_pil.json \
+    --json artifacts/figures/papers/mehregan/1b/paper_digitization/compare_pil_vs_wpd.json
 ```
 
 ## figure configs
@@ -79,8 +92,10 @@ A `figs/<figure>.json` describes one panel:
 - OCR of tick labels on small PNGs is unreliable — use known tick values.
 - frame lines and legend text pollute loose masks. shave the box, add
   the top-band legend exclusion, and check the pixel histogram per
-  series (`/tmp` debug script pattern in the skill reference).
+  series.
 - an automated trace is a **hypothesis, not ground truth**. validate at
-  least one panel per figure with WPD before using it as a gate anchor.
+  least one panel per figure with WPD or Engauge before using it as a
+  gate anchor.
 - keep the artifact next to the panel manifest, and record provenance
-  (see `digitization-schema.md` provenance check).
+  (method field in the schema JSON: `wpd-*`, `engauge-csv`, or
+  `pil-color-mask`).

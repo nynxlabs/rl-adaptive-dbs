@@ -121,7 +121,9 @@ def extract(config_path: Path, png_path: Path) -> dict:
         if len(x) < 4:
             print(f"  warn: '{name}' produced only {len(x)} points", file=sys.stderr)
             continue
-        series[name] = series_stats(x, y)
+        stats = series_stats(x, y)
+        stats["xy"] = {"x": x.tolist(), "y": y.tolist()}
+        series[name] = stats
 
     return {
         "figure": cfg.get("figure", png_path.stem),
