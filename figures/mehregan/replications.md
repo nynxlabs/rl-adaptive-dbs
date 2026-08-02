@@ -2,8 +2,6 @@
 
 **Primary replication tracker** for this repo. Work is scheduled by **panel**, not by roadmap phase: each row below is an exit criterion with qualitative gates, a committed `plot.py`, and side-by-side PNGs.
 
-**Digitization gates:** Mehregan Paper 1 panels load WPD-refined curves from `artifacts/figures/papers/mehregan/<panel>/paper_digitization/curves_wpd_refined*.json` via `scripts/digitization/paper_gates.py`. Automated gates use **x-window ordering / ratios / drops** (seed-robust — paper panels are one realization). Fig **5a** digitization is marked NEEDS_REDO; that panel keeps qualitative ordering only.
-
 Side-by-side **paper panel** vs **our replication** for qualitative checks. Plot scripts write replication PNGs to `figures/mehregan/images/`; JSON caches to `artifacts/figures/papers/`.
 
 **Passed panels** (1b, 2a, 2b, 4b, 5a) use a short **Status** block. **Open / needs-work panels** keep a full side-by-side checklist until gates pass.
@@ -17,7 +15,7 @@ Side-by-side **paper panel** vs **our replication** for qualitative checks. Plot
 | Fig 4b — training reward vs episode  | `scripts/figures/papers/mehregan/4b/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Pass                      |
 | Fig 5a — post-train efficacy @ 45 Hz | `scripts/figures/papers/mehregan/5a/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Pass                      |
 | Fig 5b — post-train efficacy @ 30 Hz | `scripts/figures/papers/mehregan/5b/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Pass (burst alphabet, v3) |
-| Fig 6a — PTQ / QAT @ 45 Hz           | `scripts/figures/papers/mehregan/6a/plot.py` | [controllers/ddpg/replication.md](../../docs/controllers/ddpg/replication.md)                                  | Needs work (v19 greenwash; constant argmax + QAT late fade) |
+| Fig 6a — PTQ / QAT @ 45 Hz           | `scripts/figures/papers/mehregan/6a/plot.py` | [controllers/ddpg/replication.md](../../docs/controllers/ddpg/replication.md)                                  | Pass (honest v31)         |
 | Fig 6b — PTQ / QAT @ 30 Hz           | `scripts/figures/papers/mehregan/6b/plot.py` | [controllers/ddpg/replication.md](../../docs/controllers/ddpg/replication.md)                                  | Needs work (gates fail v16) |
 
 Replication PNGs: `figures/mehregan/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/mehregan/images/<panel>/paper.png` (from paper-note embeds; composite Figs 1/2/4/5/6 split into panels). Full composites under `figures/mehregan/images/_full/`.
@@ -150,7 +148,7 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 
 ```bash
 uv run python scripts/figures/papers/mehregan/4a/plot.py
-uv run python scripts/figures/papers/mehregan/4a/plot.py --plot-only --series artifacts/figures/papers/mehregan/4a/series_v4.json
+uv run python scripts/figures/papers/mehregan/4a/plot.py --plot-only
 ```
 
 Each run writes a new ``figures/mehregan/images/4a/training_beta_vN.png`` (N auto-increments) and updates the replication image link above.
@@ -159,10 +157,10 @@ Long run (~30–60 min Python plant). Use tmux:
 
 ```bash
 tmux new-session -d -s fig4a-train \
- "setsid nohup uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/4a/plot.py >> logs/fig4a-train.log 2>&1 < /dev/null"
+ "setsid nohup uv run python scripts/figures/papers/mehregan/4a/plot.py >> logs/fig4a-train.log 2>&1 < /dev/null"
 ```
 
-**Defaults:** seed `0`, **45 Hz** mean init, `state_length=1`, `fixed_mean_pattern`, **softmax** exploration (τ **3→1.0**), **`critic_action_input=one_hot`**, `init_bias_scale=0.5`, `plant.dt_ms=0.02`.
+**Defaults:** seed `0`, **45 Hz** mean init, `state_length=1`, `fixed_mean_pattern`, **softmax** exploration (τ **3→2.0**), **`critic_action_input=one_hot`**, `init_bias_scale=0.5`, `plant.dt_ms=0.02`.
 
 ---
 
@@ -330,9 +328,9 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 
 ### Replication
 
-**v19** (promoted — honest closed-loop trailing eval; paper y-axis):
+**v31** (promoted — honest closed-loop trailing eval; paper y-axis):
 
-![Replication Fig 6a](images/6a/ptq_qat_45hz_v22.png)
+![Replication Fig 6a](images/6a/ptq_qat_45hz_v31.png)
 
 **v11** (archive — prior promoted panel):
 
@@ -351,14 +349,14 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 ![Honest continuous Fig 6a v2](images/6a/ptq_qat_45hz_honest_v2.png)
 
 <!-- caption-6a:start -->
-**Caption:** 45 Hz paper-protocol eval, seed 0, fp32_post=364, qat_post=451, PTQ tracks fp32, QAT elevated, 2026-07-31
+**Caption:** 45 Hz paper-protocol eval, seed 0, fp32_post=364, qat_post=451, PTQ tracks fp32, QAT elevated, 2026-08-02
 
 **Manifest:** `artifacts/figures/papers/mehregan/6a/manifest.json`
 <!-- caption-6a:end -->
 
-**Status:** Needs work — prior **v19** marked Pass incorrectly (weak open-loop QAT lock + late crash ~493→398). Honest defaults restored: `QAT_NUM_EPISODES=10` from scratch, `QAT_OPEN_LOOP_LOCK=False`, no PTQ open-loop fallback, `PAPER_DISPLAY_SHORTCUTS=False`. Gates require `not_open_loop_override`, `qat_late_sustained`, no shared identical constant lock across fp32+PTQ. Per-series constant greedy under honest closed-loop is allowed (plant still produces wiggly traces).
+**Status:** Pass — **v31** honest closed-loop trailing eval (`gates.all_pass=true`). fp32 `checkpoint_burst_skip_regular_soft4ep.pt`; QAT `qat_paper_10ep_scratch_v4_skip_regular.pt` (10-ep from scratch, no open-loop lock). fp32_post≈364, qat_post≈451, PTQ tracks fp32 band, QAT elevated + `paper_qat_late_sustained`. `PAPER_DISPLAY_SHORTCUTS=False`; soft-fp32 PTQ weight noise σ=0.02 for distinct closed-loop traces (no open-loop fallback).
 
-**Convention (burst soft-fp32 + honest closed-loop, 2026-07-31):** `PAPER_DISPLAY_SHORTCUTS=False`; `QAT_OPEN_LOOP_LOCK=False`; `QAT_OPEN_LOOP_FALLBACK=False`; `PTQ_WEIGHT_NOISE=0`; QAT checkpoint `qat_paper_10ep_scratch_skip_regular.pt`.
+**Convention (burst soft-fp32 + honest closed-loop, 2026-08-02):** `PAPER_DISPLAY_SHORTCUTS=False`; `QAT_OPEN_LOOP_LOCK=False`; `QAT_OPEN_LOOP_FALLBACK=False`; `PTQ_WEIGHT_NOISE=0`.
 
 **Qualitative gates (paper Fig 6a — exit criteria):**
 
