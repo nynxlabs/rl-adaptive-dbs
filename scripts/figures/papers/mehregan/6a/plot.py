@@ -105,18 +105,12 @@ PAPER_DT_MS = 0.02
 STATE_LENGTH = 1
 NUM_EPISODES = 10  # paper default; fp32 soft-stop uses FP32_NUM_EPISODES
 FP32_NUM_EPISODES = 4  # soft early-stop so PTQ can split near-tied logits
-# Fig 6a: σ=0.05 flips argmax to weak burst indices (19/9); use lower σ + fp32-suppressor fallback.
-PTQ_WEIGHT_NOISE = 0.02
-PTQ_WEIGHT_NOISE_BY_VARIANT: dict[str, float] = {
-    "ptq-fp16": 0.02,
-    "ptq-int8": 0.02,
-}
-# QAT: 0-episode weak open-loop lock (10-ep paper QAT suppresses on burst alphabet).
-QAT_NUM_EPISODES = 0
-QAT_OPEN_LOOP_LOCK = True
+# QAT: paper §IV.A.3 — 10 episodes from scratch with fake-quant (no weak open-loop lock).
+QAT_NUM_EPISODES = 10
+QAT_OPEN_LOOP_LOCK = False
 QAT_OPEN_LOOP_FALLBACK = False
-QAT_WEAK_ACTION = 13  # probe: post ~451 in baseline band @ 45 Hz (skip_regular burst)
-QAT_INIT_BIAS_SCALE = 3.0
+QAT_WEAK_ACTION = 13  # diagnostic-only; unused when QAT_OPEN_LOOP_LOCK is False
+QAT_INIT_BIAS_SCALE = 0.0
 QAT_BASELINE_BAND_LOW_FRAC = 0.85   # trailing 2s mean understates paper visual band
 QAT_BASELINE_BAND_HIGH_FRAC = 1.05
 # Honest plot (no AR(1) stylization); paper y-axis for visual match.
@@ -131,6 +125,12 @@ PAPER_YTICK_MAJOR_STEP = 50.0
 QAT_DISPLAY_WIGGLE_SEED = 33
 QAT_DISPLAY_BASELINE_FRAC = 0.94
 QAT_DISPLAY_WIGGLE_AMP = 20.0
+# Soft-fp32 PTQ split: small weight noise so int8/fp16 can leave near-tied logits.
+PTQ_WEIGHT_NOISE = 0.02
+PTQ_WEIGHT_NOISE_BY_VARIANT: dict[str, float] = {
+    "ptq-fp16": 0.02,
+    "ptq-int8": 0.02,
+}
 STEPS_PER_EPISODE = 30
 EVAL_STEPS = 5
 DEFAULT_SEED = 0
@@ -278,26 +278,25 @@ def _fp32_config(*, seed: int) -> DDPGConfig:
 
 
 def _qat_config(*, seed: int) -> DDPGConfig:
-    # Paper §IV.A.3 — 10-episode QAT with fake-quant stubs (§III.D).
+    # Paper §IV.A.3 — same settings as the trained model (10 episodes), with
+    # fake-quant stubs (§III.D). Train from scratch (not fp32 fine-tune).
     return replace(
         fig4a_ddpg_config(
             seed=seed,
             num_episodes=QAT_NUM_EPISODES,
             max_episode_steps=STEPS_PER_EPISODE,
-            init_bias_scale=0.0,
-            exploration_mode="greedy",
-            critic_action_input="one_hot",
+            init_bias_scale=FP32_INIT_BIAS_SCALE,
+            exploration_temperature_start=4.0,
+            exploration_temperature_end=2.0,
+            logit_noise_std=0.25,
         ),
         variant="qat",
-        entropy_coeff=0.0,
-        logit_noise_std=0.0,
-        random_warmup_steps=0,
-        critic_warmup_steps=0,
+        entropy_coeff=FP32_ENTROPY_COEFF,
     )
 
 def _default_qat_checkpoint(seed: int) -> Path:
     _ = seed
-    return DEFAULT_QAT_CHECKPOINT
+    return PAPER_QAT_CHECKPOINT if PAPER_QAT_CHECKPOINT.exists() else DEFAULT_QAT_CHECKPOINT
 
 
 def _resolve_fp32_checkpoint(
@@ -349,13 +348,13 @@ def _train_qat_only(
         else:
             print(
                 "training QAT (paper §IV.A.3: "
-                f"{QAT_NUM_EPISODES} eps from fp32, skip_regular={skip_regular}, "
+                f"{QAT_NUM_EPISODES} eps from scratch, skip_regular={skip_regular}, "
                 f"step={TRAIN_STEP_DURATION_S}s)...",
                 flush=True,
             )
-            fp32_actor, _ = load_actor(fp32_path)
-            qat_result = train_ddpg(env, cfg, actor=fp32_actor)
-            qat_mode = "paper_10ep"
+            _ = fp32_path  # fp32 used for PTQ eval only; QAT is from-scratch
+            qat_result = train_ddpg(env, cfg)
+            qat_mode = "paper_10ep_scratch"
         save_checkpoint(
             qat_path,
             actor=qat_result.actor,
@@ -592,21 +591,16 @@ def _variant_actions_fine(
     plant.close()
 
     if variant in ("ptq-fp16", "ptq-int8") and fp32_greedy_actions:
-        fp32_set = set(fp32_greedy_actions)
+        # Diagnostic only: never replace PTQ closed-loop argmax with an
+        # open-loop fp32-suppressor fallback (paper-faithfulness).
         locked = _constant_stim_action(actions)
-        if locked is not None and locked not in fp32_set:
-            ranked = _fp32_suppressor_ranking(fp32_greedy_actions)
-            if variant == "ptq-fp16":
-                fallback = ranked[0]
-            else:
-                fallback = ranked[1] if len(ranked) > 1 else ranked[0]
-            note = f"ptq_fp32_suppressor_open_loop_{fallback}"
+        if locked is not None and locked not in set(fp32_greedy_actions):
             print(
-                f"  PTQ fallback: {variant} locked on {locked} → "
-                f"fp32 suppressor action {fallback}",
+                f"  PTQ note: {variant} locked on {locked} "
+                f"(fp32 stim set={sorted(set(fp32_greedy_actions))}); "
+                "keeping closed-loop actions (no open-loop fallback)",
                 flush=True,
             )
-            return [fallback] * TRAILING_STIM_STEPS, note
 
     return actions, None
 
@@ -1065,6 +1059,27 @@ def _gate_summary(payload: dict[str, Any]) -> dict[str, Any]:
         gates["non_qat_traces_distinct"] = not action_info["shared_constant_action_lock"]
 
     # Digitization-anchored post-onset levels (seed-robust ratios, not wiggles).
+    stim = {
+        key: _stim_actions_from_variant(payload, key)
+        for key in ("fp32", "ptq-fp16", "ptq-int8", "qat")
+    }
+    dig_kwargs: dict[str, Any] = {
+        "panel": "6a",
+        "stim_actions": stim,
+        "open_loop_override": bool(
+            QAT_OPEN_LOOP_LOCK
+            or any(
+                isinstance((payload.get("variants") or {}).get(k), dict)
+                and str(((payload.get("variants") or {}).get(k) or {}).get("note") or "").startswith(
+                    ("open_loop", "ptq_fp32_suppressor_open_loop")
+                )
+                for k in ("fp32", "ptq-fp16", "ptq-int8", "qat")
+            )
+        ),
+    }
+    if sampling == "trailing":
+        times = np.asarray(payload["time_s"], dtype=float)
+        dig_kwargs["qat_trace"] = (times, np.asarray(_variant_trace(payload, "qat"), dtype=float))
     dig = fig6_quant_gates(
         {
             "fp32": float(fp32_post),
@@ -1072,7 +1087,7 @@ def _gate_summary(payload: dict[str, Any]) -> dict[str, Any]:
             "ptq-int8": float(post_fn("ptq-int8")),
             "qat": float(qat_post),
         },
-        panel="6a",
+        **dig_kwargs,
     )
     for k, v in dig["gates"].items():
         gates[f"paper_{k}"] = bool(v)
@@ -1091,6 +1106,7 @@ def _gate_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "action_diversity": action_info,
         "paper_gate_metrics": dig["metrics"],
         "paper_ref": dig["paper_ref"],
+        "paper_gate_notes": dig.get("notes"),
         "gates": gates,
     }
 

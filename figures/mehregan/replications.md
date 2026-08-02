@@ -13,11 +13,11 @@ Side-by-side **paper panel** vs **our replication** for qualitative checks. Plot
 | Fig 1b — GPi PSD                     | `scripts/figures/papers/mehregan/1b/plot.py` | [plant.md](../../docs/plant.md)                                                                                | Pass                      |
 | Fig 2a — GPi $P_\beta$ time series   | `scripts/figures/papers/mehregan/2a/plot.py` | [plant.md](../../docs/plant.md)                                                                                | Pass                      |
 | Fig 2b — Error Index time series     | `scripts/figures/papers/mehregan/2b/plot.py` | [plant.md](../../docs/plant.md)                                                                                | Pass                      |
-| Fig 4a — training $P_\beta$ vs step  | `scripts/figures/papers/mehregan/4a/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Pass (v14, τ 3→2)         |
+| Fig 4a — training $P_\beta$ vs step  | `scripts/figures/papers/mehregan/4a/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Pass (τ 3→1 mid-fade)     |
 | Fig 4b — training reward vs episode  | `scripts/figures/papers/mehregan/4b/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Pass                      |
 | Fig 5a — post-train efficacy @ 45 Hz | `scripts/figures/papers/mehregan/5a/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Pass                      |
 | Fig 5b — post-train efficacy @ 30 Hz | `scripts/figures/papers/mehregan/5b/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Pass (burst alphabet, v3) |
-| Fig 6a — PTQ / QAT @ 45 Hz           | `scripts/figures/papers/mehregan/6a/plot.py` | [controllers/ddpg/replication.md](../../docs/controllers/ddpg/replication.md)                                  | Pass (honest v19)         |
+| Fig 6a — PTQ / QAT @ 45 Hz           | `scripts/figures/papers/mehregan/6a/plot.py` | [controllers/ddpg/replication.md](../../docs/controllers/ddpg/replication.md)                                  | Needs work (v19 greenwash; constant argmax + QAT late fade) |
 | Fig 6b — PTQ / QAT @ 30 Hz           | `scripts/figures/papers/mehregan/6b/plot.py` | [controllers/ddpg/replication.md](../../docs/controllers/ddpg/replication.md)                                  | Needs work (gates fail v16) |
 
 Replication PNGs: `figures/mehregan/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/mehregan/images/<panel>/paper.png` (from paper-note embeds; composite Figs 1/2/4/5/6 split into panels). Full composites under `figures/mehregan/images/_full/`.
@@ -142,7 +142,7 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 **Manifest:** `artifacts/figures/papers/mehregan/4a/manifest.json`
 <!-- caption-4a:end -->
 
-**Status:** Pass — seed-0 **v14** (`training_beta_v14.png`), softmax τ **3→2.0** (paper-silent softer anneal than v4’s τ→1 cliff). Gates: early=0.404, late=0.299, trend↓, drop visible by mid/late training; `gates.pass=true`. Late mean accepted as paper-faithful qualitative band.
+**Status:** Digitization mid-fade gate restored — τ **3→1.0** (v4 lineage / `series_v4.json`) passes `mid_fade_vs_paper` + drop/ratio gates. Softer τ→2.0 (v14) lost the mid fade and is retired for the locked panel.
 
 **Panel notes:** extended tuning history (skip_regular workflow, entropy experiments) — [docs/figures/mehregan/4a.md](../../docs/figures/mehregan/4a.md).
 
@@ -150,19 +150,19 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 
 ```bash
 uv run python scripts/figures/papers/mehregan/4a/plot.py
-uv run python scripts/figures/papers/mehregan/4a/plot.py --plot-only
+uv run python scripts/figures/papers/mehregan/4a/plot.py --plot-only --series artifacts/figures/papers/mehregan/4a/series_v4.json
 ```
 
-Each run writes a new ``figures/mehregan/images/4a/training_beta_vN.png`` (N auto-increments) and updates the replication image link above. Locked replication image is **v14** (promote refreshes the link above).
+Each run writes a new ``figures/mehregan/images/4a/training_beta_vN.png`` (N auto-increments) and updates the replication image link above.
 
 Long run (~30–60 min Python plant). Use tmux:
 
 ```bash
 tmux new-session -d -s fig4a-train \
- "setsid nohup uv run python scripts/figures/papers/mehregan/4a/plot.py >> logs/fig4a-train.log 2>&1 < /dev/null"
+ "setsid nohup uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/4a/plot.py >> logs/fig4a-train.log 2>&1 < /dev/null"
 ```
 
-**Defaults:** seed `0`, **45 Hz** mean init, `state_length=1`, `fixed_mean_pattern`, **softmax** exploration (τ **3→2.0**), **`critic_action_input=one_hot`**, `init_bias_scale=0.5`, `plant.dt_ms=0.02`.
+**Defaults:** seed `0`, **45 Hz** mean init, `state_length=1`, `fixed_mean_pattern`, **softmax** exploration (τ **3→1.0**), **`critic_action_input=one_hot`**, `init_bias_scale=0.5`, `plant.dt_ms=0.02`.
 
 ---
 
@@ -356,7 +356,7 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 **Manifest:** `artifacts/figures/papers/mehregan/6a/manifest.json`
 <!-- caption-6a:end -->
 
-**Status:** Pass — promoted panel **v19** (`ptq_qat_45hz_v19.png`). Honest closed-loop trailing eval; **no plot stylization**, **no open-loop PTQ/QAT overrides**. QAT trained **10 eps from scratch** (paper §IV.A.3); post mean ~520 (elevated / near baseline). PTQ weight noise **0** (plain torch PTQ tracks fp32 suppression; traces may overlay). y-axis **225–550**.
+**Status:** Needs work — prior **v19** marked Pass incorrectly (weak open-loop QAT lock + late crash ~493→398). Honest defaults restored: `QAT_NUM_EPISODES=10` from scratch, `QAT_OPEN_LOOP_LOCK=False`, no PTQ open-loop fallback, `PAPER_DISPLAY_SHORTCUTS=False`. Gates require `not_open_loop_override`, `qat_late_sustained`, no shared identical constant lock across fp32+PTQ. Per-series constant greedy under honest closed-loop is allowed (plant still produces wiggly traces).
 
 **Convention (burst soft-fp32 + honest closed-loop, 2026-07-31):** `PAPER_DISPLAY_SHORTCUTS=False`; `QAT_OPEN_LOOP_LOCK=False`; `QAT_OPEN_LOOP_FALLBACK=False`; `PTQ_WEIGHT_NOISE=0`; QAT checkpoint `qat_paper_10ep_scratch_skip_regular.pt`.
 

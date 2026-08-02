@@ -331,11 +331,28 @@ def fig4a_gates(
     p_drop = p_early - p_late
     start_w = float(np.mean(y[: min(30, y.size)])) if y.size else float("nan")
     end_w = float(np.mean(y[max(0, y.size - 30) :])) if y.size else float("nan")
+    # Paper digitization: early[0,100]≈0.49, mid[120,150]≈0.445 (modest mid fade,
+    # not a vertical cliff). Require mid below early by a paper-scaled margin.
+    early_lo = window_mean(x, y, hi=100.0)
+    mid = window_mean(x, y, lo=120.0, hi=150.0)
+    p_early_lo = window_mean(px, py, hi=100.0)
+    p_mid = window_mean(px, py, lo=120.0, hi=150.0)
+    p_mid_drop = p_early_lo - p_mid
+    mid_drop = early_lo - mid
     gates = {
         "plot_style": n_expected is None or y.size == n_expected,
         "overall_trend_down": end_w < start_w,
-        "drop_vs_paper": bool(np.isfinite(drop) and np.isfinite(p_drop) and drop >= drop_frac_of_paper * p_drop),
+        "drop_vs_paper": bool(
+            np.isfinite(drop) and np.isfinite(p_drop) and drop >= drop_frac_of_paper * p_drop
+        ),
         "late_early_ratio_near_paper": ratio_close(late, early, p_late, p_early, tol=ratio_tol),
+        # Match paper's mid-training fade (digitized ~0.04), allow 50% of paper mid-drop.
+        "mid_fade_vs_paper": bool(
+            np.isfinite(mid_drop)
+            and np.isfinite(p_mid_drop)
+            and p_mid_drop > 0
+            and mid_drop >= 0.50 * p_mid_drop
+        ),
     }
     return _gate_pack(
         gates,
@@ -343,14 +360,23 @@ def fig4a_gates(
             "early_mean": early,
             "late_mean": late,
             "drop": drop,
+            "early_0_100": early_lo,
+            "mid_120_150": mid,
+            "mid_drop": mid_drop,
             "paper_early": p_early,
             "paper_late": p_late,
             "paper_drop": p_drop,
+            "paper_early_0_100": p_early_lo,
+            "paper_mid_120_150": p_mid,
+            "paper_mid_drop": p_mid_drop,
             "late_early_ratio": late / early if abs(early) > 1e-12 else float("nan"),
             "paper_late_early_ratio": p_late / p_early if abs(p_early) > 1e-12 else float("nan"),
         },
         paper_ref={"path": str(paper_path or refined_path("4a")), "early_hi": early_hi, "late_lo": late_lo},
-        notes=["Absolute early/late bands removed; seed changes level, not required drop shape."],
+        notes=[
+            "Absolute early/late bands removed; seed changes level.",
+            "mid_fade_vs_paper uses digitized paper mid fade (not a hard cliff).",
+        ],
     )
 
 
@@ -531,12 +557,21 @@ def fig6_quant_gates(
     late_lo: float = 4.0,
     ratio_tol: float = DEFAULT_RATIO_TOL,
     baseline_key: str | None = None,
+    qat_trace: tuple[np.ndarray, np.ndarray] | None = None,
+    stim_actions: dict[str, list[int]] | None = None,
+    open_loop_override: bool = False,
 ) -> dict[str, Any]:
     """Fig 6a/6b: fp32/PTQ suppressed vs QAT elevated, paper-relative post means.
 
-    ``post_means`` keys should include variants matching paper names or the
-    aliases below (``fp32``, ``ptq_int8``, ``ptq_fp16``, ``qat``).
-    Extra honesty gates (action lock, prestim, …) stay in the panel script.
+    Extra paper-faithful checks (when provided):
+    - ``stim_actions``: reject a *shared* identical constant lock across
+      fp32+PTQ (that greenwash treated distinct constants as Pass while the
+      panel is still open-loop). Per-series constant greedy is allowed when
+      honest closed-loop (scalar $P_\\beta$ policies often lock).
+    - ``open_loop_override``: hard-fail when eval used weak-action / open-loop
+      locks instead of the trained / quantized policy.
+    - ``qat_trace`` ``(times, y)``: QAT must stay elevated late (no end crash);
+      paper QAT [10,12] stays ~high band (digitized peak−end ≈ 36).
     """
     paper = paper or load_refined(paper_path or refined_path(panel))
     alias = {
@@ -569,7 +604,6 @@ def fig6_quant_gates(
         gates["qat_elevated_vs_fp32"] = o["qat"] > o["fp32"]
     for k in ("fp32", "ptq_int8", "ptq_fp16", "qat"):
         if np.isfinite(o[k]) and np.isfinite(p[k]) and np.isfinite(p["fp32"]):
-            # Compare each series relative to paper fp32 level (seed-robust).
             gates[f"{k}_level_ratio_near_paper"] = ratio_close(
                 o[k], max(abs(base), 1.0), p[k], max(abs(p["fp32"]), 1.0), tol=ratio_tol
             )
@@ -578,11 +612,71 @@ def fig6_quant_gates(
     if np.isfinite(o["ptq_int8"]) and np.isfinite(o["fp32"]):
         gates["ptq_int8_near_fp32"] = rel_close(o["ptq_int8"], o["fp32"], tol=0.20)
 
+    notes = [
+        "Paper QAT/PTQ wiggles are one seed; gates use post-onset means and ratios.",
+        "Paper: PTQ tracks fp32 suppression; 10-ep QAT fails to suppress (stays elevated).",
+    ]
+
+    if open_loop_override:
+        gates["not_open_loop_override"] = False
+        notes.append("Eval used open-loop / weak-action lock (not paper closed-loop).")
+    else:
+        gates["not_open_loop_override"] = True
+
+    if stim_actions:
+        # Reject shared identical constant lock across fp32+PTQ (greenwash).
+        # Per-series constant greedy under honest closed-loop is allowed —
+        # plant dynamics still produce the paper's wiggly suppressed traces.
+        def _acts(key: str) -> list[int]:
+            for alias_key in (key, key.replace("_", "-"), key.replace("-", "_")):
+                if alias_key in stim_actions and stim_actions[alias_key] is not None:
+                    return [int(a) for a in stim_actions[alias_key]]
+            return []
+
+        fp32 = _acts("fp32")
+        ptq16 = _acts("ptq-fp16")
+        ptq8 = _acts("ptq-int8")
+        shared_constant = bool(
+            fp32
+            and len(set(fp32)) <= 1
+            and ptq16
+            and ptq8
+            and ptq16 == fp32
+            and ptq8 == fp32
+        )
+        gates["not_shared_constant_action_lock"] = not shared_constant
+        notes.append(
+            "fp32/PTQ unique actions: "
+            f"fp32={len(set(fp32)) if fp32 else 0} "
+            f"ptq16={len(set(ptq16)) if ptq16 else 0} "
+            f"ptq8={len(set(ptq8)) if ptq8 else 0}; "
+            f"shared_constant_lock={shared_constant}"
+        )
+
+    if qat_trace is not None:
+        qt, qy = qat_trace
+        qt = np.asarray(qt, dtype=float)
+        qy = np.asarray(qy, dtype=float)
+        early_post = window_mean(qt, qy, lo=2.0, hi=8.0)
+        late_post = window_mean(qt, qy, lo=10.0, hi=12.0)
+        peak = float(np.max(qy[qt >= 2.0])) if np.any(qt >= 2.0) else float("nan")
+        end = float(qy[np.argmin(np.abs(qt - 12.0))]) if qt.size else float("nan")
+        # Paper late QAT stays in the elevated band (digitized ~430–450 at end).
+        # Reject spike-then-crash / late fade into the suppressed band.
+        gates["qat_late_sustained"] = bool(
+            np.isfinite(late_post)
+            and np.isfinite(early_post)
+            and late_post >= 0.90 * early_post
+            and (not np.isfinite(peak) or (peak - end) <= 60.0)
+        )
+        notes.append(
+            f"QAT early_post[2,8]={early_post:.1f} late[10,12]={late_post:.1f} "
+            f"peak_to_end={peak - end if np.isfinite(peak) and np.isfinite(end) else float('nan'):.1f}"
+        )
+
     return _gate_pack(
         gates,
         {"ours_post": o, "paper_post": p, "baseline_used": base},
         paper_ref={"path": str(paper_path or refined_path(panel)), "late_lo": late_lo},
-        notes=[
-            "Paper QAT/PTQ wiggles are one seed; gates use post-onset means and ratios.",
-        ],
+        notes=notes,
     )
