@@ -134,15 +134,15 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_beta_v14.png)
+![Replication Fig 4a](images/4a/training_beta_v18.png)
 
 <!-- caption-4a:start -->
-**Caption:** 45 Hz fixed_mean_pattern, within_step L=1, reward=full_segment, softmax, critic=one_hot, seed 0, v14, init_bias=0.5, early=0.404 late=0.299, trend↓ (2026-07-31)
+**Caption:** 45 Hz fixed_mean_pattern, within_step L=1, reward=full_segment, softmax, critic=one_hot, seed 0, v18, init_bias=0.5, early=0.428 late=0.299, trend↓ (2026-08-02)
 
 **Manifest:** `artifacts/figures/papers/mehregan/4a/manifest.json`
 <!-- caption-4a:end -->
 
-**Status:** Digitization mid-fade gate restored — τ **3→1.0** (v4 lineage / `series_v4.json`) passes `mid_fade_vs_paper` + drop/ratio gates. Softer τ→2.0 (v14) lost the mid fade and is retired for the locked panel.
+**Status:** Pass — seed-0 **v18** from `series_v4.json` (softmax τ **3→1.0**). Digitization gates: mid_fade_vs_paper, drop_vs_paper, late_early_ratio_near_paper, trend↓ (`gates_pass=true`). Softer τ→2.0 (v14) retired — it lost the mid fade.
 
 **Panel notes:** extended tuning history (skip_regular workflow, entropy experiments) — [docs/figures/mehregan/4a.md](../../docs/figures/mehregan/4a.md).
 
