@@ -263,8 +263,6 @@ def _gate_summary(beta_trace: list[float]) -> dict[str, Any]:
     mid = _window_mean(beta_trace, min(120, n), min(150, n))
     dig = fig4a_gates(beta_trace, n_expected=NUM_EPISODES * STEPS_PER_EPISODE)
     gates = dict(dig["gates"])
-    # Soft mid-drop still useful for "drop visible by mid training"
-    gates["drop_timing_soft"] = bool(n > 150 and mid < early - 0.02)
     return {
         "n_steps": n,
         "early_mean_0_130": early,
@@ -361,10 +359,10 @@ def _checklist_rows(gates: dict[str, Any], summary: dict[str, Any]) -> list[tupl
             "✓" if gates.get("drop_vs_paper") else "✗",
         ),
         (
-            "**Drop timing**",
-            "Fall visible by mid training (~130–150)",
-            f"mid(120–150) mean {_fmt(mid)}",
-            "~" if gates.get("drop_timing_soft") else "✗",
+            "**Drop timing / mid fade**",
+            "Digitized mid fade ~120–150 (modest, not a cliff)",
+            f"mid(120–150) mean {_fmt(mid)}; gate mid_fade_vs_paper",
+            "✓" if gates.get("mid_fade_vs_paper") else "✗",
         ),
         (
             "**Late/early ratio**",
@@ -617,7 +615,8 @@ def main() -> int:
     panel = plot_fig4a(cache, out_path=args.out)
     print(f"wrote {args.out}", flush=True)
 
-    summary = cache.get("summary") or _gate_summary(cache["beta_norm_trace"])
+    # Always recompute digitization gates from the trace (series cache may hold a stale summary).
+    summary = _gate_summary(cache["beta_norm_trace"])
     gates = summary.get("gates", {})
     manifest = {
         "figure": "mehregan_fig4a",
