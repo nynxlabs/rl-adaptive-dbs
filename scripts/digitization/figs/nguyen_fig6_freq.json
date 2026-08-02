@@ -1,0 +1,32 @@
+{
+  "figure": "nguyen_fig6_freq",
+  "panel": {
+    "box": [
+      255,
+      470,
+      70,
+      670
+    ],
+    "x_range": [
+      0,
+      500
+    ],
+    "y_range": [
+      0,
+      150
+    ],
+    "n_bins": 200,
+    "legend_exclude_frac": 0.35,
+    "legend_exclude_top_frac": 0.1,
+    "series": {
+      "Frequency": {
+        "r_min": 0,
+        "r_max": 120,
+        "g_min": 0,
+        "g_max": 140,
+        "b_min": 140,
+        "b_max": 255
+      }
+    }
+  }
+}

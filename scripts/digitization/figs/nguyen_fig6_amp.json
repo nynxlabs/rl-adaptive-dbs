@@ -1,0 +1,32 @@
+{
+  "figure": "nguyen_fig6_amp",
+  "panel": {
+    "box": [
+      255,
+      470,
+      70,
+      670
+    ],
+    "x_range": [
+      0,
+      500
+    ],
+    "y_range": [
+      200,
+      350
+    ],
+    "n_bins": 200,
+    "legend_exclude_frac": 0.35,
+    "legend_exclude_top_frac": 0.1,
+    "series": {
+      "Amplitude": {
+        "r_min": 160,
+        "r_max": 255,
+        "g_min": 0,
+        "g_max": 120,
+        "b_min": 0,
+        "b_max": 120
+      }
+    }
+  }
+}

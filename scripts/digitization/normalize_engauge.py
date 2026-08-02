@@ -41,7 +41,7 @@ from pathlib import Path
 
 import numpy as np
 
-from schema import series_stats
+from schema import series_record
 
 DEFAULT_SERIES_MAP = {
     "PD no Treatment": "pd",
@@ -160,11 +160,7 @@ def main() -> None:
     data = parse_engauge_csv(args.input, default_curve=args.curve_name)
     data = apply_series_map(data, series_map)
 
-    series = {}
-    for name, xy in data.items():
-        stats = series_stats(xy[0], xy[1])
-        stats["xy"] = {"x": xy[0].tolist(), "y": xy[1].tolist()}
-        series[name] = stats
+    series = {name: series_record(xy[0], xy[1]) for name, xy in data.items()}
     result = {
         "figure": args.figure,
         "method": "engauge-csv",

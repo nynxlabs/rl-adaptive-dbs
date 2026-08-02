@@ -1,0 +1,40 @@
+{
+  "figure": "nguyen_fig4_reward",
+  "panel": {
+    "box": [
+      50,
+      250,
+      80,
+      680
+    ],
+    "x_range": [
+      0,
+      500
+    ],
+    "y_range": [
+      -1000000.0,
+      0.0
+    ],
+    "n_bins": 200,
+    "legend_exclude_frac": 0.25,
+    "legend_exclude_top_frac": 0.12,
+    "series": {
+      "Raw": {
+        "r_min": 120,
+        "r_max": 200,
+        "g_min": 160,
+        "g_max": 230,
+        "b_min": 200,
+        "b_max": 255
+      },
+      "Smoothed": {
+        "r_min": 0,
+        "r_max": 80,
+        "g_min": 0,
+        "g_max": 80,
+        "b_min": 80,
+        "b_max": 180
+      }
+    }
+  }
+}

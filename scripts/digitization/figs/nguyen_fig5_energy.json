@@ -1,0 +1,40 @@
+{
+  "figure": "nguyen_fig5_energy",
+  "panel": {
+    "box": [
+      300,
+      520,
+      80,
+      680
+    ],
+    "x_range": [
+      0,
+      500
+    ],
+    "y_range": [
+      0,
+      3000
+    ],
+    "n_bins": 200,
+    "legend_exclude_frac": 0.25,
+    "legend_exclude_top_frac": 0.1,
+    "series": {
+      "Raw": {
+        "r_min": 0,
+        "r_max": 120,
+        "g_min": 120,
+        "g_max": 255,
+        "b_min": 0,
+        "b_max": 120
+      },
+      "Smoothed": {
+        "r_min": 0,
+        "r_max": 80,
+        "g_min": 80,
+        "g_max": 180,
+        "b_min": 0,
+        "b_max": 80
+      }
+    }
+  }
+}
