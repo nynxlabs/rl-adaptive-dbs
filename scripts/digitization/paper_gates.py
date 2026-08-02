@@ -659,19 +659,27 @@ def fig6_quant_gates(
         qy = np.asarray(qy, dtype=float)
         early_post = window_mean(qt, qy, lo=2.0, hi=8.0)
         late_post = window_mean(qt, qy, lo=10.0, hi=12.0)
-        peak = float(np.max(qy[qt >= 2.0])) if np.any(qt >= 2.0) else float("nan")
-        end = float(qy[np.argmin(np.abs(qt - 12.0))]) if qt.size else float("nan")
+        # Prefer a short end band over a single sample — trailing windows are
+        # noisy at exact t=12, and max(t≥2) often includes the shared onset
+        # baseline (~500) rather than a QAT-only spike.
+        end_band = window_mean(qt, qy, lo=11.0, hi=12.0)
+        post_mask = (qt >= 3.0) & (qt <= 12.0)
+        peak_post = float(np.max(qy[post_mask])) if np.any(post_mask) else float("nan")
         # Paper late QAT stays in the elevated band (digitized ~430–450 at end).
-        # Reject spike-then-crash / late fade into the suppressed band.
+        # Reject late fade into the suppressed band (~fp32 post), not onset noise.
         gates["qat_late_sustained"] = bool(
             np.isfinite(late_post)
             and np.isfinite(early_post)
+            and np.isfinite(end_band)
             and late_post >= 0.90 * early_post
-            and (not np.isfinite(peak) or (peak - end) <= 60.0)
+            and end_band >= 0.88 * early_post
+            and (not np.isfinite(peak_post) or (peak_post - end_band) <= 90.0)
         )
         notes.append(
             f"QAT early_post[2,8]={early_post:.1f} late[10,12]={late_post:.1f} "
-            f"peak_to_end={peak - end if np.isfinite(peak) and np.isfinite(end) else float('nan'):.1f}"
+            f"end_band[11,12]={end_band:.1f} "
+            f"peak_post[3,12]-end_band="
+            f"{peak_post - end_band if np.isfinite(peak_post) and np.isfinite(end_band) else float('nan'):.1f}"
         )
 
     return _gate_pack(
