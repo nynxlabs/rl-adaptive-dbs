@@ -1,0 +1,40 @@
+{
+  "figure": "ravivarapu_fig4b",
+  "panel": {
+    "box": [
+      35,
+      250,
+      55,
+      500
+    ],
+    "x_range": [
+      0,
+      150
+    ],
+    "y_range": [
+      -1.5,
+      0.0
+    ],
+    "n_bins": 180,
+    "legend_exclude_frac": 0.35,
+    "legend_exclude_top_frac": 0.08,
+    "series": {
+      "Baseline Reward": {
+        "r_min": 0,
+        "r_max": 120,
+        "g_min": 0,
+        "g_max": 140,
+        "b_min": 140,
+        "b_max": 255
+      },
+      "SEA-DBS Reward": {
+        "r_min": 160,
+        "r_max": 255,
+        "g_min": 0,
+        "g_max": 120,
+        "b_min": 0,
+        "b_max": 120
+      }
+    }
+  }
+}

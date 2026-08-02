@@ -1,0 +1,40 @@
+{
+  "figure": "nguyen_fig4_length",
+  "panel": {
+    "box": [
+      300,
+      520,
+      80,
+      680
+    ],
+    "x_range": [
+      0,
+      500
+    ],
+    "y_range": [
+      5,
+      25
+    ],
+    "n_bins": 200,
+    "legend_exclude_frac": 0.25,
+    "legend_exclude_top_frac": 0.1,
+    "series": {
+      "Raw": {
+        "r_min": 200,
+        "r_max": 255,
+        "g_min": 120,
+        "g_max": 200,
+        "b_min": 120,
+        "b_max": 200
+      },
+      "Smoothed": {
+        "r_min": 120,
+        "r_max": 200,
+        "g_min": 0,
+        "g_max": 80,
+        "b_min": 0,
+        "b_max": 80
+      }
+    }
+  }
+}

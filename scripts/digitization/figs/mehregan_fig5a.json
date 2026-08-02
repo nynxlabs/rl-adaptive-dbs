@@ -1,0 +1,33 @@
+{
+  "figure": "mehregan_fig5a",
+  "panel": {
+    "box": [30, 255, 45, 295],
+    "x_range": [0, 12],
+    "y_range": [100, 600],
+    "n_bins": 150,
+    "legend_exclude_frac": 0.45,
+    "legend_exclude_top_frac": 0.22,
+    "series": {
+      "PD no stim": {
+        "r_min": 0, "r_max": 60,
+        "g_min": 0, "g_max": 60,
+        "b_min": 0, "b_max": 60
+      },
+      "Fully Trained 45Hz": {
+        "r_min": 0, "r_max": 120,
+        "g_min": 140, "g_max": 255,
+        "b_min": 0, "b_max": 120
+      },
+      "Periodic 45Hz": {
+        "r_min": 160, "r_max": 255,
+        "g_min": 100, "g_max": 200,
+        "b_min": 60, "b_max": 160
+      },
+      "Periodic 130Hz": {
+        "r_min": 200, "r_max": 255,
+        "g_min": 180, "g_max": 255,
+        "b_min": 80, "b_max": 200
+      }
+    }
+  }
+}

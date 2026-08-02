@@ -1,0 +1,56 @@
+{
+  "figure": "ravivarapu_fig6",
+  "panel": {
+    "box": [
+      35,
+      255,
+      55,
+      490
+    ],
+    "x_range": [
+      0,
+      10
+    ],
+    "y_range": [
+      280,
+      480
+    ],
+    "n_bins": 80,
+    "legend_exclude_frac": 0.42,
+    "legend_exclude_top_frac": 0.18,
+    "series": {
+      "Baseline": {
+        "r_min": 0,
+        "r_max": 120,
+        "g_min": 0,
+        "g_max": 140,
+        "b_min": 140,
+        "b_max": 255
+      },
+      "Baseline + PTQ(fp16)": {
+        "r_min": 160,
+        "r_max": 255,
+        "g_min": 0,
+        "g_max": 100,
+        "b_min": 140,
+        "b_max": 255
+      },
+      "SEA-DBS": {
+        "r_min": 160,
+        "r_max": 255,
+        "g_min": 0,
+        "g_max": 120,
+        "b_min": 0,
+        "b_max": 120
+      },
+      "SEA-DBS + PTQ(fp16)": {
+        "r_min": 0,
+        "r_max": 45,
+        "g_min": 0,
+        "g_max": 45,
+        "b_min": 0,
+        "b_max": 45
+      }
+    }
+  }
+}
