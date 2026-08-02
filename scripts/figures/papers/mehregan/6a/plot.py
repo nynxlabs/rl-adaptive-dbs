@@ -125,12 +125,12 @@ PAPER_YTICK_MAJOR_STEP = 50.0
 QAT_DISPLAY_WIGGLE_SEED = 33
 QAT_DISPLAY_BASELINE_FRAC = 0.94
 QAT_DISPLAY_WIGGLE_AMP = 20.0
-# Soft-fp32 PTQ split: asymmetric weight noise so int8 and fp16 both leave
-# the fp32 argmax (σ=0.02 left int8 locked on fp32 action 9).
+# Soft-fp32 PTQ split: int8 needs σ≥0.10 to leave fp32 argmax 9 (probe);
+# fp16 already splits at lower σ (→ action 23).
 PTQ_WEIGHT_NOISE = 0.03
 PTQ_WEIGHT_NOISE_BY_VARIANT: dict[str, float] = {
     "ptq-fp16": 0.03,
-    "ptq-int8": 0.05,
+    "ptq-int8": 0.10,
 }
 STEPS_PER_EPISODE = 30
 EVAL_STEPS = 5
