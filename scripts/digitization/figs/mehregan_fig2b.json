@@ -1,0 +1,23 @@
+{
+  "figure": "mehregan_fig2b",
+  "panel": {
+    "box": [28, 230, 45, 300],
+    "x_range": [0, 12],
+    "y_range": [0, 0.4],
+    "n_bins": 150,
+    "legend_exclude_frac": 0.35,
+    "legend_exclude_top_frac": 0.18,
+    "series": {
+      "PD no Treatment": {
+        "r_min": 180, "r_max": 255,
+        "g_min": 80, "g_max": 200,
+        "b_min": 80, "b_max": 200
+      },
+      "PD 130Hz Treatment": {
+        "r_min": 80, "r_max": 200,
+        "g_min": 80, "g_max": 200,
+        "b_min": 180, "b_max": 255
+      }
+    }
+  }
+}

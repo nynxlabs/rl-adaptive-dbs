@@ -1,13 +1,14 @@
 """Compare two digitization-schema JSON files (PIL / WPD / Engauge).
 
-Reports per-series n, early/late means, drop, min/max, and interpolated
-RMSE + Pearson r on the reference x-grid. Also prints Mehregan-1b-style
-ordering checks when the expected keys are present.
+Uses full ``xy`` traces only (no convenience stats). Reports n, RMSE,
+Pearson r on the reference x-grid, optional beta-band means, and
+Mehregan-1b-style ordering when ``pd`` / ``healthy`` / ``pd_130hz`` keys
+are present.
 
 Usage:
 
     uv run python scripts/digitization/compare_curves.py \\
-        --ref artifacts/.../curves_wpd.json \\
+        --ref artifacts/.../curves_wpd_refined.json \\
         --hyp artifacts/.../curves_pil.json
 """
 from __future__ import annotations
@@ -19,80 +20,60 @@ from pathlib import Path
 import numpy as np
 
 
-def _series_xy_from_stats(stats: dict) -> tuple[np.ndarray, np.ndarray] | None:
-    """Best-effort: schema currently stores summary stats, not full traces.
-
-    Prefer an optional ``xy`` payload ``{"x": [...], "y": [...]}`` when present;
-    otherwise fall back to sparse ``at`` samples keyed by index (lossier).
-    """
-    if "xy" in stats and "x" in stats["xy"] and "y" in stats["xy"]:
-        return np.asarray(stats["xy"]["x"], float), np.asarray(stats["xy"]["y"], float)
-    at = stats.get("at")
-    if not at:
+def _xy(series: dict) -> tuple[np.ndarray, np.ndarray] | None:
+    xy = series.get("xy")
+    if not xy or "x" not in xy or "y" not in xy:
         return None
-    idxs = sorted(int(k) for k in at)
-    # reconstruct a unitless index axis; enough for shape/order checks only
-    x = np.asarray(idxs, float)
-    y = np.asarray([at[str(i)] for i in idxs], float)
-    return x, y
+    return np.asarray(xy["x"], float), np.asarray(xy["y"], float)
 
 
-def _beta_mean_from_xy(x: np.ndarray, y: np.ndarray, lo: float = 13.0, hi: float = 35.0) -> float:
+def _band_mean(x: np.ndarray, y: np.ndarray, lo: float, hi: float) -> float:
     m = (x >= lo) & (x <= hi)
     if m.sum() == 0:
         return float("nan")
     return float(y[m].mean())
 
 
-def compare(ref: dict, hyp: dict) -> dict:
+def compare(ref: dict, hyp: dict, *, beta_lo: float = 13.0, beta_hi: float = 35.0) -> dict:
     out: dict = {"series": {}, "gate": {}}
     ref_s = ref.get("series", {})
     hyp_s = hyp.get("series", {})
-    keys = sorted(set(ref_s) | set(hyp_s))
-    for k in keys:
+    for k in sorted(set(ref_s) | set(hyp_s)):
         row: dict = {"in_ref": k in ref_s, "in_hyp": k in hyp_s}
+        if k in ref_s:
+            row["n_ref"] = ref_s[k].get("n")
+            if "color_rgba" in ref_s[k]:
+                row["color_ref"] = ref_s[k]["color_rgba"]
+        if k in hyp_s:
+            row["n_hyp"] = hyp_s[k].get("n")
+            if "color_rgba" in hyp_s[k]:
+                row["color_hyp"] = hyp_s[k]["color_rgba"]
         if k in ref_s and k in hyp_s:
-            rs, hs = ref_s[k], hyp_s[k]
-            for field in (
-                "n", "early_mean", "late_mean", "drop_early_to_late",
-                "min", "max", "mean", "slope",
-            ):
-                if field in rs and field in hs:
-                    row[field] = {
-                        "ref": rs[field],
-                        "hyp": hs[field],
-                        "delta": hs[field] - rs[field],
-                    }
-            rxy = _series_xy_from_stats(rs)
-            hxy = _series_xy_from_stats(hs)
+            rxy, hxy = _xy(ref_s[k]), _xy(hyp_s[k])
             if rxy is not None and hxy is not None:
                 rx, ry = rxy
                 hx, hy = hxy
-                # interpolate hyp onto ref x when both look like real x axes
-                if rx.size >= 4 and hx.size >= 4 and (rx.max() - rx.min()) > 1:
-                    grid = rx
-                    hyp_on_ref = np.interp(grid, hx, hy)
-                    rmse = float(np.sqrt(np.mean((ry - hyp_on_ref) ** 2)))
-                    r = float(np.corrcoef(ry, hyp_on_ref)[0, 1])
-                    row["rmse"] = rmse
-                    row["pearson_r"] = r
+                if rx.size >= 4 and hx.size >= 4 and (rx.max() - rx.min()) > 0:
+                    hyp_on_ref = np.interp(rx, hx, hy)
+                    row["rmse"] = float(np.sqrt(np.mean((ry - hyp_on_ref) ** 2)))
+                    row["pearson_r"] = float(np.corrcoef(ry, hyp_on_ref)[0, 1])
                     row["beta_mean"] = {
-                        "ref": _beta_mean_from_xy(rx, ry),
-                        "hyp": _beta_mean_from_xy(hx, hy),
+                        "ref": _band_mean(rx, ry, beta_lo, beta_hi),
+                        "hyp": _band_mean(hx, hy, beta_lo, beta_hi),
                     }
         out["series"][k] = row
 
-    # Ordering gate when mehregan 1b keys present
-    def late(d: dict, key: str) -> float | None:
-        s = d.get("series", {}).get(key)
+    def band(src: dict, key: str) -> float | None:
+        s = src.get("series", {}).get(key)
         if not s:
             return None
-        return float(s.get("late_mean", s.get("mean", float("nan"))))
+        xy = _xy(s)
+        if xy is None:
+            return None
+        return _band_mean(xy[0], xy[1], beta_lo, beta_hi)
 
     for label, src in (("ref", ref), ("hyp", hyp)):
-        pd_v = late(src, "pd")
-        healthy = late(src, "healthy")
-        hz = late(src, "pd_130hz")
+        pd_v, healthy, hz = band(src, "pd"), band(src, "healthy"), band(src, "pd_130hz")
         if pd_v is not None and healthy is not None:
             out["gate"][f"{label}_pd_gt_healthy"] = pd_v > healthy
         if pd_v is not None and hz is not None:
@@ -102,8 +83,8 @@ def compare(ref: dict, hyp: dict) -> dict:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--ref", type=Path, required=True, help="reference curves.json (e.g. WPD)")
-    ap.add_argument("--hyp", type=Path, required=True, help="hypothesis curves.json (e.g. PIL)")
+    ap.add_argument("--ref", type=Path, required=True)
+    ap.add_argument("--hyp", type=Path, required=True)
     ap.add_argument("--json", type=Path, help="optional machine-readable report path")
     args = ap.parse_args()
 
@@ -114,18 +95,13 @@ def main() -> None:
     print(f"=== compare: ref={args.ref.name} ({ref.get('method')})  "
           f"hyp={args.hyp.name} ({hyp.get('method')}) ===")
     for k, row in report["series"].items():
-        print(f"\n[{k}] in_ref={row['in_ref']} in_hyp={row['in_hyp']}")
-        for field in ("n", "early_mean", "late_mean", "drop_early_to_late", "mean", "max"):
-            if field in row:
-                d = row[field]
-                print(f"  {field:20s}  ref={d['ref']:10.4f}  hyp={d['hyp']:10.4f}  "
-                      f"delta={d['delta']:+10.4f}")
+        print(f"\n[{k}] in_ref={row['in_ref']} in_hyp={row['in_hyp']}  "
+              f"n_ref={row.get('n_ref')} n_hyp={row.get('n_hyp')}")
         if "rmse" in row:
-            print(f"  {'rmse':20s}  {row['rmse']:.4f}")
-            print(f"  {'pearson_r':20s}  {row['pearson_r']:.4f}")
+            print(f"  rmse={row['rmse']:.4f}  pearson_r={row['pearson_r']:.4f}")
             bm = row["beta_mean"]
-            print(f"  {'beta_mean':20s}  ref={bm['ref']:.4f}  hyp={bm['hyp']:.4f}")
-    print("\n=== gates ===")
+            print(f"  beta_mean  ref={bm['ref']:.4f}  hyp={bm['hyp']:.4f}")
+    print("\n=== gates (beta-band means from xy) ===")
     for k, v in report["gate"].items():
         print(f"  {k}: {v}")
 

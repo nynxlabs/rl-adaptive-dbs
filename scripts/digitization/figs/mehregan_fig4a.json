@@ -1,0 +1,18 @@
+{
+  "figure": "mehregan_fig4a",
+  "panel": {
+    "box": [32, 285, 55, 375],
+    "x_range": [0, 310],
+    "y_range": [0.3, 0.6],
+    "n_bins": 200,
+    "legend_exclude_frac": 0.05,
+    "legend_exclude_top_frac": 0.05,
+    "series": {
+      "training": {
+        "r_min": 0, "r_max": 80,
+        "g_min": 50, "g_max": 160,
+        "b_min": 80, "b_max": 180
+      }
+    }
+  }
+}

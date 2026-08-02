@@ -1,0 +1,33 @@
+{
+  "figure": "mehregan_fig6a",
+  "panel": {
+    "box": [28, 245, 45, 290],
+    "x_range": [0, 12],
+    "y_range": [300, 550],
+    "n_bins": 150,
+    "legend_exclude_frac": 0.42,
+    "legend_exclude_top_frac": 0.20,
+    "series": {
+      "Fully Trained 45Hz": {
+        "r_min": 0, "r_max": 120,
+        "g_min": 140, "g_max": 255,
+        "b_min": 0, "b_max": 120
+      },
+      "PTQ, INT8": {
+        "r_min": 0, "r_max": 90,
+        "g_min": 0, "g_max": 100,
+        "b_min": 140, "b_max": 255
+      },
+      "PTQ, FP16": {
+        "r_min": 100, "r_max": 200,
+        "g_min": 40, "g_max": 120,
+        "b_min": 120, "b_max": 220
+      },
+      "QAT": {
+        "r_min": 180, "r_max": 255,
+        "g_min": 80, "g_max": 180,
+        "b_min": 40, "b_max": 120
+      }
+    }
+  }
+}

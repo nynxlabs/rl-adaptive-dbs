@@ -1,0 +1,40 @@
+{
+  "figure": "nguyen_fig6_power",
+  "panel": {
+    "box": [
+      40,
+      230,
+      70,
+      670
+    ],
+    "x_range": [
+      0,
+      500
+    ],
+    "y_range": [
+      0,
+      400
+    ],
+    "n_bins": 200,
+    "legend_exclude_frac": 0.3,
+    "legend_exclude_top_frac": 0.12,
+    "series": {
+      "GPi a-b Power": {
+        "r_min": 0,
+        "r_max": 50,
+        "g_min": 0,
+        "g_max": 50,
+        "b_min": 0,
+        "b_max": 50
+      },
+      "threshold": {
+        "r_min": 160,
+        "r_max": 255,
+        "g_min": 0,
+        "g_max": 120,
+        "b_min": 0,
+        "b_max": 120
+      }
+    }
+  }
+}

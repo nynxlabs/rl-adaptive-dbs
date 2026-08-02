@@ -7,11 +7,12 @@ Multiple extraction routes, one output schema.
 
 | file | purpose |
 |------|---------|
-| `schema.py` | shared series stats (`n`, `start`/`end`, `early_mean`/`late_mean`, `drop_early_to_late`, `min`/`max`/`mean`, `at`, `slope`) |
+| `schema.py` | thin series record: `n`, full `xy`, optional `color_rgba` (no convenience stats) |
 | `extract_pil.py` | **automated** color-mask tracing from a paper PNG (seconds, repeatable) |
 | `normalize_wpd.py` | **manual / HITL** WebPlotDigitizer export → same schema (WPD project JSON or CSV) |
 | `normalize_engauge.py` | **manual / HITL** Engauge Digitizer CSV → same schema |
 | `compare_curves.py` | compare two schema JSON files (RMSE / Pearson / ordering gates) |
+| `pil_to_wpd.py` | PIL rough extract → WPD project JSON (editable seed in the browser) |
 | `engauge-walkthrough.md` | install, WSLg, color-filter HITL steps |
 | `figs/` | per-figure configs: axis box, tick calibration, series color masks |
 
@@ -54,6 +55,15 @@ uv run python scripts/digitization/compare_curves.py \
     --ref artifacts/figures/papers/mehregan/1b/paper_digitization/curves_wpd.json \
     --hyp artifacts/figures/papers/mehregan/1b/paper_digitization/curves_pil.json \
     --json artifacts/figures/papers/mehregan/1b/paper_digitization/compare_pil_vs_wpd.json
+
+# seed WPD with a PIL rough pass (JSON and/or one-click .tar with image embedded)
+uv run python scripts/digitization/pil_to_wpd.py \
+    --curves artifacts/figures/papers/mehregan/1b/paper_digitization/curves_pil.json \
+    --config scripts/digitization/figs/mehregan_fig1b.json \
+    --png figures/mehregan/images/1b/paper.png \
+    --out artifacts/figures/papers/mehregan/1b/paper_digitization/fig1b_pil_seed.wpd.json \
+    --tar artifacts/figures/papers/mehregan/1b/paper_digitization/fig1b_pil_seed.wpd.tar
+# then in WPD: File → Load Project → pick the .tar (image + points in one step)
 ```
 
 ## figure configs

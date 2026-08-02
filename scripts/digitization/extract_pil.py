@@ -29,7 +29,20 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from schema import series_stats
+from schema import series_record
+
+
+def _color_from_mask(mask: dict) -> list[int] | None:
+    """Pick a representative RGBA from a PIL mask config."""
+    if "color" in mask:
+        c = mask["color"]
+        return [int(c[0]), int(c[1]), int(c[2]), 255]
+    if "r_min" in mask:
+        r = int((mask["r_min"] + mask["r_max"]) / 2)
+        g = int((mask["g_min"] + mask["g_max"]) / 2)
+        b = int((mask["b_min"] + mask["b_max"]) / 2)
+        return [r, g, b, 255]
+    return None
 
 
 def load_mask(mask: dict) -> "callable":
@@ -121,9 +134,7 @@ def extract(config_path: Path, png_path: Path) -> dict:
         if len(x) < 4:
             print(f"  warn: '{name}' produced only {len(x)} points", file=sys.stderr)
             continue
-        stats = series_stats(x, y)
-        stats["xy"] = {"x": x.tolist(), "y": y.tolist()}
-        series[name] = stats
+        series[name] = series_record(x, y, color_rgba=_color_from_mask(mask_cfg))
 
     return {
         "figure": cfg.get("figure", png_path.stem),

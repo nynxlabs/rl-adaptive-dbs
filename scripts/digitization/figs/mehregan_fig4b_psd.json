@@ -1,0 +1,18 @@
+{
+  "figure": "mehregan_fig4b_psd",
+  "panel": {
+    "box": [168, 288, 38, 250],
+    "x_range": [0, 8],
+    "y_range": [0.35, 0.50],
+    "n_bins": 80,
+    "legend_exclude_frac": 0.05,
+    "legend_exclude_top_frac": 0.05,
+    "series": {
+      "PSD": {
+        "r_min": 0, "r_max": 90,
+        "g_min": 40, "g_max": 160,
+        "b_min": 70, "b_max": 190
+      }
+    }
+  }
+}

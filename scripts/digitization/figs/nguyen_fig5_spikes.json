@@ -1,0 +1,32 @@
+{
+  "figure": "nguyen_fig5_spikes",
+  "panel": {
+    "box": [
+      50,
+      255,
+      80,
+      680
+    ],
+    "x_range": [
+      0,
+      500
+    ],
+    "y_range": [
+      500,
+      900
+    ],
+    "n_bins": 200,
+    "legend_exclude_frac": 0.05,
+    "legend_exclude_top_frac": 0.1,
+    "series": {
+      "Spike Count": {
+        "r_min": 80,
+        "r_max": 160,
+        "g_min": 0,
+        "g_max": 100,
+        "b_min": 120,
+        "b_max": 220
+      }
+    }
+  }
+}
