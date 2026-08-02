@@ -106,6 +106,7 @@ A `figs/<figure>.json` describes one panel:
 - an automated trace is a **hypothesis, not ground truth**. validate at
   least one panel per figure with WPD or Engauge before using it as a
   gate anchor.
-- keep the artifact next to the panel manifest, and record provenance
-  (method field in the schema JSON: `wpd-*`, `engauge-csv`, or
-  `pil-color-mask`).
+- keep the artifact next to the panel manifest. Series records are
+  ``n`` + ``xy`` (+ ``color_rgba`` when known). **No** early/late/slope
+  convenience stats — gates must slice ``xy`` by real x (Hz, sec, …).
+  Provenance: ``method`` is ``wpd-*``, ``engauge-csv``, or ``pil-color-mask``.
