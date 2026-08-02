@@ -55,6 +55,11 @@ from envs.mehregan.fixed_mean_patterns import FixedMeanPatternAlphabet
 
 from scripts.lib.paper_protocol_eval import run_eval
 
+_DIG = Path(__file__).resolve().parents[4] / "digitization"
+if str(_DIG) not in sys.path:
+    sys.path.insert(0, str(_DIG))
+from paper_gates import fig5_efficacy_gates  # noqa: E402
+
 _FIG2A_PATH = Path(__file__).resolve().parents[1] / "2a" / "plot.py"
 _fig2a_spec = importlib.util.spec_from_file_location("fig2a_plot", _FIG2A_PATH)
 assert _fig2a_spec and _fig2a_spec.loader
@@ -476,7 +481,11 @@ def _run_trailing_eval(
 
 
 def fig5a_pass(panel: dict[str, Any]) -> dict[str, Any]:
-    """Qualitative gates for Fig 5a (post-onset segment means, raw PSD)."""
+    """Qualitative gates for Fig 5a (post-onset means).
+
+    Paper digitization for 5a is marked NEEDS_REDO (30 Hz file landed here) —
+    do not use ratio anchors until a real 45 Hz refined JSON exists.
+    """
     trained = panel.get("trained_mean")
     if trained is None:
         return {
@@ -486,28 +495,31 @@ def fig5a_pass(panel: dict[str, Any]) -> dict[str, Any]:
             "pass": False,
             "note": "missing trained policy",
         }
-    no_stim = panel["no_stim_mean"]
-    periodic = panel["periodic_mean"]
-    cdbs = panel["cdbs_130_mean"]
     baseline_delta = abs(panel["baseline_no_stim"] - panel["baseline_periodic"])
     shared_baseline = baseline_delta < 25.0
-    trained_below_no_stim = trained < no_stim
-    trained_above_periodic = trained > periodic
-    cdbs_lowest = cdbs < trained and cdbs < periodic and cdbs < no_stim
+    dig = fig5_efficacy_gates(
+        {
+            "no_stim": panel["no_stim_mean"],
+            "trained": trained,
+            "periodic": panel["periodic_mean"],
+            "cdbs_130": panel["cdbs_130_mean"],
+        },
+        panel="5a",
+        require_cdbs=True,
+        skip_paper_ratios=True,
+    )
+    gates = dict(dig["gates"])
+    gates["shared_baseline"] = shared_baseline
     return {
-        "shared_baseline": shared_baseline,
+        **gates,
         "baseline_delta": baseline_delta,
-        "trained_below_no_stim": trained_below_no_stim,
-        "trained_above_periodic": trained_above_periodic,
-        "cdbs_lowest": cdbs_lowest,
-        "pass": shared_baseline
-        and trained_below_no_stim
-        and trained_above_periodic
-        and cdbs_lowest,
-        "no_stim_mean": no_stim,
+        "pass": all(gates.values()),
+        "no_stim_mean": panel["no_stim_mean"],
         "trained_mean": trained,
-        "periodic_mean": periodic,
-        "cdbs_130_mean": cdbs,
+        "periodic_mean": panel["periodic_mean"],
+        "cdbs_130_mean": panel["cdbs_130_mean"],
+        "paper_digitization": "needs_redo",
+        "paper_gate_notes": dig.get("notes"),
     }
 
 

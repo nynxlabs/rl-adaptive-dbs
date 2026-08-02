@@ -31,6 +31,11 @@ import numpy as np
 from envs.plant import DbsSpec, PlantConfig, PythonPlant
 from envs.plant.biomarkers import SpectrumParams, multitaper_psd_point_process, p_beta
 
+_DIG = Path(__file__).resolve().parents[4] / "digitization"
+if str(_DIG) not in sys.path:
+    sys.path.insert(0, str(_DIG))
+from paper_gates import fig1b_gates  # noqa: E402
+
 FIGURE_DIR = Path("artifacts/figures/papers/mehregan/1b")
 DEFAULT_CURVES = FIGURE_DIR / "curves.json"
 DEFAULT_OUT = FIGURE_DIR / "gpi_psd.png"
@@ -324,6 +329,18 @@ def main() -> int:
     title = "Oscillatory activity of model neurons in the GPi"
     panel = plot_fig1b(curves, out_path=args.out, title=title, y_max=args.y_max)
 
+    replication = {
+        c["key"]: (
+            np.asarray(c["freqs_hz"], dtype=float),
+            np.asarray(c["psd"], dtype=float),
+        )
+        for c in curves
+    }
+    paper_gates = fig1b_gates(replication)
+    panel["gates"] = paper_gates["gates"]
+    panel["gates_pass"] = paper_gates["pass"]
+    panel["paper_gate_metrics"] = paper_gates["metrics"]
+
     manifest = {
         "figure": "mehregan_fig1b",
         "duration_s": duration_s,
@@ -331,6 +348,9 @@ def main() -> int:
         "curves_cache": str(args.curves),
         "plot_only": args.plot_only,
         "panel": panel,
+        "gates": paper_gates["gates"],
+        "gates_pass": paper_gates["pass"],
+        "paper_ref": paper_gates["paper_ref"],
         "conditions": [
             {
                 "key": c["key"],
@@ -347,8 +367,12 @@ def main() -> int:
     args.manifest.parent.mkdir(parents=True, exist_ok=True)
     args.manifest.write_text(json.dumps(manifest, indent=2) + "\n")
 
+    print(
+        f"gates_pass={paper_gates['pass']} gates={paper_gates['gates']}",
+        file=sys.stderr,
+    )
     print(json.dumps(manifest, indent=2))
-    return 0
+    return 0 if paper_gates["pass"] else 1
 
 
 if __name__ == "__main__":

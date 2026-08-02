@@ -2,6 +2,8 @@
 
 **Primary replication tracker** for this repo. Work is scheduled by **panel**, not by roadmap phase: each row below is an exit criterion with qualitative gates, a committed `plot.py`, and side-by-side PNGs.
 
+**Digitization gates:** Mehregan Paper 1 panels load WPD-refined curves from `artifacts/figures/papers/mehregan/<panel>/paper_digitization/curves_wpd_refined*.json` via `scripts/digitization/paper_gates.py`. Automated gates use **x-window ordering / ratios / drops** (seed-robust — paper panels are one realization). Fig **5a** digitization is marked NEEDS_REDO; that panel keeps qualitative ordering only.
+
 Side-by-side **paper panel** vs **our replication** for qualitative checks. Plot scripts write replication PNGs to `figures/mehregan/images/`; JSON caches to `artifacts/figures/papers/`.
 
 **Passed panels** (1b, 2a, 2b, 4b, 5a) use a short **Status** block. **Open / needs-work panels** keep a full side-by-side checklist until gates pass.

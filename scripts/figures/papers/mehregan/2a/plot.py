@@ -46,6 +46,11 @@ from envs.plant import DbsSpec, PlantConfig, PythonPlant
 from envs.plant.biomarkers import SpectrumParams, p_beta
 from envs.plant.dbs import create_dbs_current
 
+_DIG = Path(__file__).resolve().parents[4] / "digitization"
+if str(_DIG) not in sys.path:
+    sys.path.insert(0, str(_DIG))
+from paper_gates import fig2_time_gates  # noqa: E402
+
 FIGURES_DIR = Path("figures/mehregan/images/2a")
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/2a")
 DEFAULT_SERIES = CACHE_DIR / "series.json"
@@ -687,6 +692,19 @@ def main() -> int:
         y_max=args.y_max,
     )
 
+    times = np.asarray(cache["time_s"], dtype=float)
+    traces = cache["traces"]
+    paper_gates = fig2_time_gates(
+        {
+            "pd": (times, np.asarray(traces["pd_no_treatment"], dtype=float)),
+            "pd_130hz": (times, np.asarray(traces["pd_130hz"], dtype=float)),
+        },
+        panel="2a",
+    )
+    panel["gates"] = paper_gates["gates"]
+    panel["gates_pass"] = paper_gates["pass"]
+    panel["paper_gate_metrics"] = paper_gates["metrics"]
+
     manifest = {
         "figure": "mehregan_fig2a",
         "sampling": cache.get("sampling", sampling),
@@ -707,6 +725,9 @@ def main() -> int:
         "series_cache": str(args.series),
         "plot_only": args.plot_only,
         "panel": panel,
+        "gates": paper_gates["gates"],
+        "gates_pass": paper_gates["pass"],
+        "paper_ref": paper_gates["paper_ref"],
         "time_s": cache.get("time_s"),
         "traces": cache.get("traces"),
         "per_seed": cache.get("per_seed"),
@@ -714,6 +735,7 @@ def main() -> int:
     args.manifest.parent.mkdir(parents=True, exist_ok=True)
     args.manifest.write_text(json.dumps(manifest, indent=2) + "\n")
     _log(f"wrote manifest {args.manifest}", verbose=verbose)
+    _log(f"gates_pass={paper_gates['pass']} gates={paper_gates['gates']}", verbose=True)
 
     if not args.no_update_docs:
         updated = _figure_promote.promote_2a(
@@ -724,7 +746,7 @@ def main() -> int:
         _log(f"updated comparison doc: {updated['doc']}", verbose=True)
 
     print(json.dumps(manifest, indent=2), flush=True)
-    return 0
+    return 0 if paper_gates["pass"] else 1
 
 
 if __name__ == "__main__":
