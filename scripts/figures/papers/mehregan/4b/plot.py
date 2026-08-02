@@ -34,6 +34,11 @@ assert _spec and _spec.loader
 _figure_promote = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_figure_promote)
 
+_DIG = Path(__file__).resolve().parents[4] / "digitization"
+if str(_DIG) not in sys.path:
+    sys.path.insert(0, str(_DIG))
+from paper_gates import fig4b_gates  # noqa: E402
+
 FIGURES_DIR = Path("figures/mehregan/images/4b")
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/4b")
 FIG4A_CACHE_DIR = Path("artifacts/figures/papers/mehregan/4a")
@@ -146,38 +151,27 @@ def _gate_summary(
     *,
     episode_mean_beta: list[float],
 ) -> dict[str, Any]:
-    gates = _fig4b_pass(episode_rewards)
+    dig = fig4b_gates(episode_rewards, episode_mean_beta)
+    legacy = _fig4b_pass(episode_rewards)
     n = len(episode_rewards)
-    early_end = min(3, n)
-    late_start_idx = min(6, max(0, n - 1))
-    early_mean = float(np.mean(episode_rewards[:early_end])) if early_end else float("nan")
-    late_mean = (
-        float(np.mean(episode_rewards[late_start_idx:]))
-        if late_start_idx < n
-        else float("nan")
-    )
-    beta_early = float(np.mean(episode_mean_beta[:early_end]))
-    beta_late = float(np.mean(episode_mean_beta[late_start_idx:]))
-    beta_trend_down = beta_late < beta_early
+    metrics = dig["metrics"]
+    gates = dict(dig["gates"])
+    gates["plot_style"] = n >= 2
+    gates["automation"] = bool(legacy.get("pass"))
     return {
         "n_episodes": n,
-        "early_mean_ep1_3": early_mean,
-        "late_mean_ep6_end": late_mean,
-        "automation_pass": gates["pass"],
-        "rise_episode": gates.get("rise_episode"),
-        "beta_early_mean": beta_early,
-        "beta_late_mean": beta_late,
-        "beta_trend_down": beta_trend_down,
-        "gates": {
-            "plot_style": n >= 2,
-            "early_negative": all(r < 0 for r in episode_rewards[: min(3, n)]),
-            "rise_timing": gates.get("rise_episode") is not None
-            and gates["rise_episode"] <= min(6, n),
-            "late_plateau_near_zero": late_mean > early_mean and late_mean > -10.0,
-            "automation": gates["pass"],
-            "beta_inverse_trend": beta_trend_down,
-        },
-        "fig4b_pass": gates,
+        "early_mean_ep1_3": metrics.get("early_reward"),
+        "late_mean_ep6_end": metrics.get("late_reward"),
+        "automation_pass": legacy["pass"],
+        "rise_episode": metrics.get("rise_episode"),
+        "beta_early_mean": metrics.get("early_beta"),
+        "beta_late_mean": metrics.get("late_beta"),
+        "beta_trend_down": gates.get("beta_drops"),
+        "paper_gate_metrics": metrics,
+        "paper_ref": dig["paper_ref"],
+        "gates": gates,
+        "gates_pass": all(gates.values()),
+        "fig4b_pass": legacy,
     }
 
 

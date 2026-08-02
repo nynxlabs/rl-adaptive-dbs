@@ -73,6 +73,11 @@ from envs.plant import DbsSpec, PlantConfig, PythonPlant
 from envs.plant.dbs import create_dbs_current
 from rl_adaptive_dbs.user_config import resolve_config
 
+_DIG = Path(__file__).resolve().parents[4] / "digitization"
+if str(_DIG) not in sys.path:
+    sys.path.insert(0, str(_DIG))
+from paper_gates import fig6_quant_gates  # noqa: E402
+
 _FIG2A_PATH = Path(__file__).resolve().parents[1] / "2a" / "plot.py"
 _fig2a_spec = importlib.util.spec_from_file_location("fig2a_plot_for_6a", _FIG2A_PATH)
 assert _fig2a_spec and _fig2a_spec.loader
@@ -1083,6 +1088,18 @@ def _gate_summary(payload: dict[str, Any]) -> dict[str, Any]:
     else:
         gates["non_qat_traces_distinct"] = not action_info["shared_constant_action_lock"]
 
+    dig = fig6_quant_gates(
+        {
+            "fp32": float(fp32_post),
+            "ptq-fp16": float(post_fn("ptq-fp16")),
+            "ptq-int8": float(post_fn("ptq-int8")),
+            "qat": float(qat_post),
+        },
+        panel="6b",
+    )
+    for k, v in dig["gates"].items():
+        gates[f"paper_{k}"] = bool(v)
+
     gates["all_pass"] = all(bool(v) for k, v in gates.items() if k != "all_pass")
 
     return {
@@ -1095,6 +1112,8 @@ def _gate_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "prestim_std": pre_std if sampling == "trailing" else None,
         "prestim_max_abs_vs_fp32": pre_max_abs if sampling == "trailing" else None,
         "action_diversity": action_info,
+        "paper_gate_metrics": dig["metrics"],
+        "paper_ref": dig["paper_ref"],
         "gates": gates,
     }
 

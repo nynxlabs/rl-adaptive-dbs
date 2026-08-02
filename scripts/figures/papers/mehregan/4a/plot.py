@@ -51,6 +51,11 @@ from envs.mehregan.fixed_mean_patterns import FixedMeanPatternAlphabet
 from envs.plant.python_backend import PythonPlant
 from rl_adaptive_dbs.user_config import resolve_config
 
+_DIG = Path(__file__).resolve().parents[4] / "digitization"
+if str(_DIG) not in sys.path:
+    sys.path.insert(0, str(_DIG))
+from paper_gates import fig4a_gates  # noqa: E402
+
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
 _spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
 assert _spec and _spec.loader
@@ -244,17 +249,22 @@ def _window_mean(trace: list[float], start: int, end: int) -> float:
 
 
 def _gate_summary(beta_trace: list[float]) -> dict[str, Any]:
+    """Digitization-anchored gates (paper early/late x windows + drop ratio).
+
+    Absolute early/late bands are intentionally dropped: seed changes level;
+    paper is one realization. Require trend down and a drop that tracks the
+    digitized paper drop / late-to-early ratio.
+    """
     n = len(beta_trace)
     early = _window_mean(beta_trace, 0, min(EARLY_END, n))
     late = _window_mean(beta_trace, min(LATE_START, n), n)
     start_w = _window_mean(beta_trace, 0, min(WINDOW, n))
     end_w = _window_mean(beta_trace, max(0, n - WINDOW), n)
-    trend_down = end_w < start_w
-    early_in_band = 0.40 <= early <= 0.60
-    late_in_band = 0.30 <= late <= 0.50
-    # Drop timing: mean of steps 120–150 vs early; soft check only
     mid = _window_mean(beta_trace, min(120, n), min(150, n))
-    drop_visible = mid < early - 0.02 if n > 150 else False
+    dig = fig4a_gates(beta_trace, n_expected=NUM_EPISODES * STEPS_PER_EPISODE)
+    gates = dict(dig["gates"])
+    # Soft mid-drop still useful for "drop visible by mid training"
+    gates["drop_timing_soft"] = bool(n > 150 and mid < early - 0.02)
     return {
         "n_steps": n,
         "early_mean_0_130": early,
@@ -263,17 +273,11 @@ def _gate_summary(beta_trace: list[float]) -> dict[str, Any]:
         "end_window_mean": end_w,
         "delta_end_minus_start": end_w - start_w,
         "mid_mean_120_150": mid,
-        "trend_down": trend_down,
-        "early_in_paper_band": early_in_band,
-        "late_in_paper_band": late_in_band,
-        "drop_visible_soft": drop_visible,
-        "gates": {
-            "plot_style": n == NUM_EPISODES * STEPS_PER_EPISODE,
-            "overall_trend_down": trend_down,
-            "early_band": early_in_band,
-            "late_band": late_in_band,
-            "drop_timing_soft": drop_visible,
-        },
+        "trend_down": gates.get("overall_trend_down"),
+        "paper_gate_metrics": dig["metrics"],
+        "paper_ref": dig["paper_ref"],
+        "gates": gates,
+        "gates_pass": all(gates.values()),
     }
 
 
@@ -350,22 +354,23 @@ def _checklist_rows(gates: dict[str, Any], summary: dict[str, Any]) -> list[tupl
             "✓",
         ),
         (
-            "**Early band (steps 0–130)**",
-            "~0.43–0.57, high variance",
-            f"mean {_fmt(early)}",
-            "✓" if gates.get("early_band") else "✗",
+            "**Drop vs paper**",
+            "Digitized early→late drop (seed-robust)",
+            f"early {_fmt(early)} → late {_fmt(late)}; "
+            f"paper metrics={summary.get('paper_gate_metrics')}",
+            "✓" if gates.get("drop_vs_paper") else "✗",
         ),
         (
             "**Drop timing**",
-            "Sharp fall ~step 130–150",
+            "Fall visible by mid training (~130–150)",
             f"mid(120–150) mean {_fmt(mid)}",
             "~" if gates.get("drop_timing_soft") else "✗",
         ),
         (
-            "**Late band (steps 150–300)**",
-            "~0.35–0.45",
-            f"mean {_fmt(late)}",
-            "✓" if gates.get("late_band") else "✗",
+            "**Late/early ratio**",
+            "Near digitized paper late/early ratio",
+            f"ours late/early; gate late_early_ratio_near_paper",
+            "✓" if gates.get("late_early_ratio_near_paper") else "✗",
         ),
         (
             "**Overall trend**",
