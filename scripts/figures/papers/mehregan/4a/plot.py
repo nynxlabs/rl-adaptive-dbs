@@ -141,7 +141,7 @@ def _train_trace(
     exploration_mode: str = "softmax",
     init_bias_scale: float = 0.5,
     temperature_start: float = 3.0,
-    temperature_end: float = 1.0,
+    temperature_end: float = 1.4,
     logit_noise_std: float = 0.1,
     entropy_coeff: float = 0.01,
     critic_action_input: str = "one_hot",
@@ -454,8 +454,8 @@ def main() -> int:
     parser.add_argument(
         "--temperature-end",
         type=float,
-        default=1.0,
-        help="Softmax temperature at final step",
+        default=1.4,
+        help="Softmax temperature at final step (1.4 = gradual mid-fade vs τ→1 cliff)",
     )
     parser.add_argument(
         "--logit-noise-std",
