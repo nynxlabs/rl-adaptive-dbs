@@ -10,7 +10,9 @@ import argparse
 import importlib.util
 import json
 import os
+import sys
 from pathlib import Path
+from typing import Any
 
 os.environ.setdefault("MPLBACKEND", "Agg")
 
@@ -25,6 +27,11 @@ _spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
 assert _spec and _spec.loader
 _figure_promote = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_figure_promote)
+
+_DIG = Path(__file__).resolve().parents[4] / "digitization"
+if str(_DIG) not in sys.path:
+    sys.path.insert(0, str(_DIG))
+from paper_gates import merge_gate_report, ravivarapu_fig6_gates  # noqa: E402
 
 CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/6")
 FIGURES_DIR = Path("figures/ravivarapu/images/6")
@@ -44,36 +51,10 @@ def _ckpt(variant: str, seed: int) -> Path:
     return Path("artifacts/sea_dbs") / f"{variant}_train{seed}.pt"
 
 
-def evaluate_gates(traces: dict[str, list[float]]) -> dict:
-    base = np.asarray(traces["Baseline"], dtype=float)
-    sea = np.asarray(traces["SEA-DBS"], dtype=float)
-    sea_ptq = np.asarray(traces["SEA-DBS + PTQ(fp16)"], dtype=float)
-    base_ptq = np.asarray(traces["Baseline + PTQ(fp16)"], dtype=float)
-    n = min(base.size, sea.size, sea_ptq.size, base_ptq.size)
-    if n < 3:
-        return {"pass": False, "reason": "too_few_steps", "n_steps": n}
-    sea_track = float(
-        np.mean(np.abs(sea_ptq[:n] - sea[:n])) / max(1e-6, np.mean(np.abs(sea[:n])))
-    )
-    base_track = float(
-        np.mean(np.abs(base_ptq[:n] - base[:n])) / max(1e-6, np.mean(np.abs(base[:n])))
-    )
-    gates = {
-        "n_steps": n,
-        "four_series": True,
-        "sea_below_baseline": float(np.mean(sea[:n])) < float(np.mean(base[:n])),
-        "sea_ptq_below_baseline": float(np.mean(sea_ptq[:n])) < float(np.mean(base[:n])),
-        "sea_ptq_tracks_fp32": sea_track < 0.15,
-        "baseline_ptq_tracks_fp32": base_track < 0.25,
-        "sea_ptq_rel_gap": sea_track,
-        "baseline_ptq_rel_gap": base_track,
-    }
-    gates["pass"] = bool(
-        gates["sea_below_baseline"]
-        and gates["sea_ptq_below_baseline"]
-        and gates["sea_ptq_tracks_fp32"]
-    )
-    return gates
+def evaluate_gates(traces: dict[str, list[float]]) -> dict[str, Any]:
+    dig = ravivarapu_fig6_gates(traces)
+    n = min(len(v) for v in traces.values())
+    return merge_gate_report(dig, {"n_steps": n})
 
 
 def main() -> None:
