@@ -29,6 +29,11 @@ assert _spec and _spec.loader
 _figure_promote = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_figure_promote)
 
+_DIG = Path(__file__).resolve().parents[4] / "digitization"
+if str(_DIG) not in sys.path:
+    sys.path.insert(0, str(_DIG))
+from paper_gates import merge_gate_report, ravivarapu_fig4b_gates  # noqa: E402
+
 FIGURES_DIR = Path("figures/ravivarapu/images/4b")
 CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/4")
 SHARED_SERIES = CACHE_DIR / "series.json"
@@ -57,25 +62,10 @@ def _vault_backed_png(path: Path) -> Path:
 def evaluate_gates(series: dict[str, Any]) -> dict[str, Any]:
     if series.get("smoke"):
         return {"pass": True, "smoke_override": True}
-    baseline = np.asarray(series["variants"]["baseline"]["episode_rewards"], dtype=float)
-    paper = np.asarray(series["variants"]["paper"]["episode_rewards"], dtype=float)
-    n = min(baseline.size, paper.size)
-    if n < 10:
-        return {"pass": False, "reason": "too_few_episodes", "n_episodes": n}
-    early = max(5, n // 10)
-    paper_early = float(np.mean(paper[:early]))
-    base_early = float(np.mean(baseline[:early]))
-    paper_late = float(np.mean(paper[n // 2 :]))
-    base_late = float(np.mean(baseline[n // 2 :]))
-    gates = {
-        "n_episodes": n,
-        "paper_above_baseline_late": paper_late > base_late,
-        "paper_faster_early_rise": paper_early > base_early,
-        "paper_late_mean": paper_late,
-        "baseline_late_mean": base_late,
-    }
-    gates["pass"] = bool(gates["paper_above_baseline_late"] and gates["paper_faster_early_rise"])
-    return gates
+    baseline = series["variants"]["baseline"]["episode_rewards"]
+    sea = series["variants"]["paper"]["episode_rewards"]
+    dig = ravivarapu_fig4b_gates(baseline, sea)
+    return merge_gate_report(dig, {"n_episodes": min(len(baseline), len(sea))})
 
 
 def plot_series(series: dict[str, Any], png_path: Path) -> None:

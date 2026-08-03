@@ -9,7 +9,9 @@ import argparse
 import importlib.util
 import json
 import os
+import sys
 from pathlib import Path
+from typing import Any
 
 os.environ.setdefault("MPLBACKEND", "Agg")
 
@@ -30,6 +32,11 @@ assert _spec and _spec.loader
 _figure_promote = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_figure_promote)
 
+_DIG = Path(__file__).resolve().parents[4] / "digitization"
+if str(_DIG) not in sys.path:
+    sys.path.insert(0, str(_DIG))
+from paper_gates import merge_gate_report, ravivarapu_inference_gates  # noqa: E402
+
 CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/5b")
 FIGURES_DIR = Path("figures/ravivarapu/images/5b")
 FIG5A_SERIES = Path("artifacts/figures/papers/ravivarapu/5a/series.json")
@@ -48,39 +55,17 @@ def evaluate_gates(
     traces: dict[str, list[float]],
     *,
     traces_50: dict[str, list[float]] | None,
-) -> dict:
-    base = np.asarray(traces["baseline"], dtype=float)
-    paper = np.asarray(traces["paper"], dtype=float)
-    n = min(base.size, paper.size)
-    if n < 3:
-        return {"pass": False, "reason": "too_few_steps", "n_steps": n}
-    base_tail = float(np.mean(base[max(1, n // 2) : n]))
-    paper_tail = float(np.mean(paper[max(1, n // 2) : n]))
-    gates: dict = {
-        "n_steps": n,
-        "carrier_hz": INFERENCE_CARRIER_30HZ,
-        "paper_below_baseline_tail": paper_tail < base_tail,
-        "paper_end_below_baseline": float(paper[n - 1]) < float(base[n - 1]),
-        "baseline_tail_mean": base_tail,
-        "paper_tail_mean": paper_tail,
-    }
-    if traces_50 and "paper" in traces_50:
-        paper_50 = np.asarray(traces_50["paper"], dtype=float)
-        m = min(n, paper_50.size)
-        # 30 Hz should be weaker suppression → higher PSD than 50 Hz (paper claim).
-        weaker_than_50 = float(np.mean(paper[max(1, m // 2) : m])) > float(
-            np.mean(paper_50[max(1, m // 2) : m])
-        )
-        gates["weaker_than_50hz"] = weaker_than_50
-        gates["paper_50_tail_mean"] = float(np.mean(paper_50[max(1, m // 2) : m]))
-    else:
-        gates["weaker_than_50hz"] = None
-    ordering_ok = bool(
-        gates["paper_below_baseline_tail"] and gates["paper_end_below_baseline"]
+) -> dict[str, Any]:
+    sea_50 = traces_50.get("paper") if traces_50 else None
+    baseline_50 = traces_50.get("baseline") if traces_50 else None
+    dig = ravivarapu_inference_gates(
+        traces["baseline"],
+        traces["paper"],
+        carrier_hz=INFERENCE_CARRIER_30HZ,
+        sea_trace_50hz=sea_50,
+        baseline_trace_50hz=baseline_50,
     )
-    cross_ok = gates["weaker_than_50hz"] in (True, None)
-    gates["pass"] = ordering_ok and cross_ok
-    return gates
+    return merge_gate_report(dig, {"n_steps": len(traces["baseline"])})
 
 
 def main() -> None:

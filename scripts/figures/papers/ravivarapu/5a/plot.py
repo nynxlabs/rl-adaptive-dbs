@@ -9,7 +9,9 @@ import argparse
 import importlib.util
 import json
 import os
+import sys
 from pathlib import Path
+from typing import Any
 
 os.environ.setdefault("MPLBACKEND", "Agg")
 
@@ -25,6 +27,11 @@ assert _spec and _spec.loader
 _figure_promote = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_figure_promote)
 
+_DIG = Path(__file__).resolve().parents[4] / "digitization"
+if str(_DIG) not in sys.path:
+    sys.path.insert(0, str(_DIG))
+from paper_gates import merge_gate_report, ravivarapu_inference_gates  # noqa: E402
+
 CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/5a")
 FIGURES_DIR = Path("figures/ravivarapu/images/5a")
 OUT_STEM = "inference_50hz"
@@ -38,27 +45,13 @@ def _ckpt(variant: str, seed: int) -> Path:
     return Path("artifacts/sea_dbs") / f"{variant}_train{seed}.pt"
 
 
-def evaluate_gates(traces: dict[str, list[float]]) -> dict:
-    base = np.asarray(traces["baseline"], dtype=float)
-    paper = np.asarray(traces["paper"], dtype=float)
-    n = min(base.size, paper.size)
-    if n < 3:
-        return {"pass": False, "reason": "too_few_steps", "n_steps": n}
-    # Compare on steps after shared start (index 0 is reset biomarker).
-    base_tail = float(np.mean(base[max(1, n // 2) : n]))
-    paper_tail = float(np.mean(paper[max(1, n // 2) : n]))
-    gates = {
-        "n_steps": n,
-        "carrier_hz": INFERENCE_CARRIER_50HZ,
-        "paper_below_baseline_tail": paper_tail < base_tail,
-        "paper_end_below_baseline": float(paper[n - 1]) < float(base[n - 1]),
-        "baseline_tail_mean": base_tail,
-        "paper_tail_mean": paper_tail,
-    }
-    gates["pass"] = bool(
-        gates["paper_below_baseline_tail"] and gates["paper_end_below_baseline"]
+def evaluate_gates(traces: dict[str, list[float]]) -> dict[str, Any]:
+    dig = ravivarapu_inference_gates(
+        traces["baseline"],
+        traces["paper"],
+        carrier_hz=INFERENCE_CARRIER_50HZ,
     )
-    return gates
+    return merge_gate_report(dig, {"n_steps": len(traces["baseline"])})
 
 
 def main() -> None:

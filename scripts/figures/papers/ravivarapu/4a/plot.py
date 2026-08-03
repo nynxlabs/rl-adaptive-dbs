@@ -12,6 +12,7 @@ import argparse
 import importlib.util
 import json
 import os
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,11 @@ from dataclasses import replace
 from controllers.sea_dbs.checkpoint import save_checkpoint
 from controllers.sea_dbs.trainer import SEA_DBSTrainer
 
+_DIG = Path(__file__).resolve().parents[4] / "digitization"
+if str(_DIG) not in sys.path:
+    sys.path.insert(0, str(_DIG))
+from paper_gates import merge_gate_report, ravivarapu_fig4a_gates  # noqa: E402
+
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
 _spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
 assert _spec and _spec.loader
@@ -41,12 +47,7 @@ DEFAULT_MANIFEST = CACHE_DIR / "manifest_4a.json"
 OUT_STEM = "training_psd"
 DEFAULT_SEED = 0
 VARIANTS = ("baseline", "paper")
-GATE_SLOPE_BURN_IN = 5  # only skip reset noise for polyfit diagnostics
-# "Start" band = first ~5% of episodes (paper Fig 4a shared high onset). Wider
-# windows (1/3) swallowed SEA-DBS's early drop into early_mean and falsely failed
-# the steeper gate while Baseline declined gradually (v15).
-GATE_EARLY_FRAC = 1 / 20
-GATE_LATE_FRAC = 1 / 2
+DEFAULT_TRAIN_EPISODES = 150
 
 
 def _vault_backed_png(path: Path) -> Path:
@@ -123,57 +124,10 @@ def train_all(*, seed: int, smoke: bool, num_episodes: int | None) -> dict[str, 
 def evaluate_gates(series: dict[str, Any]) -> dict[str, Any]:
     if series.get("smoke"):
         return {"pass": True, "smoke_override": True}
-    baseline = np.asarray(series["variants"]["baseline"]["episode_psd"], dtype=float)
-    paper = np.asarray(series["variants"]["paper"]["episode_psd"], dtype=float)
-    n = min(baseline.size, paper.size)
-    if n < 10:
-        return {"pass": False, "reason": "too_few_episodes", "n_episodes": n}
-    b_tail = float(np.mean(baseline[n // 2 :]))
-    p_tail = float(np.mean(paper[n // 2 :]))
-    early_n = max(3, int(n * GATE_EARLY_FRAC))
-    late_start = n // 2
-    b_early = float(np.mean(baseline[:early_n]))
-    p_early = float(np.mean(paper[:early_n]))
-    b_drop = b_early - b_tail  # positive => declined
-    p_drop = p_early - p_tail
-    burn = min(GATE_SLOPE_BURN_IN, n // 5)
-    b_fit = baseline[burn:n]
-    p_fit = paper[burn:n]
-    n_fit = min(b_fit.size, p_fit.size)
-    if n_fit < 10:
-        return {
-            "pass": False,
-            "reason": "too_few_episodes_after_burn_in",
-            "n_episodes": n,
-            "slope_burn_in": burn,
-        }
-    x_fit = np.arange(n_fit)
-    b_slope = float(np.polyfit(x_fit, b_fit[:n_fit], 1)[0])
-    p_slope = float(np.polyfit(x_fit, p_fit[:n_fit], 1)[0])
-    # Steeper = larger early→late drop (front-loaded learning must count; polyfit
-    # after a large burn-in erased SEA-DBS's cliff and failed v12/v13 wrongly).
-    gates = {
-        "n_episodes": n,
-        "slope_burn_in": burn,
-        "early_n": early_n,
-        "paper_below_baseline_tail": p_tail < b_tail,
-        "paper_slope_down": p_drop > 0.0 or p_slope < 0.0,
-        "paper_steeper_than_baseline": p_drop > b_drop,
-        "baseline_tail_mean": b_tail,
-        "paper_tail_mean": p_tail,
-        "baseline_early_mean": b_early,
-        "paper_early_mean": p_early,
-        "baseline_drop": b_drop,
-        "paper_drop": p_drop,
-        "baseline_slope": b_slope,
-        "paper_slope": p_slope,
-    }
-    gates["pass"] = bool(
-        gates["paper_below_baseline_tail"]
-        and gates["paper_slope_down"]
-        and gates["paper_steeper_than_baseline"]
-    )
-    return gates
+    baseline = series["variants"]["baseline"]["episode_psd"]
+    sea = series["variants"]["paper"]["episode_psd"]
+    dig = ravivarapu_fig4a_gates(baseline, sea, n_expected=DEFAULT_TRAIN_EPISODES)
+    return merge_gate_report(dig, {"n_episodes": min(len(baseline), len(sea))})
 
 
 def plot_series(series: dict[str, Any], png_path: Path) -> None:
