@@ -119,8 +119,8 @@ USE_PAPER_YLIM = True
 PTQ_DISPLAY_WIGGLE_SEEDS = {"ptq-fp16": 11, "ptq-int8": 22}
 PTQ_DISPLAY_MEAN_OFFSET = {"ptq-fp16": 12.0, "ptq-int8": -8.0}
 PTQ_DISPLAY_WIGGLE_AMP = 16.0
-PAPER_YMIN = 225.0
-PAPER_YMAX = 550.0
+PAPER_YMIN = 250.0
+PAPER_YMAX = 575.0
 PAPER_YTICK_MAJOR_STEP = 50.0
 QAT_DISPLAY_WIGGLE_SEED = 33
 QAT_DISPLAY_BASELINE_FRAC = 0.94
@@ -959,12 +959,9 @@ def _baseline_at_onset(times: list[float] | np.ndarray, trace: list[float] | np.
 
 def _paper_ylim() -> tuple[float, float, list[float]]:
     major = PAPER_YTICK_MAJOR_STEP
-    first_major = float(np.ceil(PAPER_YMIN / major) * major)
-    ticks = [PAPER_YMIN]
-    if first_major > PAPER_YMIN + 1e-9:
-        ticks.append(first_major)
-    ticks.extend(float(t) for t in np.arange(first_major + major, PAPER_YMAX + 1e-9, major))
-    if ticks[-1] < PAPER_YMAX - 1e-9:
+    last_major = float(np.floor((PAPER_YMAX - major / 2.0) / major) * major)
+    ticks = [float(t) for t in np.arange(PAPER_YMIN, last_major + 1e-9, major)]
+    if PAPER_YMAX > last_major + 1e-9:
         ticks.append(PAPER_YMAX)
     return PAPER_YMIN, PAPER_YMAX, ticks
 
