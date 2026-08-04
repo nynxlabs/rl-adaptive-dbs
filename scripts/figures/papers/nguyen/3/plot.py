@@ -25,6 +25,11 @@ import time
 from pathlib import Path
 from typing import Any
 
+_DIG = Path(__file__).resolve().parents[4] / "digitization"
+if str(_DIG) not in sys.path:
+    sys.path.insert(0, str(_DIG))
+from nguyen_gates import attach_digitization, fig3_gates  # noqa: E402
+
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
 _spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
 assert _spec and _spec.loader
@@ -174,12 +179,17 @@ def evaluate_gates(samples: dict[str, Any]) -> dict[str, Any]:
     ordering_ok = bool(np.median(pd_on) > np.median(pd_off))
     pd_q1 = float(np.percentile(pd_on, 25))
     threshold_plausible = bool(abs(pd_q1 - THRESHOLD) / max(THRESHOLD, 1.0) < 0.75)
-    return {
+    heuristic = {
         "ordering_pd_on_above_pd_off": ordering_ok,
         "threshold_near_pd_on_q1": threshold_plausible,
         "pd_on_q1": pd_q1,
         "pass": ordering_ok,
     }
+    dig = fig3_gates(samples)
+    merged = attach_digitization(heuristic, dig)
+    # Fig 3 ship pass remains ordering-only (threshold is soft).
+    merged["pass"] = ordering_ok and bool(dig["gates"].get("ordering_pd_on_above_pd_off", True))
+    return merged
 
 
 def plot_samples(samples: dict[str, Any], out_path: Path) -> None:

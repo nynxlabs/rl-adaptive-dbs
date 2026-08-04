@@ -135,11 +135,9 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    Both variants share train carrier **130 Hz** and the same no-stim actor bias
-    so episode-1 PSD starts in the same high band (paper Fig 4a). Baseline is a
-    real DDPG learner (ε-greedy + updates). SEA-DBS adds PM + GS with a **slow**
-    temperature anneal so the early third stays high before the drop (v15 failed
-    because GS collapsed PSD in the first ~10 episodes).
+    v20: learn from episode 1 (no buffer freeze). Gradual PSD fade via slow GS
+    anneal, low actor/critic LRs, sparse updates, and PM warmup — not a cliff at
+    ep 40. Baseline declines modestly; SEA-DBS steeper per digitized paper.
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -147,28 +145,31 @@ def fig4_ravivarapu_config(
         log_episodes=True,
         variant=variant,
         carrier_hz=130.0,
-        actor_no_stim_bias=1.25,
+        actor_no_stim_bias=2.35,
         episode_psd_metric="mean",
+        min_buffer_size=192,
+        polyak_tau=0.002,
     )
     if variant == "paper":
         return replace(
             cfg,
-            gs_tau0=2.0,
-            gs_lambda=2e-4,
-            gs_tau_min=0.12,
-            update_frequency=1,
-            pm_warmup_steps=900,
-            min_buffer_size=64,
+            actor_no_stim_bias=2.30,
+            gs_tau0=5.0,
+            gs_lambda=2.5e-5,
+            gs_tau_min=0.40,
+            update_frequency=2,
+            pm_warmup_steps=4000,
+            actor_lr=6e-5,
+            critic_lr=1.6e-4,
         )
     if variant == "baseline":
-        # Real but modest learning — shallower decline than SEA-DBS.
         return replace(
             cfg,
-            epsilon_start=0.60,
-            epsilon_end=0.35,
-            update_frequency=1,
-            actor_lr=1.5e-4,
-            critic_lr=4e-4,
-            min_buffer_size=64,
+            actor_no_stim_bias=2.45,
+            epsilon_start=0.32,
+            epsilon_end=0.28,
+            update_frequency=2,
+            actor_lr=3e-5,
+            critic_lr=1.2e-4,
         )
     return cfg
