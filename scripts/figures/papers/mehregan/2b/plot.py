@@ -19,6 +19,8 @@ Run:
 
 Each run writes ``figures/mehregan/images/2b/error_index_vN.png`` (N auto-increments)
 and updates the replication image link in ``figures/mehregan/replications.md``.
+
+Plant EI simulation only — no RL training; checkpoint resume is not applicable.
 """
 from __future__ import annotations
 

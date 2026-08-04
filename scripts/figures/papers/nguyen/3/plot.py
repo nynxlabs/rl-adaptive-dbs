@@ -9,6 +9,8 @@ mean reference lines, and boxplot summary.
 Run:
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/3/plot.py
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/3/plot.py --plot-only
+
+Plant sampling only — no RL training; checkpoint resume is not applicable.
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/3/plot.py --n-iterations 50
 
 Each run writes ``figures/nguyen/images/3/alpha_beta_dist_vN.png`` (N

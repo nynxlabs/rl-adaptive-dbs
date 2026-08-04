@@ -5,13 +5,20 @@ from __future__ import annotations
 from copy import deepcopy
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import json
 
 import numpy as np
 import torch
 import torch.nn.functional as F
+
+from controllers.common.resume import (
+    SNN_MATERIAL_FIELDS,
+    config_to_dict,
+    infer_completed_episodes,
+    validate_resume_config_fields,
+)
 
 from controllers.snn.actions import select_action
 from controllers.snn.adapter import NguyenEnvAdapter
@@ -206,12 +213,35 @@ class DSQNTrainer:
         indices = (ternary + 1).astype(np.int64)
         return action_index, indices
 
-    def train_episodes(self, env: NguyenEnvAdapter) -> TrainResult:
-        """Run ``num_episodes`` of interaction + DQN updates."""
-        cfg = self.config
-        result = TrainResult(config=cfg, dsqn=self.dsqn)
+    def train_episodes(
+        self,
+        env: NguyenEnvAdapter,
+        *,
+        start_episode: int = 0,
+        checkpoint_path: str | Path | None = None,
+        checkpoint_interval: int = 50,
+        on_checkpoint: Callable[[int, TrainResult], None] | None = None,
+        initial_result: TrainResult | None = None,
+    ) -> TrainResult:
+        """Run ``num_episodes`` of interaction + DQN updates.
 
-        for episode in range(cfg.num_episodes):
+        When ``start_episode`` > 0, episodes ``start_episode .. num_episodes-1`` are
+        trained and series from ``initial_result`` are appended (resume path).
+        """
+        cfg = self.config
+        if start_episode >= cfg.num_episodes:
+            if initial_result is not None:
+                return initial_result
+            return TrainResult(config=cfg, dsqn=self.dsqn)
+
+        if initial_result is not None:
+            result = initial_result
+            result.config = cfg
+            result.dsqn = self.dsqn
+        else:
+            result = TrainResult(config=cfg, dsqn=self.dsqn)
+
+        for episode in range(start_episode, cfg.num_episodes):
             obs, reset_info = env.reset(seed=cfg.seed + episode)
             episode_reward = 0.0
             episode_spikes = int(reset_info.get("cbgt_spike_count", 0))
@@ -261,6 +291,19 @@ class DSQNTrainer:
             result.episode_energies.append(episode_energy)
             result.episode_alpha_beta_means.append(float(np.nanmean(alpha_betas)))
             result.episode_early_stops.append(terminated_early)
+            completed = episode + 1
+            if checkpoint_path is not None and checkpoint_interval > 0:
+                if completed % checkpoint_interval == 0 or completed == cfg.num_episodes:
+                    save_checkpoint(
+                        checkpoint_path,
+                        dsqn=self.dsqn,
+                        config=cfg,
+                        optimizer=self.optimizer,
+                        trainer=self,
+                        extra=_episode_extra(result, completed_episodes=completed),
+                    )
+                    if on_checkpoint is not None:
+                        on_checkpoint(completed, result)
             if cfg.log_episodes:
                 print(
                     f"episode {episode + 1}/{cfg.num_episodes} "
@@ -273,6 +316,65 @@ class DSQNTrainer:
 
         result.update_count = self._update_count
         return result
+
+
+def _episode_extra(result: TrainResult, *, completed_episodes: int) -> dict[str, Any]:
+    return {
+        "completed_episodes": int(completed_episodes),
+        "episode_rewards": list(result.episode_rewards),
+        "episode_lengths": list(result.episode_lengths),
+        "episode_spike_totals": list(result.episode_spike_totals),
+        "episode_energies": list(result.episode_energies),
+        "episode_alpha_beta_means": list(result.episode_alpha_beta_means),
+        "episode_early_stops": list(result.episode_early_stops),
+        "update_count": result.update_count,
+    }
+
+
+def _series_from_payload(payload: dict[str, Any]) -> dict[str, list[Any]]:
+    extra = payload.get("extra")
+    if not isinstance(extra, dict):
+        extra = payload
+    return {
+        "episode_rewards": list(extra.get("episode_rewards", [])),
+        "episode_lengths": list(extra.get("episode_lengths", [])),
+        "episode_spike_totals": list(extra.get("episode_spike_totals", [])),
+        "episode_energies": list(extra.get("episode_energies", [])),
+        "episode_alpha_beta_means": list(extra.get("episode_alpha_beta_means", [])),
+        "episode_early_stops": list(extra.get("episode_early_stops", [])),
+    }
+
+
+def train_result_from_payload(
+    payload: dict[str, Any],
+    *,
+    dsqn: DSQN,
+    config: SNNConfig,
+) -> TrainResult:
+    series = _series_from_payload(payload)
+    result = TrainResult(config=config, dsqn=dsqn)
+    result.episode_rewards = series["episode_rewards"]
+    result.episode_lengths = series["episode_lengths"]
+    result.episode_spike_totals = series["episode_spike_totals"]
+    result.episode_energies = series["episode_energies"]
+    result.episode_alpha_beta_means = series["episode_alpha_beta_means"]
+    result.episode_early_stops = series["episode_early_stops"]
+    extra = payload.get("extra")
+    if not isinstance(extra, dict):
+        extra = payload
+    result.update_count = int(extra.get("update_count", payload.get("update_count", 0)))
+    for idx, reward in enumerate(result.episode_rewards):
+        length = result.episode_lengths[idx] if idx < len(result.episode_lengths) else 0
+        result.metrics.append(
+            TrainMetrics(
+                episode=idx,
+                episode_reward=float(reward),
+                episode_length=int(length),
+                epsilon=0.0,
+                buffer_size=0,
+            )
+        )
+    return result
 
 
 def train_metrics_to_dict(metrics: TrainMetrics) -> dict[str, Any]:
@@ -308,6 +410,7 @@ def save_checkpoint(
     dsqn: DSQN,
     config: SNNConfig,
     optimizer: torch.optim.Optimizer | None = None,
+    trainer: DSQNTrainer | None = None,
     extra: dict[str, Any] | None = None,
 ) -> None:
     path = Path(path)
@@ -318,10 +421,18 @@ def save_checkpoint(
         "controller": "snn",
         "variant": config.variant,
     }
+    if trainer is not None:
+        payload["target_dsqn_state_dict"] = trainer.target_dsqn.state_dict()
+        payload["buffer_state_dict"] = trainer.buffer.state_dict()
+        payload["trainer_state"] = {
+            "total_steps": trainer._total_steps,
+            "update_count": trainer._update_count,
+            "rng_state": trainer._rng.bit_generator.state,
+        }
     if optimizer is not None:
         payload["optimizer_state_dict"] = optimizer.state_dict()
     if extra:
-        payload.update(extra)
+        payload["extra"] = extra
     torch.save(payload, path)
 
 
@@ -333,11 +444,72 @@ def load_checkpoint(
     return torch.load(Path(path), map_location=map_location, weights_only=False)
 
 
+def validate_resume_config(
+    saved_config: SNNConfig,
+    active_config: SNNConfig,
+    *,
+    resume_start: int = 0,
+) -> None:
+    validate_resume_config_fields(
+        config_to_dict(saved_config),
+        config_to_dict(active_config),
+        SNN_MATERIAL_FIELDS,
+        label="SNNConfig",
+        resume_start=resume_start,
+    )
+
+
+def resume_dsqn_trainer(
+    payload: dict[str, Any],
+    *,
+    config: SNNConfig,
+    dsqn: DSQN | None = None,
+    buffer: ReplayBuffer | None = None,
+    metrics_path: Path | None = None,
+    start_episode: int | None = None,
+) -> tuple[DSQNTrainer, int]:
+    """Restore trainer weights, optimizer, replay buffer, and exploration state."""
+    saved_cfg = payload["config"]
+    if not isinstance(saved_cfg, SNNConfig):
+        saved_cfg = SNNConfig(**saved_cfg)
+
+    resume_start = infer_completed_episodes(
+        payload,
+        metrics_path=metrics_path,
+        start_episode=start_episode,
+    )
+    validate_resume_config(saved_cfg, config, resume_start=resume_start)
+
+    active_cfg = config.with_variant_defaults()
+    model = dsqn or DSQN(active_cfg)
+    model.load_state_dict(payload["dsqn_state_dict"])
+    replay = buffer or ReplayBuffer(active_cfg, seed=active_cfg.seed)
+    trainer = DSQNTrainer(model, replay, active_cfg)
+
+    if "target_dsqn_state_dict" in payload:
+        trainer.target_dsqn.load_state_dict(payload["target_dsqn_state_dict"])
+    if "optimizer_state_dict" in payload:
+        trainer.optimizer.load_state_dict(payload["optimizer_state_dict"])
+    if "buffer_state_dict" in payload:
+        trainer.buffer.load_state_dict(payload["buffer_state_dict"])
+
+    trainer_state = payload.get("trainer_state") or {}
+    trainer._total_steps = int(trainer_state.get("total_steps", 0))
+    trainer._update_count = int(trainer_state.get("update_count", 0))
+    if "rng_state" in trainer_state:
+        trainer._rng.bit_generator.state = trainer_state["rng_state"]
+
+    return trainer, resume_start
+
+
 def train_dsqn(
     env: NguyenEnvAdapter | None = None,
     config: SNNConfig | None = None,
     *,
     checkpoint_path: str | Path | None = None,
+    resume_path: str | Path | None = None,
+    start_episode: int | None = None,
+    checkpoint_interval: int = 50,
     plant: Any | None = None,
 ) -> TrainResult:
     """Train DSQN on ``NguyenEnvAdapter`` and optionally save a checkpoint."""
@@ -346,21 +518,43 @@ def train_dsqn(
     if env is None:
         env = NguyenEnvAdapter(plant=plant, config=cfg)
     try:
-        dsqn = DSQN(cfg)
-        buffer = ReplayBuffer(cfg, seed=cfg.seed)
-        trainer = DSQNTrainer(dsqn, buffer, cfg)
-        result = trainer.train_episodes(env)
+        initial_result: TrainResult | None = None
+        trainer: DSQNTrainer
+        if resume_path is not None:
+            payload = load_checkpoint(resume_path, map_location=cfg.device)
+            metrics_path = Path(resume_path).with_suffix(".metrics.json")
+            trainer, resume_start = resume_dsqn_trainer(
+                payload,
+                config=cfg,
+                metrics_path=metrics_path,
+                start_episode=start_episode,
+            )
+            initial_result = train_result_from_payload(payload, dsqn=trainer.dsqn, config=cfg)
+            result = trainer.train_episodes(
+                env,
+                start_episode=resume_start,
+                checkpoint_path=checkpoint_path,
+                checkpoint_interval=checkpoint_interval,
+                initial_result=initial_result,
+            )
+        else:
+            dsqn = DSQN(cfg)
+            buffer = ReplayBuffer(cfg, seed=cfg.seed)
+            trainer = DSQNTrainer(dsqn, buffer, cfg)
+            result = trainer.train_episodes(
+                env,
+                checkpoint_path=checkpoint_path,
+                checkpoint_interval=checkpoint_interval,
+            )
         if checkpoint_path is not None:
+            completed = len(result.episode_rewards)
             save_checkpoint(
                 checkpoint_path,
                 dsqn=result.dsqn,
                 config=cfg,
                 optimizer=trainer.optimizer,
-                extra={
-                    "episode_rewards": result.episode_rewards,
-                    "episode_lengths": result.episode_lengths,
-                    "update_count": result.update_count,
-                },
+                trainer=trainer,
+                extra=_episode_extra(result, completed_episodes=completed),
             )
             metrics_path = Path(checkpoint_path).with_suffix(".metrics.json")
             write_train_metrics(result, metrics_path)
