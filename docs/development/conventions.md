@@ -66,6 +66,16 @@ All controllers share the **Kumaravelu et al. (2016)** parkinsonian plant, but e
 
 Do **not** put `snn` and `ddpg` in one suite and assume the same **reward_sum** or **episode_length** are comparable without reading the suite manifest: Nguyen uses **100 ms** steps and **α–β** feedback; SEA-DBS uses **2 ms** steps and **Eq. (7)** reward; Mehregan uses **2 s** steps and **Eq. (8)**. Cross-paper runs should log **plant-level** metrics (e.g. raw $P_\beta$, stim duty cycle) plus `adapter: true` and `suite` name. Details: [benchmarking.md](../benchmarking.md) §3, §5.
 
+## Panel script checkpoint resume
+
+Training panels under `scripts/figures/papers/<paper>/<panel>/plot.py` accept:
+
+- `--resume PATH` — load a checkpoint and continue training (default: fresh run).
+- `--start-episode N` — optional; when omitted, inferred from `extra.completed_episodes` or episode series length in the checkpoint / `.metrics.json` sidecar.
+- `--checkpoint-interval N` — write `checkpoint.pt` every N episodes during train (default 50).
+
+Checkpoints store network weights, optimizer state, replay buffer contents, exploration schedule counters (`total_steps` / `env_step`), target networks, and per-episode series in `extra`. Resume **fails with a clear error** when material config fields disagree (variant, seed, reward-shaping knobs, alphabet-related settings). The target `num_episodes` may **increase** on resume (e.g. extend 180→300); lowering it is rejected. Plant-only panels (no RL train) do not implement `--resume`; they document that in the script docstring.
+
 ## Version control
 
 Do **not** commit:

@@ -20,6 +20,12 @@ from controllers.sea_dbs.config import ABLATION_EVAL_STEPS, SEADBSConfig
 from controllers.sea_dbs.eval import evaluate_ablation_steps
 from controllers.sea_dbs.trainer import train_sea_dbs
 
+_RESUME_CLI = Path(__file__).resolve().parents[2] / "resume_cli.py"
+_resume_spec = importlib.util.spec_from_file_location("figure_resume_cli", _RESUME_CLI)
+assert _resume_spec and _resume_spec.loader
+_resume_cli = importlib.util.module_from_spec(_resume_spec)
+_resume_spec.loader.exec_module(_resume_cli)
+
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
 _spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
 assert _spec and _spec.loader
@@ -43,18 +49,29 @@ LABELS = {
 }
 
 
-def ensure_checkpoints(seed: int, *, smoke: bool) -> None:
+def ensure_checkpoints(
+    seed: int,
+    *,
+    smoke: bool,
+    resume: bool = False,
+    checkpoint_interval: int = 50,
+) -> None:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     for variant in VARIANTS:
         ckpt = CACHE_DIR / f"{variant}_train{seed}.pt"
-        if ckpt.is_file():
+        if ckpt.is_file() and not resume:
             continue
         cfg = SEADBSConfig(variant=variant, seed=seed, log_episodes=True)
         if smoke:
             cfg = cfg.for_smoke(episodes=2, max_steps=5)
         else:
             cfg = replace(cfg, num_episodes=150)
-        train_sea_dbs(config=cfg, checkpoint_path=ckpt)
+        train_sea_dbs(
+            config=cfg,
+            checkpoint_path=ckpt,
+            resume_path=ckpt if ckpt.is_file() and resume else None,
+            checkpoint_interval=checkpoint_interval,
+        )
 
 
 def evaluate_gates(traces: dict[str, list[float]]) -> dict[str, Any]:
@@ -68,10 +85,26 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--plot-only", action="store_true")
+    parser.add_argument(
+        "--retrain",
+        action="store_true",
+        help="Resume training from existing per-variant checkpoints in cache",
+    )
+    parser.add_argument(
+        "--checkpoint-interval",
+        type=int,
+        default=_resume_cli.DEFAULT_CHECKPOINT_INTERVAL,
+        help=f"Save checkpoint every N episodes (default {_resume_cli.DEFAULT_CHECKPOINT_INTERVAL})",
+    )
     args = parser.parse_args()
     steps = 5 if args.smoke else ABLATION_EVAL_STEPS
     if not args.plot_only:
-        ensure_checkpoints(args.seed, smoke=args.smoke)
+        ensure_checkpoints(
+            args.seed,
+            smoke=args.smoke,
+            resume=bool(args.retrain),
+            checkpoint_interval=args.checkpoint_interval,
+        )
 
     traces: dict[str, list[float]] = {}
     for variant in VARIANTS:

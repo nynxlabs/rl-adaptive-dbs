@@ -8,7 +8,7 @@ Paper §IV.A.1 companion to Fig 4a: two panels over **9 episodes** indexed
   2. **Episode-mean PSD(x10³)** ($P_\\beta / 1000$) vs episode
 
 Loads traces from the Fig 4a series cache (default: locked ``series_v4.json``,
-first 8 episodes). Writes a combined two-panel PNG (``training_fig4b_vN.png``)
+first 8 episodes). Resume training via Fig 4a ``--resume`` (this panel replots cache only). (``training_fig4b_vN.png``)
 for showcase side-by-side use, plus separate reward/PSD PNGs for debugging.
 
 Run:

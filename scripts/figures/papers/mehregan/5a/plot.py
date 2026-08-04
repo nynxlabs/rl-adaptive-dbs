@@ -72,6 +72,12 @@ assert _spec and _spec.loader
 _figure_promote = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_figure_promote)
 
+_RESUME_CLI = Path(__file__).resolve().parents[2] / "resume_cli.py"
+_resume_spec = importlib.util.spec_from_file_location("figure_resume_cli", _RESUME_CLI)
+assert _resume_spec and _resume_spec.loader
+_resume_cli = importlib.util.module_from_spec(_resume_spec)
+_resume_spec.loader.exec_module(_resume_cli)
+
 FIGURES_DIR = Path("figures/mehregan/images/5a")
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/5a")
 FIG4A_CACHE = Path("artifacts/figures/papers/mehregan/4a")
@@ -706,6 +712,9 @@ def _train_checkpoint(
     seed: int,
     checkpoint_path: Path,
     skip_regular: bool,
+    resume_path: Path | None = None,
+    start_episode: int | None = None,
+    checkpoint_interval: int = 50,
 ) -> dict[str, Any]:
     from dataclasses import replace
 
@@ -748,7 +757,14 @@ def _train_checkpoint(
             flush=True,
         )
         t0 = time.time()
-        train(config=config, env=env, checkpoint_path=checkpoint_path)
+        train(
+            config=config,
+            env=env,
+            checkpoint_path=checkpoint_path,
+            resume_path=resume_path,
+            start_episode=start_episode,
+            checkpoint_interval=checkpoint_interval,
+        )
         elapsed = time.time() - t0
         print(f"wrote checkpoint {checkpoint_path} ({elapsed:.0f}s)", flush=True)
         return {
@@ -837,6 +853,7 @@ def main() -> int:
     )
     parser.add_argument("--no-update-docs", dest="update_docs", action="store_false")
     parser.set_defaults(update_docs=True)
+    _resume_cli.add_training_resume_args(parser)
     args = parser.parse_args()
 
     if args.out is None:
@@ -856,6 +873,9 @@ def main() -> int:
             seed=args.seed,
             checkpoint_path=args.checkpoint,
             skip_regular=args.skip_regular,
+            resume_path=args.resume,
+            start_episode=args.start_episode,
+            checkpoint_interval=args.checkpoint_interval,
         )
         payload = _run_paper_eval(
             seed=args.seed,
