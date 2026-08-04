@@ -16,7 +16,12 @@ import torch.nn.functional as F
 from controllers.snn.actions import select_action
 from controllers.snn.adapter import NguyenEnvAdapter
 from controllers.snn.buffer import ReplayBuffer, Transition
-from controllers.snn.config import SNNConfig
+from controllers.snn.config import (
+    INIT_AMPLITUDE_NA_PER_CM2,
+    INIT_FREQUENCY_HZ,
+    INIT_PULSE_WIDTH_MS,
+    SNNConfig,
+)
 from controllers.snn.networks import DSQN
 
 
@@ -43,6 +48,9 @@ class TrainResult:
     episode_energies: list[float] = field(default_factory=list)
     episode_alpha_beta_means: list[float] = field(default_factory=list)
     episode_early_stops: list[bool] = field(default_factory=list)
+    episode_amplitudes: list[float] = field(default_factory=list)
+    episode_frequencies: list[float] = field(default_factory=list)
+    episode_pulse_widths: list[float] = field(default_factory=list)
     update_count: int = 0
 
 
@@ -217,6 +225,8 @@ class DSQNTrainer:
             episode_spikes = int(reset_info.get("cbgt_spike_count", 0))
             episode_energy = float(reset_info.get("step_energy", 0.0))
             alpha_betas: list[float] = [float(reset_info.get("alpha_beta", float("nan")))]
+            end_dbs = reset_info.get("dbs")
+            step_info: dict[str, Any] | None = reset_info
             steps = 0
             terminated_early = False
             for _ in range(cfg.max_episode_steps):
@@ -245,6 +255,12 @@ class DSQNTrainer:
                     terminated_early = True
                 if done:
                     break
+
+            if step_info is not None and step_info.get("dbs") is not None:
+                end_dbs = step_info["dbs"]
+            result.episode_amplitudes.append(float(getattr(end_dbs, "amplitude", INIT_AMPLITUDE_NA_PER_CM2)))
+            result.episode_frequencies.append(float(getattr(end_dbs, "frequency_hz", INIT_FREQUENCY_HZ)))
+            result.episode_pulse_widths.append(float(getattr(end_dbs, "pulse_width_ms", INIT_PULSE_WIDTH_MS)))
 
             metrics = TrainMetrics(
                 episode=episode,
@@ -296,6 +312,9 @@ def write_train_metrics(result: TrainResult, path: str | Path) -> Path:
         "episode_energies": result.episode_energies,
         "episode_alpha_beta_means": result.episode_alpha_beta_means,
         "episode_early_stops": result.episode_early_stops,
+        "episode_amplitudes": result.episode_amplitudes,
+        "episode_frequencies": result.episode_frequencies,
+        "episode_pulse_widths": result.episode_pulse_widths,
         "episodes": [train_metrics_to_dict(m) for m in result.metrics],
     }
     out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")

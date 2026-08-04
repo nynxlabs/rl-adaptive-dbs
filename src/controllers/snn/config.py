@@ -152,7 +152,9 @@ def fig4_nguyen_config(
     """Nguyen Fig. 4 train defaults (figures/nguyen/replications.md § Fig 4).
 
     Paper Eq. (7) + probe-driven shaping (v9): progress/warm-zone bonuses,
-    truncation penalty for 25-step timeouts, faster freq ramp.
+    truncation penalty for 25-step timeouts, faster freq ramp. v11 removed
+    shaping for negative-million digitization band only — regressed to energy
+    collapse (v13); keep v9 shaping for learnable early-stop.
     """
     return SNNConfig(
         seed=seed,

@@ -21,6 +21,11 @@ from typing import Any
 
 os.environ.setdefault("MPLBACKEND", "Agg")
 
+_DIG = Path(__file__).resolve().parents[4] / "digitization"
+if str(_DIG) not in sys.path:
+    sys.path.insert(0, str(_DIG))
+from nguyen_gates import attach_digitization, fig5_spikes_energy_gates  # noqa: E402
+
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
 _spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
 assert _spec and _spec.loader
@@ -147,7 +152,10 @@ def evaluate_gates(series: dict[str, Any], *, fig4_manifest: dict[str, Any] | No
     if series.get("smoke"):
         gates["pass"] = True
         gates["smoke_override"] = True
-    return gates
+        return gates
+
+    dig = fig5_spikes_energy_gates(spikes, energies)
+    return attach_digitization(gates, dig)
 
 
 def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -> dict[str, Any]:
@@ -223,7 +231,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.refresh_train:
-        fig4_path = Path(__file__).resolve().parent / "4" / "plot.py"
+        fig4_path = Path(__file__).resolve().parent.parent / "4" / "plot.py"
         spec = importlib.util.spec_from_file_location("nguyen_fig4_plot", fig4_path)
         assert spec and spec.loader
         fig4_mod = importlib.util.module_from_spec(spec)

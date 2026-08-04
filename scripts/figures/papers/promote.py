@@ -58,6 +58,12 @@ PAPER_NGUYEN_2_3_MANIFEST = "artifacts/figures/papers/nguyen/3/manifest.json"
 PAPER_NGUYEN_2_3_REPLICATION_ALT = "Replication Fig 3"
 PAPER_NGUYEN_4_MANIFEST = "artifacts/figures/papers/nguyen/4/manifest.json"
 PAPER_NGUYEN_4_REPLICATION_ALT = "Replication Fig 4"
+PAPER_NGUYEN_5_MANIFEST = "artifacts/figures/papers/nguyen/5/manifest.json"
+PAPER_NGUYEN_5_REPLICATION_ALT = "Replication Fig 5"
+PAPER_NGUYEN_6_MANIFEST = "artifacts/figures/papers/nguyen/6/manifest.json"
+PAPER_NGUYEN_6_REPLICATION_ALT = "Replication Fig 6"
+PAPER_NGUYEN_7_MANIFEST = "artifacts/figures/papers/nguyen/7/manifest.json"
+PAPER_NGUYEN_7_REPLICATION_ALT = "Replication Fig 7"
 
 PAPER_1B_PNG = "figures/mehregan/images/1b/gpi_psd.png"
 PAPER_1B_MANIFEST = "artifacts/figures/papers/mehregan/1b/manifest.json"
@@ -1042,6 +1048,129 @@ def promote_nguyen_4(
         "caption": caption,
         "doc": str(PAPER_NGUYEN_DOC),
     }
+
+
+def _promote_nguyen_panel(
+    *,
+    manifest: dict[str, Any],
+    png_path: Path,
+    caption_marker: str,
+    manifest_path: str,
+    replication_alt: str,
+    status_row_pattern: str,
+    placeholder: str | None = None,
+    update_docs: bool = True,
+) -> dict[str, str]:
+    """Shared Nguyen tracker refresh for Fig 5–7."""
+    caption = manifest.get("caption") or "see manifest"
+    if manifest.get("png_version") is not None:
+        caption = f"{caption} (v{manifest['png_version']})"
+    link = papers_tracker_image_link(png_path, doc=PAPER_NGUYEN_DOC)
+    if update_docs and PAPER_NGUYEN_DOC.exists():
+        text = PAPER_NGUYEN_DOC.read_text()
+        text = _replace_marker_in(
+            text,
+            caption_marker,
+            _caption_block(caption, manifest_path),
+            doc=PAPER_NGUYEN_DOC,
+        )
+        text = _set_papers_tracker_image_link(
+            text,
+            alt=replication_alt,
+            link=link,
+            doc=PAPER_NGUYEN_DOC,
+        )
+        _pass = bool(manifest.get("gates", {}).get("pass"))
+        _status = (
+            f"**Status:** Pass — see manifest gates (`{png_path.name}`)."
+            if _pass
+            else f"**Status:** Open — see manifest gates (`{png_path.name}`)."
+        )
+        text = re.sub(
+            rf"(<!-- {caption_marker}:end -->\s*\n)\*\*Status:\*\*[^\n]+",
+            r"\1" + _status,
+            text,
+            count=1,
+        )
+        text = re.sub(
+            status_row_pattern,
+            lambda m: m.group(1) + ("Pass" if _pass else "Open") + m.group(2),
+            text,
+            count=1,
+        )
+        if placeholder:
+            text = text.replace(placeholder, f"![{replication_alt}]({link})")
+        PAPER_NGUYEN_DOC.write_text(text)
+    return {
+        "png": str(png_path),
+        "png_link": link,
+        "manifest": manifest_path,
+        "caption": caption,
+        "doc": str(PAPER_NGUYEN_DOC),
+    }
+
+
+def promote_nguyen_5(
+    *,
+    manifest: dict[str, Any],
+    png_path: Path,
+    update_docs: bool = True,
+) -> dict[str, str]:
+    """Refresh Fig 5 caption + replication image link."""
+    return _promote_nguyen_panel(
+        manifest=manifest,
+        png_path=png_path,
+        caption_marker="caption-5",
+        manifest_path=PAPER_NGUYEN_5_MANIFEST,
+        replication_alt=PAPER_NGUYEN_5_REPLICATION_ALT,
+        status_row_pattern=(
+            r"(\| Fig 5 — CBGT spikes \+ DBS energy over training \|[^|]+\|[^|]+\|[^|]+\| )(Open|Pass)( \|)"
+        ),
+        placeholder="*Not yet generated from a passing Fig 4 train.* Target: `figures/nguyen/images/5/spikes_energy_vN.png`",
+        update_docs=update_docs,
+    )
+
+
+def promote_nguyen_6(
+    *,
+    manifest: dict[str, Any],
+    png_path: Path,
+    update_docs: bool = True,
+) -> dict[str, str]:
+    """Refresh Fig 6 caption + replication image link."""
+    return _promote_nguyen_panel(
+        manifest=manifest,
+        png_path=png_path,
+        caption_marker="caption-6",
+        manifest_path=PAPER_NGUYEN_6_MANIFEST,
+        replication_alt=PAPER_NGUYEN_6_REPLICATION_ALT,
+        status_row_pattern=(
+            r"(\| Fig 6 — α–β \+ DBS parameters over training \|[^|]+\|[^|]+\|[^|]+\| )(Open|Pass)( \|)"
+        ),
+        placeholder="*Not yet generated.* Target: `figures/nguyen/images/6/alpha_beta_params.png`",
+        update_docs=update_docs,
+    )
+
+
+def promote_nguyen_7(
+    *,
+    manifest: dict[str, Any],
+    png_path: Path,
+    update_docs: bool = True,
+) -> dict[str, str]:
+    """Refresh Fig 7 caption + replication image link."""
+    return _promote_nguyen_panel(
+        manifest=manifest,
+        png_path=png_path,
+        caption_marker="caption-7",
+        manifest_path=PAPER_NGUYEN_7_MANIFEST,
+        replication_alt=PAPER_NGUYEN_7_REPLICATION_ALT,
+        status_row_pattern=(
+            r"(\| Fig 7 — 50-episode eval \(25 steps\) \|[^|]+\|[^|]+\|[^|]+\| )(Open|Pass)( \|)"
+        ),
+        placeholder="*Not yet generated.* Target: `figures/nguyen/images/7/eval_50ep.png`",
+        update_docs=update_docs,
+    )
 
 
 def resolve_ravivarapu_doc(checkout: Path | None = None) -> Path:

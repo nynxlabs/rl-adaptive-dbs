@@ -32,7 +32,7 @@ _spec.loader.exec_module(_figure_promote)
 _DIG = Path(__file__).resolve().parents[4] / "digitization"
 if str(_DIG) not in sys.path:
     sys.path.insert(0, str(_DIG))
-from paper_gates import merge_gate_report, ravivarapu_fig4b_gates  # noqa: E402
+from ravivarapu_gates import merge_gate_report, ravivarapu_fig4b_gates  # noqa: E402
 
 FIGURES_DIR = Path("figures/ravivarapu/images/4b")
 CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/4")
