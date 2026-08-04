@@ -51,7 +51,21 @@ from controllers.snn.adapter import NguyenEnvAdapter
 from controllers.snn.buffer import ReplayBuffer
 from controllers.snn.config import SNNConfig, fig4_nguyen_config
 from controllers.snn.networks import DSQN
-from controllers.snn.trainer import DSQNTrainer, TrainResult, save_checkpoint, write_train_metrics
+from controllers.snn.trainer import (
+    DSQNTrainer,
+    TrainResult,
+    load_checkpoint,
+    resume_dsqn_trainer,
+    save_checkpoint,
+    train_result_from_payload,
+    write_train_metrics,
+)
+
+_RESUME_CLI = Path(__file__).resolve().parents[2] / "resume_cli.py"
+_resume_spec = importlib.util.spec_from_file_location("figure_resume_cli", _RESUME_CLI)
+assert _resume_spec and _resume_spec.loader
+_resume_cli = importlib.util.module_from_spec(_resume_spec)
+_resume_spec.loader.exec_module(_resume_cli)
 
 FIGURES_DIR = Path("figures/nguyen/images/4")
 CACHE_DIR = Path("artifacts/figures/papers/nguyen/4")
@@ -124,6 +138,10 @@ def train_series(
     seed: int,
     num_episodes: int,
     smoke: bool = False,
+    resume_path: Path | None = None,
+    start_episode: int | None = None,
+    checkpoint_path: Path | None = None,
+    checkpoint_interval: int = _resume_cli.DEFAULT_CHECKPOINT_INTERVAL,
 ) -> tuple[dict[str, Any], SNNConfig, DSQNTrainer, TrainResult]:
     if smoke:
         cfg = SNNConfig(seed=seed).for_smoke(episodes=min(5, num_episodes), max_steps=8)
@@ -132,10 +150,30 @@ def train_series(
 
     env = NguyenEnvAdapter(config=cfg)
     try:
-        dsqn = DSQN(cfg)
-        buffer = ReplayBuffer(cfg, seed=cfg.seed)
-        trainer = DSQNTrainer(dsqn, buffer, cfg)
-        result = trainer.train_episodes(env)
+        initial_result: TrainResult | None = None
+        resume_start = 0
+        if resume_path is not None:
+            payload = load_checkpoint(resume_path, map_location=cfg.device)
+            metrics_path = resume_path.with_suffix(".metrics.json")
+            trainer, resume_start = resume_dsqn_trainer(
+                payload,
+                config=cfg,
+                metrics_path=metrics_path,
+                start_episode=start_episode,
+            )
+            initial_result = train_result_from_payload(payload, dsqn=trainer.dsqn, config=cfg)
+        else:
+            dsqn = DSQN(cfg)
+            buffer = ReplayBuffer(cfg, seed=cfg.seed)
+            trainer = DSQNTrainer(dsqn, buffer, cfg)
+
+        result = trainer.train_episodes(
+            env,
+            start_episode=resume_start,
+            checkpoint_path=checkpoint_path,
+            checkpoint_interval=checkpoint_interval,
+            initial_result=initial_result,
+        )
         payload: dict[str, Any] = {
             "seed": cfg.seed,
             "num_episodes": cfg.num_episodes,
@@ -321,6 +359,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--no-update-docs", action="store_true")
+    _resume_cli.add_training_resume_args(parser)
     args = parser.parse_args(argv)
 
     if args.out is None:
@@ -339,13 +378,18 @@ def main(argv: list[str] | None = None) -> int:
         max_steps = int(series.get("max_episode_steps", 25))
     else:
         print(
-            f"training DSQN seed={args.seed} episodes={args.episodes} smoke={args.smoke}",
+            f"training DSQN seed={args.seed} episodes={args.episodes} smoke={args.smoke} "
+            f"resume={args.resume}",
             flush=True,
         )
         series, cfg, trainer, train_result = train_series(
             seed=args.seed,
             num_episodes=args.episodes,
             smoke=args.smoke,
+            resume_path=args.resume,
+            start_episode=args.start_episode,
+            checkpoint_path=args.checkpoint,
+            checkpoint_interval=args.checkpoint_interval,
         )
         write_json(args.series, series)
         max_steps = cfg.max_episode_steps
@@ -355,7 +399,9 @@ def main(argv: list[str] | None = None) -> int:
                 dsqn=trainer.dsqn,
                 config=cfg,
                 optimizer=trainer.optimizer,
+                trainer=trainer,
                 extra={
+                    "completed_episodes": len(series["episode_rewards"]),
                     "episode_rewards": series["episode_rewards"],
                     "episode_lengths": series["episode_lengths"],
                     "episode_spike_totals": series.get("episode_spike_totals", []),

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -70,3 +71,29 @@ class ReplayBuffer:
             next_state=self._next_states[indices],
             dw=self._dw[indices],
         )
+
+    def state_dict(self) -> dict[str, Any]:
+        return {
+            "states": self._states.copy(),
+            "next_states": self._next_states.copy(),
+            "actions": self._actions.copy(),
+            "logits": self._logits.copy(),
+            "rewards": self._rewards.copy(),
+            "r_hat": self._r_hat.copy(),
+            "dw": self._dw.copy(),
+            "pos": int(self._pos),
+            "size": int(self._size),
+            "rng_state": self._rng.bit_generator.state,
+        }
+
+    def load_state_dict(self, state: dict[str, Any]) -> None:
+        self._states[:] = np.asarray(state["states"], dtype=np.float32)
+        self._next_states[:] = np.asarray(state["next_states"], dtype=np.float32)
+        self._actions[:] = np.asarray(state["actions"], dtype=np.int64)
+        self._logits[:] = np.asarray(state["logits"], dtype=np.float32)
+        self._rewards[:] = np.asarray(state["rewards"], dtype=np.float32)
+        self._r_hat[:] = np.asarray(state["r_hat"], dtype=np.float32)
+        self._dw[:] = np.asarray(state["dw"], dtype=np.float32)
+        self._pos = int(state["pos"])
+        self._size = int(state["size"])
+        self._rng.bit_generator.state = state["rng_state"]
