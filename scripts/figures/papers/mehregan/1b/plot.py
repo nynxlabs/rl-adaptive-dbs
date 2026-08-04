@@ -12,6 +12,8 @@ By default, PSD curves are averaged over eval seeds 0–9 to smooth single-draw 
 
 Run:
   uv run python scripts/figures/papers/mehregan/1b/plot.py
+
+Plant PSD only — no RL training; checkpoint resume is not applicable.
   uv run python scripts/figures/papers/mehregan/1b/plot.py --plot-only --y-max 90
   uv run python scripts/figures/papers/mehregan/1b/plot.py --seeds 0,1,7,42,99
 """

@@ -90,6 +90,12 @@ assert _spec and _spec.loader
 _figure_promote = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_figure_promote)
 
+_RESUME_CLI = Path(__file__).resolve().parents[2] / "resume_cli.py"
+_resume_spec = importlib.util.spec_from_file_location("figure_resume_cli", _RESUME_CLI)
+assert _resume_spec and _resume_spec.loader
+_resume_cli = importlib.util.module_from_spec(_resume_spec)
+_resume_spec.loader.exec_module(_resume_cli)
+
 FIGURES_DIR = Path("figures/mehregan/images/6b")
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/6b")
 FIG5B_CACHE = Path("artifacts/figures/papers/mehregan/5b")
@@ -323,6 +329,9 @@ def _train_qat_only(
     qat_path: Path,
     fp32_path: Path,
     skip_regular: bool = SKIP_REGULAR,
+    resume_path: Path | None = None,
+    start_episode: int | None = None,
+    checkpoint_interval: int = _resume_cli.DEFAULT_CHECKPOINT_INTERVAL,
 ) -> dict[str, Any]:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     meta: dict[str, Any] = {"seed": seed, "training": {}}
@@ -358,7 +367,15 @@ def _train_qat_only(
                 flush=True,
             )
             fp32_actor, _ = load_actor(fp32_path)
-            qat_result = train_ddpg(env, cfg, actor=fp32_actor)
+            qat_result = train_ddpg(
+                env,
+                cfg,
+                actor=fp32_actor,
+                checkpoint_path=str(qat_path),
+                resume_path=str(resume_path) if resume_path is not None else None,
+                start_episode=start_episode,
+                checkpoint_interval=checkpoint_interval,
+            )
             qat_mode = "paper_10ep"
         save_checkpoint(
             qat_path,
@@ -397,6 +414,9 @@ def _train_fp32_standalone(
     seed: int,
     fp32_path: Path,
     skip_regular: bool = SKIP_REGULAR,
+    resume_path: Path | None = None,
+    start_episode: int | None = None,
+    checkpoint_interval: int = _resume_cli.DEFAULT_CHECKPOINT_INTERVAL,
 ) -> dict[str, Any]:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     print(
@@ -410,6 +430,9 @@ def _train_fp32_standalone(
             env,
             _fp32_config(seed=seed),
             checkpoint_path=fp32_path,
+            resume_path=resume_path,
+            start_episode=start_episode,
+            checkpoint_interval=checkpoint_interval,
         )
     finally:
         env.close()
@@ -1260,6 +1283,13 @@ def main() -> int:
         help="QAT checkpoint (default: cache qat_burst_30hz.pt)",
     )
     parser.add_argument(
+        "--qat-resume",
+        type=Path,
+        default=None,
+        help="Resume QAT training from this checkpoint (default: fresh QAT train)",
+    )
+    _resume_cli.add_training_resume_args(parser)
+    parser.add_argument(
         "--train-fp32",
         action="store_true",
         help="Standalone fp32 train (legacy; prefer Fig 5b --train)",
@@ -1328,6 +1358,9 @@ def main() -> int:
                     seed=args.seed,
                     fp32_path=fp32_ckpt,
                     skip_regular=skip_regular,
+                    resume_path=args.resume,
+                    start_episode=args.start_episode,
+                    checkpoint_interval=args.checkpoint_interval,
                 )
             elif not fp32_ckpt.exists():
                 print(
@@ -1343,6 +1376,9 @@ def main() -> int:
                     qat_path=qat_ckpt,
                     fp32_path=fp32_ckpt,
                     skip_regular=skip_regular,
+                    resume_path=args.qat_resume,
+                    start_episode=args.start_episode,
+                    checkpoint_interval=args.checkpoint_interval,
                 )
                 train_meta = {**train_meta, **qat_meta}
         elif not fp32_ckpt.exists():
@@ -1357,6 +1393,9 @@ def main() -> int:
                 qat_path=qat_ckpt,
                 fp32_path=fp32_ckpt,
                 skip_regular=skip_regular,
+                resume_path=args.qat_resume,
+                start_episode=args.start_episode,
+                checkpoint_interval=args.checkpoint_interval,
             )
             train_meta = {**train_meta, **qat_meta}
 

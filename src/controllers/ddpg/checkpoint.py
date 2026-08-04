@@ -9,8 +9,14 @@ from typing import Any
 import torch
 import torch.nn as nn
 
+from controllers.common.resume import (
+    DDPG_MATERIAL_FIELDS,
+    config_to_dict,
+    infer_completed_episodes,
+    validate_resume_config_fields,
+)
 from controllers.ddpg.config import DDPGConfig
-from controllers.ddpg.networks import Actor
+from controllers.ddpg.networks import Actor, Critic
 from controllers.ddpg.quantization import QATActor
 
 
@@ -38,6 +44,7 @@ def save_checkpoint(
     n_actions: int,
     policy: nn.Module | None = None,
     critic: nn.Module | None = None,
+    trainer: Any | None = None,
     extra: dict[str, Any] | None = None,
 ) -> Path:
     """Persist actor weights and training config for ``evaluate`` / resume."""
@@ -55,6 +62,26 @@ def save_checkpoint(
         payload["qat_state_dict"] = policy.state_dict()
     if critic is not None:
         payload["critic_state_dict"] = critic.state_dict()
+    if trainer is not None:
+        payload["actor_target_state_dict"] = trainer.actor_target.state_dict()
+        payload["critic_target_state_dict"] = trainer.critic_target.state_dict()
+        payload["buffer_state_dict"] = trainer.buffer.state_dict()
+        if trainer.actor_optimizer is not None:
+            payload["actor_optimizer_state_dict"] = trainer.actor_optimizer.state_dict()
+        if trainer.critic_optimizer is not None:
+            payload["critic_optimizer_state_dict"] = trainer.critic_optimizer.state_dict()
+        payload["trainer_state"] = {
+            "env_step": int(trainer._env_step),
+            "warmup_steps_done": int(trainer._warmup_steps_done),
+            "reward_running_mean": float(trainer._reward_running_mean),
+            "reward_running_var": float(trainer._reward_running_var),
+            "reward_count": int(trainer._reward_count),
+            "obs_count": int(trainer._obs_count),
+            "obs_mean": trainer._obs_mean.copy(),
+            "obs_m2": trainer._obs_m2.copy(),
+            "episode_rewards": list(trainer.metrics.episode_rewards),
+            "episode_steps": list(trainer.metrics.episode_steps),
+        }
     if extra:
         payload["extra"] = extra
     torch.save(payload, out)
@@ -94,3 +121,46 @@ def qat_state_dict_from_checkpoint(payload: dict[str, Any]) -> dict[str, torch.T
     if state is None:
         return None
     return state
+
+
+def validate_resume_config(
+    saved_config: DDPGConfig,
+    active_config: DDPGConfig,
+    *,
+    resume_start: int = 0,
+) -> None:
+    validate_resume_config_fields(
+        config_to_dict(saved_config),
+        config_to_dict(active_config),
+        DDPG_MATERIAL_FIELDS,
+        label="DDPGConfig",
+        resume_start=resume_start,
+    )
+
+
+def infer_ddpg_start_episode(
+    payload: dict[str, Any],
+    *,
+    metrics_path: Path | None = None,
+    start_episode: int | None = None,
+) -> int:
+    trainer_state = payload.get("trainer_state")
+    if isinstance(trainer_state, dict) and "episode_rewards" in trainer_state:
+        wrapped = {"extra": {"episode_rewards": trainer_state["episode_rewards"]}}
+        return infer_completed_episodes(
+            wrapped,
+            metrics_path=metrics_path,
+            start_episode=start_episode,
+        )
+    extra = payload.get("extra")
+    if isinstance(extra, dict) and "episode_rewards" in extra:
+        return infer_completed_episodes(
+            payload,
+            metrics_path=metrics_path,
+            start_episode=start_episode,
+        )
+    return infer_completed_episodes(
+        payload,
+        metrics_path=metrics_path,
+        start_episode=start_episode,
+    )

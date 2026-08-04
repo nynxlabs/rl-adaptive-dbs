@@ -27,6 +27,12 @@ assert _spec and _spec.loader
 _figure_promote = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_figure_promote)
 
+_RESUME_CLI = Path(__file__).resolve().parents[2] / "resume_cli.py"
+_resume_spec = importlib.util.spec_from_file_location("figure_resume_cli", _RESUME_CLI)
+assert _resume_spec and _resume_spec.loader
+_resume_cli = importlib.util.module_from_spec(_resume_spec)
+_resume_spec.loader.exec_module(_resume_cli)
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -220,15 +226,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, default=None)
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--no-update-docs", action="store_true")
+    _resume_cli.add_training_resume_args(parser)
     args = parser.parse_args(argv)
 
     if args.refresh_train:
+        fig4_argv: list[str] = []
+        if args.resume is not None:
+            fig4_argv.extend(["--resume", str(args.resume)])
+        if args.start_episode is not None:
+            fig4_argv.extend(["--start-episode", str(args.start_episode)])
+        fig4_argv.extend(["--checkpoint-interval", str(args.checkpoint_interval)])
         fig4_path = Path(__file__).resolve().parent / "4" / "plot.py"
         spec = importlib.util.spec_from_file_location("nguyen_fig4_plot", fig4_path)
         assert spec and spec.loader
         fig4_mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(fig4_mod)
-        rc = int(fig4_mod.main())
+        rc = int(fig4_mod.main(fig4_argv))
         if rc != 0:
             return rc
 

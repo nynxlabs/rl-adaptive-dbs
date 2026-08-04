@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Ravivarapu Fig 4b — training reward vs episode (paired with Fig 4a).
 
+Training and checkpoint resume live in Fig 4a ``plot.py`` (``--resume``, periodic
+checkpoints). This panel replots cached 4a metrics only.
+
 Run:
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4b/plot.py
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4b/plot.py --plot-only

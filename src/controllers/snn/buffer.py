@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -88,3 +89,27 @@ class ReplayBuffer:
             next_state=self._next_states[indices],
             done=self._done[indices],
         )
+
+    def state_dict(self) -> dict[str, Any]:
+        return {
+            "states": self._states.copy(),
+            "next_states": self._next_states.copy(),
+            "actions": self._actions.copy(),
+            "rewards": self._rewards.copy(),
+            "done": self._done.copy(),
+            "pos": int(self._pos),
+            "size": int(self._size),
+            "since_update": int(self._since_update),
+            "rng_state": self._rng.bit_generator.state,
+        }
+
+    def load_state_dict(self, state: dict[str, Any]) -> None:
+        self._states[:] = np.asarray(state["states"], dtype=np.float32)
+        self._next_states[:] = np.asarray(state["next_states"], dtype=np.float32)
+        self._actions[:] = np.asarray(state["actions"], dtype=np.int64)
+        self._rewards[:] = np.asarray(state["rewards"], dtype=np.float32)
+        self._done[:] = np.asarray(state["done"], dtype=np.bool_)
+        self._pos = int(state["pos"])
+        self._size = int(state["size"])
+        self._since_update = int(state.get("since_update", 0))
+        self._rng.bit_generator.state = state["rng_state"]
