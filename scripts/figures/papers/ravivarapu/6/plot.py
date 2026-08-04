@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Ravivarapu Fig 6 — FP16 PTQ @ 50 Hz (10-step eval).
 
+Eval-only panel. Resume training from Fig 4a / Fig 7 checkpoints as above.
+
 Paper Fig. 6 has **four** series: Baseline, Baseline+PTQ(fp16), SEA-DBS,
 SEA-DBS+PTQ(fp16).
 """

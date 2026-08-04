@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Ravivarapu Fig 5a — inference @ 50 Hz carrier (post-train eval).
 
+Eval-only panel. Train or resume SEA-DBS weights via Fig 4a ``plot.py``
+(``--resume``) or Fig 7 ``plot.py`` (``--retrain``).
+
 Paper panel: 10 stimulation steps; SEA-DBS below Baseline; stronger than 30 Hz.
 """
 from __future__ import annotations

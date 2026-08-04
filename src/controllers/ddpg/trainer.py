@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 import torch
@@ -11,6 +12,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from controllers.ddpg.buffer import ReplayBuffer
+from controllers.ddpg.checkpoint import (
+    _config_from_checkpoint_payload,
+    infer_ddpg_start_episode,
+    load_checkpoint,
+    save_checkpoint,
+    validate_resume_config,
+)
 from controllers.ddpg.config import DDPGConfig
 from controllers.ddpg.quantization import unwrap_actor, wrap_actor_for_training
 from controllers.ddpg.networks import Actor, Critic, clone_module, hard_update, soft_update
@@ -110,6 +118,45 @@ class DDPGTrainer:
 
         # Critic warmup step counter
         self._warmup_steps_done = 0
+        self._env_step = 0
+        self._metrics = TrainMetrics()
+
+    @property
+    def metrics(self) -> TrainMetrics:
+        return self._metrics
+
+    def load_resume_state(self, payload: dict[str, Any]) -> None:
+        """Restore optimizer, buffer, targets, and running normalizers from checkpoint."""
+        if "critic_state_dict" in payload:
+            self.critic.load_state_dict(payload["critic_state_dict"])
+        if "actor_target_state_dict" in payload:
+            self.actor_target.load_state_dict(payload["actor_target_state_dict"])
+        if "critic_target_state_dict" in payload:
+            self.critic_target.load_state_dict(payload["critic_target_state_dict"])
+        if "buffer_state_dict" in payload:
+            self.buffer.load_state_dict(payload["buffer_state_dict"])
+        if "actor_optimizer_state_dict" in payload:
+            self.actor_optimizer.load_state_dict(payload["actor_optimizer_state_dict"])
+        if "critic_optimizer_state_dict" in payload:
+            self.critic_optimizer.load_state_dict(payload["critic_optimizer_state_dict"])
+
+        trainer_state = payload.get("trainer_state") or {}
+        self._env_step = int(trainer_state.get("env_step", 0))
+        self._warmup_steps_done = int(trainer_state.get("warmup_steps_done", 0))
+        self._reward_running_mean = float(trainer_state.get("reward_running_mean", 0.0))
+        self._reward_running_var = float(trainer_state.get("reward_running_var", 1.0))
+        self._reward_count = int(trainer_state.get("reward_count", 0))
+        self._obs_count = int(trainer_state.get("obs_count", 0))
+        if "obs_mean" in trainer_state:
+            self._obs_mean = np.asarray(trainer_state["obs_mean"], dtype=np.float64)
+        if "obs_m2" in trainer_state:
+            self._obs_m2 = np.asarray(trainer_state["obs_m2"], dtype=np.float64)
+        rewards = trainer_state.get("episode_rewards")
+        if isinstance(rewards, list):
+            self._metrics.episode_rewards = list(rewards)
+        steps = trainer_state.get("episode_steps")
+        if isinstance(steps, list):
+            self._metrics.episode_steps = list(steps)
 
     def _to_tensor(self, array: np.ndarray) -> torch.Tensor:
         return torch.as_tensor(array, device=self.device, dtype=torch.float32)
@@ -332,16 +379,27 @@ class DDPGTrainer:
                 print(f"warmup step {i + 1}/{steps}", flush=True)
         return steps
 
-    def train(self) -> TrainResult:
-        metrics = TrainMetrics()
+    def train(
+        self,
+        *,
+        start_episode: int = 0,
+        checkpoint_path: str | None = None,
+        checkpoint_interval: int = 50,
+        on_checkpoint: Callable[[int, TrainResult], None] | None = None,
+    ) -> TrainResult:
+        metrics = self._metrics
         torch.manual_seed(self.config.seed)
         np.random.seed(self.config.seed)
 
-        # Phase 1: random warmup to fill buffer with diverse transitions
-        warmup_steps = self._random_warmup()
-        env_step = warmup_steps
+        if start_episode == 0:
+            warmup_steps = self._random_warmup()
+            self._env_step = warmup_steps
+        else:
+            warmup_steps = 0
 
-        for episode in range(self.config.num_episodes):
+        env_step = self._env_step
+
+        for episode in range(start_episode, self.config.num_episodes):
             state, _info = self.env.reset(seed=self.config.seed + episode)
             self._update_obs_stats(state)
             episode_reward = float(_info.get("reward", 0.0))
@@ -383,6 +441,32 @@ class DDPGTrainer:
 
             metrics.episode_rewards.append(episode_reward)
             metrics.episode_steps.append(steps)
+            completed = episode + 1
+            self._env_step = env_step
+            if checkpoint_path is not None and checkpoint_interval > 0:
+                if completed % checkpoint_interval == 0 or completed == self.config.num_episodes:
+                    save_checkpoint(
+                        checkpoint_path,
+                        actor=unwrap_actor(self.actor),
+                        policy=self.actor,
+                        config=self.config,
+                        state_length=int(self.env.observation_space.shape[0]),
+                        n_actions=int(self.env.action_space.n),
+                        critic=self.critic,
+                        trainer=self,
+                        extra={"completed_episodes": completed},
+                    )
+                    if on_checkpoint is not None:
+                        on_checkpoint(
+                            completed,
+                            TrainResult(
+                                actor=unwrap_actor(self.actor),
+                                policy=self.actor,
+                                critic=self.critic,
+                                metrics=metrics,
+                                config=self.config,
+                            ),
+                        )
             if self.config.log_episodes:
                 print(
                     f"episode {episode + 1}/{self.config.num_episodes} "
@@ -402,9 +486,47 @@ class DDPGTrainer:
 def train_ddpg(
     env: MehreganEnv,
     config: DDPGConfig | None = None,
+    *,
+    resume_path: str | None = None,
+    start_episode: int | None = None,
+    checkpoint_path: str | None = None,
+    checkpoint_interval: int = 50,
     **kwargs: Any,
 ) -> TrainResult:
     """Train DDPG on ``env`` and return the trained actor."""
     cfg = config or DDPGConfig()
     trainer = DDPGTrainer(env, cfg, **kwargs)
-    return trainer.train()
+
+    resume_start = 0
+    if resume_path is not None:
+        payload = load_checkpoint(resume_path, device=cfg.device)
+        saved_cfg = _config_from_checkpoint_payload(payload["ddpg_config"])
+        metrics_path = Path(resume_path).with_suffix(".metrics.json")
+        resume_start = infer_ddpg_start_episode(
+            payload,
+            metrics_path=metrics_path,
+            start_episode=start_episode,
+        )
+        validate_resume_config(saved_cfg, cfg.with_variant_defaults(), resume_start=resume_start)
+        unwrap_actor(trainer.actor).load_state_dict(payload["actor_state_dict"])
+        trainer.load_resume_state(payload)
+
+    ckpt_during_train = checkpoint_path if checkpoint_path is not None else None
+    result = trainer.train(
+        start_episode=resume_start,
+        checkpoint_path=ckpt_during_train,
+        checkpoint_interval=checkpoint_interval,
+    )
+    if checkpoint_path is not None:
+        save_checkpoint(
+            checkpoint_path,
+            actor=result.actor,
+            policy=result.policy,
+            config=result.config,
+            state_length=int(env.observation_space.shape[0]),
+            n_actions=int(env.action_space.n),
+            critic=result.critic,
+            trainer=trainer,
+            extra={"completed_episodes": len(result.metrics.episode_rewards)},
+        )
+    return result

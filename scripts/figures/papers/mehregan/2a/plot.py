@@ -22,6 +22,8 @@ Run:
   uv run python scripts/figures/papers/mehregan/2a/plot.py --plot-only
   uv run python scripts/figures/papers/mehregan/2a/plot.py --sampling segment
   uv run python scripts/figures/papers/mehregan/2a/plot.py --no-update-docs  # skip figures/mehregan/replications.md refresh
+
+Plant efficacy simulation only — no RL training; checkpoint resume is not applicable.
 """
 from __future__ import annotations
 
