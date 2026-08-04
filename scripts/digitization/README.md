@@ -9,6 +9,7 @@ Multiple extraction routes, one output schema.
 |------|---------|
 | `schema.py` | thin series record: `n`, full `xy`, optional `color_rgba` (no convenience stats) |
 | `paper_gates.py` | **Mehregan Paper 1 gate builders** — load refined JSON, x-window means, ordering / ratio gates wired from panel `plot.py` |
+| `nguyen_gates.py` | **Nguyen Paper 2 gate builders** — load ``curves_fig*.json``, x-window means / ratios for panels 3–7 |
 | `extract_pil.py` | **automated** color-mask tracing from a paper PNG (seconds, repeatable) |
 | `normalize_wpd.py` | **manual / HITL** WebPlotDigitizer export → same schema (WPD project JSON or CSV) |
 | `normalize_engauge.py` | **manual / HITL** Engauge Digitizer CSV → same schema |
@@ -25,8 +26,9 @@ Multiple extraction routes, one output schema.
 3. **normalize** the export into the shared schema (`normalize_wpd.py` /
    `normalize_engauge.py`).
 4. **compare / gate:** `compare_curves.py` (PIL vs WPD, …) and panel
-   `plot.py` gates via `paper_gates.py` against
-   `artifacts/figures/papers/mehregan/<panel>/paper_digitization/curves_wpd_refined*.json`.
+   `plot.py` gates via `paper_gates.py` (Mehregan) or `nguyen_gates.py`
+   (Nguyen) against normalized curves JSON under each paper's
+   ``paper_digitization/`` tree.
 
 **Gate anchors:** prefer a human-validated WPD (or Engauge) export. An
 automated PIL trace is a hypothesis, not ground truth. Paper figures are

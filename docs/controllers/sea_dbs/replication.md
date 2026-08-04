@@ -311,7 +311,7 @@ Fig. 5 compares **50 Hz** vs **30 Hz** carrier during inference; this is not a p
 
 $\beta_t = 0.35$ implies consistent scaling of $\bar{P}_\beta$ between observations and reward, as with Mehregan. **Fixed:** Eq. (7) reward shape. **Chosen (SEA-DBS adapter):** `observation_scale = 425` (not Mehregan's 1000). On the **100 ms** biomarker window, unstimulated raw $P_\beta \approx 196$; scale 1000 maps that to $\approx 0.20$ already below $\beta_t$ and removes learning pressure. Scale **425** maps the same raw onto the paper Fig 4a band ($\approx 0.46$) so Eq. (7) can teach. **`biomarker_window_s = 0.1`** per RL step for valid multitaper estimates (§5 convention).
 
-**Fig 4a gate tuning (v16):** v15 matched starts (ep1 ~0.41/0.45) but SEA-DBS collapsed in ~10 eps while Baseline declined gradually → steeper fail. Fix: (1) early band = first ~5% of episodes for drop math; (2) slower GS (`tau0=2`, `λ=2e-4`, `tau_min=0.12`, PM warmup 900) so paper stays high longer; (3) Baseline modest (`ε` 0.60→0.35, lower LRs). Still a real learning Baseline.
+**Fig 4a gate tuning (v20):** Removed v18’s **40-episode buffer freeze** (caused ep~45 cliff). Gradual fade from ep 1: `min_buffer_size=128`, `update_frequency=3`, slow GS (`tau0=4`, `λ=3.5e-5`, `tau_min=0.32`), low LRs, long PM warmup (3600 steps), higher `actor_no_stim_bias`. v18 passed early digitization gates but failed `dig_late_gap` / `dig_late_early_ratio_sea` (SEA over-suppressed late).
 
 ---
 
