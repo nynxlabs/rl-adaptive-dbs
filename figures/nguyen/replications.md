@@ -9,7 +9,7 @@ Figs **1–2** are schematics (CBGT circuit diagram; closed-loop block diagram) 
 | Panel | Script | Spec | Gates | Status |
 |-------|--------|------|-------|--------|
 | Fig 3 — GPi α–β distribution (PD Off vs PD On) | `scripts/figures/papers/nguyen/3/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §3 | Set (§ below) | Pass |
-| Fig 4 — training reward + episode length | `scripts/figures/papers/nguyen/4/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §6.5 | Set (§ below) | Pass |
+| Fig 4 — training reward + episode length | `scripts/figures/papers/nguyen/4/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §6.5 | Set (§ below) | Open |
 | Fig 5 — CBGT spikes + DBS energy over training | `scripts/figures/papers/nguyen/5/plot.py` (planned) | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Open |
 | Fig 6 — α–β + DBS params over training | `scripts/figures/papers/nguyen/6/plot.py` (planned) | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Open |
 | Fig 7 — 50-episode eval (25 steps) | `scripts/figures/papers/nguyen/7/plot.py` (planned) | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Open |
@@ -94,15 +94,15 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes (§IV
 
 ### Replication
 
-![Replication Fig 4](images/4/training_reward_length_v10.png)
+![Replication Fig 4](images/4/training_reward_length_v14.png)
 
 <!-- caption-4:start -->
-**Caption:** DSQN train 500 ep, seed=0; late_reward=349041, late_len=10.6; pass=True (v10)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=179880, late_len=25.0; pass=False (v14)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4:end -->
 
-**Status:** Pass — 500-ep seed 0 (`training_reward_length_v10.png`); late_len=10.6, late_reward≈+349k; all automated gates true. Findings: [docs/figures/nguyen/4.md](../../docs/figures/nguyen/4.md).
+**Status:** Open — see manifest gates (`training_reward_length_v14.png`).
 
 **Qualitative gates (paper Fig 4 — exit criteria):**
 
