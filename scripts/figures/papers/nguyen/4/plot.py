@@ -33,6 +33,11 @@ from typing import Any
 
 os.environ.setdefault("MPLBACKEND", "Agg")
 
+_DIG = Path(__file__).resolve().parents[4] / "digitization"
+if str(_DIG) not in sys.path:
+    sys.path.insert(0, str(_DIG))
+from nguyen_gates import attach_digitization, fig4_training_gates  # noqa: E402
+
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
 _spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
 assert _spec and _spec.loader
@@ -141,6 +146,9 @@ def train_series(
             "episode_energies": result.episode_energies,
             "episode_alpha_beta_means": result.episode_alpha_beta_means,
             "episode_early_stops": result.episode_early_stops,
+            "episode_amplitudes": result.episode_amplitudes,
+            "episode_frequencies": result.episode_frequencies,
+            "episode_pulse_widths": result.episode_pulse_widths,
             "update_count": result.update_count,
             "smoke": smoke,
             "config": {
@@ -215,7 +223,10 @@ def evaluate_gates(
     if series.get("smoke"):
         gates["pass"] = True
         gates["smoke_override"] = True
-    return gates
+        return gates
+
+    dig = fig4_training_gates(rewards, lengths, max_episode_steps=max_episode_steps)
+    return attach_digitization(gates, dig)
 
 
 def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -> dict[str, Any]:
