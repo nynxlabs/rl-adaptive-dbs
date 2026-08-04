@@ -6,7 +6,7 @@ import json
 from copy import deepcopy
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 import torch
@@ -14,7 +14,12 @@ import torch.nn.functional as F
 
 from controllers.sea_dbs.adapter import SEA_DBSEnvAdapter
 from controllers.sea_dbs.buffer import ReplayBuffer, Transition
-from controllers.sea_dbs.checkpoint import save_checkpoint
+from controllers.sea_dbs.checkpoint import (
+    infer_sea_dbs_start_episode,
+    load_checkpoint,
+    save_checkpoint,
+    validate_resume_config,
+)
 from controllers.sea_dbs.config import SEADBSConfig
 from controllers.sea_dbs.networks import (
     Actor,
@@ -238,7 +243,48 @@ class SEA_DBSTrainer:
     def metrics(self) -> TrainMetrics:
         return self._metrics
 
-    def train_episodes(self) -> TrainResult:
+    def load_resume_state(self, payload: dict[str, Any]) -> None:
+        if "actor_target_state_dict" in payload:
+            self.actor_target.load_state_dict(payload["actor_target_state_dict"])
+        if "critic_target_state_dict" in payload:
+            self.critic_target.load_state_dict(payload["critic_target_state_dict"])
+        if "buffer_state_dict" in payload:
+            self.buffer.load_state_dict(payload["buffer_state_dict"])
+        if "actor_optimizer_state_dict" in payload:
+            self.actor_optimizer.load_state_dict(payload["actor_optimizer_state_dict"])
+        if "critic_optimizer_state_dict" in payload:
+            self.critic_optimizer.load_state_dict(payload["critic_optimizer_state_dict"])
+        if self.predictive_model is not None and "predictive_state_dict" in payload:
+            self.predictive_model.load_state_dict(payload["predictive_state_dict"])
+        if self.pred_optimizer is not None and "pred_optimizer_state_dict" in payload:
+            self.pred_optimizer.load_state_dict(payload["pred_optimizer_state_dict"])
+
+        trainer_state = payload.get("trainer_state") or {}
+        self._total_steps = int(trainer_state.get("total_steps", 0))
+        self._update_count = int(trainer_state.get("update_count", 0))
+        if "rng_state" in trainer_state:
+            self._rng.bit_generator.state = trainer_state["rng_state"]
+        rewards = trainer_state.get("episode_rewards")
+        if not isinstance(rewards, list):
+            extra = payload.get("extra") if isinstance(payload.get("extra"), dict) else {}
+            rewards = extra.get("episode_rewards")
+        if isinstance(rewards, list):
+            self._metrics.episode_rewards = list(rewards)
+        psd = trainer_state.get("episode_psd")
+        if not isinstance(psd, list):
+            extra = payload.get("extra") if isinstance(payload.get("extra"), dict) else {}
+            psd = extra.get("episode_psd")
+        if isinstance(psd, list):
+            self._metrics.episode_psd = list(psd)
+
+    def train_episodes(
+        self,
+        *,
+        start_episode: int = 0,
+        checkpoint_path: str | Path | None = None,
+        checkpoint_interval: int = 50,
+        on_checkpoint: Callable[[int, TrainResult], None] | None = None,
+    ) -> TrainResult:
         cfg = self.config
         result = TrainResult(
             config=cfg,
@@ -247,8 +293,11 @@ class SEA_DBSTrainer:
             predictive_model=self.predictive_model,
             metrics=self.metrics,
         )
+        if start_episode > 0:
+            result.episode_rewards = list(self._metrics.episode_rewards)
+            result.episode_psd = list(self._metrics.episode_psd)
 
-        for episode in range(cfg.num_episodes):
+        for episode in range(start_episode, cfg.num_episodes):
             ep_seed = cfg.seed if cfg.fixed_episode_seed else cfg.seed + episode
             state, info = self.env.reset(seed=ep_seed)
             episode_reward = 0.0
@@ -300,6 +349,25 @@ class SEA_DBSTrainer:
             result.episode_psd.append(episode_psd_val)
             self.metrics.episode_rewards.append(episode_reward)
             self.metrics.episode_psd.append(episode_psd_val)
+            completed = episode + 1
+            if checkpoint_path is not None and checkpoint_interval > 0:
+                if completed % checkpoint_interval == 0 or completed == cfg.num_episodes:
+                    save_checkpoint(
+                        checkpoint_path,
+                        actor=self.actor,
+                        critic=self.critic,
+                        config=cfg,
+                        predictive_model=self.predictive_model,
+                        trainer=self,
+                        extra={
+                            "completed_episodes": completed,
+                            "episode_rewards": list(result.episode_rewards),
+                            "episode_psd": list(result.episode_psd),
+                            "update_count": self._update_count,
+                        },
+                    )
+                    if on_checkpoint is not None:
+                        on_checkpoint(completed, result)
 
             if cfg.log_episodes:
                 print(
@@ -334,6 +402,9 @@ def train_sea_dbs(
     config: SEADBSConfig | None = None,
     *,
     checkpoint_path: str | Path | None = None,
+    resume_path: str | Path | None = None,
+    start_episode: int | None = None,
+    checkpoint_interval: int = 50,
     plant: Any | None = None,
 ) -> TrainResult:
     """Train SEA-DBS on ``SEA_DBSEnvAdapter`` and optionally save checkpoint."""
@@ -343,7 +414,28 @@ def train_sea_dbs(
         env = SEA_DBSEnvAdapter(plant=plant, config=cfg)
     try:
         trainer = SEA_DBSTrainer(env, cfg)
-        result = trainer.train_episodes()
+        resume_start = 0
+        if resume_path is not None:
+            payload = load_checkpoint(resume_path, device=cfg.device)
+            saved_raw = payload["sea_dbs_config"]
+            saved_cfg = SEADBSConfig(**saved_raw)
+            metrics_path = Path(resume_path).with_suffix(".metrics.json")
+            resume_start = infer_sea_dbs_start_episode(
+                payload,
+                metrics_path=metrics_path,
+                start_episode=start_episode,
+            )
+            validate_resume_config(saved_cfg, cfg, resume_start=resume_start)
+            trainer.actor.load_state_dict(payload["actor_state_dict"])
+            trainer.critic.load_state_dict(payload["critic_state_dict"])
+            trainer.load_resume_state(payload)
+
+        ckpt_during_train = checkpoint_path if checkpoint_path is not None else None
+        result = trainer.train_episodes(
+            start_episode=resume_start,
+            checkpoint_path=ckpt_during_train,
+            checkpoint_interval=checkpoint_interval,
+        )
         if checkpoint_path is not None:
             save_checkpoint(
                 checkpoint_path,
@@ -351,7 +443,9 @@ def train_sea_dbs(
                 critic=result.critic,
                 config=cfg,
                 predictive_model=result.predictive_model,
+                trainer=trainer,
                 extra={
+                    "completed_episodes": len(result.episode_rewards),
                     "episode_rewards": result.episode_rewards,
                     "episode_psd": result.episode_psd,
                     "update_count": result.update_count,

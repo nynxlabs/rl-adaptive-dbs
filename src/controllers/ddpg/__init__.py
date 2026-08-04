@@ -84,6 +84,9 @@ def train(
     config: DDPGConfig | None = None,
     *,
     checkpoint_path: str | Path | None = None,
+    resume_path: str | Path | None = None,
+    start_episode: int | None = None,
+    checkpoint_interval: int = 50,
     **kwargs: Any,
 ) -> TrainResult:
     """Train DDPG on ``env`` (default: :func:`default_train_env`) and optionally save a checkpoint."""
@@ -91,18 +94,15 @@ def train(
     if env is None:
         env = default_train_env(cfg)
 
-    result = train_ddpg(env, cfg, **kwargs)
-    if checkpoint_path is not None:
-        cfg = result.config
-        save_checkpoint(
-            checkpoint_path,
-            actor=result.actor,
-            policy=result.policy,
-            config=cfg,
-            state_length=int(env.observation_space.shape[0]),
-            n_actions=int(env.action_space.n),
-            critic=result.critic,
-        )
+    result = train_ddpg(
+        env,
+        cfg,
+        resume_path=str(resume_path) if resume_path is not None else None,
+        start_episode=start_episode,
+        checkpoint_path=str(checkpoint_path) if checkpoint_path is not None else None,
+        checkpoint_interval=checkpoint_interval,
+        **kwargs,
+    )
     return result
 
 

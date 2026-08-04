@@ -41,7 +41,13 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 
-from controllers.ddpg.checkpoint import save_checkpoint
+from controllers.ddpg.checkpoint import (
+    _config_from_checkpoint_payload,
+    infer_ddpg_start_episode,
+    load_checkpoint,
+    save_checkpoint,
+    validate_resume_config,
+)
 from controllers.ddpg.config import DDPGConfig, fig4a_ddpg_config
 from controllers.ddpg.quantization import unwrap_actor
 from controllers.ddpg.trainer import DDPGTrainer
@@ -61,6 +67,12 @@ _spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
 assert _spec and _spec.loader
 _figure_promote = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_figure_promote)
+
+_RESUME_CLI = Path(__file__).resolve().parents[2] / "resume_cli.py"
+_resume_spec = importlib.util.spec_from_file_location("figure_resume_cli", _RESUME_CLI)
+assert _resume_spec and _resume_spec.loader
+_resume_cli = importlib.util.module_from_spec(_resume_spec)
+_resume_spec.loader.exec_module(_resume_cli)
 
 FIGURES_DIR = Path("figures/mehregan/images/4a")
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/4a")
@@ -145,6 +157,12 @@ def _train_trace(
     logit_noise_std: float = 0.1,
     entropy_coeff: float = 0.01,
     critic_action_input: str = "one_hot",
+    resume_path: Path | None = None,
+    start_episode: int | None = None,
+    checkpoint_path: Path | None = None,
+    checkpoint_interval: int = _resume_cli.DEFAULT_CHECKPOINT_INTERVAL,
+    prior_beta_trace: list[float] | None = None,
+    prior_actions: list[int] | None = None,
 ) -> tuple[list[float], list[int], list[float], dict[str, Any], DDPGTrainer, DDPGConfig]:
     """Train and return beta_norm per step, actions, episode rewards, and trainer."""
     config = fig4a_ddpg_config(
@@ -160,12 +178,31 @@ def _train_trace(
         critic_action_input=critic_action_input,
     )
     trainer = DDPGTrainer(env, config)
-    beta_trace: list[float] = []
-    actions: list[int] = []
-    episode_rewards: list[float] = []
-    env_step = trainer._random_warmup()
+    beta_trace: list[float] = list(prior_beta_trace or [])
+    actions: list[int] = list(prior_actions or [])
+    episode_rewards: list[float] = list(trainer.metrics.episode_rewards)
+    resume_start = 0
 
-    for episode in range(num_episodes):
+    if resume_path is not None:
+        payload = load_checkpoint(resume_path, device=config.device)
+        saved_cfg = _config_from_checkpoint_payload(payload["ddpg_config"])
+        metrics_path = resume_path.with_suffix(".metrics.json")
+        resume_start = infer_ddpg_start_episode(
+            payload,
+            metrics_path=metrics_path,
+            start_episode=start_episode,
+        )
+        validate_resume_config(saved_cfg, config, resume_start=resume_start)
+        unwrap_actor(trainer.actor).load_state_dict(payload["actor_state_dict"])
+        trainer.load_resume_state(payload)
+        episode_rewards = list(trainer.metrics.episode_rewards)
+
+    if resume_start == 0:
+        env_step = trainer._random_warmup()
+    else:
+        env_step = trainer._env_step
+
+    for episode in range(resume_start, num_episodes):
         state, info0 = env.reset(seed=seed + episode)
         trainer._update_obs_stats(state)
         episode_reward = float(info0.get("reward", 0.0))
@@ -193,6 +230,22 @@ def _train_trace(
                 for _ in range(config.update_frequency):
                     trainer._update_step()
         episode_rewards.append(episode_reward)
+        trainer._env_step = env_step
+        completed = episode + 1
+        if checkpoint_path is not None and checkpoint_interval > 0:
+            if completed % checkpoint_interval == 0 or completed == num_episodes:
+                _save_training_checkpoint(
+                    trainer=trainer,
+                    config=config,
+                    env=env,
+                    path=checkpoint_path,
+                    extra={
+                        "completed_episodes": completed,
+                        "figure": "mehregan_fig4a",
+                        "seed": seed,
+                        "episode_rewards": episode_rewards,
+                    },
+                )
         print(
             f"episode {episode + 1}/{num_episodes} "
             f"reward={episode_reward:.2f} steps={STEPS_PER_EPISODE}",
@@ -236,6 +289,7 @@ def _save_training_checkpoint(
         n_actions=int(env.action_space.n),
         policy=trainer.actor,
         critic=trainer.critic,
+        trainer=trainer,
         extra=extra,
     )
     return path
@@ -493,6 +547,7 @@ def main() -> int:
         help="Rewrite the Fig 4a side-by-side checklist in replications/mehregan.md (off by default)",
     )
     parser.set_defaults(update_docs=True)
+    _resume_cli.add_training_resume_args(parser)
     args = parser.parse_args()
 
     if args.out is None:
@@ -518,6 +573,13 @@ def main() -> int:
             f"critic={args.critic_action_input}",
             flush=True,
         )
+        prior_beta: list[float] | None = None
+        prior_actions: list[int] | None = None
+        if args.resume is not None and args.series.exists():
+            prior_cache = json.loads(args.series.read_text())
+            prior_beta = list(prior_cache.get("beta_norm_trace", []))
+            prior_actions = list(prior_cache.get("actions", []))
+
         env, plant_cfg = _make_env(
             seed=args.seed,
             state_length=args.state_length,
@@ -538,6 +600,12 @@ def main() -> int:
                 logit_noise_std=args.logit_noise_std,
                 entropy_coeff=args.entropy_coeff,
                 critic_action_input=args.critic_action_input,
+                resume_path=args.resume,
+                start_episode=args.start_episode,
+                checkpoint_path=args.checkpoint,
+                checkpoint_interval=args.checkpoint_interval,
+                prior_beta_trace=prior_beta,
+                prior_actions=prior_actions,
             )
             )
             if not args.no_save_checkpoint and trainer is not None and train_config is not None:

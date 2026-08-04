@@ -8,6 +8,12 @@ from typing import Any
 
 import torch
 
+from controllers.common.resume import (
+    SEA_DBS_MATERIAL_FIELDS,
+    config_to_dict,
+    infer_completed_episodes,
+    validate_resume_config_fields,
+)
 from controllers.sea_dbs.config import SEADBSConfig
 from controllers.sea_dbs.networks import Actor, Critic, PredictiveModel
 
@@ -19,6 +25,7 @@ def save_checkpoint(
     critic: Critic,
     config: SEADBSConfig,
     predictive_model: PredictiveModel | None = None,
+    trainer: Any | None = None,
     extra: dict[str, Any] | None = None,
 ) -> Path:
     out = Path(path)
@@ -34,6 +41,21 @@ def save_checkpoint(
     }
     if predictive_model is not None:
         payload["predictive_state_dict"] = predictive_model.state_dict()
+    if trainer is not None:
+        payload["actor_target_state_dict"] = trainer.actor_target.state_dict()
+        payload["critic_target_state_dict"] = trainer.critic_target.state_dict()
+        payload["buffer_state_dict"] = trainer.buffer.state_dict()
+        payload["actor_optimizer_state_dict"] = trainer.actor_optimizer.state_dict()
+        payload["critic_optimizer_state_dict"] = trainer.critic_optimizer.state_dict()
+        if trainer.pred_optimizer is not None:
+            payload["pred_optimizer_state_dict"] = trainer.pred_optimizer.state_dict()
+        payload["trainer_state"] = {
+            "total_steps": int(trainer._total_steps),
+            "update_count": int(trainer._update_count),
+            "rng_state": trainer._rng.bit_generator.state,
+            "episode_rewards": list(trainer.metrics.episode_rewards),
+            "episode_psd": list(trainer.metrics.episode_psd),
+        }
     if extra:
         payload["extra"] = extra
     torch.save(payload, out)
@@ -60,3 +82,39 @@ def load_actor_from_payload(
     actor.to(device)
     actor.eval()
     return actor, config
+
+
+def validate_resume_config(
+    saved_config: SEADBSConfig,
+    active_config: SEADBSConfig,
+    *,
+    resume_start: int = 0,
+) -> None:
+    validate_resume_config_fields(
+        config_to_dict(saved_config),
+        config_to_dict(active_config),
+        SEA_DBS_MATERIAL_FIELDS,
+        label="SEADBSConfig",
+        resume_start=resume_start,
+    )
+
+
+def infer_sea_dbs_start_episode(
+    payload: dict[str, Any],
+    *,
+    metrics_path: Path | None = None,
+    start_episode: int | None = None,
+) -> int:
+    trainer_state = payload.get("trainer_state")
+    if isinstance(trainer_state, dict) and "episode_rewards" in trainer_state:
+        wrapped = {"extra": {"episode_rewards": trainer_state["episode_rewards"]}}
+        return infer_completed_episodes(
+            wrapped,
+            metrics_path=metrics_path,
+            start_episode=start_episode,
+        )
+    return infer_completed_episodes(
+        payload,
+        metrics_path=metrics_path,
+        start_episode=start_episode,
+    )
