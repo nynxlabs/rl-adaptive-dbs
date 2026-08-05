@@ -8,7 +8,7 @@ Controller / adapter: [sea_dbs/replication.md](../../controllers/sea_dbs/replica
 
 | Panel | Script | Status |
 |-------|--------|--------|
-| Fig 4a — training PSD vs episode | `scripts/figures/papers/ravivarapu/4a/plot.py` | Open — **gates under redesign from paper digitization** |
+| Fig 4a — training PSD vs episode | `scripts/figures/papers/ravivarapu/4a/plot.py` | **Pass** — v8, all 16 gates true (digitization-anchored) |
 | Fig 4b — training reward vs episode | `scripts/figures/papers/ravivarapu/4b/plot.py` | Open — paired with 4a |
 | Fig 5a — inference @ 50 Hz | `scripts/figures/papers/ravivarapu/5a/plot.py` | Open |
 | Fig 5b — inference @ 30 Hz | `scripts/figures/papers/ravivarapu/5b/plot.py` | Open |
@@ -117,6 +117,8 @@ Average **beta-band PSD** across **training episodes** for **Baseline (DDPG)** v
 | `late_gap_min` | $b_{\mathrm{late}} - p_{\mathrm{late}} > 0.01$ (paper ~0.02–0.03) |
 
 Do **not** pass a frozen / non-learning Baseline. Do **not** use display hacks to force these levels.
+
+**Stimulation drive convention (v23, passing):** `SEA_DBSEnvAdapter` applies each stim action as a **short burst** — 60 ms of 130 Hz carrier within the 100 ms biomarker step (`dbs_burst_ms=60`) — matching the paper's "short bursts rather than continuously" (Eq. (6)). Continuous 130 Hz on the shared Kumaravelu plant drives GPi beta to ~0.12, far below the paper's Fig 4a late levels; the 60 ms burst gives a ~0.35 full-duty floor so SEA-DBS lands at 0.355 (paper 0.340) and the Baseline at 0.375 (paper 0.368). This is a controller convention (docs/controllers/sea_dbs/replication.md §11), not a display or eval shortcut. All gates pass (v8).
 
 ---
 

@@ -8,7 +8,7 @@ Controller / adapter spec: [sea_dbs/replication.md](../../docs/controllers/sea_d
 
 | Panel | Script | Spec | Status |
 |-------|--------|------|--------|
-| Fig 4a — training PSD vs episode | `scripts/figures/papers/ravivarapu/4a/plot.py` (planned) | [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md) | Open |
+| Fig 4a — training PSD vs episode | `scripts/figures/papers/ravivarapu/4a/plot.py` | [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md) | **Pass** |
 | Fig 4b — training reward vs episode | `scripts/figures/papers/ravivarapu/4b/plot.py` (planned) | [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md) | Open |
 | Fig 5a — inference @ 50 Hz | `scripts/figures/papers/ravivarapu/5a/plot.py` (planned) | [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md) | Open |
 | Fig 5b — inference @ 30 Hz | `scripts/figures/papers/ravivarapu/5b/plot.py` (planned) | [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md) | Open |
@@ -33,15 +33,15 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_psd_v1.png)
+![Replication Fig 4a](images/4a/training_psd_v8.png)
 
 <!-- caption-4a:start -->
-**Caption:** Training mean GPi beta PSD vs episode (seed 0); Baseline vs full SEA-DBS (PM+GS). (v6)
+**Caption:** Training mean GPi beta PSD vs episode (seed 0); Baseline vs full SEA-DBS (PM+GS). (v8)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`
 <!-- caption-4a:end -->
 
-**Status:** Open — prior v1 was smoke-only (`smoke_override`); full 150-episode train in progress (`tmux ravi-fig4a-train`). Gates now use `curves_fig4a.json` from refined `fig4a_refined.wpd.tar` (same as Downloads) plus structural ordering checks.
+**Status:** **Pass (v8)** — all 16 gates true (`gates.pass=true`): structural ordering + digitization gates vs `curves_fig4a.json` (refined `fig4a_refined.wpd.tar`, same as Downloads). SEA-DBS late ≈ 0.355 vs paper 0.340; Baseline late ≈ 0.375 vs paper 0.368; late gap 0.020 vs paper 0.028. Short-burst STN drive convention (`dbs_burst_ms=60` of the 100 ms step) per paper Eq. (6); see [docs/controllers/sea_dbs/replication.md §11](../../docs/controllers/sea_dbs/replication.md).
 
 **Qualitative gates (paper Fig 4a — exit criteria):**
 

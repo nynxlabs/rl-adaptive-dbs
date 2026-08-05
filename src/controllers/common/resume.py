@@ -177,4 +177,5 @@ SEA_DBS_MATERIAL_FIELDS: tuple[str, ...] = (
     "pm_warmup_steps",
     "episode_psd_metric",
     "fixed_episode_seed",
+    "dbs_burst_ms",
 )
