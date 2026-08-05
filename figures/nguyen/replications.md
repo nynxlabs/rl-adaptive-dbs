@@ -1,28 +1,26 @@
 # Nguyen et al. — figure comparisons
 
-**Primary replication tracker** for the DSQN / closed-loop neuromorphic DBS paper. Spec: [controllers/snn/replication.md](../../docs/controllers/snn/replication.md). Work proceeds **in parallel** with Mehregan ([Mehregan replications](../mehregan/replications.md)): each row below is an exit criterion with qualitative gates, a committed `plot.py` (when present), and side-by-side PNGs.
+**Primary replication tracker** for the DSQN / closed-loop neuromorphic DBS paper. Spec: [controllers/snn/replication.md](../../docs/controllers/snn/replication.md). Work proceeds **in parallel** with Mehregan ([Mehregan replications](../mehregan/replications.md)): each row is an exit criterion with automated gates, a committed `plot.py` (when present), and side-by-side PNGs.
 
-Side-by-side **paper panel** vs **our replication** for qualitative checks. Plot scripts write replication PNGs to `figures/nguyen/images/`; JSON caches to `artifacts/figures/papers/nguyen/`.
+Plot scripts write replication PNGs to `figures/nguyen/images/`; JSON caches to `artifacts/figures/papers/nguyen/`. Paper panels: `figures/nguyen/images/<panel>/paper.png`. Full composites under `figures/nguyen/images/_full/`.
 
-Figs **1–2** are schematics (CBGT circuit diagram; closed-loop block diagram) — **not** replication targets.
+Figs **1–2** are schematics — **not** replication targets.
 
-| Panel | Script | Spec | Gates | Status |
-|-------|--------|------|-------|--------|
-| Fig 3 — GPi α–β distribution (PD Off vs PD On) | `scripts/figures/papers/nguyen/3/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §3 | Set (§ below) | Pass |
-| Fig 4 — training reward + episode length | `scripts/figures/papers/nguyen/4/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §6.5 | Set (§ below) | Open |
-| Fig 5 — CBGT spikes + DBS energy over training | `scripts/figures/papers/nguyen/5/plot.py` (planned) | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Open |
-| Fig 6 — α–β + DBS params over training | `scripts/figures/papers/nguyen/6/plot.py` (planned) | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Open |
-| Fig 7 — 50-episode eval (25 steps) | `scripts/figures/papers/nguyen/7/plot.py` (planned) | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Set (§ below) | Open |
+| Panel | Script | Spec | Status |
+|-------|--------|------|--------|
+| Fig 3 — GPi α–β distribution (PD Off vs PD On) | `scripts/figures/papers/nguyen/3/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §3 | Pass |
+| Fig 4 — training reward + episode length | `scripts/figures/papers/nguyen/4/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §6.5 | Open |
+| Fig 5 — CBGT spikes + DBS energy over training | `scripts/figures/papers/nguyen/5/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Open |
+| Fig 6 — α–β + DBS params over training | `scripts/figures/papers/nguyen/6/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Open |
+| Fig 7 — 50-episode eval (25 steps) | `scripts/figures/papers/nguyen/7/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Open |
 
-Replication PNGs: `figures/nguyen/images/`. JSON caches: `artifacts/figures/papers/nguyen/`. Paper panels: `figures/nguyen/images/<panel>/paper.png` (exact copies of paper-note embeds). Full copies also under `figures/nguyen/images/_full/`.
+**Gates:** manifest `gates` in `artifacts/figures/papers/nguyen/<panel>/manifest.json`. Heuristic keys from each `plot.py` plus digitization mirrors from `scripts/digitization/nguyen_gates.py` (`attach_digitization` — `pass` = both). Digitization loads `artifacts/figures/papers/nguyen/paper_digitization/curves_*.json`.
 
 ---
 
 ## Fig 3 — GPi α–β oscillation power distribution
 
-Distribution of GPi **α–β** oscillation power (**7–35 Hz**: α 7–13 Hz + β 13–35 Hz) for **PD On** vs **PD Off** (no DBS). Paper panel: **(a)** per-iteration scatter with mean reference lines, **(b)** boxplot summary. Control threshold **θ = 150** (§IV reward) is chosen near the PD On first quartile — it is **not** drawn on Fig 3.
-
-Unlike Mehregan $P_\beta$ (13–35 Hz only), Nguyen’s feedback band is the full **7–35 Hz** α–β index — see [snn/replication.md](../../docs/controllers/snn/replication.md) §3. Exact PSD estimator is **intentionally open** in the paper; v1 uses the repo `alpha_beta_power` helper on GPi spikes with a **100 ms** integration window (Nguyen RL step, §IV).
+Distribution of GPi **α–β** oscillation power (**7–35 Hz**) for **PD On** vs **PD Off** (no DBS). **PD On** = parkinsonian (`pd=1`); **PD Off** = healthy (`pd=0`). Reward threshold θ = 150 is **not** drawn on this panel.
 
 ### Paper (Nguyen et al.)
 
@@ -38,37 +36,17 @@ Unlike Mehregan $P_\beta$ (13–35 Hz only), Nguyen’s feedback band is the ful
 **Manifest:** `artifacts/figures/papers/nguyen/3/manifest.json`
 <!-- caption-3:end -->
 
-**Status:** Pass — 500 × 100 ms samples; layout matches paper (iteration scatter, mean PD Off/On lines, boxplot). Scatter marker size 22. Panel **(a)** legend uses a translucent framed key (`framealpha=0.75`). Means ~220 / ~291 vs paper ~215 / ~295.
+**Status:** Pass — 500 × 100 ms samples; layout matches paper (iteration scatter, mean lines, boxplot). Means ~220 / ~291 vs paper ~215 / ~295.
 
-**Qualitative gates (paper Fig 3 — exit criteria):**
+**Gates set**
 
-| # | Gate | Paper look | Fail if |
-|---|------|------------|---------|
-| 1 | **Layout** | **(a)** per-iteration scatter + mean reference lines; **(b)** boxplot; labels **PD Off** / **PD On** | Missing panel, wrong labels, or no boxplot |
-| 2 | **Ordering** | **PD On** (parkinsonian) mass **above** **PD Off** (healthy / no-PD) | `median(PD On) ≤ median(PD Off)` |
-| 3 | **No DBS** | Untreated distributions only | Any STN stimulation during sampling |
-| 4 | **Scale (qualitative)** | Means roughly ~215 / ~295 (paper read) | Ordering passes but both means sit in the same band (no separation) |
-| 5 | **θ plausibility (soft)** | Paper picks θ = 150 near PD On Q1; **not drawn** on this panel | `|PD On Q1 − 150| / 150 > 0.75` — informational only; does **not** block pass |
-
-**Terminology:** **PD On** = parkinsonian (`pd=1`); **PD Off** = healthy / no-PD (`pd=0`). Matches the paper’s “PD and no-PD” panel (higher α–β in PD).
-
-**Automated mirrors** (`scripts/figures/papers/nguyen/3/plot.py` → manifest `gates`): `ordering_pd_on_above_pd_off`; soft `threshold_near_pd_on_q1`. **`pass`** = gate **2** only (gates 4–5 are qualitative / soft).
-
-### Side-by-side checklist
-
-| Check | Paper | Replication | Match? |
-|-------|-------|-------------|--------|
-| **Layout** | (a) scatter + mean lines; (b) boxplot | Same | Yes |
-| **Sample count** | ~500 simulation iterations | `--n-iterations 500` (default) | Yes |
-| **Labels** | PD Off / PD On | PD Off / PD On | Yes |
-| **Mean lines** | Red (PD Off), black (PD On) | Same | Yes |
-| **Legend (a)** | Translucent framed key, lower right | `frameon=True`, `framealpha=0.75`, gray border | Yes |
-| **Ordering** | PD On **above** PD Off | PD On mean 290.8 > PD Off 219.5 | Yes |
-| **Scale** | Means ~215 / ~295 | 219.5 / 290.8 | Yes (qualitative) |
-| **θ on panel** | Not drawn | Not drawn (θ=150 is reward-only) | Yes |
-| **No DBS** | Untreated distributions | `DbsSpec.none()` | Yes |
-
-Panel **(b)** open circles are **outliers** — individual iterations whose α–β power falls outside the box whiskers (typically >1.5× the interquartile range from the box edge). The paper panel shows the same pattern for low PD On samples.
+| Key | Blocks `pass` |
+|-----|----------------|
+| `ordering_pd_on_above_pd_off` | yes |
+| `threshold_near_pd_on_q1` | no (informational) |
+| `paper_ordering_pd_on_above_pd_off` | yes (digitization) |
+| `paper_mean_ratio_near_paper_readout` | no (logged; Fig 3 not digitized as curves yet) |
+| `paper_means_separated` | no (logged) |
 
 **Run:**
 
@@ -80,13 +58,13 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/3/plot.py --n
 uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/3/plot.py --plot-only
 ```
 
-**Defaults:** **500** iterations per condition, **0.1 s** (100 ms) integration per sample, Python plant, seeds `0…499`. Each run writes `alpha_beta_dist_vN.png` (N auto-increments).
+**Defaults:** 500 iterations per condition, 0.1 s per sample, seeds `0…499`. Writes `alpha_beta_dist_vN.png`.
 
 ---
 
 ## Fig 4 — Training rewards and lengths
 
-Episode **rewards** (a) and **lengths** (b) over **500** training episodes (§IV; Fig. 4). Each episode starts from init DBS **40 Hz / 0.3 ms / 300 nA/cm²**. Paper claim: high variance (exploration) roughly episodes **0–100**, then a shift toward exploitation / optimization.
+Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init DBS **40 Hz / 0.3 ms / 300 nA/cm²**; seed **0**; max **25** steps/episode; early-stop streak $t_u=3$; θ = 150.
 
 ### Paper (Nguyen et al.)
 
@@ -102,29 +80,27 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes (§IV
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4:end -->
 
-**Status:** Open — see manifest gates (`training_reward_length_v14.png`).
+**Status:** Open — see manifest (`training_reward_length_v14.png`).
 
-**Qualitative gates (paper Fig 4 — exit criteria):**
+**Gates set**
 
-| # | Gate | Paper look | Fail if |
-|---|------|------------|---------|
-| 1 | **Protocol** | **500** episodes; init **40 Hz / 0.3 ms / 300 nA/cm²**; seed **0** (paper seed unspecified) | Wrong episode count, init triple, or unlocked seed across promote runs |
-| 2 | **Early exploration** | Noisy rewards ~episodes **0–100**; episode lengths near horizon while exploring | Median length in first **50** episodes `< max_steps − 2` (default max **25**) |
-| 3 | **Reward scale** | Panel (a) returns in **millions** (≈ $-10^6 \to 0$); late mean **> −2×10⁵** | $\|\text{mean reward episodes 0–50}\| < 5\times10^4$ |
-| 4 | **Reward improves** | Later episodes beat early exploration returns | Mean reward over episodes **150–500** ≤ mean over first **50** episodes |
-| 5 | **Length drops** | Episode length shortens to **≈8–10** steps late training | Mean length over episodes **150–500** ≥ mean over first **75** − **1** step, or late mean **> 12** |
-| 6 | **Exploitation shape (qualitative)** | Smoother / upward reward trend after ~episode **100** | Reward still pure noise with no late uplift (human check on smoothed trace) |
+| Key | Blocks `pass` |
+|-----|----------------|
+| `reward_scale_paper` — \|mean reward ep 0–50\| ≥ 5×10⁴ | yes |
+| `late_reward_above_early` | yes |
+| `late_reward_near_zero` — late mean > −2×10⁵ | yes |
+| `length_decreases` — late mean < early mean − 1 step | yes |
+| `late_length_paper_band` — late mean ≤ 12 | yes |
+| `early_near_max_length` — median first 50 ≥ max_steps − 2 | yes |
+| `early_high_variance` | no (logged) |
+| `paper_early_reward_mag_near_paper` | yes |
+| `paper_reward_improves_like_paper` | yes |
+| `paper_late_reward_ratio_near_paper` | yes |
+| `paper_length_decreases_like_paper` | yes |
+| `paper_late_length_near_paper` | yes |
+| `paper_early_near_max_length` | yes |
 
-**Automated mirrors** (`evaluate_gates` → manifest `gates`): `reward_scale_paper`, `late_reward_above_early`, `late_reward_near_zero`, `length_decreases`, `late_length_paper_band`, `early_near_max_length`. **`pass`** = all six booleans. `--smoke` sets `smoke_override` for CI only.
-
-### Side-by-side checklist
-
-| Check | Paper | Replication | Match? |
-|-------|-------|-------------|--------|
-| **Protocol** | 500 episodes; init 40 Hz / 0.3 ms / 300 nA/cm² | seed `0`; `fig4_nguyen_config` | — |
-| **Early phase** | High variance ~episodes 0–100 (exploration) | `early_high_variance` + near-max lengths | — |
-| **Later phase** | Shift toward exploitation; reward/length stabilize | `late_reward_above_early` + `length_decreases` | — |
-| **Seed note** | Paper seed unspecified | Lock seed `0` for gates | — |
+`--smoke` sets `smoke_override` (CI only).
 
 **Run:**
 
@@ -135,13 +111,11 @@ tmux new-session -d -s fig2-4-train \
 uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/4/plot.py --plot-only
 ```
 
-**Defaults:** 500 episodes; seed `0`; early-stop streak $t_u=3$; θ = 150; max **25** steps/episode unless early-terminated.
-
 ---
 
 ## Fig 5 — Network spikes and DBS energy
 
-Per-episode **CBGT spike counts** (a) and approximate **DBS energy** (b, Eq. (6)) over the same **500** training episodes (§IV; Fig. 5).
+Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the same **500**-episode train as Fig 4 (`artifacts/figures/papers/nguyen/4/series.json`).
 
 ### Paper (Nguyen et al.)
 
@@ -154,42 +128,35 @@ Per-episode **CBGT spike counts** (a) and approximate **DBS energy** (b, Eq. (6)
 <!-- caption-5:start -->
 **Caption:** TBD
 
-**Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json` (planned)
+**Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json`
 <!-- caption-5:end -->
 
-**Status:** Open — needs a Fig 4 train that passes gates, then promote spikes/energy from the shared series cache (`scripts/figures/papers/nguyen/5/plot.py`).
+**Status:** Open — needs Fig 4 train `gates.pass`, then `scripts/figures/papers/nguyen/5/plot.py`.
 
-**Qualitative gates (paper Fig 5 — exit criteria):**
+**Gates set**
 
-| # | Gate | Paper look | Fail if |
-|---|------|------------|---------|
-| 1 | **Shared train** | Same **500**-episode DSQN run as Fig 4 (same checkpoint / `series.json`) | Different seed, episode count, or init triple than Fig 4 |
-| 2 | **Spikes panel** | CBGT **total spike counts** per episode traceable over training | Flat / missing spike series |
-| 3 | **Energy panel** | Eq. (6) **DBS energy** per episode responds as parameters move | Energy constant (±1%) across all episodes |
-| 4 | **Co-variation** | Both panels show episode-level structure (not a single scalar repeated) | Either series has zero variance |
-| 5 | **Paper axis bands** | Spikes **400–950**/ep mean; energy **300–3200**/ep mean (Fig. 5 y-ranges) | `spike_in_paper_band` or `energy_in_paper_band` false |
-| 6 | **Shape vs digits** | Rough downward / settling trends per paper panel | N/A for automated pass — qualitative only |
+| Key | Blocks `pass` |
+|-----|----------------|
+| `shared_train` — Fig 4 passed + same `n_episodes` | yes |
+| `spike_series_has_variance` | yes |
+| `energy_series_has_variance` | yes |
+| `energy_not_constant` | yes |
+| `spike_in_paper_band` — mean spikes 400–950/ep | yes |
+| `energy_in_paper_band` — mean energy 300–3200/ep, max ≤ 3520 | yes |
+| `paper_spike_mean_near_paper` | yes |
+| `paper_energy_mean_near_paper` | yes |
+| `paper_spike_trend_near_paper` | yes |
+| `paper_energy_trend_near_paper` | yes |
+| `paper_spike_series_has_variance` | yes |
+| `paper_energy_not_constant` | yes |
 
-**Automated mirrors:** reuse Fig 4 train manifest; `spike_series_has_variance`, `energy_series_has_variance`, `energy_not_constant`, `spike_in_paper_band`, `energy_in_paper_band`. **`pass`** = gates **1–5**.
-
-### Side-by-side checklist
-
-| Check | Paper | Replication | Match? |
-|-------|-------|-------------|--------|
-| **Protocol** | Same 500-episode train as Fig 4 | Shared `artifacts/figures/papers/nguyen/4/series.json` | — |
-| **Spikes panel** | CBGT spike counts readable over episodes | Gate 2 | — |
-| **Energy panel** | Energy responds as DBS parameters move | Gate 3 | — |
-| **Shape vs digits** | Rough trend / ordering | Not digit match | — |
-
-**Run (planned):** same train cache as Fig 4; `scripts/figures/papers/nguyen/5/plot.py` (or shared `--plot-only` from Fig 4 artifacts).
-
-**Defaults (planned):** Eq. (6) energy on STN DBS current; Python plant.
+**Run:** plot from Fig 4 series cache; `scripts/figures/papers/nguyen/5/plot.py --plot-only` after train.
 
 ---
 
 ## Fig 6 — α–β and DBS parameters over training
 
-GPi **α–β** (a) and the three **DBS parameters** — amplitude, frequency, pulse width — (b) over **500** episodes (§IV; Fig. 6). Paper end-of-training anchors (~**262 nA/cm²**, ~**78.65 Hz**, ~**1 ms**) are **evaluation anchors**, not hard gates until one-seed qualitative shape passes. Paper also claims ~**22%** energy reduction vs open-loop **130 Hz** (report after shape passes).
+GPi **α–β** (a) and DBS amplitude / frequency / pulse width (b) over **500** episodes; shared train with Figs 4–5.
 
 ### Paper (Nguyen et al.)
 
@@ -197,48 +164,38 @@ GPi **α–β** (a) and the three **DBS parameters** — amplitude, frequency, p
 
 ### Replication
 
-*Not yet generated.* Target: `figures/nguyen/images/6/alpha_beta_params.png`
+*Not yet generated.* Target: `figures/nguyen/images/6/alpha_beta_params_vN.png`
 
 <!-- caption-6:start -->
 **Caption:** TBD
 
-**Manifest:** `artifacts/figures/papers/nguyen/6/manifest.json` (planned)
+**Manifest:** `artifacts/figures/papers/nguyen/6/manifest.json`
 <!-- caption-6:end -->
 
 **Status:** Open.
 
-**Qualitative gates (paper Fig 6 — exit criteria):**
+**Gates set**
 
-| # | Gate | Paper look | Fail if |
-|---|------|------------|---------|
-| 1 | **Shared train** | Same **500**-episode run as Figs 4–5 | Mismatched checkpoint / series vs Fig 4 |
-| 2 | **α–β suppression** | GPi α–β **decreases** over training vs early episodes | Mean α–β over last **100** episodes ≥ mean over first **50** |
-| 3 | **Sub-threshold** | Late training α–β at or **below** θ = **150** (raw scale) | Mean α–β over last **100** episodes **> θ** |
-| 4 | **Params leave init** | Amplitude, frequency, pulse width move off **300 nA/cm² / 40 Hz / 0.3 ms** | All three params within **5%** of init at episode **500** |
-| 5 | **Late stabilization** | DBS parameters plateau in late training (not perpetual limit-cycle) | Each parameter’s std over last **50** episodes **> 20%** of its mean (noise-dominated) |
-| 6 | **Paper anchors (soft)** | End state ~**262 nA/cm²**, ~**78.65 Hz**, ~**1 ms** | Informational after gates **2–5** pass — not hard fail |
-| 7 | **Energy claim (report)** | ~**22%** lower DBS energy vs open-loop **130 Hz** (Eq. (6)) | Report in caption/manifest after shape passes — not a panel pass gate |
+| Key | Blocks `pass` |
+|-----|----------------|
+| `shared_train` | yes |
+| `paper_alpha_beta_decreases_like_paper` | yes |
+| `paper_late_alpha_beta_below_theta` — late mean α–β ≤ 150 | yes |
+| `paper_late_alpha_beta_near_paper` | yes |
+| `paper_params_left_init` — amp / freq / pw each >5% off init | yes |
+| `paper_amp_left_init`, `paper_freq_left_init`, `paper_pw_left_init` | (subsumed by `params_left_init`) |
+| `paper_amp_late_near_paper`, `paper_freq_late_near_paper`, `paper_pw_late_near_paper` | yes |
+| `paper_late_params_stable` — std over last 50 ep ≤ 20% of mean | yes |
 
-**Planned automated mirrors:** `alpha_beta_decreases`, `late_alpha_beta_below_theta`, `params_left_init`, `late_params_stable`. **`pass`** = gates **2–5**. Gate **6** logged as `paper_anchor_delta_*`.
+Paper end anchors (~262 nA/cm², ~78.65 Hz, ~1 ms) and ~22% energy vs open-loop 130 Hz are **report** items in manifest metrics, not separate pass keys.
 
-### Side-by-side checklist
-
-| Check | Paper | Replication | Match? |
-|-------|-------|-------------|--------|
-| **α–β trend** | Decreases vs PD baseline / toward or below θ | Gates 2–3 | — |
-| **Params leave init** | Leave 40 Hz / 0.3 ms / 300 nA/cm² | Gate 4 | — |
-| **Therapeutic band** | Settle near clinical-ish settings | Gate 5 + soft gate 6 | — |
-| **Paper readouts** | ~262 nA/cm², ~78.65 Hz, ~1 ms | Soft gate 6 | — |
-
-**Run (planned):** train cache shared with Figs 4–5; `scripts/figures/papers/nguyen/6/plot.py`.
-
-**Defaults (planned):** init triple as Fig 4; factored ternary actions (v1).
+**Run:** shared Fig 4 series; `scripts/figures/papers/nguyen/6/plot.py`.
 
 ---
 
 ## Fig 7 — Evaluation (50 episodes × 25 steps)
 
-Seeded eval of the trained policy: average **50** test episodes across **25** time steps with **different seeds** per episode (§IV; Fig. 7). Paper claim: learned policy keeps α–β below untreated PD reference from Fig 3.
+Seeded eval of the trained policy: **50** episodes × **25** steps, different seed per episode.
 
 ### Paper (Nguyen et al.)
 
@@ -246,50 +203,40 @@ Seeded eval of the trained policy: average **50** test episodes across **25** ti
 
 ### Replication
 
-*Not yet generated.* Target: `figures/nguyen/images/7/eval_50ep.png`
+*Not yet generated.* Target: `figures/nguyen/images/7/eval_50ep_vN.png`
 
 <!-- caption-7:start -->
 **Caption:** TBD
 
-**Manifest:** `artifacts/figures/papers/nguyen/7/manifest.json` (planned)
+**Manifest:** `artifacts/figures/papers/nguyen/7/manifest.json`
 <!-- caption-7:end -->
 
-**Status:** Open — needs a Fig 4–6 checkpoint that passes training gates + `rl-dbs eval --controller snn` + panel script.
+**Status:** Open — needs Fig 4 checkpoint + `rl-dbs eval --controller snn` + panel script.
 
-**Qualitative gates (paper Fig 7 — exit criteria):**
+**Gates set**
 
-| # | Gate | Paper look | Fail if |
-|---|------|------------|---------|
-| 1 | **Eval protocol** | **50** test episodes × **25** steps; **different seed per episode** | Wrong episode/step counts or shared seed across episodes |
-| 2 | **vs Fig 3 PD** | Policy α–β **below** untreated **PD On** reference from Fig 3 (parkinsonian, no DBS) | Mean policy α–β over eval **≥** Fig 3 `PD On` median (from locked Fig 3 manifest) |
-| 3 | **vs θ** | Sustained sub-threshold control | Mean policy α–β over all steps **> θ = 150** |
-| 4 | **Stability** | Readable mean trace with bounded spread across **25** steps | NaNs, or step-to-step mean range **> 2×** Fig 3 PD On IQR |
-| 5 | **Checkpoint lineage** | Eval uses the same trained policy as Figs 4–6 | Checkpoint path ≠ Fig 4 `checkpoint.pt` (or documented promoted ckpt) |
-
-**Planned automated mirrors:** `eval_protocol_ok`, `below_fig3_pd_median`, `below_theta`, `step_series_finite`, `checkpoint_matches_fig4`. **`pass`** = gates **1–4**.
-
-### Side-by-side checklist
-
-| Check | Paper | Replication | Match? |
-|-------|-------|-------------|--------|
-| **Protocol** | 50 episodes × 25 steps; varying seeds | Gate 1 | — |
-| **α–β vs untreated** | Mean under policy **below** Fig 3 PD reference | Gates 2–3 | — |
-| **Stability** | Readable mean ± spread over steps | Gate 4 | — |
+| Key | Blocks `pass` |
+|-----|----------------|
+| `checkpoint_lineage_ok` — Fig 4 train passed | yes |
+| `paper_eval_protocol_ok` — trajectories present, ≥20 steps | yes |
+| `paper_overall_mean_near_paper` | yes |
+| `paper_late_early_ratio_near_paper` | yes |
+| `paper_step_series_finite` | yes |
+| `paper_below_fig3_pd_median` | yes (when Fig 3 median available) |
+| `mean_below_theta` | no (informational) |
 
 **Run (planned):**
 
 ```bash
-uv run rl-dbs eval --controller snn --checkpoint artifacts/snn/<ckpt>.pt
+uv run rl-dbs eval --controller snn --checkpoint artifacts/figures/papers/nguyen/4/checkpoint.pt
 uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/7/plot.py --plot-only
 ```
-
-**Defaults (planned):** 50 episodes, 25 steps, Python plant.
 
 ---
 
 ## Conventions (v1)
 
-Documented choices for paper-silent knobs (see [snn/replication.md](../../docs/controllers/snn/replication.md) §12 and `SNNConfig`):
+Paper-silent knobs — see [snn/replication.md](../../docs/controllers/snn/replication.md) §12 and `SNNConfig`:
 
 | Knob | v1 choice |
 |------|-----------|

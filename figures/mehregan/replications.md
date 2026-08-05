@@ -1,22 +1,20 @@
 # Mehregan et al. — figure comparisons
 
-**Primary replication tracker** for this repo. Work is scheduled by **panel**, not by roadmap phase: each row below is an exit criterion with qualitative gates, a committed `plot.py`, and side-by-side PNGs.
+**Primary replication tracker** for this repo. Work is scheduled by **panel**, not by roadmap phase: each row below is an exit criterion with automated gates in `plot.py` (manifest `gates` / `gates_pass`), a committed `plot.py`, and side-by-side PNGs.
 
-Side-by-side **paper panel** vs **our replication** for qualitative checks. Plot scripts write replication PNGs to `figures/mehregan/images/`; JSON caches to `artifacts/figures/papers/`.
+Side-by-side **paper panel** vs **our replication**. Plot scripts write replication PNGs to `figures/mehregan/images/`; JSON caches to `artifacts/figures/papers/`.
 
-**Passed panels** (1b, 2a, 2b, 4a, 4b, 5a, 5b, 6a, 6b) use a short **Status** block. **Open / needs-work panels** keep a full side-by-side checklist until gates pass.
-
-| Panel                                | Script                                       | Spec                                                                                                           | Status                    |
-| ------------------------------------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| Fig 1b — GPi PSD                     | `scripts/figures/papers/mehregan/1b/plot.py` | [plant.md](../../docs/plant.md)                                                                                | Pass                      |
-| Fig 2a — GPi $P_\beta$ time series   | `scripts/figures/papers/mehregan/2a/plot.py` | [plant.md](../../docs/plant.md)                                                                                | Pass                      |
-| Fig 2b — Error Index time series     | `scripts/figures/papers/mehregan/2b/plot.py` | [plant.md](../../docs/plant.md)                                                                                | Pass                      |
-| Fig 4a — training $P_\beta$ vs step  | `scripts/figures/papers/mehregan/4a/plot.py` | [environment.md](../../docs/environment.md), [4a.md](../../docs/figures/mehregan/4a.md) | Pass (v18, τ 3→1.0)       |
-| Fig 4b — training reward vs episode  | `scripts/figures/papers/mehregan/4b/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Pass (paired v18, v14)      |
-| Fig 5a — post-train efficacy @ 45 Hz | `scripts/figures/papers/mehregan/5a/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Pass                      |
-| Fig 5b — post-train efficacy @ 30 Hz | `scripts/figures/papers/mehregan/5b/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Pass (burst alphabet, v3) |
-| Fig 6a — PTQ / QAT @ 45 Hz           | `scripts/figures/papers/mehregan/6a/plot.py` | [controllers/ddpg/replication.md](../../docs/controllers/ddpg/replication.md), [6a.md](../../docs/figures/mehregan/6a.md) | Pass (honest v40, weak QAT) |
-| Fig 6b — PTQ / QAT @ 30 Hz           | `scripts/figures/papers/mehregan/6b/plot.py` | [controllers/ddpg/replication.md](../../docs/controllers/ddpg/replication.md), [6b.md](../../docs/figures/mehregan/6b.md) | Pass (honest v20, tier PTQ) |
+| Panel                                | Script                                       | Spec                                                                                                           | Gates | Status                    |
+| ------------------------------------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----- | ------------------------- |
+| Fig 1b — GPi PSD                     | `scripts/figures/papers/mehregan/1b/plot.py` | [plant.md](../../docs/plant.md)                                                                                | Set   | Pass                      |
+| Fig 2a — GPi $P_\beta$ time series   | `scripts/figures/papers/mehregan/2a/plot.py` | [plant.md](../../docs/plant.md)                                                                                | Set   | Pass                      |
+| Fig 2b — Error Index time series     | `scripts/figures/papers/mehregan/2b/plot.py` | [plant.md](../../docs/plant.md)                                                                                | Set   | Pass                      |
+| Fig 4a — training $P_\beta$ vs step  | `scripts/figures/papers/mehregan/4a/plot.py` | [environment.md](../../docs/environment.md), [4a.md](../../docs/figures/mehregan/4a.md) | Set   | Pass (v18, τ 3→1.0)       |
+| Fig 4b — training reward vs episode  | `scripts/figures/papers/mehregan/4b/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Set   | Pass (paired v18, v14)      |
+| Fig 5a — post-train efficacy @ 45 Hz | `scripts/figures/papers/mehregan/5a/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Set   | Pass                      |
+| Fig 5b — post-train efficacy @ 30 Hz | `scripts/figures/papers/mehregan/5b/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Set   | Pass (burst alphabet, v3) |
+| Fig 6a — PTQ / QAT @ 45 Hz           | `scripts/figures/papers/mehregan/6a/plot.py` | [controllers/ddpg/replication.md](../../docs/controllers/ddpg/replication.md), [6a.md](../../docs/figures/mehregan/6a.md) | Set   | Pass (honest v40, weak QAT) |
+| Fig 6b — PTQ / QAT @ 30 Hz           | `scripts/figures/papers/mehregan/6b/plot.py` | [controllers/ddpg/replication.md](../../docs/controllers/ddpg/replication.md), [6b.md](../../docs/figures/mehregan/6b.md) | Set   | Pass (honest v20, tier PTQ) |
 
 Replication PNGs: `figures/mehregan/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/mehregan/images/<panel>/paper.png` (from paper-note embeds; composite Figs 1/2/4/5/6 split into panels). Full composites under `figures/mehregan/images/_full/`.
 
@@ -41,6 +39,8 @@ Mean GPi multitaper power spectral density (1–50 Hz) for three conditions: **h
 <!-- caption-1b:end -->
 
 **Status:** Pass — condition ordering and beta-peak shape match the paper panel (seeds `0–9` mean).
+
+**Gates** (`fig1b_gates` in `scripts/digitization/paper_gates.py`): `pd_gt_healthy`, `pd_130_lt_pd`, `suppression_ratio_near_paper`, `healthy_beta_near_paper`, `pd_130hz_beta_near_paper`. **`gates_pass`** = all booleans. Pearson r on PSD shape is diagnostic only; PD absolute beta level is not hard-gated.
 
 **Run:**
 
@@ -73,6 +73,8 @@ GPi beta-band power ($P_\beta$, Eq. 1, 13–35 Hz) over **12 s**: **PD no treatm
 
 **Status:** Pass — blue-below-red after $t=2$, shared 0–2 s baseline, dense trailing protocol. Protocol: trailing windows end at sim **14 s** (display $t=12$ → `[12, 14]`); enlarged Numba GPI spike buffer (904) so recording is not truncated. Remaining polish: blue floor slightly below paper at $t=12$; single seed (0).
 
+**Gates** (`fig2_time_gates`, panel `2a`): `prestim_shared`, `treated_below_untreated_late`, `late_ratio_near_paper`, `suppression_drop_near_paper`. **`gates_pass`** = all booleans. Digitization anchors late-window ratios; seed changes post-onset floor.
+
 **Run:**
 
 ```bash
@@ -104,6 +106,8 @@ Windowed Error Index (EI, Eq. 2) over **12 s** with **So-style SMC pulses into T
 <!-- caption-2b:end -->
 
 **Status:** Pass — blue-below-red after $t=2$, shared baseline, blue floor ~0.12 near paper. Remaining polish: red $t=12$ slightly low (~0.24 vs ~0.30); single seed.
+
+**Gates** (`fig2_time_gates`, panel `2b`): `prestim_shared`, `treated_below_untreated_late`, `late_ratio_near_paper`, `suppression_drop_near_paper`. **`gates_pass`** = all booleans.
 
 **Run:**
 
@@ -141,6 +145,8 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 <!-- caption-4a:end -->
 
 **Status:** Pass — locked **v18** (`training_beta_v18.png`, `series_v18.json`): linear softmax τ **3→1.0**, late fixture-seed skip, `gates_pass=true` (mid_drop≈0.024 vs paper≈0.047). Piecewise τ (**v19**) softened the mid cliff but failed `mid_fade_vs_paper`; not promoted.
+
+**Gates** (`fig4a_gates`): `plot_style`, `overall_trend_down`, `drop_vs_paper`, `late_early_ratio_near_paper`, `mid_fade_vs_paper`. **`gates_pass`** = all booleans. Absolute early/late bands intentionally omitted — seed changes level.
 
 **Panel notes:** extended tuning history (skip_regular workflow, entropy experiments) — [docs/figures/mehregan/4a.md](../../docs/figures/mehregan/4a.md).
 
@@ -190,6 +196,8 @@ Episode **total reward** and **episode-mean PSD(x10³)** during the same **45 Hz
 
 **Status:** Pass — **v14** reward + PSD panels (9 episodes, indices 0–8), paired with locked Fig 4a **v18** (`series_v18.json`, seed 0). Qualitative: reward↑, episode-mean PSD↓ (0.447→0.292), rise by ep 1.
 
+**Gates** (`fig4b_gates` + legacy `_fig4b_pass`): `early_negative`, `reward_rises`, `late_plateau_improved`, `rise_timing`, `beta_drops`, `beta_drop_ratio_near_paper`, `reward_recovers_like_paper`, `plot_style`, `automation`. **`gates_pass`** = all booleans. Reward absolute scale differs from paper; gates require qualitative recovery, not magnitude match.
+
 **Run:**
 
 ```bash
@@ -228,7 +236,9 @@ Dashed vertical at **2 s** (stimulation onset). Paper claims: trained stimulatio
 **Manifest:** `artifacts/figures/papers/mehregan/5a/manifest.json`
 <!-- caption-5a:end -->
 
-**Status:** Pass — four-series panel with **skip_regular** action space (40 irregular patterns; pattern 0 excluded from training). **0.2 s trailing / 2 s window** biomarker sampling (same protocol as Fig 2a). Qualitative gates: shared baseline, **130 Hz** lowest, trained **< no stim**, trained **> periodic 45 Hz** (seed 0; greedy action 7 → pattern 8). Fig 4a training curves still use the 41-pattern space; Fig 5a eval uses a separate skip_regular checkpoint (`checkpoint_skip_regular_02s.pt`).
+**Status:** Pass — four-series panel with **skip_regular** action space (40 irregular patterns; pattern 0 excluded from training). **0.2 s trailing / 2 s window** biomarker sampling (same protocol as Fig 2a). Seed 0; greedy action 7 → pattern 8. Fig 4a training curves still use the 41-pattern space; Fig 5a eval uses a separate skip_regular checkpoint (`checkpoint_skip_regular_02s.pt`).
+
+**Gates** (`fig5a_pass` / `fig5_efficacy_gates` — ordering only; 45 Hz digitization `needs_redo`): `shared_baseline`, `trained_below_no_stim`, `trained_above_periodic`, `cdbs_lowest`. **`pass`** = all booleans.
 
 **Convention (skip_regular, 2026-07-16):** At 45 Hz, pattern 0 (regular periodic) is the global open-loop optimum — a 41-pattern agent correctly collapses to it. Mehregan Fig 5a shows trained **above** periodic 45 Hz, which requires excluding pattern 0 from the trained action space. Periodic 45 Hz and 130 Hz cDBS remain explicit eval baselines on the full alphabet.
 
@@ -277,19 +287,11 @@ Key paper claim: **periodic 30 Hz elevates** beta (stimulation rate inside the b
 **Manifest:** `artifacts/figures/papers/mehregan/5b/manifest.json`
 <!-- caption-5b:end -->
 
-**Status:** Pass — burst-alphabet retrain (seed 0) + trailing eval **v3**. Gates: shared baseline, periodic **>** no-stim, trained **<** no-stim, trained **<** periodic (trained≈367, no-stim≈488, periodic≈639). Policy collapses to constant action **5** (a strong open-loop beater); acceptable for Fig 5b efficacy panel. Y-limits auto-fit from traces (override with `--y-min` / `--y-max`).
+**Status:** Pass — burst-alphabet retrain (seed 0) + trailing eval **v3** (trained≈367, no-stim≈488, periodic≈639). Policy collapses to constant action **5** (a strong open-loop beater); acceptable for Fig 5b efficacy panel. Y-limits auto-fit from traces (override with `--y-min` / `--y-max`).
+
+**Gates** (`fig5b_pass` / `fig5_efficacy_gates`): `shared_baseline`, `trained_below_no_stim`, `trained_below_periodic`, `periodic_above_no_stim`, `trained_no_stim_ratio_near_paper`, `periodic_no_stim_ratio_near_paper`. **`pass`** = all booleans.
 
 **Convention (burst alphabet, 2026-07-23):** The default ±1/3 ISI jitter alphabet has **0/41** open-loop patterns with $P_\beta$ below no-stim at `plant.dt_ms=0.02` (TASK-176; switching oracle also failed). Periodic 14–34 Hz is a plant dead zone (TASK-177). Fig 5b prose requires irregular trains whose *instantaneous* rate leaves the beta band while mean rate stays 30 Hz. **Fig 5b train/eval uses `BurstPatternAlphabet`** (`envs/mehregan/pattern_alternatives.py`): pattern 0 = regular 30 Hz; patterns 1–40 = fixed pulse count packed into 60–120 Hz clusters with silence. 1-step oracle: **32/41** beat no-stim (best ≈331 vs no-stim ≈503). Artifact: `artifacts/ddpg/fig5b_alphabet_redesign_oracle_30hz.json`. ±1/3 ISI remains the default for other panels (e.g. Fig 5a).
-
-### Side-by-side checklist
-
-| Check | Paper | Replication | Match? |
-|-------|-------|-------------|--------|
-| **Protocol** | 2 s baseline + post-onset stim; fixed seed | Trailing 0.2 s / 2 s window (Fig 2a); 14 s integrate | Yes |
-| **Periodic 30 Hz vs no stim** | Periodic **>** no stim after $t=2$ | ≈639 vs ≈488 | Yes |
-| **Trained vs no stim** | Trained **<** no stim after $t=2$ | ≈367 vs ≈488 | Yes |
-| **Trained vs periodic 30 Hz** | Trained **<** periodic 30 Hz | ≈367 vs ≈639 | Yes |
-| **Qualitative shape** | Green low band ~350–430; orange high ~580–650 | Green ~320–370; orange ~630–680 | Yes (levels) |
 
 **Run (panel script — default trailing eval + versioned PNG):**
 
@@ -302,8 +304,6 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/5b/plot.py 
 Legacy 2 s segment plot: `--sampling segment`.
 
 **Defaults:** seed `0`, **BurstPatternAlphabet** (41 patterns), **trailing** sampling, Python plant, `plant.dt_ms=0.02`, checkpoint `artifacts/figures/papers/mehregan/5b/checkpoint.pt`.
-
-**Acceptance (automation):** trained mean $P_\beta$ `<` no-stim **and** `<` periodic 30 Hz (`_fig5b_pass` in training scripts).
 
 ---
 
@@ -336,16 +336,7 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 
 **Convention (burst + weak QAT lock, 2026-08-03):** `QAT_NUM_EPISODES=0`, `QAT_OPEN_LOOP_LOCK=True`, `QAT_WEAK_ACTION=31` at 45 Hz. fp32 `checkpoint_burst_skip_regular_02s.pt`. PTQ tier open-loop when quant locks on non-fp32 actions (fp16 **19**, int8 **28**). Prior **v36** retired int8 closed-loop action 9 (slow transient).
 
-**Qualitative gates (paper Fig 6a — exit criteria):**
-
-| # | Gate | Paper look | Fail if |
-|---|------|------------|---------|
-| 1 | **Shared pre-stim (0–2 s)** | All four series **overlap** and are **wiggly** (not a flat constant) | Pre-onset forced flat, or series disagree before $t=2$ |
-| 2 | **Non-QAT post-onset** | fp32, PTQ fp16, PTQ int8 sit in the **suppressed** band (~320–430) and stay **wiggly** | Flat constant lock, or no suppression vs baseline |
-| 3 | **Non-QAT mutual diversity** | The three non-QAT traces each have **their own** post-onset wiggle (not identical overlays) | fp32 / PTQ fp16 / PTQ int8 share one identical action sequence or identical $P_\beta$ path |
-| 4 | **QAT elevated** | QAT stays **high**, typically **~450–520** (near / returning toward baseline ~500); does **not** track the suppressed band | QAT post-onset mean near fp32 or clearly suppressing like trained |
-
-Automated mirrors (panel / manifest): shared pre-onset agreement; `fp32_suppresses_vs_baseline`; PTQ tracks fp32 band; `qat_elevated` + `qat_near_baseline_band`; `non_qat_traces_distinct`. Digitization ratio gate on QAT level is advisory for promotion when qualitative match holds.
+**Gates** (`_gate_summary` → manifest `gates`): `prestim_shared`, `prestim_wiggly`, `fp32_suppresses_vs_baseline`, `ptq-fp16_tracks_fp32`, `ptq-int8_tracks_fp32`, `non_qat_traces_distinct`, `qat_elevated_vs_fp32`, `qat_near_baseline_band`, `not_shared_constant_action_lock`, plus digitization mirrors `paper_*` (`qat_elevated_vs_fp32`, `ptq_fp16_near_fp32`, `ptq_int8_near_fp32`, `*_level_ratio_near_paper`, `qat_late_sustained`, `not_open_loop_override`, `not_shared_constant_action_lock`). **`all_pass`** = all booleans (v40 fails only `paper_qat_level_ratio_near_paper` — advisory when qualitative match holds).
 
 **Run:**
 
@@ -371,19 +362,6 @@ tmux new-session -d -s fig6a-train \
 
 **Defaults:** fp32 `checkpoint_burst_skip_regular_02s.pt`; QAT weak-lock checkpoint `qat_paper_10ep_skip_regular.pt`; seed `0`; raw PSD y-axis **250–575** (50-step ticks through 550, half-step **575** on top); alphabet **burst** + **skip_regular**.
 
-### Side-by-side checklist
-
-| Check | Paper | Replication (v40) | Match? |
-|-------|-------|-------------------|--------|
-| **Shared 0–2 s** | Overlapping wiggly baseline | Yes (real plant) | Yes |
-| **Non-QAT suppressed + wiggly** | ~320–430, time-varying | fp32/PTQ post ~336–360 | Yes |
-| **Non-QAT different wiggles** | fp32 / int8 / fp16 visibly distinct | Tier 28 / 19 / fp32 29→28 | Yes |
-| **QAT ~500 / elevated** | High band ~450–520 | Weak-lock action 31 (~525 mean) | Yes |
-| **Onset marker** | Dashed vertical at **2 s** | Yes | Yes |
-| **Y-axis** | ~250–550 + headroom | 250–575 (half-step at 575) | Yes |
-
-**Defaults:** 45 Hz trained actor; eval seed `0`; `plant.dt_ms=0.02`.
-
 ---
 
 ## Fig 6b — PTQ / QAT @ 30 Hz
@@ -408,6 +386,8 @@ Same quantization panel layout as Fig 6a for the **30 Hz** trained model (§IV.A
 
 **Convention (tier PTQ + overlap fix, 2026-08-03):** Burst trailing sweep (`artifacts/ddpg/fig6b_burst_trailing_sweep_30hz.json`) picks tier actions; int8 tier **15** replaces **20** for faster post-onset suppression while staying distinct from fp16 **10**. Prior **v18** used int8 tier 20 (~420). int8 σ=0.10 weight noise during closed-loop rollout.
 
+**Gates** (`_gate_summary` → manifest `gates`): same family as Fig 6a — `prestim_shared`, `prestim_wiggly`, `fp32_suppresses_vs_baseline`, `ptq-fp16_tracks_fp32`, `ptq-int8_tracks_fp32`, `non_qat_traces_distinct`, `qat_elevated_vs_fp32`, `qat_near_baseline_band`, `not_shared_constant_action_lock`, plus `paper_*` digitization mirrors. **`all_pass`** = all booleans (v20).
+
 **Run:**
 
 ```bash
@@ -418,16 +398,5 @@ uv run python -m rl_adaptive_dbs.run \
 uv run python -m rl_adaptive_dbs.run \
   scripts/figures/papers/mehregan/6b/plot.py --skip-train
 ```
-
-### Side-by-side checklist
-
-| Check | Paper | Replication (v20) | Match? |
-|-------|-------|-------------------|--------|
-| **Shared 0–2 s** | Overlapping wiggly baseline | Yes (real plant) | Yes |
-| **PTQ fp16 / int8 vs fp32** | Track suppressed band | fp32≈367, fp16≈390, int8≈396 | Yes |
-| **Non-QAT distinct wiggles** | fp32 / int8 / fp16 visibly distinct | Tier actions 5 / 10 / 15 | Yes |
-| **QAT vs fp32** | QAT elevated ~450–500 | Weak-lock action 8 (~499 mean) | Yes |
-| **Onset marker** | Dashed vertical at **2 s** | Yes | Yes |
-| **Y-axis** | ~300–550 | 300–550 (no 275 half-step) | Yes |
 
 **Defaults:** 30 Hz Fig 5b fp32 checkpoint; eval seed `0`; `plant.dt_ms=0.02`; `BurstPatternAlphabet` (41 patterns); QAT `qat_burst_30hz.pt`.
