@@ -281,7 +281,7 @@ Dashed vertical at **2 s** (stimulation onset). Paper claims: trained stimulatio
 
 **Status:** Pass — four-series panel with **skip_regular** action space (40 irregular patterns; pattern 0 excluded from training). **0.2 s trailing / 2 s window** biomarker sampling (same protocol as Fig 2a). Seed 0; greedy action 7 → pattern 8. Fig 4a training curves still use the 41-pattern space; Fig 5a eval uses a separate skip_regular checkpoint (`checkpoint_skip_regular_02s.pt`).
 
-**Gates set** (`fig5a_pass` / `fig5_efficacy_gates` — ordering only; 45 Hz digitization `needs_redo`)
+**Gates set** (`fig5a_pass` / `fig5_efficacy_gates` → manifest `gates`)
 
 | Key | Blocks `pass` |
 |-----|---------------|
@@ -289,8 +289,10 @@ Dashed vertical at **2 s** (stimulation onset). Paper claims: trained stimulatio
 | `trained_below_no_stim` — trained post-onset mean < no stim | yes |
 | `trained_above_periodic` — trained > periodic 45 Hz | yes |
 | `cdbs_lowest` — 130 Hz cDBS lowest of four series | yes |
-| `trained_no_stim_ratio_near_paper` | no (skipped until 45 Hz digitization redone) |
-| `periodic_no_stim_ratio_near_paper` | no (skipped until 45 Hz digitization redone) |
+| `trained_no_stim_ratio_near_paper` — late ratio vs digitized paper | yes |
+| `periodic_no_stim_ratio_near_paper` — late ratio vs digitized paper | yes |
+
+Digitization: `artifacts/figures/papers/mehregan/5a/paper_digitization/curves_wpd_refined.json` (45 Hz series: PD no stim, Fully Trained 45Hz, Periodic 45Hz, Periodic 130Hz). Locked **v3** passes all six gates.
 
 **Convention (skip_regular, 2026-07-16):** At 45 Hz, pattern 0 (regular periodic) is the global open-loop optimum — a 41-pattern agent correctly collapses to it. Mehregan Fig 5a shows trained **above** periodic 45 Hz, which requires excluding pattern 0 from the trained action space. Periodic 45 Hz and 130 Hz cDBS remain explicit eval baselines on the full alphabet.
 
