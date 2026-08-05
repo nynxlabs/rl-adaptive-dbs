@@ -1437,8 +1437,25 @@ def resolve_ravivarapu_doc(checkout: Path | None = None) -> Path:
 PAPER_RAVIVARAPU_DOC = resolve_ravivarapu_doc()
 
 
+def refresh_ravivarapu_gate_tables(*, update_docs: bool = True) -> None:
+    """Refresh per-panel gate tables (with live Pass column) in the Ravivarapu tracker."""
+    if not update_docs or not PAPER_RAVIVARAPU_DOC.exists():
+        return
+    digitization = Path(__file__).resolve().parents[2] / "digitization"
+    path = digitization / "ravivarapu_gate_status.py"
+    if not path.is_file():
+        return
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("ravivarapu_gate_status", path)
+    if spec is None or spec.loader is None:
+        return
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    mod.refresh_gate_tables(PAPER_RAVIVARAPU_DOC)
+
+
 def promote_ravivarapu_4a(*, manifest: dict[str, Any], png_path: Path, update_docs: bool = True) -> dict[str, str]:
-    del update_docs
     caption = manifest.get("caption") or "see manifest"
     if manifest.get("png_version") is not None:
         caption = f"{caption} (v{manifest['png_version']})"
@@ -1460,11 +1477,11 @@ def promote_ravivarapu_4a(*, manifest: dict[str, Any], png_path: Path, update_do
             f"**Status:** {'Pass' if manifest.get('gates', {}).get('pass') else 'Open'} — see manifest gates.",
         )
         PAPER_RAVIVARAPU_DOC.write_text(text)
+    refresh_ravivarapu_gate_tables(update_docs=update_docs)
     return {"png": str(png_path), "caption": caption, "doc": str(PAPER_RAVIVARAPU_DOC)}
 
 
 def promote_ravivarapu_4b(*, manifest: dict[str, Any], png_path: Path, update_docs: bool = True) -> dict[str, str]:
-    del update_docs
     caption = manifest.get("caption") or "see manifest"
     if manifest.get("png_version") is not None:
         caption = f"{caption} (v{manifest['png_version']})"
@@ -1485,4 +1502,5 @@ def promote_ravivarapu_4b(*, manifest: dict[str, Any], png_path: Path, update_do
             f"**Status:** {'Pass' if manifest.get('gates', {}).get('pass') else 'Open'} — see manifest gates.",
         )
         PAPER_RAVIVARAPU_DOC.write_text(text)
+    refresh_ravivarapu_gate_tables(update_docs=update_docs)
     return {"png": str(png_path), "caption": caption, "doc": str(PAPER_RAVIVARAPU_DOC)}
