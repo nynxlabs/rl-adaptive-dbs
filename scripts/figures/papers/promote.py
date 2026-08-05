@@ -330,7 +330,11 @@ def _replace_marker_in(text: str, marker: str, body: str, *, doc: Path) -> str:
     if not pattern.search(text):
         msg = f"missing marker block {marker} in {doc}"
         raise ValueError(msg)
-    return pattern.sub(rf"\1\n{body}\n\3", text, count=1)
+
+    def _repl(match: re.Match[str]) -> str:
+        return f"{match.group(1)}\n{body}\n{match.group(3)}"
+
+    return pattern.sub(_repl, text, count=1)
 
 
 def _replace_marker(text: str, marker: str, body: str) -> str:
@@ -436,7 +440,11 @@ def refresh_nguyen_summary_in_text(text: str) -> str:
     )
     if not pattern.search(text):
         raise ValueError("missing summary markers in Nguyen replications doc")
-    return pattern.sub(rf"\1\n{block}\n\3", text, count=1)
+
+    def _repl(match: re.Match[str]) -> str:
+        return f"{match.group(1)}\n{block}\n{match.group(3)}"
+
+    return pattern.sub(_repl, text, count=1)
 
 
 def refresh_nguyen_gate_tables_in_text(text: str) -> str:
