@@ -90,6 +90,12 @@ class SEADBSConfig:
     pm_warmup_steps: int = 0
     # Actor logit bias toward no-stim (action 0); helps early PSD start high (Fig 4a).
     actor_no_stim_bias: float = 0.0
+    # Fig 4a Baseline convention: the paper's Baseline curve fades GRADUALLY across
+    # episodes, which epsilon-greedy argmax cannot produce (it flips abruptly into a
+    # step). Force Gumbel-Softmax structured sampling for the baseline WITHOUT the
+    # predictive model, so the duty ramps smoothly and the baseline stays the weaker
+    # variant. Leave the plain ``baseline`` (epsilon-greedy) intact for Fig 7.
+    force_gumbel_softmax: bool = False
 
     @property
     def step_duration_s(self) -> float:
@@ -106,7 +112,7 @@ class SEADBSConfig:
 
     @property
     def use_gumbel_softmax(self) -> bool:
-        return self.variant in {"baseline-gs", "paper"}
+        return self.variant in {"baseline-gs", "paper"} or self.force_gumbel_softmax
 
     @property
     def n_actions(self) -> int:
@@ -141,12 +147,17 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v23: short-burst STN drive (``dbs_burst_ms=60``) per paper Eq. (6) "short
-    bursts rather than continuously" — intermediate beta floor (~0.35 on the
-    425 scale) instead of continuous-130 Hz collapse to ~0.12. v22 (50 ms) left
-    the gap too small (0.006 vs paper 0.028); 60 ms deepens the floor so the
-    Baseline's higher-epsilon duty (0.42) opens the paper-like gap. Reward
-    keeps mild learning pressure so curves fade gradually, not a cliff.
+    v24-v30: short-burst STN drive (``dbs_burst_ms=60``) per paper Eq. (6) plus a
+    GS-temperature-anneal-driven ramp so the curves FADE GRADUALLY across all
+    150 episodes like the digitized paper (v23's plateau failed the mid-vs-late
+    gradual-decline gate). v24 fixed SEA's ramp; v25 found epsilon-greedy flips
+    into a step; v26-v29 dialed the GS Baseline (no PM) from declined-too-much
+    (v26/v29: collapsed to ~0.37 matching SEA) through too-slow/flat (v27/v28:
+    bias 1.6-2.0 too strong for the actor to overcome). v30: Baseline keeps the
+    overcome-able bias 1.3 but slows its duty ramp (actor_lr 5e-6 so its learned
+    stim preference grows across all 150 eps, lambda 5e-5 so tau stays ~4.5) to
+    land ~0.39-0.40; SEA lambda slowed to 1.2e-4 so its decline spreads instead
+    of front-loading.
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -154,7 +165,7 @@ def fig4_ravivarapu_config(
         log_episodes=True,
         variant=variant,
         carrier_hz=130.0,
-        actor_no_stim_bias=2.35,
+        actor_no_stim_bias=1.2,
         episode_psd_metric="mean",
         min_buffer_size=192,
         polyak_tau=0.002,
@@ -163,23 +174,27 @@ def fig4_ravivarapu_config(
     if variant == "paper":
         return replace(
             cfg,
-            actor_no_stim_bias=2.30,
+            actor_no_stim_bias=1.2,
             gs_tau0=5.0,
-            gs_lambda=2.5e-5,
+            gs_lambda=1.2e-4,
             gs_tau_min=0.40,
             update_frequency=2,
             pm_warmup_steps=4000,
-            actor_lr=6e-5,
+            actor_lr=1.2e-5,
             critic_lr=1.6e-4,
         )
     if variant == "baseline":
         return replace(
             cfg,
-            actor_no_stim_bias=2.45,
+            actor_no_stim_bias=1.4,
+            force_gumbel_softmax=True,
+            gs_tau0=5.0,
+            gs_lambda=8e-5,
+            gs_tau_min=0.80,
             epsilon_start=0.32,
             epsilon_end=0.42,
             update_frequency=2,
-            actor_lr=3e-5,
+            actor_lr=9e-6,
             critic_lr=1.2e-4,
         )
     return cfg

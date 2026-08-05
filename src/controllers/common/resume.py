@@ -178,4 +178,5 @@ SEA_DBS_MATERIAL_FIELDS: tuple[str, ...] = (
     "episode_psd_metric",
     "fixed_episode_seed",
     "dbs_burst_ms",
+    "force_gumbel_softmax",
 )

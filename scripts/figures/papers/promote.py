@@ -11,6 +11,7 @@ detached worktree copy of the index.
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import date
 from pathlib import Path
@@ -45,6 +46,24 @@ def resolve_paper_1_doc(checkout: Path | None = None) -> Path:
 PAPER_1_DOC = resolve_paper_1_doc()
 
 
+def refresh_mehregan_gate_tables(*, update_docs: bool = True) -> None:
+    """Refresh per-panel gate tables (with live Pass column) in the Mehregan tracker."""
+    if not update_docs or not PAPER_1_DOC.exists():
+        return
+    digitization = Path(__file__).resolve().parents[2] / "digitization"
+    path = digitization / "mehregan_gate_status.py"
+    if not path.is_file():
+        return
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("mehregan_gate_status", path)
+    if spec is None or spec.loader is None:
+        return
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    mod.refresh_gate_tables(PAPER_1_DOC)
+
+
 def resolve_nguyen_doc(checkout: Path | None = None) -> Path:
     """Path to ``figures/nguyen/replications.md`` (Nguyen tracker)."""
     root = main_checkout_root(checkout or CHECKOUT_ROOT)
@@ -64,6 +83,74 @@ PAPER_NGUYEN_6_MANIFEST = "artifacts/figures/papers/nguyen/6/manifest.json"
 PAPER_NGUYEN_6_REPLICATION_ALT = "Replication Fig 6"
 PAPER_NGUYEN_7_MANIFEST = "artifacts/figures/papers/nguyen/7/manifest.json"
 PAPER_NGUYEN_7_REPLICATION_ALT = "Replication Fig 7"
+
+# Nguyen gate rows: (manifest key, description suffix, blocks overall pass).
+NGUYEN_GATE_ROWS: dict[str, list[tuple[str, str, bool]]] = {
+    "3": [
+        ("ordering_pd_on_above_pd_off", "", True),
+        ("threshold_near_pd_on_q1", "informational", False),
+        ("paper_ordering_pd_on_above_pd_off", "digitization", True),
+        ("paper_mean_ratio_near_paper_readout", "digitization; no curves_fig3 yet", False),
+        ("paper_means_separated", "logged", False),
+    ],
+    "4": [
+        ("reward_scale_paper", "|mean reward ep 0–50| ≥ 5×10⁴", True),
+        ("late_reward_above_early", "", True),
+        ("late_reward_near_zero", "late mean > −2×10⁵", True),
+        ("length_decreases", "late mean < early mean − 1 step", True),
+        ("late_length_paper_band", "late mean ≤ 12", True),
+        ("early_near_max_length", "median first 50 ≥ max_steps − 2", True),
+        ("early_high_variance", "logged", False),
+        ("paper_early_reward_mag_near_paper", "digitization", True),
+        ("paper_reward_improves_like_paper", "digitization", True),
+        ("paper_late_reward_ratio_near_paper", "digitization", True),
+        ("paper_length_decreases_like_paper", "digitization", True),
+        ("paper_late_length_near_paper", "digitization", True),
+        ("paper_early_near_max_length", "digitization", True),
+    ],
+    "5": [
+        ("shared_train", "Fig 4 passed + same n_episodes", True),
+        ("spike_series_has_variance", "", True),
+        ("energy_series_has_variance", "", True),
+        ("energy_not_constant", "", True),
+        ("spike_in_paper_band", "mean spikes 400–950/ep", True),
+        ("energy_in_paper_band", "mean 300–3200/ep, max ≤ 3520", True),
+        ("paper_spike_mean_near_paper", "digitization", True),
+        ("paper_energy_mean_near_paper", "digitization", True),
+        ("paper_spike_trend_near_paper", "digitization", True),
+        ("paper_energy_trend_near_paper", "digitization", True),
+        ("paper_spike_series_has_variance", "digitization", True),
+        ("paper_energy_not_constant", "digitization", True),
+    ],
+    "6": [
+        ("shared_train", "", True),
+        ("paper_alpha_beta_decreases_like_paper", "digitization", True),
+        ("paper_late_alpha_beta_below_theta", "late mean α–β ≤ 150", True),
+        ("paper_late_alpha_beta_near_paper", "digitization", True),
+        ("paper_params_left_init", "amp / freq / pw each >5% off init", True),
+        ("paper_amp_late_near_paper", "digitization", True),
+        ("paper_freq_late_near_paper", "digitization", True),
+        ("paper_pw_late_near_paper", "digitization", True),
+        ("paper_late_params_stable", "std last 50 ep ≤ 20% of mean", True),
+    ],
+    "7": [
+        ("checkpoint_lineage_ok", "Fig 4 train passed", True),
+        ("paper_eval_protocol_ok", "≥20 steps", True),
+        ("paper_overall_mean_near_paper", "digitization", True),
+        ("paper_late_early_ratio_near_paper", "digitization", True),
+        ("paper_step_series_finite", "", True),
+        ("paper_below_fig3_pd_median", "when Fig 3 median available", True),
+        ("mean_below_theta", "informational", False),
+    ],
+}
+
+NGUYEN_MANIFEST_BY_PANEL: dict[str, str] = {
+    "3": PAPER_NGUYEN_2_3_MANIFEST,
+    "4": PAPER_NGUYEN_4_MANIFEST,
+    "5": PAPER_NGUYEN_5_MANIFEST,
+    "6": PAPER_NGUYEN_6_MANIFEST,
+    "7": PAPER_NGUYEN_7_MANIFEST,
+}
 
 PAPER_1B_PNG = "figures/mehregan/images/1b/gpi_psd.png"
 PAPER_1B_MANIFEST = "artifacts/figures/papers/mehregan/1b/manifest.json"
@@ -240,6 +327,77 @@ def _replace_marker_in(text: str, marker: str, body: str, *, doc: Path) -> str:
 
 def _replace_marker(text: str, marker: str, body: str) -> str:
     return _replace_marker_in(text, marker, body, doc=PAPER_1_DOC)
+
+
+def _load_nguyen_manifest(manifest_rel: str) -> dict[str, Any] | None:
+    path = REPO_ROOT / manifest_rel
+    if not path.is_file():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def _gate_current_cell(gates: dict[str, Any], key: str) -> str:
+    if key not in gates:
+        return "—"
+    value = gates[key]
+    if isinstance(value, bool):
+        return "pass" if value else "fail"
+    return "—"
+
+
+def _format_nguyen_gates_table(
+    panel: str,
+    manifest: dict[str, Any] | None,
+    *,
+    manifest_rel: str,
+) -> str:
+    rows = NGUYEN_GATE_ROWS[panel]
+    if manifest is None:
+        overall = "—"
+        source = f"no manifest at `{manifest_rel}`"
+        gate_values: dict[str, Any] = {}
+    else:
+        gate_values = manifest.get("gates") or {}
+        overall = "pass" if gate_values.get("pass") else "fail"
+        source = f"`{manifest_rel}`"
+
+    lines = [
+        f"**Gates** ({source}; overall **{overall}**)",
+        "",
+        "| Key | Blocks `pass` | Current |",
+        "|-----|---------------|---------|",
+    ]
+    for key, desc, blocks in rows:
+        label = f"`{key}`"
+        if desc:
+            label = f"{label} — {desc}"
+        blocks_cell = "yes" if blocks else "no"
+        current = _gate_current_cell(gate_values, key)
+        lines.append(f"| {label} | {blocks_cell} | {current} |")
+    return "\n".join(lines)
+
+
+def refresh_nguyen_gate_tables_in_text(text: str) -> str:
+    """Replace all ``gates-<panel>`` marker blocks from on-disk manifests."""
+    for panel, manifest_rel in NGUYEN_MANIFEST_BY_PANEL.items():
+        marker = f"gates-{panel}"
+        if f"<!-- {marker}:start -->" not in text:
+            continue
+        manifest = _load_nguyen_manifest(manifest_rel)
+        body = _format_nguyen_gates_table(panel, manifest, manifest_rel=manifest_rel)
+        text = _replace_marker_in(text, marker, body, doc=PAPER_NGUYEN_DOC)
+    return text
+
+
+def refresh_nguyen_gate_tables(*, update_docs: bool = True) -> None:
+    """Refresh Nguyen gate tables in the tracker from manifest JSON on disk."""
+    if not update_docs or not PAPER_NGUYEN_DOC.exists():
+        return
+    text = PAPER_NGUYEN_DOC.read_text(encoding="utf-8")
+    PAPER_NGUYEN_DOC.write_text(refresh_nguyen_gate_tables_in_text(text), encoding="utf-8")
 
 
 def _default_paper_1_doc(*, caption_1b: str, caption_2a: str) -> str:
@@ -504,6 +662,7 @@ def promote_1b(
     caption = _caption_1b(manifest)
     if update_docs:
         _ensure_paper_1_doc(caption_1b=caption, caption_2a=None, caption_2b=None)
+    refresh_mehregan_gate_tables(update_docs=update_docs)
     return {
         "png": str(png_path),
         "manifest": PAPER_1B_MANIFEST,
@@ -524,6 +683,7 @@ def promote_2a(
     caption = _caption_2a(manifest)
     if update_docs:
         _ensure_paper_1_doc(caption_1b=None, caption_2a=caption, caption_2b=None)
+    refresh_mehregan_gate_tables(update_docs=update_docs)
     return {
         "png": str(png_path),
         "manifest": str(PAPER_2A_MANIFEST),
@@ -553,6 +713,7 @@ def promote_2b(
         )
         PAPER_1_DOC.write_text(text)
     materialize_docs_figure_papers()
+    refresh_mehregan_gate_tables(update_docs=update_docs)
     return {
         "png": str(png_path),
         "png_repo_rel": repo_rel,
@@ -608,6 +769,7 @@ def promote_4b(
             )
         PAPER_1_DOC.write_text(text)
     materialize_docs_figure_papers()
+    refresh_mehregan_gate_tables(update_docs=update_docs)
     return {
         "png": str(reward_png_path),
         "reward_png_repo_rel": reward_rel,
@@ -644,6 +806,7 @@ def promote_4a(
         )
         PAPER_1_DOC.write_text(text)
     materialize_docs_figure_papers()
+    refresh_mehregan_gate_tables(update_docs=update_docs)
     return {
         "png": str(png_path),
         "png_repo_rel": repo_rel,
@@ -770,6 +933,7 @@ def promote_5b(
         )
         PAPER_1_DOC.write_text(text)
     materialize_docs_figure_papers()
+    refresh_mehregan_gate_tables(update_docs=update_docs)
     return {
         "png": str(png_path),
         "png_repo_rel": repo_rel,
@@ -807,6 +971,7 @@ def promote_5a(
         )
         PAPER_1_DOC.write_text(text)
     materialize_docs_figure_papers()
+    refresh_mehregan_gate_tables(update_docs=update_docs)
     return {
         "png": str(png_path),
         "png_repo_rel": repo_rel,
@@ -876,6 +1041,7 @@ def promote_6a(
         )
         PAPER_1_DOC.write_text(text)
     materialize_docs_figure_papers()
+    refresh_mehregan_gate_tables(update_docs=update_docs)
     return {
         "png": str(png_path),
         "png_repo_rel": repo_rel,
@@ -945,6 +1111,7 @@ def promote_6b(
         )
         PAPER_1_DOC.write_text(text)
     materialize_docs_figure_papers()
+    refresh_mehregan_gate_tables(update_docs=update_docs)
     return {
         "png": str(png_path),
         "png_repo_rel": repo_rel,
@@ -980,6 +1147,25 @@ def promote_nguyen_2_3(
             link=link,
             doc=PAPER_NGUYEN_DOC,
         )
+        _pass = bool(manifest.get("gates", {}).get("pass"))
+        _status = (
+            f"**Status:** Pass — 500 × 100 ms samples; see `{png_path.name}`."
+            if _pass
+            else f"**Status:** Open — see `{png_path.name}`."
+        )
+        text = re.sub(
+            r"(<!-- caption-3:end -->\s*\n)\*\*Status:\*\*[^\n]+",
+            r"\1" + _status,
+            text,
+            count=1,
+        )
+        text = re.sub(
+            r"(\| Fig 3 — GPi α–β distribution \(PD Off vs PD On\) \|[^|]+\|[^|]+\| )(Open|Pass)( \|)",
+            r"\1" + ("Pass" if _pass else "Open") + r"\3",
+            text,
+            count=1,
+        )
+        text = refresh_nguyen_gate_tables_in_text(text)
         PAPER_NGUYEN_DOC.write_text(text)
     return {
         "png": str(png_path),
@@ -1040,6 +1226,7 @@ def promote_nguyen_4(
             "*Not yet generated.* Target: `figures/nguyen/images/4/training_reward_length.png`",
             f"![Replication Fig 4]({link})",
         )
+        text = refresh_nguyen_gate_tables_in_text(text)
         PAPER_NGUYEN_DOC.write_text(text)
     return {
         "png": str(png_path),
@@ -1100,6 +1287,7 @@ def _promote_nguyen_panel(
         )
         if placeholder:
             text = text.replace(placeholder, f"![{replication_alt}]({link})")
+        text = refresh_nguyen_gate_tables_in_text(text)
         PAPER_NGUYEN_DOC.write_text(text)
     return {
         "png": str(png_path),
