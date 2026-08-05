@@ -84,65 +84,73 @@ PAPER_NGUYEN_6_REPLICATION_ALT = "Replication Fig 6"
 PAPER_NGUYEN_7_MANIFEST = "artifacts/figures/papers/nguyen/7/manifest.json"
 PAPER_NGUYEN_7_REPLICATION_ALT = "Replication Fig 7"
 
-# Nguyen gate rows: (manifest key, description suffix, blocks overall pass).
-NGUYEN_GATE_ROWS: dict[str, list[tuple[str, str, bool]]] = {
+# Nguyen gate rows: (manifest key, description). Every row is required for exit.
+NGUYEN_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
     "3": [
-        ("ordering_pd_on_above_pd_off", "", True),
-        ("threshold_near_pd_on_q1", "informational", False),
-        ("paper_ordering_pd_on_above_pd_off", "digitization", True),
-        ("paper_mean_ratio_near_paper_readout", "digitization; no curves_fig3 yet", False),
-        ("paper_means_separated", "logged", False),
+        ("ordering_pd_on_above_pd_off", "PD On above PD Off"),
+        ("threshold_near_pd_on_q1", "threshold near PD On Q1 (informational)"),
+        ("paper_ordering_pd_on_above_pd_off", "digitization — ordering"),
+        ("paper_mean_ratio_near_paper_readout", "digitization — mean ratio (no curves_fig3 yet)"),
+        ("paper_means_separated", "digitization — means separated (logged)"),
     ],
     "4": [
-        ("reward_scale_paper", "|mean reward ep 0–50| ≥ 5×10⁴", True),
-        ("late_reward_above_early", "", True),
-        ("late_reward_near_zero", "late mean > −2×10⁵", True),
-        ("length_decreases", "late mean < early mean − 1 step", True),
-        ("late_length_paper_band", "late mean ≤ 12", True),
-        ("early_near_max_length", "median first 50 ≥ max_steps − 2", True),
-        ("early_high_variance", "logged", False),
-        ("paper_early_reward_mag_near_paper", "digitization", True),
-        ("paper_reward_improves_like_paper", "digitization", True),
-        ("paper_late_reward_ratio_near_paper", "digitization", True),
-        ("paper_length_decreases_like_paper", "digitization", True),
-        ("paper_late_length_near_paper", "digitization", True),
-        ("paper_early_near_max_length", "digitization", True),
+        ("reward_scale_paper", "|mean reward ep 0–50| ≥ 5×10⁴"),
+        ("late_reward_above_early", "late mean reward > early mean"),
+        ("late_reward_near_zero", "late mean > −2×10⁵"),
+        ("length_decreases", "late mean length < early mean − 1 step"),
+        ("late_length_paper_band", "late mean length ≤ 12"),
+        ("early_near_max_length", "median first 50 ≥ max_steps − 2"),
+        ("early_high_variance", "early reward variance (logged)"),
+        ("paper_early_reward_mag_near_paper", "digitization — early reward magnitude"),
+        ("paper_reward_improves_like_paper", "digitization — reward improves"),
+        ("paper_late_reward_ratio_near_paper", "digitization — late/early reward ratio"),
+        ("paper_length_decreases_like_paper", "digitization — length decreases"),
+        ("paper_late_length_near_paper", "digitization — late length"),
+        ("paper_early_near_max_length", "digitization — early near max length"),
     ],
     "5": [
-        ("shared_train", "Fig 4 passed + same n_episodes", True),
-        ("spike_series_has_variance", "", True),
-        ("energy_series_has_variance", "", True),
-        ("energy_not_constant", "", True),
-        ("spike_in_paper_band", "mean spikes 400–950/ep", True),
-        ("energy_in_paper_band", "mean 300–3200/ep, max ≤ 3520", True),
-        ("paper_spike_mean_near_paper", "digitization", True),
-        ("paper_energy_mean_near_paper", "digitization", True),
-        ("paper_spike_trend_near_paper", "digitization", True),
-        ("paper_energy_trend_near_paper", "digitization", True),
-        ("paper_spike_series_has_variance", "digitization", True),
-        ("paper_energy_not_constant", "digitization", True),
+        ("shared_train", "Fig 4 passed + same n_episodes"),
+        ("spike_series_has_variance", "spike series has variance"),
+        ("energy_series_has_variance", "energy series has variance"),
+        ("energy_not_constant", "energy not constant"),
+        ("spike_in_paper_band", "mean spikes 400–950/ep"),
+        ("energy_in_paper_band", "mean 300–3200/ep, max ≤ 3520"),
+        ("paper_spike_mean_near_paper", "digitization — spike mean"),
+        ("paper_energy_mean_near_paper", "digitization — energy mean"),
+        ("paper_spike_trend_near_paper", "digitization — spike trend"),
+        ("paper_energy_trend_near_paper", "digitization — energy trend"),
+        ("paper_spike_series_has_variance", "digitization — spike variance"),
+        ("paper_energy_not_constant", "digitization — energy not constant"),
     ],
     "6": [
-        ("shared_train", "", True),
-        ("paper_alpha_beta_decreases_like_paper", "digitization", True),
-        ("paper_late_alpha_beta_below_theta", "late mean α–β ≤ 150", True),
-        ("paper_late_alpha_beta_near_paper", "digitization", True),
-        ("paper_params_left_init", "amp / freq / pw each >5% off init", True),
-        ("paper_amp_late_near_paper", "digitization", True),
-        ("paper_freq_late_near_paper", "digitization", True),
-        ("paper_pw_late_near_paper", "digitization", True),
-        ("paper_late_params_stable", "std last 50 ep ≤ 20% of mean", True),
+        ("shared_train", "Fig 4 passed + shared train"),
+        ("paper_alpha_beta_decreases_like_paper", "digitization — α–β decreases"),
+        ("paper_late_alpha_beta_below_theta", "late mean α–β ≤ 150"),
+        ("paper_late_alpha_beta_near_paper", "digitization — late α–β"),
+        ("paper_params_left_init", "amp / freq / pw each >5% off init"),
+        ("paper_amp_late_near_paper", "digitization — late amplitude"),
+        ("paper_freq_late_near_paper", "digitization — late frequency"),
+        ("paper_pw_late_near_paper", "digitization — late pulse width"),
+        ("paper_late_params_stable", "std last 50 ep ≤ 20% of mean"),
     ],
     "7": [
-        ("checkpoint_lineage_ok", "Fig 4 train passed", True),
-        ("paper_eval_protocol_ok", "≥20 steps", True),
-        ("paper_overall_mean_near_paper", "digitization", True),
-        ("paper_late_early_ratio_near_paper", "digitization", True),
-        ("paper_step_series_finite", "", True),
-        ("paper_below_fig3_pd_median", "when Fig 3 median available", True),
-        ("mean_below_theta", "informational", False),
+        ("checkpoint_lineage_ok", "Fig 4 train passed"),
+        ("paper_eval_protocol_ok", "≥20 steps"),
+        ("paper_overall_mean_near_paper", "digitization — overall mean"),
+        ("paper_late_early_ratio_near_paper", "digitization — late/early ratio"),
+        ("paper_step_series_finite", "step series finite"),
+        ("paper_below_fig3_pd_median", "below Fig 3 PD On median when available"),
+        ("mean_below_theta", "mean below θ (informational)"),
     ],
 }
+
+NGUYEN_SUMMARY_ROWS: tuple[tuple[str, str, str], ...] = (
+    ("3", "Fig 3", "GPi α–β distribution (PD Off vs PD On)"),
+    ("4", "Fig 4", "Training reward + episode length"),
+    ("5", "Fig 5", "CBGT spikes + DBS energy over training"),
+    ("6", "Fig 6", "α–β + DBS parameters over training"),
+    ("7", "Fig 7", "50-episode eval (25 steps)"),
+)
 
 NGUYEN_MANIFEST_BY_PANEL: dict[str, str] = {
     "3": PAPER_NGUYEN_2_3_MANIFEST,
@@ -339,13 +347,28 @@ def _load_nguyen_manifest(manifest_rel: str) -> dict[str, Any] | None:
         return None
 
 
-def _gate_current_cell(gates: dict[str, Any], key: str) -> str:
+def _gate_pass_cell(gates: dict[str, Any], key: str) -> str:
     if key not in gates:
         return "—"
     value = gates[key]
     if isinstance(value, bool):
-        return "pass" if value else "fail"
+        return "yes" if value else "no"
     return "—"
+
+
+def _nguyen_all_gates_pass(gates: dict[str, Any], panel: str) -> bool | None:
+    rows = NGUYEN_GATE_ROWS[panel]
+    seen = False
+    for key, _ in rows:
+        if key not in gates:
+            continue
+        value = gates[key]
+        if not isinstance(value, bool):
+            continue
+        seen = True
+        if not value:
+            return False
+    return True if seen else None
 
 
 def _format_nguyen_gates_table(
@@ -356,32 +379,69 @@ def _format_nguyen_gates_table(
 ) -> str:
     rows = NGUYEN_GATE_ROWS[panel]
     if manifest is None:
-        overall = "—"
+        overall_cell = "—"
         source = f"no manifest at `{manifest_rel}`"
         gate_values: dict[str, Any] = {}
     else:
         gate_values = manifest.get("gates") or {}
-        overall = "pass" if gate_values.get("pass") else "fail"
+        overall = _nguyen_all_gates_pass(gate_values, panel)
+        overall_cell = "yes" if overall else ("no" if overall is False else "—")
         source = f"`{manifest_rel}`"
 
     lines = [
-        f"**Gates** ({source}; overall **{overall}**)",
+        f"**Gates set** ({source}; overall **`pass`**: {overall_cell}, {_today()}). "
+        "Every row is required for exit.",
         "",
-        "| Key | Blocks `pass` | Current |",
-        "|-----|---------------|---------|",
+        "| Key | Pass |",
+        "|-----|------|",
     ]
-    for key, desc, blocks in rows:
-        label = f"`{key}`"
-        if desc:
-            label = f"{label} — {desc}"
-        blocks_cell = "yes" if blocks else "no"
-        current = _gate_current_cell(gate_values, key)
-        lines.append(f"| {label} | {blocks_cell} | {current} |")
+    for key, desc in rows:
+        lines.append(f"| `{key}` — {desc} | {_gate_pass_cell(gate_values, key)} |")
     return "\n".join(lines)
+
+
+def _nguyen_summary_status(panel: str, manifest: dict[str, Any] | None) -> str:
+    if manifest is None:
+        return "Open"
+    gates = manifest.get("gates") or {}
+    overall = _nguyen_all_gates_pass(gates, panel)
+    if overall is True:
+        return "Pass"
+    if overall is False:
+        failed = [key for key, _ in NGUYEN_GATE_ROWS[panel] if gates.get(key) is False]
+        if failed:
+            return f"Fail (`{failed[0]}`)"
+        return "Fail"
+    return "Open"
+
+
+def render_nguyen_summary_table() -> str:
+    lines = [
+        "| Panel | Description | Status |",
+        "|-------|-------------|--------|",
+    ]
+    for panel, label, description in NGUYEN_SUMMARY_ROWS:
+        manifest_rel = NGUYEN_MANIFEST_BY_PANEL[panel]
+        manifest = _load_nguyen_manifest(manifest_rel)
+        status = _nguyen_summary_status(panel, manifest)
+        lines.append(f"| {label} | {description} | {status} |")
+    return "\n".join(lines)
+
+
+def refresh_nguyen_summary_in_text(text: str) -> str:
+    block = render_nguyen_summary_table()
+    pattern = re.compile(
+        r"(<!-- summary:start -->)(.*?)(<!-- summary:end -->)",
+        re.DOTALL,
+    )
+    if not pattern.search(text):
+        raise ValueError("missing summary markers in Nguyen replications doc")
+    return pattern.sub(rf"\1\n{block}\n\3", text, count=1)
 
 
 def refresh_nguyen_gate_tables_in_text(text: str) -> str:
     """Replace all ``gates-<panel>`` marker blocks from on-disk manifests."""
+    text = refresh_nguyen_summary_in_text(text)
     for panel, manifest_rel in NGUYEN_MANIFEST_BY_PANEL.items():
         marker = f"gates-{panel}"
         if f"<!-- {marker}:start -->" not in text:
