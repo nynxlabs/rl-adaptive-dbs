@@ -396,11 +396,11 @@ def _format_nguyen_gates_table(
         f"**Gates set** ({source}; overall **`pass`**: {overall_cell}, {_today()}). "
         "Every row is required for exit.",
         "",
-        "| Key | Pass |",
-        "|-----|------|",
+        "| Key | Description | Pass |",
+        "|-----|-------------|------|",
     ]
     for key, desc in rows:
-        lines.append(f"| `{key}` — {desc} | {_gate_pass_cell(gate_values, key)} |")
+        lines.append(f"| `{key}` | {desc} | {_gate_pass_cell(gate_values, key)} |")
     return "\n".join(lines)
 
 

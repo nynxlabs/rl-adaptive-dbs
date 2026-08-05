@@ -178,12 +178,12 @@ def render_gate_block(status: PanelGateStatus) -> str:
         f"**Gates set** (`{status.source}`; overall **`{status.pass_field}`**: {overall}, "
         f"{_today()}). Every row is required for exit.",
         "",
-        "| Key | Pass |",
-        "|-----|------|",
+        "| Key | Description | Pass |",
+        "|-----|-------------|------|",
     ]
     for row in status.rows:
         lines.append(
-            f"| `{row.key}` — {row.description} | {_pass_cell(status.gates.get(row.key))} |"
+            f"| `{row.key}` | {row.description} | {_pass_cell(status.gates.get(row.key))} |"
         )
     return "\n".join(lines)
 
