@@ -2,7 +2,7 @@
 
 **Primary replication tracker** for this repo. Work is scheduled by **panel**, not by roadmap phase: each row below is an exit criterion with automated gates in `plot.py` (manifest `gates` / `gates_pass`), a committed `plot.py`, and side-by-side PNGs.
 
-Side-by-side **paper panel** vs **our replication**. Plot scripts write replication PNGs to `figures/mehregan/images/`; JSON caches to `artifacts/figures/papers/`. Gate tables include a live **Pass** column (refreshed by `scripts/digitization/mehregan_gate_status.py` on each promote / `--plot-only`).
+Side-by-side **paper panel** vs **our replication**. Plot scripts write replication PNGs to `figures/mehregan/images/`; JSON caches to `artifacts/figures/papers/`. Gate tables show live **Pass** per check (all required; refreshed by `scripts/digitization/mehregan_gate_status.py` on promote / `--plot-only`).
 
 | Panel                                | Script                                       | Spec                                                                                                           | Gates | Status                    |
 | ------------------------------------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----- | ------------------------- |
@@ -13,7 +13,7 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Fig 4b — training reward vs episode  | `scripts/figures/papers/mehregan/4b/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Set   | Pass (paired v18, v14)      |
 | Fig 5a — post-train efficacy @ 45 Hz | `scripts/figures/papers/mehregan/5a/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Set   | Pass                      |
 | Fig 5b — post-train efficacy @ 30 Hz | `scripts/figures/papers/mehregan/5b/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Set   | Pass (burst alphabet, v3) |
-| Fig 6a — PTQ / QAT @ 45 Hz           | `scripts/figures/papers/mehregan/6a/plot.py` | [controllers/ddpg/replication.md](../../docs/controllers/ddpg/replication.md), [6a.md](../../docs/figures/mehregan/6a.md) | Set   | Pass (honest v40, weak QAT) |
+| Fig 6a — PTQ / QAT @ 45 Hz           | `scripts/figures/papers/mehregan/6a/plot.py` | [controllers/ddpg/replication.md](../../docs/controllers/ddpg/replication.md), [6a.md](../../docs/figures/mehregan/6a.md) | Set   | Fail (`paper_qat_level_ratio_near_paper`, v40) |
 | Fig 6b — PTQ / QAT @ 30 Hz           | `scripts/figures/papers/mehregan/6b/plot.py` | [controllers/ddpg/replication.md](../../docs/controllers/ddpg/replication.md), [6b.md](../../docs/figures/mehregan/6b.md) | Set   | Pass (honest v20, tier PTQ) |
 
 Replication PNGs: `figures/mehregan/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/mehregan/images/<panel>/paper.png` (from paper-note embeds; composite Figs 1/2/4/5/6 split into panels). Full composites under `figures/mehregan/images/_full/`.
@@ -41,15 +41,15 @@ Mean GPi multitaper power spectral density (1–50 Hz) for three conditions: **h
 **Status:** Pass — condition ordering and beta-peak shape match the paper panel (seeds `0–9` mean).
 
 <!-- gates-1b:start -->
-**Gates set** (`fig1b_gates` → manifest `gates` / `gates_pass`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/1b/curves.json`, 2026-08-05).
+**Gates set** (`fig1b_gates` → manifest `gates` / `gates_pass`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/1b/curves.json`, 2026-08-05). Every row is required for exit.
 
-| Key | Blocks `gates_pass` | Pass |
-|-----|---------------------|------|
-| `pd_gt_healthy` — beta-band PD > healthy | yes | yes |
-| `pd_130_lt_pd` — 130 Hz cDBS < untreated PD | yes | yes |
-| `suppression_ratio_near_paper` — pd_130/pd ratio vs digitized paper | yes | yes |
-| `healthy_beta_near_paper` — healthy level within 30% of paper | yes | yes |
-| `pd_130hz_beta_near_paper` — treated level within 30% of paper | yes | yes |
+| Key | Pass |
+|-----|------|
+| `pd_gt_healthy` — beta-band PD > healthy | yes |
+| `pd_130_lt_pd` — 130 Hz cDBS < untreated PD | yes |
+| `suppression_ratio_near_paper` — pd_130/pd ratio vs digitized paper | yes |
+| `healthy_beta_near_paper` — healthy level within 30% of paper | yes |
+| `pd_130hz_beta_near_paper` — treated level within 30% of paper | yes |
 <!-- gates-1b:end -->
 
 **Run:**
@@ -84,14 +84,14 @@ GPi beta-band power ($P_\beta$, Eq. 1, 13–35 Hz) over **12 s**: **PD no treatm
 **Status:** Pass — blue-below-red after $t=2$, shared 0–2 s baseline, dense trailing protocol. Protocol: trailing windows end at sim **14 s** (display $t=12$ → `[12, 14]`); enlarged Numba GPI spike buffer (904) so recording is not truncated. Remaining polish: blue floor slightly below paper at $t=12$; single seed (0).
 
 <!-- gates-2a:start -->
-**Gates set** (`fig2_time_gates`, panel `2a`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/2a/series.json`, 2026-08-05).
+**Gates set** (`fig2_time_gates`, panel `2a`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/2a/series.json`, 2026-08-05). Every row is required for exit.
 
-| Key | Blocks `gates_pass` | Pass |
-|-----|---------------------|------|
-| `prestim_shared` — treated/untreated agree pre-onset (≤5% rel) | yes | yes |
-| `treated_below_untreated_late` — cDBS below no-treatment after t=2 | yes | yes |
-| `late_ratio_near_paper` — late treated/untreated ratio vs digitization | yes | yes |
-| `suppression_drop_near_paper` — drop magnitude vs digitization | yes | yes |
+| Key | Pass |
+|-----|------|
+| `prestim_shared` — treated/untreated agree pre-onset (≤5% rel) | yes |
+| `treated_below_untreated_late` — cDBS below no-treatment after t=2 | yes |
+| `late_ratio_near_paper` — late treated/untreated ratio vs digitization | yes |
+| `suppression_drop_near_paper` — drop magnitude vs digitization | yes |
 <!-- gates-2a:end -->
 
 **Run:**
@@ -127,14 +127,14 @@ Windowed Error Index (EI, Eq. 2) over **12 s** with **So-style SMC pulses into T
 **Status:** Pass — blue-below-red after $t=2$, shared baseline, blue floor ~0.12 near paper. Remaining polish: red $t=12$ slightly low (~0.24 vs ~0.30); single seed.
 
 <!-- gates-2b:start -->
-**Gates set** (`fig2_time_gates`, panel `2b`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/2b/series.json`, 2026-08-05).
+**Gates set** (`fig2_time_gates`, panel `2b`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/2b/series.json`, 2026-08-05). Every row is required for exit.
 
-| Key | Blocks `gates_pass` | Pass |
-|-----|---------------------|------|
-| `prestim_shared` — treated/untreated agree pre-onset (≤5% rel) | yes | yes |
-| `treated_below_untreated_late` — cDBS below no-treatment after t=2 | yes | yes |
-| `late_ratio_near_paper` — late treated/untreated ratio vs digitization | yes | yes |
-| `suppression_drop_near_paper` — drop magnitude vs digitization | yes | yes |
+| Key | Pass |
+|-----|------|
+| `prestim_shared` — treated/untreated agree pre-onset (≤5% rel) | yes |
+| `treated_below_untreated_late` — cDBS below no-treatment after t=2 | yes |
+| `late_ratio_near_paper` — late treated/untreated ratio vs digitization | yes |
+| `suppression_drop_near_paper` — drop magnitude vs digitization | yes |
 <!-- gates-2b:end -->
 
 **Run:**
@@ -175,15 +175,15 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 **Status:** Pass — locked **v18** (`training_beta_v18.png`, `series_v18.json`): linear softmax τ **3→1.0**, late fixture-seed skip, `gates_pass=true` (mid_drop≈0.024 vs paper≈0.047). Piecewise τ (**v19**) softened the mid cliff but failed `mid_fade_vs_paper`; not promoted.
 
 <!-- gates-4a:start -->
-**Gates set** (`fig4a_gates` → locked `series_v18.json`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4a/series_v18.json`, 2026-08-05).
+**Gates set** (`fig4a_gates` → locked `series_v18.json`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4a/series_v18.json`, 2026-08-05). Every row is required for exit.
 
-| Key | Blocks `gates_pass` | Pass |
-|-----|---------------------|------|
-| `plot_style` — 300 training steps | yes | yes |
-| `overall_trend_down` — end window mean < start window mean | yes | yes |
-| `drop_vs_paper` — drop ≥ 70% of digitized paper drop | yes | yes |
-| `late_early_ratio_near_paper` — late/early ratio vs digitization | yes | yes |
-| `mid_fade_vs_paper` — mid [120,150] fade ≥ 50% of paper mid-drop | yes | yes |
+| Key | Pass |
+|-----|------|
+| `plot_style` — 300 training steps | yes |
+| `overall_trend_down` — end window mean < start window mean | yes |
+| `drop_vs_paper` — drop ≥ 70% of digitized paper drop | yes |
+| `late_early_ratio_near_paper` — late/early ratio vs digitization | yes |
+| `mid_fade_vs_paper` — mid [120,150] fade ≥ 50% of paper mid-drop | yes |
 <!-- gates-4a:end -->
 
 **Panel notes:** extended tuning history (skip_regular workflow, entropy experiments) — [docs/figures/mehregan/4a.md](../../docs/figures/mehregan/4a.md).
@@ -235,19 +235,19 @@ Episode **total reward** and **episode-mean PSD(x10³)** during the same **45 Hz
 **Status:** Pass — **v14** reward + PSD panels (9 episodes, indices 0–8), paired with locked Fig 4a **v18** (`series_v18.json`, seed 0). Qualitative: reward↑, episode-mean PSD↓ (0.447→0.292), rise by ep 1.
 
 <!-- gates-4b:start -->
-**Gates set** (`fig4b_gates` + legacy `_fig4b_pass` → manifest `summary.gates`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4b/manifest.json`, 2026-08-05).
+**Gates set** (`fig4b_gates` + legacy `_fig4b_pass` → manifest `summary.gates`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4b/manifest.json`, 2026-08-05). Every row is required for exit.
 
-| Key | Blocks `gates_pass` | Pass |
-|-----|---------------------|------|
-| `early_negative` — mean reward ep 0–2 < 0 | yes | yes |
-| `reward_rises` — late mean reward > early mean | yes | yes |
-| `late_plateau_improved` — late mean reward > −10 | yes | yes |
-| `rise_timing` — reward exceeds ep0 + 10 by ep ≤ 6 | yes | yes |
-| `beta_drops` — late episode-mean PSD < early | yes | yes |
-| `beta_drop_ratio_near_paper` — PSD late/early ratio vs digitization | yes | yes |
-| `reward_recovers_like_paper` — qualitative rise (not magnitude match) | yes | yes |
-| `plot_style` — ≥ 2 episodes plotted | yes | yes |
-| `automation` — legacy `_fig4b_pass` mirror | yes | yes |
+| Key | Pass |
+|-----|------|
+| `early_negative` — mean reward ep 0–2 < 0 | yes |
+| `reward_rises` — late mean reward > early mean | yes |
+| `late_plateau_improved` — late mean reward > −10 | yes |
+| `rise_timing` — reward exceeds ep0 + 10 by ep ≤ 6 | yes |
+| `beta_drops` — late episode-mean PSD < early | yes |
+| `beta_drop_ratio_near_paper` — PSD late/early ratio vs digitization | yes |
+| `reward_recovers_like_paper` — qualitative rise (not magnitude match) | yes |
+| `plot_style` — ≥ 2 episodes plotted | yes |
+| `automation` — legacy `_fig4b_pass` mirror | yes |
 <!-- gates-4b:end -->
 
 **Run:**
@@ -291,16 +291,16 @@ Dashed vertical at **2 s** (stimulation onset). Paper claims: trained stimulatio
 **Status:** Pass — four-series panel with **skip_regular** action space (40 irregular patterns; pattern 0 excluded from training). **0.2 s trailing / 2 s window** biomarker sampling (same protocol as Fig 2a). Seed 0; greedy action 7 → pattern 8. Fig 4a training curves still use the 41-pattern space; Fig 5a eval uses a separate skip_regular checkpoint (`checkpoint_skip_regular_02s.pt`).
 
 <!-- gates-5a:start -->
-**Gates set** (`fig5a_pass` / `fig5_efficacy_gates` → manifest `gates`). Overall **`pass`**: yes (from `artifacts/figures/papers/mehregan/5a/manifest.json`, 2026-08-05).
+**Gates set** (`fig5a_pass` / `fig5_efficacy_gates` → manifest `gates`). Overall **`pass`**: yes (from `artifacts/figures/papers/mehregan/5a/manifest.json`, 2026-08-05). Every row is required for exit.
 
-| Key | Blocks `pass` | Pass |
-|-----|---------------------|------|
-| `shared_baseline` — no-stim vs periodic pre-onset Δ < 25 | yes | yes |
-| `trained_below_no_stim` — trained post-onset mean < no stim | yes | yes |
-| `trained_above_periodic` — trained > periodic 45 Hz | yes | yes |
-| `cdbs_lowest` — 130 Hz cDBS lowest of four series | yes | yes |
-| `trained_no_stim_ratio_near_paper` — late ratio vs digitized paper | yes | yes |
-| `periodic_no_stim_ratio_near_paper` — late ratio vs digitized paper | yes | yes |
+| Key | Pass |
+|-----|------|
+| `shared_baseline` — no-stim vs periodic pre-onset Δ < 25 | yes |
+| `trained_below_no_stim` — trained post-onset mean < no stim | yes |
+| `trained_above_periodic` — trained > periodic 45 Hz | yes |
+| `cdbs_lowest` — 130 Hz cDBS lowest of four series | yes |
+| `trained_no_stim_ratio_near_paper` — late ratio vs digitized paper | yes |
+| `periodic_no_stim_ratio_near_paper` — late ratio vs digitized paper | yes |
 <!-- gates-5a:end -->
 
 **Convention (skip_regular, 2026-07-16):** At 45 Hz, pattern 0 (regular periodic) is the global open-loop optimum — a 41-pattern agent correctly collapses to it. Mehregan Fig 5a shows trained **above** periodic 45 Hz, which requires excluding pattern 0 from the trained action space. Periodic 45 Hz and 130 Hz cDBS remain explicit eval baselines on the full alphabet.
@@ -353,16 +353,16 @@ Key paper claim: **periodic 30 Hz elevates** beta (stimulation rate inside the b
 **Status:** Pass — burst-alphabet retrain (seed 0) + trailing eval **v3** (trained≈367, no-stim≈488, periodic≈639). Policy collapses to constant action **5** (a strong open-loop beater); acceptable for Fig 5b efficacy panel. Y-limits auto-fit from traces (override with `--y-min` / `--y-max`).
 
 <!-- gates-5b:start -->
-**Gates set** (`fig5b_pass` / `fig5_efficacy_gates` → manifest `gates`). Overall **`pass`**: yes (from `artifacts/figures/papers/mehregan/5b/manifest.json`, 2026-08-05).
+**Gates set** (`fig5b_pass` / `fig5_efficacy_gates` → manifest `gates`). Overall **`pass`**: yes (from `artifacts/figures/papers/mehregan/5b/manifest.json`, 2026-08-05). Every row is required for exit.
 
-| Key | Blocks `pass` | Pass |
-|-----|---------------------|------|
-| `shared_baseline` — no-stim vs periodic pre-onset Δ < 25 | yes | yes |
-| `trained_below_no_stim` — trained post-onset mean < no stim | yes | yes |
-| `trained_below_periodic` — trained < periodic 30 Hz | yes | yes |
-| `periodic_above_no_stim` — periodic 30 Hz elevates beta vs no stim | yes | yes |
-| `trained_no_stim_ratio_near_paper` — late ratio vs digitized paper | yes | yes |
-| `periodic_no_stim_ratio_near_paper` — late ratio vs digitized paper | yes | yes |
+| Key | Pass |
+|-----|------|
+| `shared_baseline` — no-stim vs periodic pre-onset Δ < 25 | yes |
+| `trained_below_no_stim` — trained post-onset mean < no stim | yes |
+| `trained_below_periodic` — trained < periodic 30 Hz | yes |
+| `periodic_above_no_stim` — periodic 30 Hz elevates beta vs no stim | yes |
+| `trained_no_stim_ratio_near_paper` — late ratio vs digitized paper | yes |
+| `periodic_no_stim_ratio_near_paper` — late ratio vs digitized paper | yes |
 <!-- gates-5b:end -->
 
 **Convention (burst alphabet, 2026-07-23):** The default ±1/3 ISI jitter alphabet has **0/41** open-loop patterns with $P_\beta$ below no-stim at `plant.dt_ms=0.02` (TASK-176; switching oracle also failed). Periodic 14–34 Hz is a plant dead zone (TASK-177). Fig 5b prose requires irregular trains whose *instantaneous* rate leaves the beta band while mean rate stays 30 Hz. **Fig 5b train/eval uses `BurstPatternAlphabet`** (`envs/mehregan/pattern_alternatives.py`): pattern 0 = regular 30 Hz; patterns 1–40 = fixed pulse count packed into 60–120 Hz clusters with silence. 1-step oracle: **32/41** beat no-stim (best ≈331 vs no-stim ≈503). Artifact: `artifacts/ddpg/fig5b_alphabet_redesign_oracle_30hz.json`. ±1/3 ISI remains the default for other panels (e.g. Fig 5a).
@@ -406,34 +406,34 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 **Manifest:** `artifacts/figures/papers/mehregan/6a/manifest.json`
 <!-- caption-6a:end -->
 
-**Status:** Pass (qualitative) — **v40** (`ptq_qat_45hz_v40.png`). Honest trailing eval with weak QAT open-loop lock action **31** (~525 post mean); fp32_post≈336, PTQ fp16≈360 (tier action **19**), int8≈345 (tier action **28**, fp32 suppressor — faster drop than closed-loop action 9). `non_qat_traces_distinct=true`. Manifest `all_pass=false` only on digitization `paper_qat_level_ratio_near_paper` (QAT ~525 vs paper digitized ~434). Y-axis **250–575** PSD: 50-step majors through 550 plus single **575** half-step on top. `PAPER_DISPLAY_SHORTCUTS=False`.
+**Status:** Fail — **v40** (`ptq_qat_45hz_v40.png`). Honest trailing eval with weak QAT open-loop lock action **31** (~525 post mean); fp32_post≈336, PTQ fp16≈360 (tier action **19**), int8≈345 (tier action **28**, fp32 suppressor — faster drop than closed-loop action 9). `non_qat_traces_distinct=true`. `all_pass=false` on digitization `paper_qat_level_ratio_near_paper` (QAT ~525 vs paper digitized ~434). Y-axis **250–575** PSD: 50-step majors through 550 plus single **575** half-step on top. `PAPER_DISPLAY_SHORTCUTS=False`.
 
 **Convention (burst + weak QAT lock, 2026-08-03):** `QAT_NUM_EPISODES=0`, `QAT_OPEN_LOOP_LOCK=True`, `QAT_WEAK_ACTION=31` at 45 Hz. fp32 `checkpoint_burst_skip_regular_02s.pt`. PTQ tier open-loop when quant locks on non-fp32 actions (fp16 **19**, int8 **28**). Prior **v36** retired int8 closed-loop action 9 (slow transient).
 
 <!-- gates-6a:start -->
-**Gates set** (`_gate_summary` → manifest `gates`). Overall **`all_pass`**: no (from `artifacts/figures/papers/mehregan/6a/manifest.json`, 2026-08-05).
+**Gates set** (`_gate_summary` → manifest `gates`). Overall **`all_pass`**: no (from `artifacts/figures/papers/mehregan/6a/manifest.json`, 2026-08-05). Every row is required for exit.
 
-| Key | Blocks `all_pass` | Pass |
-|-----|---------------------|------|
-| `prestim_shared` — all series agree pre-onset (≤1 PSD unit vs fp32) | yes | yes |
-| `prestim_wiggly` — fp32 pre-onset std ≥ 5 | yes | yes |
-| `fp32_suppresses_vs_baseline` — fp32 post-onset < pre-stim baseline | yes | yes |
-| `ptq-fp16_tracks_fp32` — PTQ fp16 post mean within tolerance of fp32 | yes | yes |
-| `ptq-int8_tracks_fp32` — PTQ int8 post mean within tolerance of fp32 | yes | yes |
-| `non_qat_traces_distinct` — fp32 / PTQ fp16 / PTQ int8 not identical post-onset | yes | yes |
-| `qat_elevated_vs_fp32` — QAT post-onset > fp32 | yes | yes |
-| `qat_near_baseline_band` — QAT in elevated pre-stim band, not suppressed | yes | yes |
-| `not_shared_constant_action_lock` — fp32+PTQ do not share one constant action | yes | yes |
-| `paper_qat_elevated_vs_fp32` — digitization mirror | yes | yes |
-| `paper_fp32_level_ratio_near_paper` — digitization mirror | yes | yes |
-| `paper_ptq_int8_level_ratio_near_paper` — digitization mirror | yes | yes |
-| `paper_ptq_fp16_level_ratio_near_paper` — digitization mirror | yes | yes |
-| `paper_qat_level_ratio_near_paper` — digitization mirror | yes | no |
-| `paper_ptq_fp16_near_fp32` — digitization mirror | yes | yes |
-| `paper_ptq_int8_near_fp32` — digitization mirror | yes | yes |
-| `paper_not_open_loop_override` — digitization mirror | yes | yes |
-| `paper_not_shared_constant_action_lock` — digitization mirror | yes | yes |
-| `paper_qat_late_sustained` — QAT stays elevated late (no end crash) | yes | yes |
+| Key | Pass |
+|-----|------|
+| `prestim_shared` — all series agree pre-onset (≤1 PSD unit vs fp32) | yes |
+| `prestim_wiggly` — fp32 pre-onset std ≥ 5 | yes |
+| `fp32_suppresses_vs_baseline` — fp32 post-onset < pre-stim baseline | yes |
+| `ptq-fp16_tracks_fp32` — PTQ fp16 post mean within tolerance of fp32 | yes |
+| `ptq-int8_tracks_fp32` — PTQ int8 post mean within tolerance of fp32 | yes |
+| `non_qat_traces_distinct` — fp32 / PTQ fp16 / PTQ int8 not identical post-onset | yes |
+| `qat_elevated_vs_fp32` — QAT post-onset > fp32 | yes |
+| `qat_near_baseline_band` — QAT in elevated pre-stim band, not suppressed | yes |
+| `not_shared_constant_action_lock` — fp32+PTQ do not share one constant action | yes |
+| `paper_qat_elevated_vs_fp32` — digitization mirror | yes |
+| `paper_fp32_level_ratio_near_paper` — digitization mirror | yes |
+| `paper_ptq_int8_level_ratio_near_paper` — digitization mirror | yes |
+| `paper_ptq_fp16_level_ratio_near_paper` — digitization mirror | yes |
+| `paper_qat_level_ratio_near_paper` — digitization mirror | no |
+| `paper_ptq_fp16_near_fp32` — digitization mirror | yes |
+| `paper_ptq_int8_near_fp32` — digitization mirror | yes |
+| `paper_not_open_loop_override` — digitization mirror | yes |
+| `paper_not_shared_constant_action_lock` — digitization mirror | yes |
+| `paper_qat_late_sustained` — QAT stays elevated late (no end crash) | yes |
 <!-- gates-6a:end -->
 
 **Run:**
@@ -485,27 +485,27 @@ Same quantization panel layout as Fig 6a for the **30 Hz** trained model (§IV.A
 **Convention (tier PTQ + overlap fix, 2026-08-03):** Burst trailing sweep (`artifacts/ddpg/fig6b_burst_trailing_sweep_30hz.json`) picks tier actions; int8 tier **15** replaces **20** for faster post-onset suppression while staying distinct from fp16 **10**. Prior **v18** used int8 tier 20 (~420). int8 σ=0.10 weight noise during closed-loop rollout.
 
 <!-- gates-6b:start -->
-**Gates set** (`_gate_summary` → manifest `gates`). Overall **`all_pass`**: yes (from `artifacts/figures/papers/mehregan/6b/manifest.json`, 2026-08-05).
+**Gates set** (`_gate_summary` → manifest `gates`). Overall **`all_pass`**: yes (from `artifacts/figures/papers/mehregan/6b/manifest.json`, 2026-08-05). Every row is required for exit.
 
-| Key | Blocks `all_pass` | Pass |
-|-----|---------------------|------|
-| `prestim_shared` — all series agree pre-onset (≤1 PSD unit vs fp32) | yes | yes |
-| `prestim_wiggly` — fp32 pre-onset std ≥ 5 | yes | yes |
-| `fp32_suppresses_vs_baseline` — fp32 post-onset < pre-stim baseline | yes | yes |
-| `ptq-fp16_tracks_fp32` — PTQ fp16 post mean within tolerance of fp32 | yes | yes |
-| `ptq-int8_tracks_fp32` — PTQ int8 post mean within tolerance of fp32 | yes | yes |
-| `non_qat_traces_distinct` — fp32 / PTQ fp16 / PTQ int8 not identical post-onset | yes | yes |
-| `qat_elevated_vs_fp32` — QAT post-onset > fp32 | yes | yes |
-| `qat_near_baseline_band` — QAT in elevated pre-stim band, not suppressed | yes | yes |
-| `not_shared_constant_action_lock` — fp32+PTQ do not share one constant action | yes | yes |
-| `paper_qat_elevated_vs_fp32` — digitization mirror | yes | yes |
-| `paper_fp32_level_ratio_near_paper` — digitization mirror | yes | yes |
-| `paper_ptq_int8_level_ratio_near_paper` — digitization mirror | yes | yes |
-| `paper_ptq_fp16_level_ratio_near_paper` — digitization mirror | yes | yes |
-| `paper_qat_level_ratio_near_paper` — digitization mirror | yes | yes |
-| `paper_ptq_fp16_near_fp32` — digitization mirror | yes | yes |
-| `paper_ptq_int8_near_fp32` — digitization mirror | yes | yes |
-| `paper_not_open_loop_override` — digitization mirror | yes | yes |
+| Key | Pass |
+|-----|------|
+| `prestim_shared` — all series agree pre-onset (≤1 PSD unit vs fp32) | yes |
+| `prestim_wiggly` — fp32 pre-onset std ≥ 5 | yes |
+| `fp32_suppresses_vs_baseline` — fp32 post-onset < pre-stim baseline | yes |
+| `ptq-fp16_tracks_fp32` — PTQ fp16 post mean within tolerance of fp32 | yes |
+| `ptq-int8_tracks_fp32` — PTQ int8 post mean within tolerance of fp32 | yes |
+| `non_qat_traces_distinct` — fp32 / PTQ fp16 / PTQ int8 not identical post-onset | yes |
+| `qat_elevated_vs_fp32` — QAT post-onset > fp32 | yes |
+| `qat_near_baseline_band` — QAT in elevated pre-stim band, not suppressed | yes |
+| `not_shared_constant_action_lock` — fp32+PTQ do not share one constant action | yes |
+| `paper_qat_elevated_vs_fp32` — digitization mirror | yes |
+| `paper_fp32_level_ratio_near_paper` — digitization mirror | yes |
+| `paper_ptq_int8_level_ratio_near_paper` — digitization mirror | yes |
+| `paper_ptq_fp16_level_ratio_near_paper` — digitization mirror | yes |
+| `paper_qat_level_ratio_near_paper` — digitization mirror | yes |
+| `paper_ptq_fp16_near_fp32` — digitization mirror | yes |
+| `paper_ptq_int8_near_fp32` — digitization mirror | yes |
+| `paper_not_open_loop_override` — digitization mirror | yes |
 <!-- gates-6b:end -->
 
 **Run:**
