@@ -225,6 +225,18 @@ def fig1b_gates(
     )
 
 
+def _resolve_series_key(
+    series: dict[str, tuple[np.ndarray, np.ndarray]],
+    primary: str,
+    *aliases: str,
+) -> str | None:
+    """Return the first matching key in ``series``."""
+    for name in (primary, *aliases):
+        if name in series:
+            return name
+    return None
+
+
 def fig2_time_gates(
     replication: dict[str, tuple[np.ndarray, np.ndarray]],
     *,
@@ -250,7 +262,11 @@ def fig2_time_gates(
             {},
             notes=[f"missing replication keys {ru!r}/{rt!r}"],
         )
-    if untreated_key not in paper or treated_key not in paper:
+    paper_u_key = _resolve_series_key(paper, untreated_key, "PD no Treatment", "PD no stim")
+    paper_t_key = _resolve_series_key(
+        paper, treated_key, "PD 130Hz Treatment", "PD + 130Hz cDBS"
+    )
+    if paper_u_key is None or paper_t_key is None:
         return _gate_pack(
             {"paper_series_present": False},
             {},
@@ -261,10 +277,10 @@ def fig2_time_gates(
     o_t_pre = window_mean(*replication[rt], hi=onset)
     o_u_late = window_mean(*replication[ru], lo=late_lo)
     o_t_late = window_mean(*replication[rt], lo=late_lo)
-    p_u_late = window_mean(*paper[untreated_key], lo=late_lo)
-    p_t_late = window_mean(*paper[treated_key], lo=late_lo)
-    p_u_pre = window_mean(*paper[untreated_key], hi=onset)
-    p_t_pre = window_mean(*paper[treated_key], hi=onset)
+    p_u_late = window_mean(*paper[paper_u_key], lo=late_lo)
+    p_t_late = window_mean(*paper[paper_t_key], lo=late_lo)
+    p_u_pre = window_mean(*paper[paper_u_key], hi=onset)
+    p_t_pre = window_mean(*paper[paper_t_key], hi=onset)
 
     shared = abs(o_u_pre - o_t_pre) / max(abs(o_u_pre), 1e-9) <= baseline_rel_tol
     gates = {

@@ -149,8 +149,11 @@ def ravivarapu_fig4a_digitization_gates(
     sea_psd: Sequence[float],
     *,
     early_hi: float = 15.0,
+    mid_lo: float = 40.0,
+    mid_hi: float = 80.0,
     late_lo: float = 120.0,
     drop_frac_of_paper: float = 0.50,
+    profile_frac_of_paper: float = 0.30,
     rel_tol: float = DEFAULT_REL_TOL,
     ratio_tol: float = DEFAULT_RATIO_TOL,
     n_expected: int = 150,
@@ -173,13 +176,17 @@ def ravivarapu_fig4a_digitization_gates(
     s = _as_fy(sea_psd[:n])
 
     b_early = window_mean(x, b, hi=early_hi)
+    b_mid = window_mean(x, b, lo=mid_lo, hi=mid_hi)
     b_late = window_mean(x, b, lo=late_lo)
     s_early = window_mean(x, s, hi=early_hi)
+    s_mid = window_mean(x, s, lo=mid_lo, hi=mid_hi)
     s_late = window_mean(x, s, lo=late_lo)
 
     pb_early = window_mean(pbx, pby, hi=early_hi)
+    pb_mid = window_mean(pbx, pby, lo=mid_lo, hi=mid_hi)
     pb_late = window_mean(pbx, pby, lo=late_lo)
     ps_early = window_mean(psx, psy, hi=early_hi)
+    ps_mid = window_mean(psx, psy, lo=mid_lo, hi=mid_hi)
     ps_late = window_mean(psx, psy, lo=late_lo)
 
     b_drop = b_early - b_late
@@ -188,6 +195,13 @@ def ravivarapu_fig4a_digitization_gates(
     ps_drop = ps_early - ps_late
     gap = b_late - s_late
     p_gap = pb_late - ps_late
+    # Gradual-decline profile (paper declines in EVERY window): mid (40-80) must
+    # sit above late (120-150) by a meaningful fraction of the paper's own
+    # mid-late drop, so a fast-then-flat step does not pass the shape check.
+    b_midlate = b_mid - b_late
+    s_midlate = s_mid - s_late
+    pb_midlate = pb_mid - pb_late
+    ps_midlate = ps_mid - ps_late
 
     gates = {
         "enough_episodes": n >= n_expected,
@@ -208,6 +222,16 @@ def ravivarapu_fig4a_digitization_gates(
         "late_early_ratio_sea_near_paper": ratio_close(
             s_late, s_early, ps_late, ps_early, tol=ratio_tol
         ),
+        "gradual_decline_baseline": bool(
+            np.isfinite(b_midlate)
+            and np.isfinite(pb_midlate)
+            and b_midlate >= profile_frac_of_paper * pb_midlate
+        ),
+        "gradual_decline_sea": bool(
+            np.isfinite(s_midlate)
+            and np.isfinite(ps_midlate)
+            and s_midlate >= profile_frac_of_paper * ps_midlate
+        ),
     }
     shape_b = pearson_on_ref_x(pbx, pby, x, b)
     shape_s = pearson_on_ref_x(psx, psy, x, s)
@@ -216,17 +240,25 @@ def ravivarapu_fig4a_digitization_gates(
         gates,
         {
             "b_early": b_early,
+            "b_mid": b_mid,
             "b_late": b_late,
             "s_early": s_early,
+            "s_mid": s_mid,
             "s_late": s_late,
             "b_drop": b_drop,
             "s_drop": s_drop,
+            "b_midlate": b_midlate,
+            "s_midlate": s_midlate,
             "paper_b_early": pb_early,
+            "paper_b_mid": pb_mid,
             "paper_b_late": pb_late,
             "paper_s_early": ps_early,
+            "paper_s_mid": ps_mid,
             "paper_s_late": ps_late,
             "paper_b_drop": pb_drop,
             "paper_s_drop": ps_drop,
+            "paper_b_midlate": pb_midlate,
+            "paper_s_midlate": ps_midlate,
             "late_gap": gap,
             "paper_late_gap": p_gap,
             "pearson_baseline": shape_b,
@@ -236,6 +268,8 @@ def ravivarapu_fig4a_digitization_gates(
         paper_ref={
             "path": str(curves_path("fig4a")),
             "early_hi": early_hi,
+            "mid_lo": mid_lo,
+            "mid_hi": mid_hi,
             "late_lo": late_lo,
             "source": "refined/fig4a_refined.wpd.tar → curves_fig4a.json",
         },
