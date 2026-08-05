@@ -34,7 +34,6 @@ _MEHREGAN_PLOTS = _REPO / "scripts" / "figures" / "papers" / "mehregan"
 class GateRow:
     key: str
     description: str
-    blocks: bool
 
 
 @dataclass
@@ -124,11 +123,11 @@ def evaluate_1b() -> PanelGateStatus:
     }
     dig = fig1b_gates(replication)
     rows = (
-        GateRow("pd_gt_healthy", "beta-band PD > healthy", True),
-        GateRow("pd_130_lt_pd", "130 Hz cDBS < untreated PD", True),
-        GateRow("suppression_ratio_near_paper", "pd_130/pd ratio vs digitized paper", True),
-        GateRow("healthy_beta_near_paper", "healthy level within 30% of paper", True),
-        GateRow("pd_130hz_beta_near_paper", "treated level within 30% of paper", True),
+        GateRow("pd_gt_healthy", "beta-band PD > healthy"),
+        GateRow("pd_130_lt_pd", "130 Hz cDBS < untreated PD"),
+        GateRow("suppression_ratio_near_paper", "pd_130/pd ratio vs digitized paper"),
+        GateRow("healthy_beta_near_paper", "healthy level within 30% of paper"),
+        GateRow("pd_130hz_beta_near_paper", "treated level within 30% of paper"),
     )
     return PanelGateStatus(
         panel="1b",
@@ -145,10 +144,10 @@ def evaluate_2a() -> PanelGateStatus:
     series_path = ARTIFACT_ROOT / "2a" / "series.json"
     dig = fig2_time_gates(_fig2_replication(_load_json(series_path)), panel="2a")
     rows = (
-        GateRow("prestim_shared", "treated/untreated agree pre-onset (≤5% rel)", True),
-        GateRow("treated_below_untreated_late", "cDBS below no-treatment after t=2", True),
-        GateRow("late_ratio_near_paper", "late treated/untreated ratio vs digitization", True),
-        GateRow("suppression_drop_near_paper", "drop magnitude vs digitization", True),
+        GateRow("prestim_shared", "treated/untreated agree pre-onset (≤5% rel)"),
+        GateRow("treated_below_untreated_late", "cDBS below no-treatment after t=2"),
+        GateRow("late_ratio_near_paper", "late treated/untreated ratio vs digitization"),
+        GateRow("suppression_drop_near_paper", "drop magnitude vs digitization"),
     )
     return PanelGateStatus(
         panel="2a",
@@ -165,10 +164,10 @@ def evaluate_2b() -> PanelGateStatus:
     series_path = ARTIFACT_ROOT / "2b" / "series.json"
     dig = fig2_time_gates(_fig2_replication(_load_json(series_path)), panel="2b")
     rows = (
-        GateRow("prestim_shared", "treated/untreated agree pre-onset (≤5% rel)", True),
-        GateRow("treated_below_untreated_late", "cDBS below no-treatment after t=2", True),
-        GateRow("late_ratio_near_paper", "late treated/untreated ratio vs digitization", True),
-        GateRow("suppression_drop_near_paper", "drop magnitude vs digitization", True),
+        GateRow("prestim_shared", "treated/untreated agree pre-onset (≤5% rel)"),
+        GateRow("treated_below_untreated_late", "cDBS below no-treatment after t=2"),
+        GateRow("late_ratio_near_paper", "late treated/untreated ratio vs digitization"),
+        GateRow("suppression_drop_near_paper", "drop magnitude vs digitization"),
     )
     return PanelGateStatus(
         panel="2b",
@@ -186,11 +185,11 @@ def evaluate_4a() -> PanelGateStatus:
     trace = _load_json(series_path)["beta_norm_trace"]
     dig = fig4a_gates(trace)
     rows = (
-        GateRow("plot_style", "300 training steps", True),
-        GateRow("overall_trend_down", "end window mean < start window mean", True),
-        GateRow("drop_vs_paper", "drop ≥ 70% of digitized paper drop", True),
-        GateRow("late_early_ratio_near_paper", "late/early ratio vs digitization", True),
-        GateRow("mid_fade_vs_paper", "mid [120,150] fade ≥ 50% of paper mid-drop", True),
+        GateRow("plot_style", "300 training steps"),
+        GateRow("overall_trend_down", "end window mean < start window mean"),
+        GateRow("drop_vs_paper", "drop ≥ 70% of digitized paper drop"),
+        GateRow("late_early_ratio_near_paper", "late/early ratio vs digitization"),
+        GateRow("mid_fade_vs_paper", "mid [120,150] fade ≥ 50% of paper mid-drop"),
     )
     return PanelGateStatus(
         panel="4a",
@@ -215,15 +214,15 @@ def evaluate_4b() -> PanelGateStatus:
     else:
         gates["automation"] = bool((manifest.get("summary") or {}).get("automation_pass", True))
     rows = (
-        GateRow("early_negative", "mean reward ep 0–2 < 0", True),
-        GateRow("reward_rises", "late mean reward > early mean", True),
-        GateRow("late_plateau_improved", "late mean reward > −10", True),
-        GateRow("rise_timing", "reward exceeds ep0 + 10 by ep ≤ 6", True),
-        GateRow("beta_drops", "late episode-mean PSD < early", True),
-        GateRow("beta_drop_ratio_near_paper", "PSD late/early ratio vs digitization", True),
-        GateRow("reward_recovers_like_paper", "qualitative rise (not magnitude match)", True),
-        GateRow("plot_style", "≥ 2 episodes plotted", True),
-        GateRow("automation", "legacy `_fig4b_pass` mirror", True),
+        GateRow("early_negative", "mean reward ep 0–2 < 0"),
+        GateRow("reward_rises", "late mean reward > early mean"),
+        GateRow("late_plateau_improved", "late mean reward > −10"),
+        GateRow("rise_timing", "reward exceeds ep0 + 10 by ep ≤ 6"),
+        GateRow("beta_drops", "late episode-mean PSD < early"),
+        GateRow("beta_drop_ratio_near_paper", "PSD late/early ratio vs digitization"),
+        GateRow("reward_recovers_like_paper", "qualitative rise (not magnitude match)"),
+        GateRow("plot_style", "≥ 2 episodes plotted"),
+        GateRow("automation", "legacy `_fig4b_pass` mirror"),
     )
     return PanelGateStatus(
         panel="4b",
@@ -244,12 +243,12 @@ def evaluate_5a() -> PanelGateStatus:
     result = fig5a_pass(panel)
     gates = {k: bool(v) for k, v in result.items() if isinstance(v, bool) and k != "pass"}
     rows = (
-        GateRow("shared_baseline", "no-stim vs periodic pre-onset Δ < 25", True),
-        GateRow("trained_below_no_stim", "trained post-onset mean < no stim", True),
-        GateRow("trained_above_periodic", "trained > periodic 45 Hz", True),
-        GateRow("cdbs_lowest", "130 Hz cDBS lowest of four series", True),
-        GateRow("trained_no_stim_ratio_near_paper", "late ratio vs digitized paper", True),
-        GateRow("periodic_no_stim_ratio_near_paper", "late ratio vs digitized paper", True),
+        GateRow("shared_baseline", "no-stim vs periodic pre-onset Δ < 25"),
+        GateRow("trained_below_no_stim", "trained post-onset mean < no stim"),
+        GateRow("trained_above_periodic", "trained > periodic 45 Hz"),
+        GateRow("cdbs_lowest", "130 Hz cDBS lowest of four series"),
+        GateRow("trained_no_stim_ratio_near_paper", "late ratio vs digitized paper"),
+        GateRow("periodic_no_stim_ratio_near_paper", "late ratio vs digitized paper"),
     )
     return PanelGateStatus(
         panel="5a",
@@ -270,12 +269,12 @@ def evaluate_5b() -> PanelGateStatus:
     result = fig5b_pass(panel)
     gates = {k: bool(v) for k, v in result.items() if isinstance(v, bool) and k != "pass"}
     rows = (
-        GateRow("shared_baseline", "no-stim vs periodic pre-onset Δ < 25", True),
-        GateRow("trained_below_no_stim", "trained post-onset mean < no stim", True),
-        GateRow("trained_below_periodic", "trained < periodic 30 Hz", True),
-        GateRow("periodic_above_no_stim", "periodic 30 Hz elevates beta vs no stim", True),
-        GateRow("trained_no_stim_ratio_near_paper", "late ratio vs digitized paper", True),
-        GateRow("periodic_no_stim_ratio_near_paper", "late ratio vs digitized paper", True),
+        GateRow("shared_baseline", "no-stim vs periodic pre-onset Δ < 25"),
+        GateRow("trained_below_no_stim", "trained post-onset mean < no stim"),
+        GateRow("trained_below_periodic", "trained < periodic 30 Hz"),
+        GateRow("periodic_above_no_stim", "periodic 30 Hz elevates beta vs no stim"),
+        GateRow("trained_no_stim_ratio_near_paper", "late ratio vs digitized paper"),
+        GateRow("periodic_no_stim_ratio_near_paper", "late ratio vs digitized paper"),
     )
     return PanelGateStatus(
         panel="5b",
@@ -294,27 +293,27 @@ def _evaluate_6(panel: str) -> PanelGateStatus:
     gates = _manifest_gates(manifest)
     overall = _manifest_overall(manifest, "all_pass")
     rows = (
-        GateRow("prestim_shared", "all series agree pre-onset (≤1 PSD unit vs fp32)", True),
-        GateRow("prestim_wiggly", "fp32 pre-onset std ≥ 5", True),
-        GateRow("fp32_suppresses_vs_baseline", "fp32 post-onset < pre-stim baseline", True),
-        GateRow("ptq-fp16_tracks_fp32", "PTQ fp16 post mean within tolerance of fp32", True),
-        GateRow("ptq-int8_tracks_fp32", "PTQ int8 post mean within tolerance of fp32", True),
-        GateRow("non_qat_traces_distinct", "fp32 / PTQ fp16 / PTQ int8 not identical post-onset", True),
-        GateRow("qat_elevated_vs_fp32", "QAT post-onset > fp32", True),
-        GateRow("qat_near_baseline_band", "QAT in elevated pre-stim band, not suppressed", True),
-        GateRow("not_shared_constant_action_lock", "fp32+PTQ do not share one constant action", True),
-        GateRow("paper_qat_elevated_vs_fp32", "digitization mirror", True),
-        GateRow("paper_fp32_level_ratio_near_paper", "digitization mirror", True),
-        GateRow("paper_ptq_int8_level_ratio_near_paper", "digitization mirror", True),
-        GateRow("paper_ptq_fp16_level_ratio_near_paper", "digitization mirror", True),
-        GateRow("paper_qat_level_ratio_near_paper", "digitization mirror", True),
-        GateRow("paper_ptq_fp16_near_fp32", "digitization mirror", True),
-        GateRow("paper_ptq_int8_near_fp32", "digitization mirror", True),
-        GateRow("paper_not_open_loop_override", "digitization mirror", True),
+        GateRow("prestim_shared", "all series agree pre-onset (≤1 PSD unit vs fp32)"),
+        GateRow("prestim_wiggly", "fp32 pre-onset std ≥ 5"),
+        GateRow("fp32_suppresses_vs_baseline", "fp32 post-onset < pre-stim baseline"),
+        GateRow("ptq-fp16_tracks_fp32", "PTQ fp16 post mean within tolerance of fp32"),
+        GateRow("ptq-int8_tracks_fp32", "PTQ int8 post mean within tolerance of fp32"),
+        GateRow("non_qat_traces_distinct", "fp32 / PTQ fp16 / PTQ int8 not identical post-onset"),
+        GateRow("qat_elevated_vs_fp32", "QAT post-onset > fp32"),
+        GateRow("qat_near_baseline_band", "QAT in elevated pre-stim band, not suppressed"),
+        GateRow("not_shared_constant_action_lock", "fp32+PTQ do not share one constant action"),
+        GateRow("paper_qat_elevated_vs_fp32", "digitization mirror"),
+        GateRow("paper_fp32_level_ratio_near_paper", "digitization mirror"),
+        GateRow("paper_ptq_int8_level_ratio_near_paper", "digitization mirror"),
+        GateRow("paper_ptq_fp16_level_ratio_near_paper", "digitization mirror"),
+        GateRow("paper_qat_level_ratio_near_paper", "digitization mirror"),
+        GateRow("paper_ptq_fp16_near_fp32", "digitization mirror"),
+        GateRow("paper_ptq_int8_near_fp32", "digitization mirror"),
+        GateRow("paper_not_open_loop_override", "digitization mirror"),
     )
     if panel == "6a":
-        rows = rows + (GateRow("paper_not_shared_constant_action_lock", "digitization mirror", True),)
-        rows = rows + (GateRow("paper_qat_late_sustained", "QAT stays elevated late (no end crash)", True),)
+        rows = rows + (GateRow("paper_not_shared_constant_action_lock", "digitization mirror"),)
+        rows = rows + (GateRow("paper_qat_late_sustained", "QAT stays elevated late (no end crash)"),)
     return PanelGateStatus(
         panel=panel,
         pass_field="all_pass",
@@ -349,17 +348,14 @@ def render_gate_block(status: PanelGateStatus) -> str:
     overall = _pass_cell(status.overall)
     lines = [
         f"**Gates set** ({status.header}). Overall **`{status.pass_field}`**: {overall} "
-        f"(from `{status.source}`, {_today()}).",
+        f"(from `{status.source}`, {_today()}). Every row is required for exit.",
         "",
-        f"| Key | Blocks `{status.pass_field}` | Pass |",
-        "|-----|---------------------|------|",
+        "| Key | Pass |",
+        "|-----|------|",
     ]
     for row in status.rows:
         gate_val = status.gates.get(row.key)
-        lines.append(
-            f"| `{row.key}` — {row.description} | "
-            f"{'yes' if row.blocks else 'no'} | {_pass_cell(gate_val)} |"
-        )
+        lines.append(f"| `{row.key}` — {row.description} | {_pass_cell(gate_val)} |")
     return "\n".join(lines)
 
 
