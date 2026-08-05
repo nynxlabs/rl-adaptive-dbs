@@ -11,7 +11,7 @@ from gymnasium import spaces
 
 from controllers.sea_dbs.config import SEADBSConfig
 from controllers.sea_dbs.reward import sea_dbs_reward
-from envs.plant.dbs import DbsSpec
+from envs.plant.dbs import DbsSpec, create_dbs_current
 from envs.plant.matlab_backend import IntegrateResult
 
 
@@ -94,6 +94,21 @@ class SEA_DBSEnvAdapter(gym.Env):
     def _dbs_spec_for_action(self, action: int) -> DbsSpec:
         if int(action) == 0:
             return DbsSpec.none()
+        cfg = self.config
+        integration_ms = self.config.integration_duration_s * 1000.0
+        burst_ms = float(cfg.dbs_burst_ms)
+        if burst_ms < integration_ms:
+            # Short-burst convention (paper Eq. (6)): apply the carrier train for
+            # only ``burst_ms`` of the biomarker window, then leave the rest of the
+            # window unstimulated. Intermediate beta floor vs continuous drive.
+            full = create_dbs_current(
+                self._carrier_hz,
+                tmax_ms=integration_ms,
+                dt_ms=cfg.plant_dt_ms,
+            )
+            burst = full.copy()
+            burst[int(round(burst_ms / cfg.plant_dt_ms)) :] = 0.0
+            return DbsSpec(pick_dbs_freq=2, idbs=burst)
         return DbsSpec.from_frequency_hz(self._carrier_hz)
 
     def reset(

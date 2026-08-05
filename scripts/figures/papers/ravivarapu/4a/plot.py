@@ -32,7 +32,12 @@ from controllers.sea_dbs.trainer import SEA_DBSTrainer
 _DIG = Path(__file__).resolve().parents[4] / "digitization"
 if str(_DIG) not in sys.path:
     sys.path.insert(0, str(_DIG))
-from paper_gates import merge_gate_report, ravivarapu_fig4a_gates  # noqa: E402
+from ravivarapu_gates import (  # noqa: E402
+    attach_digitization,
+    merge_gate_report,
+    ravivarapu_fig4a_digitization_gates,
+    ravivarapu_fig4a_gates,
+)
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
 _spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
@@ -179,8 +184,14 @@ def evaluate_gates(series: dict[str, Any]) -> dict[str, Any]:
         return {"pass": True, "smoke_override": True}
     baseline = series["variants"]["baseline"]["episode_psd"]
     sea = series["variants"]["paper"]["episode_psd"]
-    dig = ravivarapu_fig4a_gates(baseline, sea, n_expected=DEFAULT_TRAIN_EPISODES)
-    return merge_gate_report(dig, {"n_episodes": min(len(baseline), len(sea))})
+    heuristic = ravivarapu_fig4a_gates(baseline, sea, n_expected=DEFAULT_TRAIN_EPISODES)
+    merged = merge_gate_report(heuristic, {"n_episodes": min(len(baseline), len(sea))})
+    dig = ravivarapu_fig4a_digitization_gates(
+        baseline,
+        sea,
+        n_expected=DEFAULT_TRAIN_EPISODES,
+    )
+    return attach_digitization(merged, dig, prefix="dig_")
 
 
 def plot_series(series: dict[str, Any], png_path: Path) -> None:
