@@ -8,9 +8,9 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Panel | Description | Status |
 |-------|-------------|--------|
 | Fig 1b | GPi PSD | Pass |
-| Fig 2a | GPi $P_eta$ time series | Pass |
+| Fig 2a | GPi $P_\beta$ time series | Pass |
 | Fig 2b | Error Index time series | Pass |
-| Fig 4a | Training $P_eta$ vs step | Pass (v18, τ 3→1.0) |
+| Fig 4a | Training $P_\beta$ vs step | Pass (v18, τ 3→1.0) |
 | Fig 4b | Training reward vs episode | Pass (paired v18, v14) |
 | Fig 5a | Post-train efficacy @ 45 Hz | Pass |
 | Fig 5b | Post-train efficacy @ 30 Hz | Pass (burst alphabet, v3) |

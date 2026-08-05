@@ -339,9 +339,9 @@ EVALUATORS = {
 
 MEHREGAN_SUMMARY_ROWS: tuple[tuple[str, str, str], ...] = (
     ("1b", "Fig 1b", "GPi PSD"),
-    ("2a", "Fig 2a", "GPi $P_\\beta$ time series"),
+    ("2a", "Fig 2a", "GPi $P_" + "\\beta$ time series"),
     ("2b", "Fig 2b", "Error Index time series"),
-    ("4a", "Fig 4a", "Training $P_\\beta$ vs step"),
+    ("4a", "Fig 4a", "Training $P_" + "\\beta$ vs step"),
     ("4b", "Fig 4b", "Training reward vs episode"),
     ("5a", "Fig 5a", "Post-train efficacy @ 45 Hz"),
     ("5b", "Fig 5b", "Post-train efficacy @ 30 Hz"),
@@ -400,7 +400,11 @@ def inject_summary_table(text: str, statuses: dict[str, PanelGateStatus]) -> str
     )
     if not pattern.search(text):
         raise ValueError("missing summary markers in Mehregan replications doc")
-    return pattern.sub(rf"\1\n{block}\n\3", text, count=1)
+
+    def _repl(match: re.Match[str]) -> str:
+        return f"{match.group(1)}\n{block}\n{match.group(3)}"
+
+    return pattern.sub(_repl, text, count=1)
 
 
 def render_gate_block(status: PanelGateStatus) -> str:
@@ -436,7 +440,11 @@ def refresh_gate_tables(doc_path: Path) -> dict[str, PanelGateStatus]:
         )
         if not pattern.search(text):
             raise ValueError(f"missing gates markers for panel {panel} in {doc_path}")
-        text = pattern.sub(rf"\1\n{block}\n\3", text, count=1)
+
+        def _repl(match: re.Match[str], *, _block: str = block) -> str:
+            return f"{match.group(1)}\n{_block}\n{match.group(3)}"
+
+        text = pattern.sub(_repl, text, count=1)
     text = inject_summary_table(text, statuses)
     doc_path.write_text(text, encoding="utf-8")
     return statuses
