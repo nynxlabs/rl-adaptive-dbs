@@ -68,6 +68,8 @@ class DSQN(nn.Module):
     def __init__(self, config: SNNConfig | None = None) -> None:
         super().__init__()
         cfg = (config or SNNConfig()).with_variant_defaults()
+        torch.manual_seed(cfg.seed)
+        torch.cuda.manual_seed_all(cfg.seed)
         self.config = cfg
         self.input_layer = LIFLayer(
             cfg.flat_observation_dim,
