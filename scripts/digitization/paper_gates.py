@@ -11,8 +11,7 @@ Design notes
   with generous tolerances — not pointwise RMSE or wiggle matching.
 - Absolute y can differ between plant and paper; prefer ratios to an untreated
   / early baseline when units disagree.
-- Fig 5a refined digitization is known-bad (30 Hz file); callers must not
-  treat it as an anchor until redone.
+- Fig 5a refined digitization lives under ``artifacts/figures/papers/mehregan/5a/paper_digitization/``.
 """
 from __future__ import annotations
 
@@ -474,7 +473,7 @@ def fig5_efficacy_gates(
 ) -> dict[str, Any]:
     """Fig 5a/5b post-onset means: ordering + optional paper ratios.
 
-    ``skip_paper_ratios=True`` for Fig 5a until digitization is redone.
+    ``skip_paper_ratios=True`` only when digitization is missing or marked bad.
     """
     no_stim = panel_means.get("no_stim")
     trained = panel_means.get("trained")
