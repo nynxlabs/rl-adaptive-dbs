@@ -487,11 +487,7 @@ def _run_trailing_eval(
 
 
 def fig5a_pass(panel: dict[str, Any]) -> dict[str, Any]:
-    """Qualitative gates for Fig 5a (post-onset means).
-
-    Paper digitization for 5a is marked NEEDS_REDO (30 Hz file landed here) —
-    do not use ratio anchors until a real 45 Hz refined JSON exists.
-    """
+    """Digitization-anchored gates for Fig 5a (ordering + paper late ratios)."""
     trained = panel.get("trained_mean")
     if trained is None:
         return {
@@ -512,7 +508,7 @@ def fig5a_pass(panel: dict[str, Any]) -> dict[str, Any]:
         },
         panel="5a",
         require_cdbs=True,
-        skip_paper_ratios=True,
+        skip_paper_ratios=False,
     )
     gates = dict(dig["gates"])
     gates["shared_baseline"] = shared_baseline
@@ -524,7 +520,8 @@ def fig5a_pass(panel: dict[str, Any]) -> dict[str, Any]:
         "trained_mean": trained,
         "periodic_mean": panel["periodic_mean"],
         "cdbs_130_mean": panel["cdbs_130_mean"],
-        "paper_digitization": "needs_redo",
+        "paper_gate_metrics": dig.get("metrics"),
+        "paper_ref": dig.get("paper_ref"),
         "paper_gate_notes": dig.get("notes"),
     }
 
