@@ -70,7 +70,13 @@ class SEADBSConfig:
 
     # Plant / DBS carrier (§14.10 — fixed eval knob, default train carrier)
     carrier_hz: float = DEFAULT_CARRIER_HZ
-    plant_dt_ms: float = 0.02
+    # Integrator grid (PlantConfig.dt_ms); used to build the STN drive trace grid.
+    plant_dt_ms: float = 0.01
+    # Short-burst STN drive (ms) per stim action within the integration window.
+    # 100.0 == continuous drive for the whole window (Kumaravelu default). A
+    # shorter burst yields an intermediate beta floor; paper 3 describes pulses
+    # as "short bursts rather than continuously" (Eq. 6). Fig 4a override below.
+    dbs_burst_ms: float = 100.0
 
     variant: str = "paper"
     seed: int = 0
@@ -135,9 +141,12 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v20: learn from episode 1 (no buffer freeze). Gradual PSD fade via slow GS
-    anneal, low actor/critic LRs, sparse updates, and PM warmup — not a cliff at
-    ep 40. Baseline declines modestly; SEA-DBS steeper per digitized paper.
+    v23: short-burst STN drive (``dbs_burst_ms=60``) per paper Eq. (6) "short
+    bursts rather than continuously" — intermediate beta floor (~0.35 on the
+    425 scale) instead of continuous-130 Hz collapse to ~0.12. v22 (50 ms) left
+    the gap too small (0.006 vs paper 0.028); 60 ms deepens the floor so the
+    Baseline's higher-epsilon duty (0.42) opens the paper-like gap. Reward
+    keeps mild learning pressure so curves fade gradually, not a cliff.
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -149,6 +158,7 @@ def fig4_ravivarapu_config(
         episode_psd_metric="mean",
         min_buffer_size=192,
         polyak_tau=0.002,
+        dbs_burst_ms=60.0,
     )
     if variant == "paper":
         return replace(
@@ -167,7 +177,7 @@ def fig4_ravivarapu_config(
             cfg,
             actor_no_stim_bias=2.45,
             epsilon_start=0.32,
-            epsilon_end=0.28,
+            epsilon_end=0.42,
             update_frequency=2,
             actor_lr=3e-5,
             critic_lr=1.2e-4,
