@@ -6,14 +6,14 @@ Side-by-side **paper panel** vs **our replication** for qualitative checks. Plot
 
 Controller / adapter spec: [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md). Shared plant: [plant.md](../../docs/plant.md). **Qualitative gates (exit criteria):** [docs/figures/papers/ravivarapu.md](../../docs/figures/papers/ravivarapu.md). Schematics (paper Figs 1, 3) are **out of scope** for this tracker. Fig 2 (reward curve of Eq. (7)) is optional polish, not a gate.
 
-| Panel | Script | Spec | Status |
-|-------|--------|------|--------|
-| Fig 4a — training PSD vs episode | `scripts/figures/papers/ravivarapu/4a/plot.py` | [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md) | **Pass** |
-| Fig 4b — training reward vs episode | `scripts/figures/papers/ravivarapu/4b/plot.py` (planned) | [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md) | Open |
-| Fig 5a — inference @ 50 Hz | `scripts/figures/papers/ravivarapu/5a/plot.py` (planned) | [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md) | Open |
-| Fig 5b — inference @ 30 Hz | `scripts/figures/papers/ravivarapu/5b/plot.py` (planned) | [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md) | Open |
-| Fig 6 — FP16 PTQ @ 50 Hz | `scripts/figures/papers/ravivarapu/6/plot.py` (planned) | [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md) | Open |
-| Fig 7 — ablation (Baseline / +PM / +GS / SEA-DBS) | `scripts/figures/papers/ravivarapu/7/plot.py` (planned) | [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md) | Open |
+| Panel | Description | Status |
+|-------|-------------|--------|
+| Fig 4a | Training PSD vs episode | **Pass** |
+| Fig 4b | Training reward vs episode | Open |
+| Fig 5a | Inference @ 50 Hz | Open |
+| Fig 5b | Inference @ 30 Hz | Open |
+| Fig 6 | FP16 PTQ @ 50 Hz | Open |
+| Fig 7 | Ablation (Baseline / +PM / +GS / SEA-DBS) | Open |
 
 Replication PNGs: `figures/ravivarapu/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/ravivarapu/images/<panel>/paper.png` (from KB paper-note embeds; Fig 4/5 split from combined panels). Full composites also under `figures/ravivarapu/images/_full/`.
 

@@ -337,11 +337,70 @@ EVALUATORS = {
     "6b": lambda: _evaluate_6("6b"),
 }
 
+MEHREGAN_SUMMARY_ROWS: tuple[tuple[str, str, str], ...] = (
+    ("1b", "Fig 1b", "GPi PSD"),
+    ("2a", "Fig 2a", "GPi $P_\\beta$ time series"),
+    ("2b", "Fig 2b", "Error Index time series"),
+    ("4a", "Fig 4a", "Training $P_\\beta$ vs step"),
+    ("4b", "Fig 4b", "Training reward vs episode"),
+    ("5a", "Fig 5a", "Post-train efficacy @ 45 Hz"),
+    ("5b", "Fig 5b", "Post-train efficacy @ 30 Hz"),
+    ("6a", "Fig 6a", "PTQ / QAT @ 45 Hz"),
+    ("6b", "Fig 6b", "PTQ / QAT @ 30 Hz"),
+)
+
+MEHREGAN_STATUS_NOTES: dict[str, str] = {
+    "4a": "v18, τ 3→1.0",
+    "4b": "paired v18, v14",
+    "5b": "burst alphabet, v3",
+    "6a": "v40",
+    "6b": "honest v20, tier PTQ",
+}
+
 
 def _pass_cell(value: bool | None) -> str:
     if value is None:
         return "—"
     return "yes" if value else "no"
+
+
+def _summary_status_line(status: PanelGateStatus, note: str = "") -> str:
+    if status.overall:
+        return f"Pass ({note})" if note else "Pass"
+    failed = [key for key, value in status.gates.items() if not value]
+    if failed:
+        detail = f"`{failed[0]}`"
+        if note:
+            detail = f"{detail}, {note}"
+        return f"Fail ({detail})"
+    if status.overall is False:
+        return f"Fail ({note})" if note else "Fail"
+    return "Open"
+
+
+def render_summary_table(statuses: dict[str, PanelGateStatus]) -> str:
+    lines = [
+        "| Panel | Description | Status |",
+        "|-------|-------------|--------|",
+    ]
+    for panel_key, label, description in MEHREGAN_SUMMARY_ROWS:
+        status = statuses[panel_key]
+        note = MEHREGAN_STATUS_NOTES.get(panel_key, "")
+        lines.append(
+            f"| {label} | {description} | {_summary_status_line(status, note)} |"
+        )
+    return "\n".join(lines)
+
+
+def inject_summary_table(text: str, statuses: dict[str, PanelGateStatus]) -> str:
+    block = render_summary_table(statuses)
+    pattern = re.compile(
+        r"(<!-- summary:start -->)(.*?)(<!-- summary:end -->)",
+        re.DOTALL,
+    )
+    if not pattern.search(text):
+        raise ValueError("missing summary markers in Mehregan replications doc")
+    return pattern.sub(rf"\1\n{block}\n\3", text, count=1)
 
 
 def render_gate_block(status: PanelGateStatus) -> str:
@@ -378,7 +437,8 @@ def refresh_gate_tables(doc_path: Path) -> dict[str, PanelGateStatus]:
         if not pattern.search(text):
             raise ValueError(f"missing gates markers for panel {panel} in {doc_path}")
         text = pattern.sub(rf"\1\n{block}\n\3", text, count=1)
-    doc_path.write_text(text)
+    text = inject_summary_table(text, statuses)
+    doc_path.write_text(text, encoding="utf-8")
     return statuses
 
 

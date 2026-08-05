@@ -2,19 +2,21 @@
 
 **Primary replication tracker** for this repo. Work is scheduled by **panel**, not by roadmap phase: each row below is an exit criterion with automated gates in `plot.py` (manifest `gates` / `gates_pass`), a committed `plot.py`, and side-by-side PNGs.
 
-Side-by-side **paper panel** vs **our replication**. Plot scripts write replication PNGs to `figures/mehregan/images/`; JSON caches to `artifacts/figures/papers/`. Gate tables show live **Pass** per check (all required; refreshed by `scripts/digitization/mehregan_gate_status.py` on promote / `--plot-only`).
+Side-by-side **paper panel** vs **our replication**. Plot scripts write replication PNGs to `figures/mehregan/images/`; JSON caches to `artifacts/figures/papers/`. Per-panel gate tables show live **Pass** per check (all required; refreshed by `scripts/digitization/mehregan_gate_status.py` on promote / `--plot-only`).
 
-| Panel                                | Script                                       | Spec                                                                                                           | Gates | Status                    |
-| ------------------------------------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----- | ------------------------- |
-| Fig 1b — GPi PSD                     | `scripts/figures/papers/mehregan/1b/plot.py` | [plant.md](../../docs/plant.md)                                                                                | Set   | Pass                      |
-| Fig 2a — GPi $P_\beta$ time series   | `scripts/figures/papers/mehregan/2a/plot.py` | [plant.md](../../docs/plant.md)                                                                                | Set   | Pass                      |
-| Fig 2b — Error Index time series     | `scripts/figures/papers/mehregan/2b/plot.py` | [plant.md](../../docs/plant.md)                                                                                | Set   | Pass                      |
-| Fig 4a — training $P_\beta$ vs step  | `scripts/figures/papers/mehregan/4a/plot.py` | [environment.md](../../docs/environment.md), [4a.md](../../docs/figures/mehregan/4a.md) | Set   | Pass (v18, τ 3→1.0)       |
-| Fig 4b — training reward vs episode  | `scripts/figures/papers/mehregan/4b/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Set   | Pass (paired v18, v14)      |
-| Fig 5a — post-train efficacy @ 45 Hz | `scripts/figures/papers/mehregan/5a/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Set   | Pass                      |
-| Fig 5b — post-train efficacy @ 30 Hz | `scripts/figures/papers/mehregan/5b/plot.py` | [environment.md](../../docs/environment.md), [ddpg/replication.md](../../docs/controllers/ddpg/replication.md) | Set   | Pass (burst alphabet, v3) |
-| Fig 6a — PTQ / QAT @ 45 Hz           | `scripts/figures/papers/mehregan/6a/plot.py` | [controllers/ddpg/replication.md](../../docs/controllers/ddpg/replication.md), [6a.md](../../docs/figures/mehregan/6a.md) | Set   | Fail (`paper_qat_level_ratio_near_paper`, v40) |
-| Fig 6b — PTQ / QAT @ 30 Hz           | `scripts/figures/papers/mehregan/6b/plot.py` | [controllers/ddpg/replication.md](../../docs/controllers/ddpg/replication.md), [6b.md](../../docs/figures/mehregan/6b.md) | Set   | Pass (honest v20, tier PTQ) |
+<!-- summary:start -->
+| Panel | Description | Status |
+|-------|-------------|--------|
+| Fig 1b | GPi PSD | Pass |
+| Fig 2a | GPi $P_eta$ time series | Pass |
+| Fig 2b | Error Index time series | Pass |
+| Fig 4a | Training $P_eta$ vs step | Pass (v18, τ 3→1.0) |
+| Fig 4b | Training reward vs episode | Pass (paired v18, v14) |
+| Fig 5a | Post-train efficacy @ 45 Hz | Pass |
+| Fig 5b | Post-train efficacy @ 30 Hz | Pass (burst alphabet, v3) |
+| Fig 6a | PTQ / QAT @ 45 Hz | Fail (`paper_qat_level_ratio_near_paper`, v40) |
+| Fig 6b | PTQ / QAT @ 30 Hz | Pass (honest v20, tier PTQ) |
+<!-- summary:end -->
 
 Replication PNGs: `figures/mehregan/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/mehregan/images/<panel>/paper.png` (from paper-note embeds; composite Figs 1/2/4/5/6 split into panels). Full composites under `figures/mehregan/images/_full/`.
 

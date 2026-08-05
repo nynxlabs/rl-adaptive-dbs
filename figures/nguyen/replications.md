@@ -6,15 +6,17 @@ Plot scripts write replication PNGs to `figures/nguyen/images/`; JSON caches to 
 
 Figs **1–2** are schematics — **not** replication targets.
 
-| Panel | Script | Spec | Status |
-|-------|--------|------|--------|
-| Fig 3 — GPi α–β distribution (PD Off vs PD On) | `scripts/figures/papers/nguyen/3/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §3 | Pass |
-| Fig 4 — training reward + episode length | `scripts/figures/papers/nguyen/4/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §6.5 | Open |
-| Fig 5 — CBGT spikes + DBS energy over training | `scripts/figures/papers/nguyen/5/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Open |
-| Fig 6 — α–β + DBS params over training | `scripts/figures/papers/nguyen/6/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Open |
-| Fig 7 — 50-episode eval (25 steps) | `scripts/figures/papers/nguyen/7/plot.py` | [snn/replication.md](../../docs/controllers/snn/replication.md) §8 | Open |
+**Gates:** manifest `gates` in `artifacts/figures/papers/nguyen/<panel>/manifest.json`. Per-panel tables below refresh from manifest on each `promote` run (`scripts/figures/papers/promote.py` `refresh_nguyen_gate_tables`). Every listed check is required for exit. Digitization mirrors from `scripts/digitization/nguyen_gates.py` (`attach_digitization`).
 
-**Gates:** manifest `gates` in `artifacts/figures/papers/nguyen/<panel>/manifest.json`. Tables below refresh from manifest on each `promote` run (`scripts/figures/papers/promote.py` `refresh_nguyen_gate_tables`). Heuristic keys from each `plot.py` plus digitization mirrors from `scripts/digitization/nguyen_gates.py` (`attach_digitization` — overall `pass` = both layers). Digitization loads `artifacts/figures/papers/nguyen/paper_digitization/curves_*.json`.
+<!-- summary:start -->
+| Panel | Description | Status |
+|-------|-------------|--------|
+| Fig 3 | GPi α–β distribution (PD Off vs PD On) | Pass |
+| Fig 4 | Training reward + episode length | Fail (`late_reward_above_early`) |
+| Fig 5 | CBGT spikes + DBS energy over training | Open |
+| Fig 6 | α–β + DBS parameters over training | Open |
+| Fig 7 | 50-episode eval (25 steps) | Open |
+<!-- summary:end -->
 
 ---
 
@@ -39,15 +41,15 @@ Distribution of GPi **α–β** oscillation power (**7–35 Hz**) for **PD On** 
 **Status:** Pass — 500 × 100 ms samples; see `alpha_beta_dist_v5.png`.
 
 <!-- gates-3:start -->
-**Gates** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **pass**)
+**Gates set** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **`pass`**: yes, 2026-08-05). Every row is required for exit.
 
-| Key | Blocks `pass` | Current |
-|-----|---------------|---------|
-| `ordering_pd_on_above_pd_off` | yes | pass |
-| `threshold_near_pd_on_q1` — informational | no | pass |
-| `paper_ordering_pd_on_above_pd_off` — digitization | yes | pass |
-| `paper_mean_ratio_near_paper_readout` — digitization; no curves_fig3 yet | no | pass |
-| `paper_means_separated` — logged | no | pass |
+| Key | Pass |
+|-----|------|
+| `ordering_pd_on_above_pd_off` — PD On above PD Off | yes |
+| `threshold_near_pd_on_q1` — threshold near PD On Q1 (informational) | yes |
+| `paper_ordering_pd_on_above_pd_off` — digitization — ordering | yes |
+| `paper_mean_ratio_near_paper_readout` — digitization — mean ratio (no curves_fig3 yet) | yes |
+| `paper_means_separated` — digitization — means separated (logged) | yes |
 <!-- gates-3:end -->
 
 **Run:**
@@ -85,23 +87,23 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 **Status:** Open — see `training_reward_length_v14.png`.
 
 <!-- gates-4:start -->
-**Gates** (`artifacts/figures/papers/nguyen/4/manifest.json`; overall **fail**)
+**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; overall **`pass`**: no, 2026-08-05). Every row is required for exit.
 
-| Key | Blocks `pass` | Current |
-|-----|---------------|---------|
-| `reward_scale_paper` — |mean reward ep 0–50| ≥ 5×10⁴ | yes | pass |
-| `late_reward_above_early` | yes | fail |
-| `late_reward_near_zero` — late mean > −2×10⁵ | yes | pass |
-| `length_decreases` — late mean < early mean − 1 step | yes | fail |
-| `late_length_paper_band` — late mean ≤ 12 | yes | fail |
-| `early_near_max_length` — median first 50 ≥ max_steps − 2 | yes | pass |
-| `early_high_variance` — logged | no | pass |
-| `paper_early_reward_mag_near_paper` — digitization | yes | fail |
-| `paper_reward_improves_like_paper` — digitization | yes | fail |
-| `paper_late_reward_ratio_near_paper` — digitization | yes | fail |
-| `paper_length_decreases_like_paper` — digitization | yes | fail |
-| `paper_late_length_near_paper` — digitization | yes | fail |
-| `paper_early_near_max_length` — digitization | yes | pass |
+| Key | Pass |
+|-----|------|
+| `reward_scale_paper` — |mean reward ep 0–50| ≥ 5×10⁴ | yes |
+| `late_reward_above_early` — late mean reward > early mean | no |
+| `late_reward_near_zero` — late mean > −2×10⁵ | yes |
+| `length_decreases` — late mean length < early mean − 1 step | no |
+| `late_length_paper_band` — late mean length ≤ 12 | no |
+| `early_near_max_length` — median first 50 ≥ max_steps − 2 | yes |
+| `early_high_variance` — early reward variance (logged) | yes |
+| `paper_early_reward_mag_near_paper` — digitization — early reward magnitude | no |
+| `paper_reward_improves_like_paper` — digitization — reward improves | no |
+| `paper_late_reward_ratio_near_paper` — digitization — late/early reward ratio | no |
+| `paper_length_decreases_like_paper` — digitization — length decreases | no |
+| `paper_late_length_near_paper` — digitization — late length | no |
+| `paper_early_near_max_length` — digitization — early near max length | yes |
 <!-- gates-4:end -->
 
 `--smoke` sets `smoke_override` (CI only).
@@ -138,22 +140,22 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 **Status:** Open — needs Fig 4 train `gates.pass`, then `scripts/figures/papers/nguyen/5/plot.py`.
 
 <!-- gates-5:start -->
-**Gates** (no manifest at `artifacts/figures/papers/nguyen/5/manifest.json`; overall **—**)
+**Gates set** (no manifest at `artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: —, 2026-08-05). Every row is required for exit.
 
-| Key | Blocks `pass` | Current |
-|-----|---------------|---------|
-| `shared_train` — Fig 4 passed + same n_episodes | yes | — |
-| `spike_series_has_variance` | yes | — |
-| `energy_series_has_variance` | yes | — |
-| `energy_not_constant` | yes | — |
-| `spike_in_paper_band` — mean spikes 400–950/ep | yes | — |
-| `energy_in_paper_band` — mean 300–3200/ep, max ≤ 3520 | yes | — |
-| `paper_spike_mean_near_paper` — digitization | yes | — |
-| `paper_energy_mean_near_paper` — digitization | yes | — |
-| `paper_spike_trend_near_paper` — digitization | yes | — |
-| `paper_energy_trend_near_paper` — digitization | yes | — |
-| `paper_spike_series_has_variance` — digitization | yes | — |
-| `paper_energy_not_constant` — digitization | yes | — |
+| Key | Pass |
+|-----|------|
+| `shared_train` — Fig 4 passed + same n_episodes | — |
+| `spike_series_has_variance` — spike series has variance | — |
+| `energy_series_has_variance` — energy series has variance | — |
+| `energy_not_constant` — energy not constant | — |
+| `spike_in_paper_band` — mean spikes 400–950/ep | — |
+| `energy_in_paper_band` — mean 300–3200/ep, max ≤ 3520 | — |
+| `paper_spike_mean_near_paper` — digitization — spike mean | — |
+| `paper_energy_mean_near_paper` — digitization — energy mean | — |
+| `paper_spike_trend_near_paper` — digitization — spike trend | — |
+| `paper_energy_trend_near_paper` — digitization — energy trend | — |
+| `paper_spike_series_has_variance` — digitization — spike variance | — |
+| `paper_energy_not_constant` — digitization — energy not constant | — |
 <!-- gates-5:end -->
 
 **Run:** plot from Fig 4 series cache; `scripts/figures/papers/nguyen/5/plot.py --plot-only` after train.
@@ -181,19 +183,19 @@ GPi **α–β** (a) and DBS amplitude / frequency / pulse width (b) over **500**
 **Status:** Open.
 
 <!-- gates-6:start -->
-**Gates** (no manifest at `artifacts/figures/papers/nguyen/6/manifest.json`; overall **—**)
+**Gates set** (no manifest at `artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: —, 2026-08-05). Every row is required for exit.
 
-| Key | Blocks `pass` | Current |
-|-----|---------------|---------|
-| `shared_train` | yes | — |
-| `paper_alpha_beta_decreases_like_paper` — digitization | yes | — |
-| `paper_late_alpha_beta_below_theta` — late mean α–β ≤ 150 | yes | — |
-| `paper_late_alpha_beta_near_paper` — digitization | yes | — |
-| `paper_params_left_init` — amp / freq / pw each >5% off init | yes | — |
-| `paper_amp_late_near_paper` — digitization | yes | — |
-| `paper_freq_late_near_paper` — digitization | yes | — |
-| `paper_pw_late_near_paper` — digitization | yes | — |
-| `paper_late_params_stable` — std last 50 ep ≤ 20% of mean | yes | — |
+| Key | Pass |
+|-----|------|
+| `shared_train` — Fig 4 passed + shared train | — |
+| `paper_alpha_beta_decreases_like_paper` — digitization — α–β decreases | — |
+| `paper_late_alpha_beta_below_theta` — late mean α–β ≤ 150 | — |
+| `paper_late_alpha_beta_near_paper` — digitization — late α–β | — |
+| `paper_params_left_init` — amp / freq / pw each >5% off init | — |
+| `paper_amp_late_near_paper` — digitization — late amplitude | — |
+| `paper_freq_late_near_paper` — digitization — late frequency | — |
+| `paper_pw_late_near_paper` — digitization — late pulse width | — |
+| `paper_late_params_stable` — std last 50 ep ≤ 20% of mean | — |
 <!-- gates-6:end -->
 
 Paper end anchors (~262 nA/cm², ~78.65 Hz, ~1 ms) and ~22% energy vs open-loop 130 Hz are **report** items in manifest metrics, not separate pass keys.
@@ -223,17 +225,17 @@ Seeded eval of the trained policy: **50** episodes × **25** steps, different se
 **Status:** Open — needs Fig 4 checkpoint + `rl-dbs eval --controller snn` + panel script.
 
 <!-- gates-7:start -->
-**Gates** (no manifest at `artifacts/figures/papers/nguyen/7/manifest.json`; overall **—**)
+**Gates set** (no manifest at `artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: —, 2026-08-05). Every row is required for exit.
 
-| Key | Blocks `pass` | Current |
-|-----|---------------|---------|
-| `checkpoint_lineage_ok` — Fig 4 train passed | yes | — |
-| `paper_eval_protocol_ok` — ≥20 steps | yes | — |
-| `paper_overall_mean_near_paper` — digitization | yes | — |
-| `paper_late_early_ratio_near_paper` — digitization | yes | — |
-| `paper_step_series_finite` | yes | — |
-| `paper_below_fig3_pd_median` — when Fig 3 median available | yes | — |
-| `mean_below_theta` — informational | no | — |
+| Key | Pass |
+|-----|------|
+| `checkpoint_lineage_ok` — Fig 4 train passed | — |
+| `paper_eval_protocol_ok` — ≥20 steps | — |
+| `paper_overall_mean_near_paper` — digitization — overall mean | — |
+| `paper_late_early_ratio_near_paper` — digitization — late/early ratio | — |
+| `paper_step_series_finite` — step series finite | — |
+| `paper_below_fig3_pd_median` — below Fig 3 PD On median when available | — |
+| `mean_below_theta` — mean below θ (informational) | — |
 <!-- gates-7:end -->
 
 **Run (planned):**
