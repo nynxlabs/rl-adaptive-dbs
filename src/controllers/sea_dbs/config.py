@@ -147,9 +147,10 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v65 (2026-08-07): v64 passed gap_widens but froze baseline (pearson 0.49).
-    Revert τ_min to 0.86; faster gs_λ for ep 15–40 bump; polyak 0.0035 smooths
-  updates; v60 SEA knobs; bias 2.19 mid-late gap without v64 freeze.
+    v66 (2026-08-07): v65 passes pearson + SEA progressive; only baseline
+    progressive bump (+0.005) and gap closes late (0.073→0.055). Keep v65
+    polyak/SEA; lower gs_tau0 3.5 for sharper early GS; τ_min 0.87 + bias 2.20
+    for late gap without v64 full freeze.
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -178,15 +179,15 @@ def fig4_ravivarapu_config(
     if variant == "baseline":
         return replace(
             cfg,
-            actor_no_stim_bias=2.19,
+            actor_no_stim_bias=2.20,
             force_gumbel_softmax=True,
-            gs_tau0=5.0,
-            gs_lambda=6.0e-5,
-            gs_tau_min=0.86,
+            gs_tau0=3.5,
+            gs_lambda=6.2e-5,
+            gs_tau_min=0.87,
             epsilon_start=0.21,
             epsilon_end=0.21,
             update_frequency=2,
-            actor_lr=5.2e-6,
+            actor_lr=5.1e-6,
             critic_lr=1.16e-4,
         )
     return cfg
