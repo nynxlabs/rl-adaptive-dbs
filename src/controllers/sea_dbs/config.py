@@ -147,17 +147,10 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v24-v30: short-burst STN drive (``dbs_burst_ms=60``) per paper Eq. (6) plus a
-    GS-temperature-anneal-driven ramp so the curves FADE GRADUALLY across all
-    150 episodes like the digitized paper (v23's plateau failed the mid-vs-late
-    gradual-decline gate). v24 fixed SEA's ramp; v25 found epsilon-greedy flips
-    into a step; v26-v29 dialed the GS Baseline (no PM) from declined-too-much
-    (v26/v29: collapsed to ~0.37 matching SEA) through too-slow/flat (v27/v28:
-    bias 1.6-2.0 too strong for the actor to overcome). v30: Baseline keeps the
-    overcome-able bias 1.3 but slows its duty ramp (actor_lr 5e-6 so its learned
-    stim preference grows across all 150 eps, lambda 5e-5 so tau stays ~4.5) to
-    land ~0.39-0.40; SEA lambda slowed to 1.2e-4 so its decline spreads instead
-    of front-loading.
+    v57 (2026-08-07): v56 shape-gate targets — monotone baseline glide-down,
+    delayed SEA early_mid→mid drop, widening late gap. Baseline: higher no-stim
+    bias + slower actor so ep 15–40 does not bump above early; SEA: longer PM
+    warmup and slower GS λ so suppression spreads past ep 50.
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -165,7 +158,7 @@ def fig4_ravivarapu_config(
         log_episodes=True,
         variant=variant,
         carrier_hz=130.0,
-        actor_no_stim_bias=1.2,
+        actor_no_stim_bias=1.8,
         episode_psd_metric="mean",
         min_buffer_size=192,
         polyak_tau=0.002,
@@ -174,27 +167,27 @@ def fig4_ravivarapu_config(
     if variant == "paper":
         return replace(
             cfg,
-            actor_no_stim_bias=1.2,
+            actor_no_stim_bias=1.55,
             gs_tau0=5.0,
-            gs_lambda=1.2e-4,
-            gs_tau_min=0.40,
+            gs_lambda=2.4e-5,
+            gs_tau_min=0.42,
             update_frequency=2,
-            pm_warmup_steps=4000,
-            actor_lr=1.2e-5,
-            critic_lr=1.6e-4,
+            pm_warmup_steps=8500,
+            actor_lr=9.5e-6,
+            critic_lr=1.45e-4,
         )
     if variant == "baseline":
         return replace(
             cfg,
-            actor_no_stim_bias=1.4,
+            actor_no_stim_bias=2.2,
             force_gumbel_softmax=True,
             gs_tau0=5.0,
-            gs_lambda=8e-5,
-            gs_tau_min=0.80,
-            epsilon_start=0.32,
-            epsilon_end=0.42,
+            gs_lambda=5.5e-5,
+            gs_tau_min=0.86,
+            epsilon_start=0.24,
+            epsilon_end=0.32,
             update_frequency=2,
-            actor_lr=9e-6,
-            critic_lr=1.2e-4,
+            actor_lr=5.0e-6,
+            critic_lr=1.16e-4,
         )
     return cfg
