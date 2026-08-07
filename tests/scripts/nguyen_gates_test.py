@@ -49,8 +49,11 @@ def test_fig4_paper_self_consistent():
     rewards = np.interp(np.arange(n), rx, ry)
     lengths = np.interp(np.arange(n), lx, ly)
     report = fig4_training_gates(rewards, lengths, max_episode_steps=25)
-    assert report["gates"]["reward_improves_like_paper"]
-    assert report["gates"]["length_decreases_like_paper"]
+    assert report["reward"]["gates"]["reward_improves_like_paper"]
+    assert report["length"]["gates"]["length_decreases_like_paper"]
+    assert report["pass"]
+    assert report["reward"]["pass"]
+    assert report["length"]["pass"]
 
 
 @pytest.mark.skipif(not (ARTIFACT / "curves_fig5_spikes.json").exists(), reason="no digitization")

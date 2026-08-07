@@ -84,7 +84,50 @@ PAPER_NGUYEN_6_REPLICATION_ALT = "Replication Fig 6"
 PAPER_NGUYEN_7_MANIFEST = "artifacts/figures/papers/nguyen/7/manifest.json"
 PAPER_NGUYEN_7_REPLICATION_ALT = "Replication Fig 7"
 
-# Nguyen gate rows: (manifest key, description). Every row is required for exit.
+# Nguyen Fig 4 gate tiers: shape = phase-1 curve features; full = digitization polish too.
+NGUYEN_FIG4_GATE_TIER: dict[str, dict[str, str]] = {
+    "reward": {
+        "reward_scale_paper": "shape",
+        "late_reward_above_early": "shape",
+        "late_reward_near_zero": "full",
+        "early_high_variance": "info",
+        "paper_early_reward_mag_near_paper": "full",
+        "paper_reward_improves_like_paper": "shape",
+        "paper_late_reward_ratio_near_paper": "full",
+    },
+    "length": {
+        "length_decreases": "shape",
+        "late_length_paper_band": "shape",
+        "early_near_max_length": "shape",
+        "paper_length_decreases_like_paper": "shape",
+        "paper_late_length_near_paper": "full",
+        "paper_early_near_max_length": "full",
+    },
+}
+
+# Nguyen gate rows: (manifest key, description). ``pass`` = all non-info rows; ``shape_pass`` = shape tier only.
+NGUYEN_GATE_GROUPS: dict[str, dict[str, list[tuple[str, str]]]] = {
+    "4": {
+        "reward": [
+            ("reward_scale_paper", "|mean reward ep 0–50| ≥ 5×10⁴"),
+            ("late_reward_above_early", "late mean reward > first-50 mean"),
+            ("late_reward_near_zero", "late mean > −2×10⁵ (full only)"),
+            ("early_high_variance", "early reward variance (logged)"),
+            ("paper_early_reward_mag_near_paper", "digitization — early reward magnitude"),
+            ("paper_reward_improves_like_paper", "digitization — reward improves"),
+            ("paper_late_reward_ratio_near_paper", "digitization — late/first-50 reward ratio"),
+        ],
+        "length": [
+            ("length_decreases", "late mean length < early mean − 1 step"),
+            ("late_length_paper_band", "late mean length ≤ 12"),
+            ("early_near_max_length", "median first 50 ≥ max_steps − 2"),
+            ("paper_length_decreases_like_paper", "digitization — length decreases"),
+            ("paper_late_length_near_paper", "digitization — late length"),
+            ("paper_early_near_max_length", "digitization — early near max length"),
+        ],
+    },
+}
+
 NGUYEN_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
     "3": [
         ("ordering_pd_on_above_pd_off", "PD On above PD Off"),
@@ -92,21 +135,6 @@ NGUYEN_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
         ("paper_ordering_pd_on_above_pd_off", "digitization — ordering"),
         ("paper_mean_ratio_near_paper_readout", "digitization — mean ratio (no curves_fig3 yet)"),
         ("paper_means_separated", "digitization — means separated (logged)"),
-    ],
-    "4": [
-        ("reward_scale_paper", "|mean reward ep 0–50| ≥ 5×10⁴"),
-        ("late_reward_above_early", "late mean reward > early mean"),
-        ("late_reward_near_zero", "late mean > −2×10⁵"),
-        ("length_decreases", "late mean length < early mean − 1 step"),
-        ("late_length_paper_band", "late mean length ≤ 12"),
-        ("early_near_max_length", "median first 50 ≥ max_steps − 2"),
-        ("early_high_variance", "early reward variance (logged)"),
-        ("paper_early_reward_mag_near_paper", "digitization — early reward magnitude"),
-        ("paper_reward_improves_like_paper", "digitization — reward improves"),
-        ("paper_late_reward_ratio_near_paper", "digitization — late/early reward ratio"),
-        ("paper_length_decreases_like_paper", "digitization — length decreases"),
-        ("paper_late_length_near_paper", "digitization — late length"),
-        ("paper_early_near_max_length", "digitization — early near max length"),
     ],
     "5": [
         ("shared_train", "Fig 4 passed + same n_episodes"),
@@ -360,7 +388,113 @@ def _gate_pass_cell(gates: dict[str, Any], key: str) -> str:
     return "—"
 
 
+def _fig4_gate_values(gates: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    reward = gates.get("reward")
+    length = gates.get("length")
+    if isinstance(reward, dict) and isinstance(length, dict):
+        return {"reward": reward, "length": length}
+    legacy_reward = {k: gates[k] for k, _ in NGUYEN_GATE_GROUPS["4"]["reward"] if k in gates}
+    legacy_length = {k: gates[k] for k, _ in NGUYEN_GATE_GROUPS["4"]["length"] if k in gates}
+    return {"reward": legacy_reward, "length": legacy_length}
+
+
+FIG4_INFORMATIONAL_KEYS = frozenset({"early_high_variance"})
+
+
+def _fig4_tier_keys(group_name: str, tier: str) -> tuple[str, ...]:
+    tiers = NGUYEN_FIG4_GATE_TIER[group_name]
+    return tuple(key for key, row_tier in tiers.items() if row_tier == tier)
+
+
+def _group_rows_pass(
+    group_values: dict[str, Any],
+    rows: list[tuple[str, str]],
+    *,
+    skip: frozenset[str] | None = None,
+    only: frozenset[str] | None = None,
+) -> bool | None:
+    skip = skip or frozenset()
+    seen = False
+    for key, _ in rows:
+        if key in skip:
+            continue
+        if only is not None and key not in only:
+            continue
+        if key not in group_values:
+            continue
+        value = group_values[key]
+        if not isinstance(value, bool):
+            continue
+        seen = True
+        if not value:
+            return False
+    return True if seen else None
+
+
+def _fig4_group_shape_pass(group_name: str, group_values: dict[str, Any]) -> bool | None:
+    if isinstance(group_values.get("shape_pass"), bool):
+        return bool(group_values["shape_pass"])
+    shape_keys = frozenset(_fig4_tier_keys(group_name, "shape"))
+    return _group_rows_pass(
+        group_values,
+        NGUYEN_GATE_GROUPS["4"][group_name],
+        only=shape_keys,
+    )
+
+
+def _fig4_group_full_pass(group_name: str, group_values: dict[str, Any]) -> bool | None:
+    if isinstance(group_values.get("pass"), bool):
+        return bool(group_values["pass"])
+    full_keys = frozenset(
+        key for key, tier in NGUYEN_FIG4_GATE_TIER[group_name].items() if tier in {"shape", "full"}
+    )
+    return _group_rows_pass(
+        group_values,
+        NGUYEN_GATE_GROUPS["4"][group_name],
+        skip=FIG4_INFORMATIONAL_KEYS if group_name == "reward" else None,
+        only=full_keys,
+    )
+
+
+def _fig4_tier_pass_cell(
+    group_name: str,
+    group_values: dict[str, Any],
+    key: str,
+    *,
+    column: str,
+) -> str:
+    tier = NGUYEN_FIG4_GATE_TIER[group_name].get(key, "full")
+    if tier == "info":
+        return "—"
+    if column == "shape" and tier == "full":
+        return "—"
+    return _gate_pass_cell(group_values, key)
+
+
+def _nguyen_fig4_overall_pass(gates: dict[str, Any], *, shape: bool) -> bool | None:
+    groups = _fig4_gate_values(gates)
+    if shape and isinstance(gates.get("shape_pass"), bool):
+        return bool(gates["shape_pass"])
+    if not shape and isinstance(gates.get("pass"), bool):
+        return bool(gates["pass"])
+    reward_pass = _fig4_group_shape_pass("reward", groups["reward"]) if shape else _fig4_group_full_pass(
+        "reward", groups["reward"]
+    )
+    length_pass = _fig4_group_shape_pass("length", groups["length"]) if shape else _fig4_group_full_pass(
+        "length", groups["length"]
+    )
+    if reward_pass is None and length_pass is None:
+        return None
+    if reward_pass is False or length_pass is False:
+        return False
+    if reward_pass is True and length_pass is True:
+        return True
+    return None
+
+
 def _nguyen_all_gates_pass(gates: dict[str, Any], panel: str) -> bool | None:
+    if panel == "4":
+        return _nguyen_fig4_overall_pass(gates, shape=False)
     rows = NGUYEN_GATE_ROWS[panel]
     seen = False
     for key, _ in rows:
@@ -375,12 +509,63 @@ def _nguyen_all_gates_pass(gates: dict[str, Any], panel: str) -> bool | None:
     return True if seen else None
 
 
+def _format_nguyen_fig4_gates_table(
+    manifest: dict[str, Any] | None,
+    *,
+    manifest_rel: str,
+) -> str:
+    if manifest is None:
+        shape_cell = "—"
+        full_cell = "—"
+        source = f"no manifest at `{manifest_rel}`"
+        groups = {"reward": {}, "length": {}}
+    else:
+        gate_values = manifest.get("gates") or {}
+        groups = _fig4_gate_values(gate_values)
+        overall_shape = _nguyen_fig4_overall_pass(gate_values, shape=True)
+        overall_full = _nguyen_fig4_overall_pass(gate_values, shape=False)
+        shape_cell = "yes" if overall_shape else ("no" if overall_shape is False else "—")
+        full_cell = "yes" if overall_full else ("no" if overall_full is False else "—")
+        source = f"`{manifest_rel}`"
+
+    lines = [
+        f"**Gates set** ({source}; **`shape_pass`**: {shape_cell}, **`pass`**: {full_cell}, {_today()}). "
+        "Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). "
+        "Both subplot groups required.",
+        "",
+    ]
+    for group_name, title in (("reward", "Reward (panel a)"), ("length", "Length (panel b)")):
+        group_values = groups[group_name]
+        shape_pass = _fig4_group_shape_pass(group_name, group_values)
+        full_pass = _fig4_group_full_pass(group_name, group_values)
+        shape_cell = "yes" if shape_pass else ("no" if shape_pass is False else "—")
+        full_cell = "yes" if full_pass else ("no" if full_pass is False else "—")
+        lines.extend(
+            [
+                f"### {title} (`shape_pass`: {shape_cell} | `pass`: {full_cell})",
+                "",
+                "| Key | Description | Shape | Full |",
+                "|-----|-------------|-------|------|",
+            ]
+        )
+        for key, desc in NGUYEN_GATE_GROUPS["4"][group_name]:
+            lines.append(
+                f"| `{key}` | {desc} | "
+                f"{_fig4_tier_pass_cell(group_name, group_values, key, column='shape')} | "
+                f"{_fig4_tier_pass_cell(group_name, group_values, key, column='full')} |"
+            )
+        lines.append("")
+    return "\n".join(lines).rstrip()
+
+
 def _format_nguyen_gates_table(
     panel: str,
     manifest: dict[str, Any] | None,
     *,
     manifest_rel: str,
 ) -> str:
+    if panel == "4":
+        return _format_nguyen_fig4_gates_table(manifest, manifest_rel=manifest_rel)
     rows = NGUYEN_GATE_ROWS[panel]
     if manifest is None:
         overall_cell = "—"
@@ -412,6 +597,23 @@ def _nguyen_summary_status(panel: str, manifest: dict[str, Any] | None) -> str:
     if overall is True:
         return "Pass"
     if overall is False:
+        if panel == "4":
+            if gates.get("shape_pass"):
+                return "Shape OK (full open)"
+            groups = _fig4_gate_values(gates)
+            for group_name, rows in NGUYEN_GATE_GROUPS["4"].items():
+                shape_keys = frozenset(_fig4_tier_keys(group_name, "shape"))
+                for key, _ in rows:
+                    if key in FIG4_INFORMATIONAL_KEYS:
+                        continue
+                    if key in shape_keys and groups[group_name].get(key) is False:
+                        return f"Fail (`{group_name} shape:{key}`)"
+            for group_name, rows in NGUYEN_GATE_GROUPS["4"].items():
+                for key, _ in rows:
+                    if key in FIG4_INFORMATIONAL_KEYS:
+                        continue
+                    if groups[group_name].get(key) is False:
+                        return f"Fail (`{group_name}:{key}`)"
         failed = [key for key, _ in NGUYEN_GATE_ROWS[panel] if gates.get(key) is False]
         if failed:
             return f"Fail (`{failed[0]}`)"

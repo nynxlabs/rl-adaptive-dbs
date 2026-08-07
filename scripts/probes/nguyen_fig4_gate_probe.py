@@ -19,7 +19,23 @@ from controllers.snn.buffer import ReplayBuffer  # noqa: E402
 from controllers.snn.config import fig4_nguyen_config  # noqa: E402
 from controllers.snn.networks import DSQN  # noqa: E402
 from controllers.snn.trainer import DSQNTrainer  # noqa: E402
-from nguyen_gates import attach_digitization, fig4_training_gates  # noqa: E402
+from nguyen_gates import (  # noqa: E402
+    attach_digitization,
+    fig4_length_gates,
+    fig4_reward_gates,
+)
+
+
+REWARD_KEYS = (
+    "reward_scale_paper",
+    "late_reward_above_early",
+    "late_reward_near_zero",
+)
+LENGTH_KEYS = (
+    "length_decreases",
+    "late_length_paper_band",
+    "early_near_max_length",
+)
 
 
 def eval_all(
@@ -33,23 +49,27 @@ def eval_all(
     lengths_arr = np.asarray(lengths, dtype=float)
     n = int(rewards_arr.size)
     late_start = late_start if late_start is not None else min(350, max(51, n - 30))
-    gates = {
+    reward_heur = {
         "reward_scale_paper": abs(float(np.mean(rewards_arr[:50]))) >= 5e4,
         "late_reward_above_early": float(np.mean(rewards_arr[late_start:])) > float(np.mean(rewards_arr[:50])),
         "late_reward_near_zero": float(np.mean(rewards_arr[late_start:])) > -2e5,
+    }
+    length_heur = {
         "length_decreases": float(np.mean(lengths_arr[late_start:])) < float(np.mean(lengths_arr[:75])) - 1,
         "late_length_paper_band": float(np.mean(lengths_arr[late_start:])) <= 12,
         "early_near_max_length": float(np.median(lengths_arr[:50])) >= max_steps - 2,
     }
-    gates["heur_pass"] = all(gates[k] for k in gates if k != "heur_pass")
-    late_lo = float(late_start)
-    dig = fig4_training_gates(
-        rewards_arr,
-        lengths_arr,
-        max_episode_steps=max_steps,
-        late_lo=late_lo,
-    )
-    return attach_digitization({"pass": gates["heur_pass"], **gates}, dig)
+    reward_heur["pass"] = all(reward_heur[k] for k in REWARD_KEYS)
+    length_heur["pass"] = all(length_heur[k] for k in LENGTH_KEYS)
+    dig_reward = fig4_reward_gates(rewards_arr, late_lo=float(late_start))
+    dig_length = fig4_length_gates(lengths_arr, max_episode_steps=max_steps, late_lo=float(late_start))
+    reward = attach_digitization(reward_heur, dig_reward)
+    length = attach_digitization(length_heur, dig_length)
+    return {
+        "pass": bool(reward["pass"] and length["pass"]),
+        "reward": reward,
+        "length": length,
+    }
 
 
 def train_cfg(cfg) -> tuple[list[float], list[int]]:
@@ -128,19 +148,17 @@ def main() -> int:
         rewards, lengths = train_cfg(cfg)
         late_start = min(350, max(51, len(rewards) - 30))
         merged = eval_all(rewards, lengths, late_start=late_start)
-        heur_fail = [
+        heur_fail = [k for k in REWARD_KEYS if not merged["reward"].get(k, True)]
+        heur_fail += [k for k in LENGTH_KEYS if not merged["length"].get(k, True)]
+        dig_fail = [
             k
-            for k in (
-                "reward_scale_paper",
-                "late_reward_above_early",
-                "late_reward_near_zero",
-                "length_decreases",
-                "late_length_paper_band",
-                "early_near_max_length",
-            )
-            if not merged.get(k, True)
+            for k, v in merged["reward"].items()
+            if k.startswith("paper_") and v is False
+        ] + [
+            k
+            for k, v in merged["length"].items()
+            if k.startswith("paper_") and v is False
         ]
-        dig_fail = [k for k, v in merged.items() if k.startswith("paper_") and v is False]
         row = {
             "name": name,
             "first50": float(np.mean(rewards[:50])),

@@ -36,7 +36,11 @@ os.environ.setdefault("MPLBACKEND", "Agg")
 _DIG = Path(__file__).resolve().parents[4] / "digitization"
 if str(_DIG) not in sys.path:
     sys.path.insert(0, str(_DIG))
-from nguyen_gates import attach_digitization, fig4_training_gates  # noqa: E402
+from nguyen_gates import (  # noqa: E402
+    attach_digitization,
+    fig4_length_gates,
+    fig4_reward_gates,
+)
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
 _spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
@@ -200,6 +204,33 @@ def train_series(
         env.close()
 
 
+REWARD_HEURISTIC_KEYS = (
+    "reward_scale_paper",
+    "late_reward_above_early",
+    "late_reward_near_zero",
+)
+REWARD_SHAPE_KEYS = (
+    "reward_scale_paper",
+    "late_reward_above_early",
+)
+REWARD_SHAPE_PAPER_KEYS = (
+    "paper_reward_improves_like_paper",
+)
+LENGTH_HEURISTIC_KEYS = (
+    "length_decreases",
+    "late_length_paper_band",
+    "early_near_max_length",
+)
+LENGTH_SHAPE_KEYS = LENGTH_HEURISTIC_KEYS
+LENGTH_SHAPE_PAPER_KEYS = (
+    "paper_length_decreases_like_paper",
+)
+
+
+def _group_pass(group: dict[str, Any], keys: tuple[str, ...]) -> bool:
+    return all(bool(group.get(key)) for key in keys)
+
+
 def evaluate_gates(
     series: dict[str, Any],
     *,
@@ -209,18 +240,35 @@ def evaluate_gates(
     lengths = np.asarray(series["episode_lengths"], dtype=float)
     n = int(rewards.size)
     if n < 10:
-        gates = {
+        reward = {
             "pass": False,
+            "shape_pass": False,
             "reason": "too_few_episodes",
-            "n_episodes": n,
             "early_reward_mean": float(np.mean(rewards)) if n else float("nan"),
             "late_reward_mean": float(np.mean(rewards)) if n else float("nan"),
+        }
+        length = {
+            "pass": False,
+            "shape_pass": False,
+            "reason": "too_few_episodes",
             "early_length_mean": float(np.mean(lengths)) if n else float("nan"),
             "late_length_mean": float(np.mean(lengths)) if n else float("nan"),
         }
+        gates = {
+            "pass": False,
+            "shape_pass": False,
+            "n_episodes": n,
+            "reward": reward,
+            "length": length,
+        }
         if series.get("smoke"):
             gates["pass"] = True
+            gates["shape_pass"] = True
             gates["smoke_override"] = True
+            reward["pass"] = True
+            reward["shape_pass"] = True
+            length["pass"] = True
+            length["shape_pass"] = True
         return gates
 
     early_end = min(EARLY_END, n // 2)
@@ -235,36 +283,63 @@ def evaluate_gates(
     early_mean = float(np.mean(early_rewards))
     late_mean_reward = float(np.mean(late_rewards))
     first50_mean = float(np.mean(rewards[: min(50, n)]))
+    early_length_mean = float(np.mean(early_lengths))
+    late_length_mean = float(np.mean(late_lengths))
 
-    gates = {
-        "n_episodes": n,
-        "early_high_variance": early_std > 0.05 * max(abs(early_mean), 1.0),
+    reward_heur = {
         "reward_scale_paper": abs(first50_mean) >= PAPER_REWARD_EARLY_MAG,
         "late_reward_above_early": late_mean_reward > first50_mean,
         "late_reward_near_zero": late_mean_reward > PAPER_REWARD_LATE_FLOOR,
-        "length_decreases": float(np.mean(late_lengths)) < float(np.mean(early_lengths)) - 1.0,
-        "late_length_paper_band": float(np.mean(late_lengths)) <= PAPER_LENGTH_LATE_MAX,
-        "early_near_max_length": float(np.median(early_lengths[: min(50, n)])) >= max_episode_steps - 2,
+        "early_high_variance": early_std > 0.05 * max(abs(early_mean), 1.0),
         "early_reward_mean": early_mean,
         "late_reward_mean": late_mean_reward,
-        "early_length_mean": float(np.mean(early_lengths)),
-        "late_length_mean": float(np.mean(late_lengths)),
+        "first50_reward_mean": first50_mean,
+        "pass": False,
+        "shape_pass": False,
     }
-    gates["pass"] = bool(
-        gates["reward_scale_paper"]
-        and gates["late_reward_above_early"]
-        and gates["late_reward_near_zero"]
-        and gates["length_decreases"]
-        and gates["late_length_paper_band"]
-        and gates["early_near_max_length"]
-    )
-    if series.get("smoke"):
-        gates["pass"] = True
-        gates["smoke_override"] = True
-        return gates
+    reward_heur["shape_pass"] = _group_pass(reward_heur, REWARD_SHAPE_KEYS)
+    reward_heur["pass"] = _group_pass(reward_heur, REWARD_HEURISTIC_KEYS)
 
-    dig = fig4_training_gates(rewards, lengths, max_episode_steps=max_episode_steps)
-    return attach_digitization(gates, dig)
+    length_heur = {
+        "length_decreases": late_length_mean < early_length_mean - 1.0,
+        "late_length_paper_band": late_length_mean <= PAPER_LENGTH_LATE_MAX,
+        "early_near_max_length": float(np.median(early_lengths[: min(50, n)])) >= max_episode_steps - 2,
+        "early_length_mean": early_length_mean,
+        "late_length_mean": late_length_mean,
+        "pass": False,
+        "shape_pass": False,
+    }
+    length_heur["shape_pass"] = _group_pass(length_heur, LENGTH_SHAPE_KEYS)
+    length_heur["pass"] = _group_pass(length_heur, LENGTH_HEURISTIC_KEYS)
+
+    if series.get("smoke"):
+        reward_heur["pass"] = True
+        reward_heur["shape_pass"] = True
+        length_heur["pass"] = True
+        length_heur["shape_pass"] = True
+        return {
+            "pass": True,
+            "shape_pass": True,
+            "n_episodes": n,
+            "reward": reward_heur,
+            "length": length_heur,
+            "smoke_override": True,
+        }
+
+    dig_reward = fig4_reward_gates(rewards)
+    dig_length = fig4_length_gates(lengths, max_episode_steps=max_episode_steps)
+    reward = attach_digitization(reward_heur, dig_reward)
+    length = attach_digitization(length_heur, dig_length)
+    reward["shape_pass"] = _group_pass(reward, REWARD_SHAPE_KEYS + REWARD_SHAPE_PAPER_KEYS)
+    length["shape_pass"] = _group_pass(length, LENGTH_SHAPE_KEYS + LENGTH_SHAPE_PAPER_KEYS)
+
+    return {
+        "pass": bool(reward["pass"] and length["pass"]),
+        "shape_pass": bool(reward["shape_pass"] and length["shape_pass"]),
+        "n_episodes": n,
+        "reward": reward,
+        "length": length,
+    }
 
 
 def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -> dict[str, Any]:
@@ -416,8 +491,11 @@ def main(argv: list[str] | None = None) -> int:
 
     caption = (
         f"DSQN train {series['num_episodes']} ep, seed={series['seed']}; "
-        f"late_reward={gates['late_reward_mean']:.0f}, "
-        f"late_len={gates['late_length_mean']:.1f}; pass={gates['pass']}"
+        f"late_reward={gates['reward']['late_reward_mean']:.0f}, "
+        f"late_len={gates['length']['late_length_mean']:.1f}; "
+        f"shape_pass={gates['shape_pass']} pass={gates['pass']} "
+        f"(reward shape={gates['reward']['shape_pass']} full={gates['reward']['pass']}, "
+        f"length shape={gates['length']['shape_pass']} full={gates['length']['pass']})"
     )
     manifest = {
         "panel": "2/4",
