@@ -125,44 +125,32 @@ def fig3_gates(
     )
 
 
-def fig4_training_gates(
+def fig4_reward_gates(
     episode_rewards: list[float] | np.ndarray,
-    episode_lengths: list[int] | np.ndarray,
     *,
-    max_episode_steps: int = 25,
     early_hi: float = 50.0,
     late_lo: float = 350.0,
     ratio_tol: float = DEFAULT_RATIO_TOL,
     rel_tol: float = DEFAULT_REL_TOL,
 ) -> dict[str, Any]:
-    """Fig 4 reward + length vs digitized paper training curves."""
+    """Fig 4 panel (a) reward vs digitized paper training curve."""
     rewards = np.asarray(episode_rewards, dtype=float)
-    lengths = np.asarray(episode_lengths, dtype=float)
     n = int(rewards.size)
     if n < 10:
         return _gate_pack(
             {"enough_episodes": False},
             {"n_episodes": n},
-            paper_ref={"reward": str(curves_path("fig4_reward")), "length": str(curves_path("fig4_length"))},
+            paper_ref={"reward": str(curves_path("fig4_reward")), "early_hi": early_hi, "late_lo": late_lo},
         )
 
     x = np.arange(n, dtype=float)
-    early_r = window_mean(x, rewards, hi=early_hi)
     late_r = window_mean(x, rewards, lo=late_lo)
     first50_r = window_mean(x, rewards, hi=min(50.0, float(n - 1)))
-    early_len = window_mean(x, lengths, hi=75.0)
-    late_len = window_mean(x, lengths, lo=late_lo)
 
     paper_r = load_curves("fig4_reward")
-    paper_l = load_curves("fig4_length")
     prx, pry = _pick_series(paper_r, "Smoothed", "Raw")
-    plx, ply = _pick_series(paper_l, "Smoothed", "Raw")
-
-    p_early_r = window_mean(prx, pry, hi=early_hi)
     p_late_r = window_mean(prx, pry, lo=late_lo)
     p_first50_r = window_mean(prx, pry, hi=50.0)
-    p_early_len = window_mean(plx, ply, hi=75.0)
-    p_late_len = window_mean(plx, ply, lo=late_lo)
 
     gates = {
         "early_reward_mag_near_paper": rel_close(
@@ -174,35 +162,121 @@ def fig4_training_gates(
         "late_reward_ratio_near_paper": ratio_close(
             late_r, first50_r, p_late_r, p_first50_r, tol=ratio_tol
         ),
-        "length_decreases_like_paper": bool(late_len < early_len and p_late_len < p_early_len),
-        "late_length_near_paper": rel_close(late_len, p_late_len, tol=rel_tol),
-        "early_near_max_length": float(np.median(lengths[: min(50, n)])) >= max_episode_steps - 2,
     }
     shape_r = pearson_on_ref_x(prx, pry, x, rewards)
-    shape_l = pearson_on_ref_x(plx, ply, x, lengths.astype(float))
 
     return _gate_pack(
         gates,
         {
             "early_reward": first50_r,
             "late_reward": late_r,
-            "early_length": early_len,
-            "late_length": late_len,
             "paper_early_reward": p_first50_r,
             "paper_late_reward": p_late_r,
-            "paper_early_length": p_early_len,
-            "paper_late_length": p_late_len,
             "pearson_reward": shape_r,
-            "pearson_length": shape_l,
         },
         paper_ref={
             "reward": str(curves_path("fig4_reward")),
-            "length": str(curves_path("fig4_length")),
             "early_hi": early_hi,
             "late_lo": late_lo,
         },
         notes=["Pearson r is diagnostic only; seeds change wiggles."],
     )
+
+
+def fig4_length_gates(
+    episode_lengths: list[int] | np.ndarray,
+    *,
+    max_episode_steps: int = 25,
+    late_lo: float = 350.0,
+    rel_tol: float = DEFAULT_REL_TOL,
+) -> dict[str, Any]:
+    """Fig 4 panel (b) episode length vs digitized paper training curve."""
+    lengths = np.asarray(episode_lengths, dtype=float)
+    n = int(lengths.size)
+    if n < 10:
+        return _gate_pack(
+            {"enough_episodes": False},
+            {"n_episodes": n},
+            paper_ref={"length": str(curves_path("fig4_length")), "late_lo": late_lo},
+        )
+
+    x = np.arange(n, dtype=float)
+    early_len = window_mean(x, lengths, hi=75.0)
+    late_len = window_mean(x, lengths, lo=late_lo)
+
+    paper_l = load_curves("fig4_length")
+    plx, ply = _pick_series(paper_l, "Smoothed", "Raw")
+    p_early_len = window_mean(plx, ply, hi=75.0)
+    p_late_len = window_mean(plx, ply, lo=late_lo)
+
+    gates = {
+        "length_decreases_like_paper": bool(late_len < early_len and p_late_len < p_early_len),
+        "late_length_near_paper": rel_close(late_len, p_late_len, tol=rel_tol),
+        "early_near_max_length": float(np.median(lengths[: min(50, n)])) >= max_episode_steps - 2,
+    }
+    shape_l = pearson_on_ref_x(plx, ply, x, lengths.astype(float))
+
+    return _gate_pack(
+        gates,
+        {
+            "early_length": early_len,
+            "late_length": late_len,
+            "paper_early_length": p_early_len,
+            "paper_late_length": p_late_len,
+            "pearson_length": shape_l,
+        },
+        paper_ref={
+            "length": str(curves_path("fig4_length")),
+            "late_lo": late_lo,
+        },
+        notes=["Pearson r is diagnostic only; seeds change wiggles."],
+    )
+
+
+def fig4_training_gates(
+    episode_rewards: list[float] | np.ndarray,
+    episode_lengths: list[int] | np.ndarray,
+    *,
+    max_episode_steps: int = 25,
+    early_hi: float = 50.0,
+    late_lo: float = 350.0,
+    ratio_tol: float = DEFAULT_RATIO_TOL,
+    rel_tol: float = DEFAULT_REL_TOL,
+) -> dict[str, Any]:
+    """Fig 4 reward + length vs digitized paper training curves (grouped)."""
+    reward = fig4_reward_gates(
+        episode_rewards,
+        early_hi=early_hi,
+        late_lo=late_lo,
+        ratio_tol=ratio_tol,
+        rel_tol=rel_tol,
+    )
+    length = fig4_length_gates(
+        episode_lengths,
+        max_episode_steps=max_episode_steps,
+        late_lo=late_lo,
+        rel_tol=rel_tol,
+    )
+    reward_gates = {f"paper_{k}": v for k, v in reward["gates"].items()}
+    length_gates = {f"paper_{k}": v for k, v in length["gates"].items()}
+    metrics = {
+        **reward.get("metrics", {}),
+        **length.get("metrics", {}),
+    }
+    return {
+        "reward": reward,
+        "length": length,
+        "pass": bool(reward["pass"] and length["pass"]),
+        "gates": {**reward_gates, **length_gates},
+        "metrics": metrics,
+        "paper_ref": {
+            "reward": str(curves_path("fig4_reward")),
+            "length": str(curves_path("fig4_length")),
+            "early_hi": early_hi,
+            "late_lo": late_lo,
+        },
+        "notes": list(reward.get("notes", [])),
+    }
 
 
 def fig5_spikes_energy_gates(
