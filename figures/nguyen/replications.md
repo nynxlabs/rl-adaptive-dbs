@@ -12,7 +12,7 @@ Figs **1–2** are schematics — **not** replication targets.
 | Panel | Description | Status |
 |-------|-------------|--------|
 | Fig 3 | GPi α–β distribution (PD Off vs PD On) | Pass |
-| Fig 4 | Training reward + episode length | Fail (`late_reward_above_early`) |
+| Fig 4 | Training reward + episode length | Fail (`reward shape:late_reward_above_early`) |
 | Fig 5 | CBGT spikes + DBS energy over training | Fail (`shared_train`) |
 | Fig 6 | α–β + DBS parameters over training | Fail (`shared_train`) |
 | Fig 7 | 50-episode eval (25 steps) | Open |
@@ -41,7 +41,7 @@ Distribution of GPi **α–β** oscillation power (**7–35 Hz**) for **PD On** 
 **Status:** Pass — 500 × 100 ms samples; see `alpha_beta_dist_v5.png`.
 
 <!-- gates-3:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **`pass`**: yes, 2026-08-05). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **`pass`**: yes, 2026-08-07). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -76,34 +76,41 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 ### Replication
 
-![Replication Fig 4](images/4/training_reward_length_v14.png)
+![Replication Fig 4](../../../../../../../bme/rl-adaptive-dbs/figures/nguyen/images/4/training_reward_length_v16.png)
 
 <!-- caption-4:start -->
-**Caption:** DSQN train 500 ep, seed=0; late_reward=179880, late_len=25.0; pass=False (v14)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=179880, late_len=25.0; shape_pass=False pass=False (reward shape=False full=False, length shape=False full=False) (v16)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4:end -->
 
-**Status:** Open — see `training_reward_length_v14.png`.
+**Status:** Open — see manifest gates (`training_reward_length_v16.png`).
 
 <!-- gates-4:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; overall **`pass`**: no, 2026-08-05). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: no, **`pass`**: no, 2026-08-07). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
 
-| Key | Description | Pass |
-|-----|-------------|------|
-| `reward_scale_paper` | |mean reward ep 0–50| ≥ 5×10⁴ | yes |
-| `late_reward_above_early` | late mean reward > early mean | no |
-| `late_reward_near_zero` | late mean > −2×10⁵ | yes |
-| `length_decreases` | late mean length < early mean − 1 step | no |
-| `late_length_paper_band` | late mean length ≤ 12 | no |
-| `early_near_max_length` | median first 50 ≥ max_steps − 2 | yes |
-| `early_high_variance` | early reward variance (logged) | yes |
-| `paper_early_reward_mag_near_paper` | digitization — early reward magnitude | no |
-| `paper_reward_improves_like_paper` | digitization — reward improves | no |
-| `paper_late_reward_ratio_near_paper` | digitization — late/early reward ratio | no |
-| `paper_length_decreases_like_paper` | digitization — length decreases | no |
-| `paper_late_length_near_paper` | digitization — late length | no |
-| `paper_early_near_max_length` | digitization — early near max length | yes |
+### Reward (panel a) (`shape_pass`: no | `pass`: no)
+
+| Key | Description | Shape | Full |
+|-----|-------------|-------|------|
+| `reward_scale_paper` | |mean reward ep 0–50| ≥ 5×10⁴ | yes | yes |
+| `late_reward_above_early` | late mean reward > first-50 mean | no | no |
+| `late_reward_near_zero` | late mean > −2×10⁵ (full only) | — | yes |
+| `early_high_variance` | early reward variance (logged) | — | — |
+| `paper_early_reward_mag_near_paper` | digitization — early reward magnitude | — | no |
+| `paper_reward_improves_like_paper` | digitization — reward improves | no | no |
+| `paper_late_reward_ratio_near_paper` | digitization — late/first-50 reward ratio | — | no |
+
+### Length (panel b) (`shape_pass`: no | `pass`: no)
+
+| Key | Description | Shape | Full |
+|-----|-------------|-------|------|
+| `length_decreases` | late mean length < early mean − 1 step | no | no |
+| `late_length_paper_band` | late mean length ≤ 12 | no | no |
+| `early_near_max_length` | median first 50 ≥ max_steps − 2 | yes | yes |
+| `paper_length_decreases_like_paper` | digitization — length decreases | no | no |
+| `paper_late_length_near_paper` | digitization — late length | — | no |
+| `paper_early_near_max_length` | digitization — early near max length | — | yes |
 <!-- gates-4:end -->
 
 `--smoke` sets `smoke_override` (CI only).
@@ -140,7 +147,7 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 **Status:** Open — needs Fig 4 train `gates.pass`, then `scripts/figures/papers/nguyen/5/plot.py`.
 
 <!-- gates-5:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-08-05). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-08-07). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -183,7 +190,7 @@ GPi **α–β** (a) and DBS amplitude / frequency / pulse width (b) over **500**
 **Status:** Open.
 
 <!-- gates-6:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: no, 2026-08-05). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: no, 2026-08-07). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -225,7 +232,7 @@ Seeded eval of the trained policy: **50** episodes × **25** steps, different se
 **Status:** Open — needs Fig 4 checkpoint + `rl-dbs eval --controller snn` + panel script.
 
 <!-- gates-7:start -->
-**Gates set** (no manifest at `artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: —, 2026-08-05). Every row is required for exit.
+**Gates set** (no manifest at `artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: —, 2026-08-07). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
