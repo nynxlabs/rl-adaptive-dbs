@@ -68,6 +68,8 @@ class SEA_DBSTrainer:
         self.env = env
         self.config = config.with_variant_defaults()
         self.device = torch.device(self.config.device)
+        torch.manual_seed(self.config.seed)
+        np.random.seed(self.config.seed)
 
         state_dim = int(env.observation_space.shape[0])
         n_actions = int(env.action_space.n)
