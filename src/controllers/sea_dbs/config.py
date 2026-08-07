@@ -60,6 +60,12 @@ class SEADBSConfig:
     gs_tau0: float = 1.0
     gs_tau_min: float = 0.1
     gs_lambda: float = 1e-4  # fig4 paper override in fig4_ravivarapu_config
+    # Optional Fig 4a baseline schedule (paper-silent): step-indexed τ can leave an
+    # ep 15–40 PSD bump; boost λ early and raise τ floor late when set.
+    gs_early_lambda_episode_hi: int = 0  # 0 = off; apply scale while episode < hi
+    gs_early_lambda_scale: float = 1.0
+    gs_late_tau_floor_episode_lo: int = 0  # 0 = off; floor τ from this episode on
+    gs_late_tau_floor: float = 0.0
 
     # Baseline exploration (no GS)
     epsilon_start: float = 0.5
@@ -147,10 +153,9 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v66 (2026-08-07): v65 passes pearson + SEA progressive; only baseline
-    progressive bump (+0.005) and gap closes late (0.073→0.055). Keep v65
-    polyak/SEA; lower gs_tau0 3.5 for sharper early GS; τ_min 0.87 + bias 2.20
-    for late gap without v64 full freeze.
+    v67 (2026-08-07): v65 knobs + episode GS schedule on baseline only — early
+    λ boost (ep 0–45) for dig_progressive_decline_baseline; late τ floor (ep
+    112+) for dig_gap_widens_mid_to_late. Paper-silent convention documented here.
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -179,15 +184,19 @@ def fig4_ravivarapu_config(
     if variant == "baseline":
         return replace(
             cfg,
-            actor_no_stim_bias=2.20,
+            actor_no_stim_bias=2.19,
             force_gumbel_softmax=True,
-            gs_tau0=3.5,
-            gs_lambda=6.2e-5,
-            gs_tau_min=0.87,
+            gs_tau0=5.0,
+            gs_lambda=6.0e-5,
+            gs_tau_min=0.86,
+            gs_early_lambda_episode_hi=45,
+            gs_early_lambda_scale=3.0,
+            gs_late_tau_floor_episode_lo=112,
+            gs_late_tau_floor=0.90,
             epsilon_start=0.21,
             epsilon_end=0.21,
             update_frequency=2,
-            actor_lr=5.1e-6,
+            actor_lr=5.2e-6,
             critic_lr=1.16e-4,
         )
     return cfg
