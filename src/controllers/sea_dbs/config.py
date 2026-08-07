@@ -147,9 +147,9 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v59 (2026-08-07): v58 over-froze baseline (flat, pearson≈0). Revert baseline
-    toward v57 decline rates with lower early ε only; keep v58 gap-friendly SEA
-    late actor but stretch PM warmup / slow GS λ to fix SEA front-load.
+    v60 (2026-08-07): v59 still fails progressive baseline bump, gap closes
+    late, SEA front-load, pearson baseline. Flat ε, gs_tau_min 0.87 for late gap,
+    v57-like actor_lr; SEA pm_warmup 14000 + gs_lambda 1.3e-5.
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -168,25 +168,25 @@ def fig4_ravivarapu_config(
             cfg,
             actor_no_stim_bias=1.55,
             gs_tau0=5.0,
-            gs_lambda=1.85e-5,
-            gs_tau_min=0.40,
+            gs_lambda=1.3e-5,
+            gs_tau_min=0.41,
             update_frequency=2,
-            pm_warmup_steps=12500,
-            actor_lr=1.0e-5,
+            pm_warmup_steps=14000,
+            actor_lr=8.0e-6,
             critic_lr=1.45e-4,
         )
     if variant == "baseline":
         return replace(
             cfg,
-            actor_no_stim_bias=2.25,
+            actor_no_stim_bias=2.15,
             force_gumbel_softmax=True,
             gs_tau0=5.0,
-            gs_lambda=5.2e-5,
-            gs_tau_min=0.85,
-            epsilon_start=0.22,
-            epsilon_end=0.30,
+            gs_lambda=5.0e-5,
+            gs_tau_min=0.87,
+            epsilon_start=0.25,
+            epsilon_end=0.25,
             update_frequency=2,
-            actor_lr=4.8e-6,
+            actor_lr=5.2e-6,
             critic_lr=1.16e-4,
         )
     return cfg
