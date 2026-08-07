@@ -71,6 +71,13 @@ assert _resume_spec and _resume_spec.loader
 _resume_cli = importlib.util.module_from_spec(_resume_spec)
 _resume_spec.loader.exec_module(_resume_cli)
 
+_AXES = Path(__file__).resolve().parents[2] / "plot_axes.py"
+_axes_spec = importlib.util.spec_from_file_location("figure_plot_axes", _AXES)
+assert _axes_spec and _axes_spec.loader
+_plot_axes = importlib.util.module_from_spec(_axes_spec)
+_axes_spec.loader.exec_module(_plot_axes)
+data_ylim = _plot_axes.data_ylim
+
 FIGURES_DIR = Path("figures/nguyen/images/4")
 CACHE_DIR = Path("artifacts/figures/papers/nguyen/4")
 DEFAULT_SERIES = CACHE_DIR / "series.json"
@@ -364,7 +371,7 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
     )
     ax0.set_ylabel("Reward")
     ax0.set_title("Episode Rewards")
-    ax0.set_ylim(-1.05e6, 0.05e6)
+    ax0.set_ylim(*data_ylim(rewards, reward_smooth, extra_values=(0.0,)))
     ax0.ticklabel_format(axis="y", style="sci", scilimits=(-6, 6))
     ax0.legend(frameon=False, fontsize=8, loc="lower right")
     ax0.grid(True, linestyle="--", alpha=0.6)
@@ -381,7 +388,7 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
     ax1.set_xlabel("Episode")
     ax1.set_ylabel("Length")
     ax1.set_title("Episode Lengths")
-    ax1.set_ylim(5.0, 26.0)
+    ax1.set_ylim(*data_ylim(lengths, length_smooth, integer_snap=True))
     ax1.legend(frameon=False, fontsize=8, loc="lower right")
     ax1.grid(True, linestyle="--", alpha=0.6)
 

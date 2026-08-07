@@ -12,7 +12,7 @@ Figs **1–2** are schematics — **not** replication targets.
 | Panel | Description | Status |
 |-------|-------------|--------|
 | Fig 3 | GPi α–β distribution (PD Off vs PD On) | Pass |
-| Fig 4 | Training reward + episode length | Fail (`reward shape:late_reward_above_early`) |
+| Fig 4 | Training reward + episode length | Shape OK (full open) |
 | Fig 5 | CBGT spikes + DBS energy over training | Fail (`shared_train`) |
 | Fig 6 | α–β + DBS parameters over training | Fail (`shared_train`) |
 | Fig 7 | 50-episode eval (25 steps) | Open |
@@ -79,7 +79,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 ![Replication Fig 4](../../../../../../../bme/rl-adaptive-dbs/figures/nguyen/images/4/training_reward_length_v16.png)
 
 <!-- caption-4:start -->
-**Caption:** DSQN train 500 ep, seed=0; late_reward=179880, late_len=25.0; shape_pass=False pass=False (reward shape=False full=False, length shape=False full=False) (v16)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=387083, late_len=11.4; shape_pass=True pass=False (reward shape=True full=False, length shape=True full=False) (v16)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4:end -->
@@ -87,28 +87,28 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 **Status:** Open — see manifest gates (`training_reward_length_v16.png`).
 
 <!-- gates-4:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: no, **`pass`**: no, 2026-08-07). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
+**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: yes, **`pass`**: no, 2026-08-07). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
 
-### Reward (panel a) (`shape_pass`: no | `pass`: no)
+### Reward (panel a) (`shape_pass`: yes | `pass`: no)
 
 | Key | Description | Shape | Full |
 |-----|-------------|-------|------|
 | `reward_scale_paper` | |mean reward ep 0–50| ≥ 5×10⁴ | yes | yes |
-| `late_reward_above_early` | late mean reward > first-50 mean | no | no |
+| `late_reward_above_early` | late mean reward > first-50 mean | yes | yes |
 | `late_reward_near_zero` | late mean > −2×10⁵ (full only) | — | yes |
 | `early_high_variance` | early reward variance (logged) | — | — |
 | `paper_early_reward_mag_near_paper` | digitization — early reward magnitude | — | no |
-| `paper_reward_improves_like_paper` | digitization — reward improves | no | no |
+| `paper_reward_improves_like_paper` | digitization — reward improves | yes | yes |
 | `paper_late_reward_ratio_near_paper` | digitization — late/first-50 reward ratio | — | no |
 
-### Length (panel b) (`shape_pass`: no | `pass`: no)
+### Length (panel b) (`shape_pass`: yes | `pass`: no)
 
 | Key | Description | Shape | Full |
 |-----|-------------|-------|------|
-| `length_decreases` | late mean length < early mean − 1 step | no | no |
-| `late_length_paper_band` | late mean length ≤ 12 | no | no |
+| `length_decreases` | late mean length < early mean − 1 step | yes | yes |
+| `late_length_paper_band` | late mean length ≤ 12 | yes | yes |
 | `early_near_max_length` | median first 50 ≥ max_steps − 2 | yes | yes |
-| `paper_length_decreases_like_paper` | digitization — length decreases | no | no |
+| `paper_length_decreases_like_paper` | digitization — length decreases | yes | yes |
 | `paper_late_length_near_paper` | digitization — late length | — | no |
 | `paper_early_near_max_length` | digitization — early near max length | — | yes |
 <!-- gates-4:end -->
