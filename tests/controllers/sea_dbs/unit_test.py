@@ -7,9 +7,12 @@ import pytest
 import torch
 
 from controllers.sea_dbs.adapter import SEA_DBSEnvAdapter
+from dataclasses import replace
+
 from controllers.sea_dbs.config import SEADBSConfig
 from controllers.sea_dbs.networks import gumbel_softmax_sample
 from controllers.sea_dbs.reward import sea_dbs_reward
+from controllers.sea_dbs.trainer import SEA_DBSTrainer
 
 
 def test_adapter_reset_nonzero_p_beta() -> None:
@@ -65,3 +68,30 @@ def test_for_smoke_reduces_episodes() -> None:
     cfg = SEADBSConfig().for_smoke(episodes=2, max_steps=4)
     assert cfg.num_episodes == 2
     assert cfg.max_episode_steps == 4
+
+
+def test_gs_episode_schedule() -> None:
+    cfg = replace(
+        SEADBSConfig(variant="baseline-gs").for_smoke(episodes=6, max_steps=2),
+        gs_tau0=1.0,
+        gs_tau_min=0.05,
+        gs_lambda=1e-4,
+        gs_early_lambda_episode_hi=3,
+        gs_early_lambda_scale=10.0,
+        gs_late_tau_floor_episode_lo=4,
+        gs_late_tau_floor=0.5,
+    )
+    env = SEA_DBSEnvAdapter(config=cfg)
+    try:
+        trainer = SEA_DBSTrainer(env, cfg)
+        trainer._total_steps = 1000
+        trainer._current_episode = 1
+        tau_boosted = trainer.gs_temperature()
+        trainer._current_episode = 4
+        tau_unboosted = trainer.gs_temperature()
+        trainer._current_episode = 5
+        tau_late_floor = trainer.gs_temperature()
+        assert tau_boosted < tau_unboosted
+        assert tau_late_floor >= 0.5
+    finally:
+        env.close()

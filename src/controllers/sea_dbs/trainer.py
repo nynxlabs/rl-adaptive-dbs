@@ -125,11 +125,22 @@ class SEA_DBSTrainer:
         self._rng = np.random.default_rng(config.seed)
         self._total_steps = 0
         self._update_count = 0
+        self._current_episode = 0
         self._metrics = TrainMetrics()
 
     def gs_temperature(self) -> float:
         cfg = self.config
-        return max(cfg.gs_tau_min, cfg.gs_tau0 * np.exp(-cfg.gs_lambda * self._total_steps))
+        lam = cfg.gs_lambda
+        if cfg.gs_early_lambda_episode_hi > 0 and self._current_episode < cfg.gs_early_lambda_episode_hi:
+            lam *= cfg.gs_early_lambda_scale
+        tau = max(cfg.gs_tau_min, cfg.gs_tau0 * np.exp(-lam * self._total_steps))
+        if (
+            cfg.gs_late_tau_floor_episode_lo > 0
+            and cfg.gs_late_tau_floor > 0.0
+            and self._current_episode >= cfg.gs_late_tau_floor_episode_lo
+        ):
+            tau = max(tau, cfg.gs_late_tau_floor)
+        return float(tau)
 
     def pm_warmup_scale(self) -> float:
         steps = int(self.config.pm_warmup_steps)
@@ -300,6 +311,7 @@ class SEA_DBSTrainer:
             result.episode_psd = list(self._metrics.episode_psd)
 
         for episode in range(start_episode, cfg.num_episodes):
+            self._current_episode = episode
             ep_seed = cfg.seed if cfg.fixed_episode_seed else cfg.seed + episode
             state, info = self.env.reset(seed=ep_seed)
             episode_reward = 0.0
