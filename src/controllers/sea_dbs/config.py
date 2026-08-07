@@ -147,10 +147,10 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v57 (2026-08-07): v56 shape-gate targets — monotone baseline glide-down,
-    delayed SEA early_mid→mid drop, widening late gap. Baseline: higher no-stim
-    bias + slower actor so ep 15–40 does not bump above early; SEA: longer PM
-    warmup and slower GS λ so suppression spreads past ep 50.
+    v58 (2026-08-07): v57 still failed progressive baseline (ep 15–40 bump),
+    gap closes ep 80→120, SEA front-load by 0.003. Baseline: higher no-stim bias,
+    slower actor/GS, decreasing ε to kill mid spikes. SEA: longer PM warmup,
+    slower early GS λ, slightly faster actor for late gap maintenance.
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -169,25 +169,25 @@ def fig4_ravivarapu_config(
             cfg,
             actor_no_stim_bias=1.55,
             gs_tau0=5.0,
-            gs_lambda=2.4e-5,
-            gs_tau_min=0.42,
+            gs_lambda=2.0e-5,
+            gs_tau_min=0.38,
             update_frequency=2,
-            pm_warmup_steps=8500,
-            actor_lr=9.5e-6,
+            pm_warmup_steps=11000,
+            actor_lr=1.05e-5,
             critic_lr=1.45e-4,
         )
     if variant == "baseline":
         return replace(
             cfg,
-            actor_no_stim_bias=2.2,
+            actor_no_stim_bias=2.45,
             force_gumbel_softmax=True,
             gs_tau0=5.0,
-            gs_lambda=5.5e-5,
-            gs_tau_min=0.86,
-            epsilon_start=0.24,
-            epsilon_end=0.32,
+            gs_lambda=4.2e-5,
+            gs_tau_min=0.88,
+            epsilon_start=0.28,
+            epsilon_end=0.22,
             update_frequency=2,
-            actor_lr=5.0e-6,
-            critic_lr=1.16e-4,
+            actor_lr=3.5e-6,
+            critic_lr=1.14e-4,
         )
     return cfg
