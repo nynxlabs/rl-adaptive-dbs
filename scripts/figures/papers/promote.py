@@ -1648,13 +1648,24 @@ def refresh_ravivarapu_gate_tables(*, update_docs: bool = True) -> None:
     if not path.is_file():
         return
     import importlib.util
+    import sys
 
     spec = importlib.util.spec_from_file_location("ravivarapu_gate_status", path)
     if spec is None or spec.loader is None:
         return
     mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)
     mod.refresh_gate_tables(PAPER_RAVIVARAPU_DOC)
+
+
+def _ravivarapu_4a_status_line(manifest: dict[str, Any]) -> str:
+    gates = manifest.get("gates") or {}
+    if gates.get("pass"):
+        return "**Status:** Pass — all gates true; see manifest."
+    if gates.get("shape_pass"):
+        return "**Status:** Shape OK (full open) — see manifest gates."
+    return "**Status:** Fail — see manifest gates (`shape_pass` / `pass`)."
 
 
 def promote_ravivarapu_4a(*, manifest: dict[str, Any], png_path: Path, update_docs: bool = True) -> dict[str, str]:
@@ -1674,9 +1685,14 @@ def promote_ravivarapu_4a(*, manifest: dict[str, Any], png_path: Path, update_do
             "*Not yet generated.* Target: `figures/ravivarapu/images/4a/training_psd.png`",
             f"![Replication Fig 4a](images/4a/{png_path.name})",
         )
+        text = re.sub(
+            r"!\[Replication Fig 4a\]\(images/4a/training_psd_v\d+\.png\)",
+            f"![Replication Fig 4a](images/4a/{png_path.name})",
+            text,
+        )
         text = text.replace(
             "**Status:** Open — needs SEA-DBS trainer + Baseline ablation.",
-            f"**Status:** {'Pass' if manifest.get('gates', {}).get('pass') else 'Open'} — see manifest gates.",
+            _ravivarapu_4a_status_line(manifest),
         )
         PAPER_RAVIVARAPU_DOC.write_text(text)
     refresh_ravivarapu_gate_tables(update_docs=update_docs)
