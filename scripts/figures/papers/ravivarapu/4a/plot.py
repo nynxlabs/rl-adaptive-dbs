@@ -35,6 +35,7 @@ if str(_DIG) not in sys.path:
 from ravivarapu_gates import (  # noqa: E402
     attach_digitization,
     merge_gate_report,
+    ravivarapu_fig4a_attach_tiered_pass,
     ravivarapu_fig4a_digitization_gates,
     ravivarapu_fig4a_gates,
 )
@@ -181,7 +182,7 @@ def train_all(
 
 def evaluate_gates(series: dict[str, Any]) -> dict[str, Any]:
     if series.get("smoke"):
-        return {"pass": True, "smoke_override": True}
+        return {"pass": True, "shape_pass": True, "smoke_override": True}
     baseline = series["variants"]["baseline"]["episode_psd"]
     sea = series["variants"]["paper"]["episode_psd"]
     heuristic = ravivarapu_fig4a_gates(baseline, sea, n_expected=DEFAULT_TRAIN_EPISODES)
@@ -191,7 +192,7 @@ def evaluate_gates(series: dict[str, Any]) -> dict[str, Any]:
         sea,
         n_expected=DEFAULT_TRAIN_EPISODES,
     )
-    return attach_digitization(merged, dig, prefix="dig_")
+    return ravivarapu_fig4a_attach_tiered_pass(attach_digitization(merged, dig, prefix="dig_"))
 
 
 def plot_series(series: dict[str, Any], png_path: Path) -> None:
@@ -238,6 +239,11 @@ def main() -> None:
     png_path, png_version = _figure_promote.next_versioned_png(FIGURES_DIR, OUT_STEM)
     plot_series(series, png_path)
 
+    caption = (
+        f"Training mean GPi beta PSD vs episode (seed {args.seed}); "
+        f"shape_pass={gates['shape_pass']} pass={gates['pass']}; "
+        "Baseline vs full SEA-DBS (PM+GS)."
+    )
     manifest = {
         "panel": "4a",
         "seed": args.seed,
@@ -246,10 +252,7 @@ def main() -> None:
         "png_version": png_version,
         "gates": gates,
         "elapsed_s": round(time.time() - t0, 1),
-        "caption": (
-            f"Training mean GPi beta PSD vs episode (seed {args.seed}); "
-            "Baseline vs full SEA-DBS (PM+GS)."
-        ),
+        "caption": caption,
         "series_cache": SHARED_SERIES.as_posix(),
     }
     DEFAULT_MANIFEST.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
