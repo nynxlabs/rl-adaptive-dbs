@@ -115,3 +115,22 @@ def test_episode_stim_logit_boost() -> None:
         assert float(boosted[1]) == pytest.approx(-0.5)
     finally:
         env.close()
+
+
+def test_episode_late_no_stim_logit_boost() -> None:
+    cfg = replace(
+        SEADBSConfig(variant="baseline-gs").for_smoke(episodes=6, max_steps=2),
+        actor_late_episode_lo=4,
+        actor_late_episode_hi=6,
+        actor_late_episode_no_stim_boost=0.3,
+    )
+    env = SEA_DBSEnvAdapter(config=cfg)
+    try:
+        trainer = SEA_DBSTrainer(env, cfg)
+        base = torch.tensor([0.0, 0.0])
+        trainer._current_episode = 5
+        late = trainer._episode_action_logits(base)
+        assert float(late[0]) == pytest.approx(0.3)
+        assert float(late[1]) == pytest.approx(-0.3)
+    finally:
+        env.close()
