@@ -101,6 +101,11 @@ class SEADBSConfig:
     actor_mid_episode_lo: int = 0
     actor_mid_episode_hi: int = 0
     actor_mid_episode_stim_logit_boost: float = 0.0
+    # Late-training no-stim nudge (paper-silent): keeps baseline PSD from over-
+    # committing in ep 120–150 so the baseline–SEA gap does not close.
+    actor_late_episode_lo: int = 0
+    actor_late_episode_hi: int = 0
+    actor_late_episode_no_stim_boost: float = 0.0
     # Fig 4a Baseline convention: the paper's Baseline curve fades GRADUALLY across
     # episodes, which epsilon-greedy argmax cannot produce (it flips abruptly into a
     # step). Force Gumbel-Softmax structured sampling for the baseline WITHOUT the
@@ -158,9 +163,9 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v68 (2026-08-07): v67 episode GS unchanged in spirit; add mid-episode stim
-    logit boost (ep 12–38) for progressive baseline; τ floor 0.93 from ep 100
-  and τ_min 0.87 for late gap (ep 140–149 baseline crash).
+    v69 (2026-08-07): lock v68 mid stim boost (progressive baseline passes); raise
+    τ_min/floor for gap_widens; late no-stim logit nudge ep 120–150 counters
+    ep 145–149 baseline crash (gap 0.073→0.055 on v68).
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -193,14 +198,17 @@ def fig4_ravivarapu_config(
             force_gumbel_softmax=True,
             gs_tau0=5.0,
             gs_lambda=6.0e-5,
-            gs_tau_min=0.87,
+            gs_tau_min=0.88,
             gs_early_lambda_episode_hi=38,
             gs_early_lambda_scale=4.5,
-            gs_late_tau_floor_episode_lo=100,
-            gs_late_tau_floor=0.93,
+            gs_late_tau_floor_episode_lo=92,
+            gs_late_tau_floor=0.96,
             actor_mid_episode_lo=12,
             actor_mid_episode_hi=38,
             actor_mid_episode_stim_logit_boost=0.4,
+            actor_late_episode_lo=120,
+            actor_late_episode_hi=150,
+            actor_late_episode_no_stim_boost=0.35,
             epsilon_start=0.21,
             epsilon_end=0.21,
             update_frequency=2,

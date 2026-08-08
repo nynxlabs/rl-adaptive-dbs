@@ -162,16 +162,29 @@ class SEA_DBSTrainer:
 
     def _episode_action_logits(self, logits: torch.Tensor) -> torch.Tensor:
         cfg = self.config
-        boost = cfg.actor_mid_episode_stim_logit_boost
-        lo, hi = cfg.actor_mid_episode_lo, cfg.actor_mid_episode_hi
-        if boost == 0.0 or lo <= 0 or hi <= lo:
-            return logits
-        if lo <= self._current_episode < hi:
-            adjusted = logits.clone()
-            adjusted[0] -= boost
-            adjusted[1] += boost
-            return adjusted
-        return logits
+        ep = self._current_episode
+        adjusted = logits
+
+        stim_boost = cfg.actor_mid_episode_stim_logit_boost
+        mid_lo, mid_hi = cfg.actor_mid_episode_lo, cfg.actor_mid_episode_hi
+        if stim_boost != 0.0 and mid_lo > 0 and mid_hi > mid_lo and mid_lo <= ep < mid_hi:
+            adjusted = adjusted.clone()
+            adjusted[0] -= stim_boost
+            adjusted[1] += stim_boost
+
+        no_stim_boost = cfg.actor_late_episode_no_stim_boost
+        late_lo, late_hi = cfg.actor_late_episode_lo, cfg.actor_late_episode_hi
+        if (
+            no_stim_boost != 0.0
+            and late_lo > 0
+            and late_hi > late_lo
+            and late_lo <= ep < late_hi
+        ):
+            if adjusted is logits:
+                adjusted = logits.clone()
+            adjusted[0] += no_stim_boost
+            adjusted[1] -= no_stim_boost
+        return adjusted
 
     def _select_action(self, state: np.ndarray) -> tuple[int, np.ndarray]:
         state_t = self._to_tensor(state).unsqueeze(0)
