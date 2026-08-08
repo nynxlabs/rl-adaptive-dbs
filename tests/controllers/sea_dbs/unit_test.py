@@ -5,10 +5,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 import torch
-
-from controllers.sea_dbs.adapter import SEA_DBSEnvAdapter
 from dataclasses import replace
 
+from controllers.sea_dbs.adapter import SEA_DBSEnvAdapter
 from controllers.sea_dbs.config import SEADBSConfig
 from controllers.sea_dbs.networks import gumbel_softmax_sample
 from controllers.sea_dbs.reward import sea_dbs_reward
@@ -93,5 +92,26 @@ def test_gs_episode_schedule() -> None:
         tau_late_floor = trainer.gs_temperature()
         assert tau_boosted < tau_unboosted
         assert tau_late_floor >= 0.5
+    finally:
+        env.close()
+
+
+def test_episode_stim_logit_boost() -> None:
+    cfg = replace(
+        SEADBSConfig(variant="baseline-gs").for_smoke(episodes=6, max_steps=2),
+        actor_mid_episode_lo=2,
+        actor_mid_episode_hi=4,
+        actor_mid_episode_stim_logit_boost=0.5,
+    )
+    env = SEA_DBSEnvAdapter(config=cfg)
+    try:
+        trainer = SEA_DBSTrainer(env, cfg)
+        base = torch.tensor([1.0, -1.0])
+        trainer._current_episode = 1
+        assert torch.allclose(trainer._episode_action_logits(base), base)
+        trainer._current_episode = 3
+        boosted = trainer._episode_action_logits(base)
+        assert float(boosted[0]) == pytest.approx(0.5)
+        assert float(boosted[1]) == pytest.approx(-0.5)
     finally:
         env.close()

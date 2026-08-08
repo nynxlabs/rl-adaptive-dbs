@@ -76,15 +76,15 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 ### Replication
 
-![Replication Fig 4](../../../../../../../bme/rl-adaptive-dbs/figures/nguyen/images/4/training_reward_length_v18.png)
+![Replication Fig 4](../../../../../../../bme/rl-adaptive-dbs/figures/nguyen/images/4/training_reward_length_v20.png)
 
 <!-- caption-4:start -->
-**Caption:** DSQN train 500 ep, seed=0; late_reward=396935, late_len=9.0; shape_pass=True pass=False (reward shape=True full=False, length shape=True full=True) (v18)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=433123, late_len=11.8; shape_pass=False pass=False (reward shape=False full=False, length shape=False full=False) (v20)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4:end -->
 
-**Status:** Open — see manifest gates (`training_reward_length_v18.png`).
+**Status:** Open — see manifest gates (`training_reward_length_v20.png`).
 
 <!-- gates-4:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: yes, **`pass`**: no, 2026-08-07). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
@@ -95,6 +95,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 |-----|-------------|-------|------|
 | `reward_scale_paper` | |mean reward ep 0–50| ≥ 5×10⁴ | yes | yes |
 | `late_reward_above_early` | late mean reward > first-50 mean | yes | yes |
+| `reward_post100_plateau` | smoothed reward flat ep 100–450 | — | — |
 | `late_reward_near_zero` | late mean > −2×10⁵ (full only) | — | yes |
 | `early_high_variance` | early reward variance (logged) | — | — |
 | `paper_early_reward_mag_near_paper` | digitization — early reward magnitude | — | no |
@@ -108,6 +109,8 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 | `length_decreases` | late mean length < early mean − 1 step | yes | yes |
 | `late_length_paper_band` | late mean length ≤ 12 | yes | yes |
 | `early_near_max_length` | median first 50 ≥ max_steps − 2 | yes | yes |
+| `length_mid_glide_like_paper` | length glide ep 50–100 like paper | — | — |
+| `length_post100_plateau` | length plateau ep 100+ like paper | — | — |
 | `paper_length_decreases_like_paper` | digitization — length decreases | yes | yes |
 | `paper_late_length_near_paper` | digitization — late length | — | yes |
 | `paper_early_near_max_length` | digitization — early near max length | — | yes |
