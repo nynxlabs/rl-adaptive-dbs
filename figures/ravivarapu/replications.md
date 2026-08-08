@@ -7,7 +7,7 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 <!-- summary:start -->
 | Panel | Description | Status |
 |-------|-------------|--------|
-| Fig 4a | Training PSD vs episode | Fail (`dig_gap_widens_mid_to_late` (shape), v35) |
+| Fig 4a | Training PSD vs episode | Fail (`dig_gap_widens_mid_to_late` (shape), v36) |
 | Fig 4b | Training reward vs episode | Open |
 | Fig 5a | Inference @ 50 Hz | Open |
 | Fig 5b | Inference @ 30 Hz | Open |
@@ -31,10 +31,10 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_psd_v35.png)
+![Replication Fig 4a](images/4a/training_psd_v36.png)
 
 <!-- caption-4a:start -->
-**Caption:** Training mean GPi beta PSD vs episode (seed 0); shape_pass=False pass=False; Baseline vs full SEA-DBS (PM+GS). (v35)
+**Caption:** Training mean GPi beta PSD vs episode (seed 0); shape_pass=False pass=False; Baseline vs full SEA-DBS (PM+GS). (v36)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`
 <!-- caption-4a:end -->
@@ -74,7 +74,7 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 | `dig_early_mid_sea_near_paper` | digitization — SEA ep 15–40 vs paper | — | yes |
 | `dig_drop_timing_baseline` | digitization — baseline drop not front-loaded by ep 50 | yes | yes |
 | `dig_drop_timing_sea` | digitization — SEA drop not front-loaded by ep 50 | yes | yes |
-| `dig_pearson_baseline_min` | digitization — baseline trajectory shape (Pearson r) | no | no |
+| `dig_pearson_baseline_min` | digitization — baseline trajectory shape (Pearson r) | yes | yes |
 | `dig_pearson_sea_min` | digitization — SEA trajectory shape (Pearson r) | yes | yes |
 <!-- gates-4a:end -->
 

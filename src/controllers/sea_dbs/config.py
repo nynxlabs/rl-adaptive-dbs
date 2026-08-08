@@ -101,6 +101,11 @@ class SEADBSConfig:
     actor_mid_episode_lo: int = 0
     actor_mid_episode_hi: int = 0
     actor_mid_episode_stim_logit_boost: float = 0.0
+    # Mid-late stim nudge (paper-silent): ep 80–120 gap_midlate gate band; favors
+    # stimulation to lower baseline PSD without late-window flattening (v83 lesson).
+    actor_midlate_episode_lo: int = 0
+    actor_midlate_episode_hi: int = 0
+    actor_midlate_episode_stim_logit_boost: float = 0.0
     # Late-training no-stim nudge (paper-silent): ramps from 0 at lo to full at
     # hi−1 so ep 145–149 gap lift does not flatten the whole late window (pearson).
     actor_late_episode_lo: int = 0
@@ -169,9 +174,9 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v83 (2026-08-08): series_gap_sweep on v82 — midlate drop ~0.011 passes shape
-    without late boost; early late ramp kills pearson. v79 late ramp restored;
-    wider negative patch −0.14 ep 84–118.
+    v84 (2026-08-08): v83 pearson 0.605; gap short ~0.009 midlate. Series sweep:
+    midlate drop −0.008 passes shape. Dedicated midlate stim band ep 84–118 @ 0.16;
+    disable gap_patch.
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -212,9 +217,12 @@ def fig4_ravivarapu_config(
             actor_mid_episode_lo=12,
             actor_mid_episode_hi=38,
             actor_mid_episode_stim_logit_boost=0.4,
-            actor_gap_patch_episode_lo=84,
-            actor_gap_patch_episode_hi=118,
-            actor_gap_patch_no_stim_boost=-0.14,
+            actor_midlate_episode_lo=84,
+            actor_midlate_episode_hi=118,
+            actor_midlate_episode_stim_logit_boost=0.16,
+            actor_gap_patch_episode_lo=0,
+            actor_gap_patch_episode_hi=0,
+            actor_gap_patch_no_stim_boost=0.0,
             actor_late_episode_lo=138,
             actor_late_episode_hi=150,
             actor_late_episode_no_stim_boost=0.40,
