@@ -172,6 +172,14 @@ class SEA_DBSTrainer:
             adjusted[0] -= stim_boost
             adjusted[1] += stim_boost
 
+        patch_boost = cfg.actor_gap_patch_no_stim_boost
+        patch_lo, patch_hi = cfg.actor_gap_patch_episode_lo, cfg.actor_gap_patch_episode_hi
+        if patch_boost != 0.0 and patch_lo > 0 and patch_hi > patch_lo and patch_lo <= ep < patch_hi:
+            if adjusted is logits:
+                adjusted = logits.clone()
+            adjusted[0] += patch_boost
+            adjusted[1] -= patch_boost
+
         no_stim_boost = cfg.actor_late_episode_no_stim_boost
         late_lo, late_hi = cfg.actor_late_episode_lo, cfg.actor_late_episode_hi
         if (

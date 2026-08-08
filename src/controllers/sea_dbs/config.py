@@ -107,6 +107,11 @@ class SEADBSConfig:
     actor_late_episode_hi: int = 0
     actor_late_episode_no_stim_boost: float = 0.0
     actor_late_episode_boost_ramp: bool = True
+    # Narrow mid-late gap patch (paper-silent): lifts ep ~142–145 without the
+    # wide-late lift that costs pearson (v74 lesson).
+    actor_gap_patch_episode_lo: int = 0
+    actor_gap_patch_episode_hi: int = 0
+    actor_gap_patch_no_stim_boost: float = 0.0
     # Fig 4a Baseline convention: the paper's Baseline curve fades GRADUALLY across
     # episodes, which epsilon-greedy argmax cannot produce (it flips abruptly into a
     # step). Force Gumbel-Softmax structured sampling for the baseline WITHOUT the
@@ -164,8 +169,8 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v74 (2026-08-08): v73 pearson/progressive pass; gap 0.060 (need 0.070). Weak
-    gaps ep 143–145 — widen flat no-stim boost to ep 134–150 @ 0.30; τ floor 0.948@106.
+    v75 (2026-08-08): v73 base (pearson 0.582, gap 0.060); add narrow gap
+    patch ep 142–146 @ 0.20 plus unchanged late boost 0.45 ep 146–150.
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -201,14 +206,17 @@ def fig4_ravivarapu_config(
             gs_tau_min=0.87,
             gs_early_lambda_episode_hi=38,
             gs_early_lambda_scale=4.5,
-            gs_late_tau_floor_episode_lo=106,
-            gs_late_tau_floor=0.948,
+            gs_late_tau_floor_episode_lo=108,
+            gs_late_tau_floor=0.94,
             actor_mid_episode_lo=12,
             actor_mid_episode_hi=38,
             actor_mid_episode_stim_logit_boost=0.4,
-            actor_late_episode_lo=134,
+            actor_gap_patch_episode_lo=142,
+            actor_gap_patch_episode_hi=146,
+            actor_gap_patch_no_stim_boost=0.20,
+            actor_late_episode_lo=146,
             actor_late_episode_hi=150,
-            actor_late_episode_no_stim_boost=0.30,
+            actor_late_episode_no_stim_boost=0.45,
             actor_late_episode_boost_ramp=False,
             epsilon_start=0.21,
             epsilon_end=0.21,

@@ -7,7 +7,7 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 <!-- summary:start -->
 | Panel | Description | Status |
 |-------|-------------|--------|
-| Fig 4a | Training PSD vs episode | Fail (`dig_gap_widens_mid_to_late` (shape), v26) |
+| Fig 4a | Training PSD vs episode | Fail (`dig_gap_widens_mid_to_late` (shape), v27) |
 | Fig 4b | Training reward vs episode | Open |
 | Fig 5a | Inference @ 50 Hz | Open |
 | Fig 5b | Inference @ 30 Hz | Open |
@@ -31,10 +31,10 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_psd_v26.png)
+![Replication Fig 4a](images/4a/training_psd_v27.png)
 
 <!-- caption-4a:start -->
-**Caption:** Training mean GPi beta PSD vs episode (seed 0); shape_pass=False pass=False; Baseline vs full SEA-DBS (PM+GS). (v26)
+**Caption:** Training mean GPi beta PSD vs episode (seed 0); shape_pass=False pass=False; Baseline vs full SEA-DBS (PM+GS). (v27)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`
 <!-- caption-4a:end -->
@@ -42,7 +42,7 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 **Status:** **Fail** — see manifest gates.
 
 <!-- gates-4a:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4a.json`; **`shape_pass`**: no, **`pass`**: no, 2026-08-07). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
+**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4a.json`; **`shape_pass`**: no, **`pass`**: no, 2026-08-08). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
 
 | Key | Description | Shape | Full |
 |-----|-------------|-------|------|
@@ -74,7 +74,7 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 | `dig_early_mid_sea_near_paper` | digitization — SEA ep 15–40 vs paper | — | yes |
 | `dig_drop_timing_baseline` | digitization — baseline drop not front-loaded by ep 50 | yes | yes |
 | `dig_drop_timing_sea` | digitization — SEA drop not front-loaded by ep 50 | yes | yes |
-| `dig_pearson_baseline_min` | digitization — baseline trajectory shape (Pearson r) | yes | yes |
+| `dig_pearson_baseline_min` | digitization — baseline trajectory shape (Pearson r) | no | no |
 | `dig_pearson_sea_min` | digitization — SEA trajectory shape (Pearson r) | yes | yes |
 <!-- gates-4a:end -->
 
@@ -110,7 +110,7 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4a/plot.p
 **Status:** Open — pair with Fig 4a locked run.
 
 <!-- gates-4b:start -->
-**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/4/manifest_4b.json``; overall **`pass`**: —, 2026-08-07). Every row is required for exit.
+**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/4/manifest_4b.json``; overall **`pass`**: —, 2026-08-08). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -153,7 +153,7 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 **Status:** Open — needs trained `paper` + `baseline` actors and adapter carrier-frequency knob.
 
 <!-- gates-5a:start -->
-**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/5a/manifest.json``; overall **`pass`**: —, 2026-08-07). Every row is required for exit.
+**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/5a/manifest.json``; overall **`pass`**: —, 2026-08-08). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -198,7 +198,7 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 **Status:** Open — pair protocol with Fig 5a; only carrier differs.
 
 <!-- gates-5b:start -->
-**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/5b/manifest.json``; overall **`pass`**: —, 2026-08-07). Every row is required for exit.
+**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/5b/manifest.json``; overall **`pass`**: —, 2026-08-08). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -247,7 +247,7 @@ QAT is **out of scope** for SEA-DBS (not reported).
 **Status:** Open — needs FP16 PTQ path on SEA-DBS actor after full-precision train.
 
 <!-- gates-6:start -->
-**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/6/manifest.json``; overall **`pass`**: —, 2026-08-07). Every row is required for exit.
+**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/6/manifest.json``; overall **`pass`**: —, 2026-08-08). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -293,7 +293,7 @@ Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper` ([se
 **Status:** Open — needs all four variants trainable and a shared 10-step eval harness.
 
 <!-- gates-7:start -->
-**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/7/manifest.json``; overall **`pass`**: —, 2026-08-07). Every row is required for exit.
+**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/7/manifest.json``; overall **`pass`**: —, 2026-08-08). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|

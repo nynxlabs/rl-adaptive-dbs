@@ -117,6 +117,24 @@ def test_episode_stim_logit_boost() -> None:
         env.close()
 
 
+def test_episode_gap_patch_no_stim_boost() -> None:
+    cfg = replace(
+        SEADBSConfig(variant="baseline-gs").for_smoke(episodes=6, max_steps=2),
+        actor_gap_patch_episode_lo=2,
+        actor_gap_patch_episode_hi=4,
+        actor_gap_patch_no_stim_boost=0.15,
+    )
+    env = SEA_DBSEnvAdapter(config=cfg)
+    try:
+        trainer = SEA_DBSTrainer(env, cfg)
+        base = torch.tensor([0.0, 0.0])
+        trainer._current_episode = 3
+        patched = trainer._episode_action_logits(base)
+        assert float(patched[0]) == pytest.approx(0.15)
+    finally:
+        env.close()
+
+
 def test_episode_late_no_stim_flat_boost() -> None:
     cfg = replace(
         SEADBSConfig(variant="baseline-gs").for_smoke(episodes=6, max_steps=2),
