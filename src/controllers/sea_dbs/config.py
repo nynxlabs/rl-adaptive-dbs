@@ -163,9 +163,9 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v70 (2026-08-08): v68 mid stim (progressive pass) + surgical late gap fix.
-    v69 gap pass but pearson 0.51 (shape fail). Revert τ_min 0.87; mild τ floor
-    0.94@108; tiny no-stim nudge ep 144–150 only; λ 6.1e-5 for drop/pearson.
+    v71 (2026-08-08): v70 pearson (0.61) + tuned late gap fix between v70/v69.
+    gap 0.056 needs ~0.070; ep 143–149 collapse. τ floor 0.952@100; no-stim
+    nudge 0.22 ep 135–150 (v69 was 0.35@120, v70 0.12@144).
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -201,14 +201,14 @@ def fig4_ravivarapu_config(
             gs_tau_min=0.87,
             gs_early_lambda_episode_hi=38,
             gs_early_lambda_scale=4.5,
-            gs_late_tau_floor_episode_lo=108,
-            gs_late_tau_floor=0.94,
+            gs_late_tau_floor_episode_lo=100,
+            gs_late_tau_floor=0.952,
             actor_mid_episode_lo=12,
             actor_mid_episode_hi=38,
             actor_mid_episode_stim_logit_boost=0.4,
-            actor_late_episode_lo=144,
+            actor_late_episode_lo=135,
             actor_late_episode_hi=150,
-            actor_late_episode_no_stim_boost=0.12,
+            actor_late_episode_no_stim_boost=0.22,
             epsilon_start=0.21,
             epsilon_end=0.21,
             update_frequency=2,
