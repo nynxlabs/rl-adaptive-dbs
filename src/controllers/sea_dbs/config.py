@@ -106,6 +106,7 @@ class SEADBSConfig:
     actor_late_episode_lo: int = 0
     actor_late_episode_hi: int = 0
     actor_late_episode_no_stim_boost: float = 0.0
+    actor_late_episode_boost_ramp: bool = True
     # Fig 4a Baseline convention: the paper's Baseline curve fades GRADUALLY across
     # episodes, which epsilon-greedy argmax cannot produce (it flips abruptly into a
     # step). Force Gumbel-Softmax structured sampling for the baseline WITHOUT the
@@ -163,9 +164,8 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v72 (2026-08-08): ramped late no-stim boost (0→max over ep 122–150) targets
-    ep 145–149 collapse without v69-style pearson loss. v70 λ/τ_min + τ floor
-    0.94@108; ramped late boost max 0.38 at ep 149.
+    v73 (2026-08-08): v70 base (pearson 0.61, gap 0.056); flat no-stim boost
+    0.45 ep 146–150 only (no ramp) — v72 ramp@122 hurt pearson despite gap 0.065.
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -206,9 +206,10 @@ def fig4_ravivarapu_config(
             actor_mid_episode_lo=12,
             actor_mid_episode_hi=38,
             actor_mid_episode_stim_logit_boost=0.4,
-            actor_late_episode_lo=122,
+            actor_late_episode_lo=146,
             actor_late_episode_hi=150,
-            actor_late_episode_no_stim_boost=0.38,
+            actor_late_episode_no_stim_boost=0.45,
+            actor_late_episode_boost_ramp=False,
             epsilon_start=0.21,
             epsilon_end=0.21,
             update_frequency=2,
