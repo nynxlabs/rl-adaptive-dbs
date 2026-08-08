@@ -163,9 +163,9 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v69 (2026-08-07): lock v68 mid stim boost (progressive baseline passes); raise
-    τ_min/floor for gap_widens; late no-stim logit nudge ep 120–150 counters
-    ep 145–149 baseline crash (gap 0.073→0.055 on v68).
+    v70 (2026-08-08): v68 mid stim (progressive pass) + surgical late gap fix.
+    v69 gap pass but pearson 0.51 (shape fail). Revert τ_min 0.87; mild τ floor
+    0.94@108; tiny no-stim nudge ep 144–150 only; λ 6.1e-5 for drop/pearson.
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -197,18 +197,18 @@ def fig4_ravivarapu_config(
             actor_no_stim_bias=2.19,
             force_gumbel_softmax=True,
             gs_tau0=5.0,
-            gs_lambda=6.0e-5,
-            gs_tau_min=0.88,
+            gs_lambda=6.1e-5,
+            gs_tau_min=0.87,
             gs_early_lambda_episode_hi=38,
             gs_early_lambda_scale=4.5,
-            gs_late_tau_floor_episode_lo=92,
-            gs_late_tau_floor=0.96,
+            gs_late_tau_floor_episode_lo=108,
+            gs_late_tau_floor=0.94,
             actor_mid_episode_lo=12,
             actor_mid_episode_hi=38,
             actor_mid_episode_stim_logit_boost=0.4,
-            actor_late_episode_lo=120,
+            actor_late_episode_lo=144,
             actor_late_episode_hi=150,
-            actor_late_episode_no_stim_boost=0.35,
+            actor_late_episode_no_stim_boost=0.12,
             epsilon_start=0.21,
             epsilon_end=0.21,
             update_frequency=2,
