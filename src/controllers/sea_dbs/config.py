@@ -174,9 +174,8 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v84 (2026-08-08): v83 pearson 0.605; gap short ~0.009 midlate. Series sweep:
-    midlate drop −0.008 passes shape. Dedicated midlate stim band ep 84–118 @ 0.16;
-    disable gap_patch.
+    v85 (2026-08-08): v84 midlate 0.067 / late 0.060 — need ~−0.008 midlate.
+    Strengthen midlate stim to 0.22 and widen to ep 80–120 (full gate window).
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -217,9 +216,9 @@ def fig4_ravivarapu_config(
             actor_mid_episode_lo=12,
             actor_mid_episode_hi=38,
             actor_mid_episode_stim_logit_boost=0.4,
-            actor_midlate_episode_lo=84,
-            actor_midlate_episode_hi=118,
-            actor_midlate_episode_stim_logit_boost=0.16,
+            actor_midlate_episode_lo=80,
+            actor_midlate_episode_hi=120,
+            actor_midlate_episode_stim_logit_boost=0.22,
             actor_gap_patch_episode_lo=0,
             actor_gap_patch_episode_hi=0,
             actor_gap_patch_no_stim_boost=0.0,
