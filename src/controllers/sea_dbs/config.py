@@ -169,8 +169,9 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v78 (2026-08-08): v76 late ramp (138–150 max 0.40); v77 ramp nudge regressed.
-    Add gap_patch ep 120–134 boost 0.12 for weak 120–135 gap (0.058 vs 0.073 midlate).
+    v79 (2026-08-08): v76 base; v78 early-late patch hurt pearson. Lower gap_midlate
+    (ep 80–120) via negative gap_patch ep 90–116 (−0.09 stim favor) so gap_late
+    can stay ~0.062 while gap_widens passes (need midlate drop ~0.01).
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -211,9 +212,9 @@ def fig4_ravivarapu_config(
             actor_mid_episode_lo=12,
             actor_mid_episode_hi=38,
             actor_mid_episode_stim_logit_boost=0.4,
-            actor_gap_patch_episode_lo=120,
-            actor_gap_patch_episode_hi=134,
-            actor_gap_patch_no_stim_boost=0.12,
+            actor_gap_patch_episode_lo=90,
+            actor_gap_patch_episode_hi=116,
+            actor_gap_patch_no_stim_boost=-0.09,
             actor_late_episode_lo=138,
             actor_late_episode_hi=150,
             actor_late_episode_no_stim_boost=0.40,
