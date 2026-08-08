@@ -76,15 +76,15 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 ### Replication
 
-![Replication Fig 4](../../../../../../../bme/rl-adaptive-dbs/figures/nguyen/images/4/training_reward_length_v20.png)
+![Replication Fig 4](../../../../../../../bme/rl-adaptive-dbs/figures/nguyen/images/4/training_reward_length_v21.png)
 
 <!-- caption-4:start -->
-**Caption:** DSQN train 500 ep, seed=0; late_reward=433123, late_len=11.8; shape_pass=False pass=False (reward shape=False full=False, length shape=False full=False) (v20)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=576064, late_len=10.7; shape_pass=False pass=False (reward shape=False full=False, length shape=False full=True) (v21)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4:end -->
 
-**Status:** Open — see manifest gates (`training_reward_length_v20.png`).
+**Status:** Open — see manifest gates (`training_reward_length_v21.png`).
 
 <!-- gates-4:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: yes, **`pass`**: no, 2026-08-07). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
