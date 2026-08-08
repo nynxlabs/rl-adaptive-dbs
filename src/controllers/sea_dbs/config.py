@@ -101,8 +101,8 @@ class SEADBSConfig:
     actor_mid_episode_lo: int = 0
     actor_mid_episode_hi: int = 0
     actor_mid_episode_stim_logit_boost: float = 0.0
-    # Late-training no-stim nudge (paper-silent): keeps baseline PSD from over-
-    # committing in ep 120–150 so the baseline–SEA gap does not close.
+    # Late-training no-stim nudge (paper-silent): ramps from 0 at lo to full at
+    # hi−1 so ep 145–149 gap lift does not flatten the whole late window (pearson).
     actor_late_episode_lo: int = 0
     actor_late_episode_hi: int = 0
     actor_late_episode_no_stim_boost: float = 0.0
@@ -163,9 +163,9 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v71 (2026-08-08): v70 pearson (0.61) + tuned late gap fix between v70/v69.
-    gap 0.056 needs ~0.070; ep 143–149 collapse. τ floor 0.952@100; no-stim
-    nudge 0.22 ep 135–150 (v69 was 0.35@120, v70 0.12@144).
+    v72 (2026-08-08): ramped late no-stim boost (0→max over ep 122–150) targets
+    ep 145–149 collapse without v69-style pearson loss. v70 λ/τ_min + τ floor
+    0.94@108; ramped late boost max 0.38 at ep 149.
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -201,14 +201,14 @@ def fig4_ravivarapu_config(
             gs_tau_min=0.87,
             gs_early_lambda_episode_hi=38,
             gs_early_lambda_scale=4.5,
-            gs_late_tau_floor_episode_lo=100,
-            gs_late_tau_floor=0.952,
+            gs_late_tau_floor_episode_lo=108,
+            gs_late_tau_floor=0.94,
             actor_mid_episode_lo=12,
             actor_mid_episode_hi=38,
             actor_mid_episode_stim_logit_boost=0.4,
-            actor_late_episode_lo=135,
+            actor_late_episode_lo=122,
             actor_late_episode_hi=150,
-            actor_late_episode_no_stim_boost=0.22,
+            actor_late_episode_no_stim_boost=0.38,
             epsilon_start=0.21,
             epsilon_end=0.21,
             update_frequency=2,

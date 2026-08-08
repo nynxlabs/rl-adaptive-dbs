@@ -128,6 +128,9 @@ def test_episode_late_no_stim_logit_boost() -> None:
     try:
         trainer = SEA_DBSTrainer(env, cfg)
         base = torch.tensor([0.0, 0.0])
+        trainer._current_episode = 4
+        ramp_start = trainer._episode_action_logits(base)
+        assert float(ramp_start[0]) == pytest.approx(0.0)
         trainer._current_episode = 5
         late = trainer._episode_action_logits(base)
         assert float(late[0]) == pytest.approx(0.3)

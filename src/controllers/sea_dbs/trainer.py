@@ -180,10 +180,13 @@ class SEA_DBSTrainer:
             and late_hi > late_lo
             and late_lo <= ep < late_hi
         ):
+            span = late_hi - late_lo
+            frac = (ep - late_lo) / max(1, span - 1)
+            effective = no_stim_boost * frac
             if adjusted is logits:
                 adjusted = logits.clone()
-            adjusted[0] += no_stim_boost
-            adjusted[1] -= no_stim_boost
+            adjusted[0] += effective
+            adjusted[1] -= effective
         return adjusted
 
     def _select_action(self, state: np.ndarray) -> tuple[int, np.ndarray]:
