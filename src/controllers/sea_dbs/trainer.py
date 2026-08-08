@@ -160,10 +160,23 @@ class SEA_DBSTrainer:
     def _to_tensor(self, array: np.ndarray) -> torch.Tensor:
         return torch.as_tensor(array, device=self.device, dtype=torch.float32)
 
+    def _episode_action_logits(self, logits: torch.Tensor) -> torch.Tensor:
+        cfg = self.config
+        boost = cfg.actor_mid_episode_stim_logit_boost
+        lo, hi = cfg.actor_mid_episode_lo, cfg.actor_mid_episode_hi
+        if boost == 0.0 or lo <= 0 or hi <= lo:
+            return logits
+        if lo <= self._current_episode < hi:
+            adjusted = logits.clone()
+            adjusted[0] -= boost
+            adjusted[1] += boost
+            return adjusted
+        return logits
+
     def _select_action(self, state: np.ndarray) -> tuple[int, np.ndarray]:
         state_t = self._to_tensor(state).unsqueeze(0)
         with torch.no_grad():
-            logits = self.actor(state_t).squeeze(0)
+            logits = self._episode_action_logits(self.actor(state_t).squeeze(0))
             logits_np = logits.cpu().numpy().astype(np.float32)
 
         if self.config.use_gumbel_softmax:
