@@ -181,7 +181,10 @@ class SEA_DBSTrainer:
             and late_lo <= ep < late_hi
         ):
             span = late_hi - late_lo
-            frac = (ep - late_lo) / max(1, span - 1)
+            if cfg.actor_late_episode_boost_ramp and span > 1:
+                frac = (ep - late_lo) / (span - 1)
+            else:
+                frac = 1.0
             effective = no_stim_boost * frac
             if adjusted is logits:
                 adjusted = logits.clone()
