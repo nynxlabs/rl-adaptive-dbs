@@ -164,8 +164,8 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v73 (2026-08-08): v70 base (pearson 0.61, gap 0.056); flat no-stim boost
-    0.45 ep 146–150 only (no ramp) — v72 ramp@122 hurt pearson despite gap 0.065.
+    v74 (2026-08-08): v73 pearson/progressive pass; gap 0.060 (need 0.070). Weak
+    gaps ep 143–145 — widen flat no-stim boost to ep 134–150 @ 0.30; τ floor 0.948@106.
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -201,14 +201,14 @@ def fig4_ravivarapu_config(
             gs_tau_min=0.87,
             gs_early_lambda_episode_hi=38,
             gs_early_lambda_scale=4.5,
-            gs_late_tau_floor_episode_lo=108,
-            gs_late_tau_floor=0.94,
+            gs_late_tau_floor_episode_lo=106,
+            gs_late_tau_floor=0.948,
             actor_mid_episode_lo=12,
             actor_mid_episode_hi=38,
             actor_mid_episode_stim_logit_boost=0.4,
-            actor_late_episode_lo=146,
+            actor_late_episode_lo=134,
             actor_late_episode_hi=150,
-            actor_late_episode_no_stim_boost=0.45,
+            actor_late_episode_no_stim_boost=0.30,
             actor_late_episode_boost_ramp=False,
             epsilon_start=0.21,
             epsilon_end=0.21,
