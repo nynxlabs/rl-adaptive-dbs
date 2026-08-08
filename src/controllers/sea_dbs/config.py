@@ -169,9 +169,9 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v82 (2026-08-08): v81 gap_late 0.065 (closest); pearson fail. Series sweep:
-    drop midlate ~0.009 passes gap+pearson. Narrow patch −0.15 ep 90–110; keep
-    v81 late ramp 122–150 max 0.36.
+    v83 (2026-08-08): series_gap_sweep on v82 — midlate drop ~0.011 passes shape
+    without late boost; early late ramp kills pearson. v79 late ramp restored;
+    wider negative patch −0.14 ep 84–118.
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -212,12 +212,12 @@ def fig4_ravivarapu_config(
             actor_mid_episode_lo=12,
             actor_mid_episode_hi=38,
             actor_mid_episode_stim_logit_boost=0.4,
-            actor_gap_patch_episode_lo=90,
-            actor_gap_patch_episode_hi=110,
-            actor_gap_patch_no_stim_boost=-0.15,
-            actor_late_episode_lo=122,
+            actor_gap_patch_episode_lo=84,
+            actor_gap_patch_episode_hi=118,
+            actor_gap_patch_no_stim_boost=-0.14,
+            actor_late_episode_lo=138,
             actor_late_episode_hi=150,
-            actor_late_episode_no_stim_boost=0.36,
+            actor_late_episode_no_stim_boost=0.40,
             actor_late_episode_boost_ramp=True,
             epsilon_start=0.21,
             epsilon_end=0.21,
