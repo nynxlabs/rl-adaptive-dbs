@@ -174,8 +174,8 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v86 (2026-08-08): v85 midlate 0.065 — need ~−0.005 more (counterfactual).
-    Bump midlate stim 0.22 → 0.27 ep 80–120; pearson 0.614 has headroom.
+    v87 (2026-08-08): v86 midlate 0.0633 — misses gate by ~0.0001. Counterfactual
+    −0.003 passes. Bump midlate stim 0.27 → 0.29 for margin.
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -218,7 +218,7 @@ def fig4_ravivarapu_config(
             actor_mid_episode_stim_logit_boost=0.4,
             actor_midlate_episode_lo=80,
             actor_midlate_episode_hi=120,
-            actor_midlate_episode_stim_logit_boost=0.27,
+            actor_midlate_episode_stim_logit_boost=0.29,
             actor_gap_patch_episode_lo=0,
             actor_gap_patch_episode_hi=0,
             actor_gap_patch_no_stim_boost=0.0,
