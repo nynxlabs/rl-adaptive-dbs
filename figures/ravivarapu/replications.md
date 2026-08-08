@@ -7,7 +7,7 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 <!-- summary:start -->
 | Panel | Description | Status |
 |-------|-------------|--------|
-| Fig 4a | Training PSD vs episode | Fail (`dig_gap_widens_mid_to_late` (shape), v21) |
+| Fig 4a | Training PSD vs episode | Fail (`dig_baseline_drop_vs_paper` (full), v22) |
 | Fig 4b | Training reward vs episode | Open |
 | Fig 5a | Inference @ 50 Hz | Open |
 | Fig 5b | Inference @ 30 Hz | Open |
@@ -31,10 +31,10 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_psd_v21.png)
+![Replication Fig 4a](images/4a/training_psd_v22.png)
 
 <!-- caption-4a:start -->
-**Caption:** Training mean GPi beta PSD vs episode (seed 0); shape_pass=False pass=False; Baseline vs full SEA-DBS (PM+GS). (v21)
+**Caption:** Training mean GPi beta PSD vs episode (seed 0); shape_pass=False pass=False; Baseline vs full SEA-DBS (PM+GS). (v22)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`
 <!-- caption-4a:end -->
@@ -56,7 +56,7 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 | `n_episodes_ok` | ≥ 150 training episodes | yes | yes |
 | `dig_enough_episodes` | digitization — enough episodes | yes | yes |
 | `dig_shared_start_near_paper` | digitization — shared start vs paper | — | yes |
-| `dig_baseline_drop_vs_paper` | digitization — baseline drop vs paper | — | yes |
+| `dig_baseline_drop_vs_paper` | digitization — baseline drop vs paper | — | no |
 | `dig_sea_drop_vs_paper` | digitization — SEA-DBS drop vs paper | — | yes |
 | `dig_sea_steeper_than_baseline_like_paper` | digitization — SEA steeper than baseline | yes | yes |
 | `dig_sea_below_baseline_late_like_paper` | digitization — SEA below baseline late | yes | yes |
@@ -64,7 +64,7 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 | `dig_final_window_gap_near_paper` | digitization — final 10-episode gap vs paper | — | yes |
 | `dig_progressive_decline_baseline` | digitization — Baseline declines in every window | yes | yes |
 | `dig_progressive_decline_sea` | digitization — SEA-DBS declines in every window | yes | yes |
-| `dig_gap_widens_mid_to_late` | digitization — baseline−SEA gap widens ep 40→150 | no | no |
+| `dig_gap_widens_mid_to_late` | digitization — baseline−SEA gap widens ep 40→150 | yes | yes |
 | `dig_early_mid_to_mid_drop_sea_not_front_loaded` | digitization — SEA early drop is not front-loaded | yes | yes |
 | `dig_late_early_ratio_baseline_near_paper` | digitization — baseline late/early ratio | — | yes |
 | `dig_late_early_ratio_sea_near_paper` | digitization — SEA late/early ratio | — | yes |
@@ -74,7 +74,7 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 | `dig_early_mid_sea_near_paper` | digitization — SEA ep 15–40 vs paper | — | yes |
 | `dig_drop_timing_baseline` | digitization — baseline drop not front-loaded by ep 50 | yes | yes |
 | `dig_drop_timing_sea` | digitization — SEA drop not front-loaded by ep 50 | yes | yes |
-| `dig_pearson_baseline_min` | digitization — baseline trajectory shape (Pearson r) | yes | yes |
+| `dig_pearson_baseline_min` | digitization — baseline trajectory shape (Pearson r) | no | no |
 | `dig_pearson_sea_min` | digitization — SEA trajectory shape (Pearson r) | yes | yes |
 <!-- gates-4a:end -->
 
