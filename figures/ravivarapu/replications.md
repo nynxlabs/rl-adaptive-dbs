@@ -41,7 +41,7 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`
 <!-- caption-4a:end -->
 
-**Status:** **Pass** (v42) — `shape_pass` and full `pass`; hybrid reset `fixed_episode_seed_until=2` (v89 train). Manifest `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`.
+**Status:** **Pass** (v44) — `shape_pass` and full `pass`; hybrid reset `fixed_episode_seed_until=2` (v89 train); paper overlay (black baseline, grey SEA-DBS). Manifest `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`.
 
 <!-- gates-4a:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4a.json`; **`shape_pass`**: yes, **`pass`**: yes, 2026-08-09). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
