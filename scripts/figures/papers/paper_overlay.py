@@ -19,6 +19,11 @@ if str(_DIG) not in sys.path:
 from paper_gates import load_refined  # noqa: E402
 
 NGUYEN_DIG = Path("artifacts/figures/papers/nguyen/paper_digitization")
+RAVIVARAPU_DIG = Path("artifacts/figures/papers/ravivarapu/paper_digitization")
+
+# Ravivarapu Fig 4a: Baseline black, SEA-DBS light grey (replication solid; paper dashed/dotted).
+RAVI_BASELINE_COLOR = "#000000"
+RAVI_SEA_COLOR = "#c8c8c8"
 
 PAPER_SMOOTH_STYLE: dict[str, Any] = {
     "color": "#1b4332",
@@ -62,8 +67,20 @@ def overlay_on_axis(
     *,
     label: str,
     raw: bool = False,
+    color: str | None = None,
+    linestyle: str | None = None,
+    linewidth: float | None = None,
+    alpha: float | None = None,
 ) -> None:
-    style = PAPER_RAW_STYLE if raw else PAPER_SMOOTH_STYLE
+    style = dict(PAPER_RAW_STYLE if raw else PAPER_SMOOTH_STYLE)
+    if color is not None:
+        style["color"] = color
+    if linestyle is not None:
+        style["linestyle"] = linestyle
+    if linewidth is not None:
+        style["linewidth"] = linewidth
+    if alpha is not None:
+        style["alpha"] = alpha
     ax.plot(x, y, label=label, **style)
 
 
@@ -98,3 +115,33 @@ def overlay_nguyen_fig4(
     r_raw_y = reward_curves["Raw"][1] if "Raw" in reward_curves else pry
     l_raw_y = length_curves["Raw"][1] if "Raw" in length_curves else ply
     return {"reward": (pry, r_raw_y), "length": (ply, l_raw_y)}
+
+
+def ravivarapu_fig4a_digitization() -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """Baseline and SEA-DBS PSD vs episode from ``curves_fig4a.json``."""
+    return load_panel_curves(RAVIVARAPU_DIG / "curves_fig4a.json")
+
+
+def overlay_ravivarapu_fig4a(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """Draw digitized Baseline / SEA-DBS on the Fig 4a axis (1-based episode x)."""
+    curves = ravivarapu_fig4a_digitization()
+    out: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+    for series_name, repl_label, paper_color, paper_ls in (
+        ("Baseline", "Paper Baseline (digitized)", RAVI_BASELINE_COLOR, "--"),
+        ("SEA-DBS", "Paper SEA-DBS (digitized)", RAVI_SEA_COLOR, ":"),
+    ):
+        px, py = pick_series(curves, series_name)
+        # WPD x is 0-based episode index; replication plots use 1..n.
+        px_plot = np.asarray(px, dtype=float) + 1.0
+        overlay_on_axis(
+            ax,
+            px_plot,
+            py,
+            label=repl_label,
+            color=paper_color,
+            linestyle=paper_ls,
+            linewidth=2.4 if series_name == "SEA-DBS" else 2.0,
+            alpha=0.95 if series_name == "SEA-DBS" else 0.85,
+        )
+        out[series_name] = (py, py)
+    return out
