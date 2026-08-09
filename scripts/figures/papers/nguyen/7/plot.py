@@ -26,6 +26,13 @@ if str(_DIG) not in sys.path:
     sys.path.insert(0, str(_DIG))
 from nguyen_gates import attach_digitization, fig7_eval_gates  # noqa: E402
 
+_OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
+_overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
+assert _overlay_spec and _overlay_spec.loader
+_overlay_import = importlib.util.module_from_spec(_overlay_spec)
+_overlay_spec.loader.exec_module(_overlay_import)
+_paper_overlay = _overlay_import.load_paper_overlay()
+
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
 _spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
 assert _spec and _spec.loader
@@ -126,6 +133,7 @@ def plot_eval(eval_payload: dict[str, Any], out_path: Path) -> dict[str, Any]:
         ax.plot(np.arange(len(tr)), tr, color="#9ecae1", linewidth=0.6, alpha=0.35)
     ax.plot(steps, mean_trace, color="#08519c", linewidth=2.0, label="Mean")
     ax.axhline(BIOMARKER_THRESHOLD, color="#d62728", linestyle="--", linewidth=1.2, label="θ=150")
+    _paper_overlay.overlay_nguyen_fig7(ax)
     ax.set_xlabel("Time Step")
     ax.set_ylabel("α–β Power")
     ax.set_title("Evaluation α–β (50 episodes)")

@@ -35,6 +35,13 @@ if str(_DIG) not in sys.path:
     sys.path.insert(0, str(_DIG))
 from ravivarapu_gates import merge_gate_report, ravivarapu_inference_gates  # noqa: E402
 
+_OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
+_overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
+assert _overlay_spec and _overlay_spec.loader
+_overlay_import = importlib.util.module_from_spec(_overlay_spec)
+_overlay_spec.loader.exec_module(_overlay_import)
+_paper_overlay = _overlay_import.load_paper_overlay()
+
 CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/5a")
 FIGURES_DIR = Path("figures/ravivarapu/images/5a")
 OUT_STEM = "inference_50hz"
@@ -61,25 +68,46 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--smoke", action="store_true")
+    parser.add_argument(
+        "--plot-only",
+        action="store_true",
+        help="Replot from cached series.json (no eval)",
+    )
     args = parser.parse_args()
     steps = 5 if args.smoke else ABLATION_EVAL_STEPS
-    traces: dict[str, list[float]] = {}
-    for variant in VARIANTS:
-        payload = evaluate(
-            _ckpt(variant, args.seed),
-            config=SEADBSConfig(variant=variant, seed=args.seed),
-            max_steps=steps,
-            carrier_hz=INFERENCE_CARRIER_50HZ,
-        )
-        traces[variant] = payload["p_beta_trajectories"][0]
+    series_path = CACHE_DIR / "series.json"
+    if args.plot_only:
+        if not series_path.is_file():
+            raise SystemExit(f"missing series cache: {series_path}")
+        payload = json.loads(series_path.read_text(encoding="utf-8"))
+        traces = payload["traces"]
+        steps = int(payload.get("steps", len(next(iter(traces.values())))))
+    else:
+        traces = {}
+        for variant in VARIANTS:
+            payload = evaluate(
+                _ckpt(variant, args.seed),
+                config=SEADBSConfig(variant=variant, seed=args.seed),
+                max_steps=steps,
+                carrier_hz=INFERENCE_CARRIER_50HZ,
+            )
+            traces[variant] = payload["p_beta_trajectories"][0]
 
     fig, ax = plt.subplots(figsize=(6, 4))
     for variant, label in (("baseline", "Baseline 50Hz"), ("paper", "SEA-DBS 50Hz")):
-        ax.plot(traces[variant], label=label)
+        y = np.asarray(traces[variant], dtype=float)
+        ax.plot(np.arange(y.size, dtype=float), y, label=label, linewidth=1.5)
+    paper = _paper_overlay.overlay_ravivarapu_fig5a(ax)
+    ys = [np.asarray(v, dtype=float) for v in traces.values()]
+    ys.extend(v[0] for v in paper.values())
+    all_y = np.concatenate(ys) if ys else np.array([0.0, 1.0])
+    lo, hi = float(np.nanmin(all_y)), float(np.nanmax(all_y))
+    pad = 0.05 * (hi - lo + 1e-6)
+    ax.set_ylim(lo - pad, hi + pad)
     ax.set_xlabel("Steps")
     ax.set_ylabel("PSD (norm)")
     ax.set_title("Beta stimulation freq. 50 Hz")
-    ax.legend()
+    ax.legend(fontsize=8)
     ax.grid(True, alpha=0.3)
     png_path, png_version = _figure_promote.next_versioned_png(FIGURES_DIR, OUT_STEM)
     fig.savefig(png_path, dpi=150)
@@ -87,8 +115,8 @@ def main() -> None:
 
     gates = {"pass": True, "smoke_override": True} if args.smoke else evaluate_gates(traces)
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    series_path = CACHE_DIR / "series.json"
-    series_path.write_text(json.dumps({"traces": traces, "steps": steps}, indent=2) + "\n")
+    if not args.plot_only:
+        series_path.write_text(json.dumps({"traces": traces, "steps": steps}, indent=2) + "\n")
     manifest = {
         "panel": "5a",
         "carrier_hz": INFERENCE_CARRIER_50HZ,

@@ -37,6 +37,13 @@ if str(_DIG) not in sys.path:
     sys.path.insert(0, str(_DIG))
 from ravivarapu_gates import merge_gate_report, ravivarapu_fig4b_gates  # noqa: E402
 
+_OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
+_overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
+assert _overlay_spec and _overlay_spec.loader
+_overlay_import = importlib.util.module_from_spec(_overlay_spec)
+_overlay_spec.loader.exec_module(_overlay_import)
+_paper_overlay = _overlay_import.load_paper_overlay()
+
 FIGURES_DIR = Path("figures/ravivarapu/images/4b")
 CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/4")
 SHARED_SERIES = CACHE_DIR / "series.json"
@@ -73,13 +80,22 @@ def evaluate_gates(series: dict[str, Any]) -> dict[str, Any]:
 
 def plot_series(series: dict[str, Any], png_path: Path) -> None:
     fig, ax = plt.subplots(figsize=(6, 4))
+    repl_ys: list[np.ndarray] = []
     for variant, label in (("baseline", "Baseline (DDPG)"), ("paper", "SEA-DBS")):
-        rewards = series["variants"][variant]["episode_rewards"]
+        rewards = np.asarray(series["variants"][variant]["episode_rewards"], dtype=float)
         episodes = np.arange(1, len(rewards) + 1)
         ax.plot(episodes, rewards, label=label, linewidth=1.5)
+        repl_ys.append(rewards)
+    early = float(np.mean(repl_ys[0][: max(1, len(repl_ys[0]) // 10)])) if repl_ys else -95.0
+    paper = _paper_overlay.overlay_ravivarapu_fig4b(ax, replication_early_mean=early)
+    paper_ys = [v[0] for v in paper.values()]
+    all_y = np.concatenate(repl_ys + paper_ys)
+    lo, hi = float(np.nanmin(all_y)), float(np.nanmax(all_y))
+    pad = 0.05 * (hi - lo + 1e-6)
+    ax.set_ylim(lo - pad, hi + pad)
     ax.set_xlabel("Training episode")
     ax.set_ylabel("Episode reward (Eq. 7)")
-    ax.legend()
+    ax.legend(fontsize=8)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
     png_path.parent.mkdir(parents=True, exist_ok=True)

@@ -53,6 +53,13 @@ if str(_DIG) not in sys.path:
     sys.path.insert(0, str(_DIG))
 from paper_gates import fig2_time_gates  # noqa: E402
 
+_OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
+_overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
+assert _overlay_spec and _overlay_spec.loader
+_overlay_import = importlib.util.module_from_spec(_overlay_spec)
+_overlay_spec.loader.exec_module(_overlay_import)
+_paper_overlay = _overlay_import.load_paper_overlay()
+
 FIGURES_DIR = Path("figures/mehregan/images/2a")
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/2a")
 DEFAULT_SERIES = CACHE_DIR / "series.json"
@@ -508,6 +515,10 @@ def plot_fig2a(
         if drawstyle == "steps-post":
             plot_kwargs["drawstyle"] = "steps-post"
         ax.plot(x, y, **plot_kwargs)
+
+    paper_y = _paper_overlay.overlay_mehregan_fig2(ax)
+    for _, (py, _) in paper_y.items():
+        peak = max(peak, float(np.max(py)))
 
     ax.axvline(
         DBS_ONSET_S,

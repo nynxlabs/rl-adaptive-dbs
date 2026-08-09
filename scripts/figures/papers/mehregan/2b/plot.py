@@ -55,6 +55,13 @@ if str(_DIG) not in sys.path:
     sys.path.insert(0, str(_DIG))
 from paper_gates import fig2_time_gates  # noqa: E402
 
+_OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
+_overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
+assert _overlay_spec and _overlay_spec.loader
+_overlay_import = importlib.util.module_from_spec(_overlay_spec)
+_overlay_spec.loader.exec_module(_overlay_import)
+_paper_overlay = _overlay_import.load_paper_overlay()
+
 FIGURES_DIR = Path("figures/mehregan/images/2b")
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/2b")
 DEFAULT_SERIES = CACHE_DIR / "series.json"
@@ -80,8 +87,9 @@ DEFAULT_GGITH = KUMARAVELU_GGITH
 DEFAULT_SMC_AMPLITUDE = BOC_SMC_AMPLITUDE
 DEFAULT_BACKEND = "python"
 DEFAULT_SEEDS: tuple[int, ...] = (0,)
-DEFAULT_Y_MIN = 0.10
-DEFAULT_Y_MAX = 0.4
+# Paper Fig 2b frame is 0–0.4; used when auto limits still fit all series.
+PAPER_Y_MIN = 0.0
+PAPER_Y_MAX = 0.4
 
 SamplingMode = Literal["trailing", "segment"]
 
@@ -416,6 +424,29 @@ def load_series(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text())
 
 
+def _auto_ylim(*series: np.ndarray) -> tuple[float, float]:
+    """Y limits covering every replication + paper series (pad; prefer paper 0–0.4)."""
+    chunks = [np.asarray(s, dtype=float).ravel() for s in series if s is not None and np.size(s)]
+    if not chunks:
+        return PAPER_Y_MIN, PAPER_Y_MAX
+    vals = np.concatenate(chunks)
+    vals = vals[np.isfinite(vals)]
+    if vals.size == 0:
+        return PAPER_Y_MIN, PAPER_Y_MAX
+    lo = float(np.min(vals))
+    hi = float(np.max(vals))
+    span = max(hi - lo, 1e-6)
+    pad = max(0.02, 0.05 * span)
+    ymin = max(0.0, lo - pad)
+    ymax = hi + pad
+    # Keep the paper frame when it still shows everything.
+    if ymin >= PAPER_Y_MIN and ymax <= PAPER_Y_MAX:
+        return PAPER_Y_MIN, PAPER_Y_MAX
+    if ymin <= 0.05:
+        ymin = PAPER_Y_MIN
+    return ymin, ymax
+
+
 def plot_fig2b(
     cache: dict[str, Any],
     *,
@@ -426,18 +457,23 @@ def plot_fig2b(
     plt.rcParams.update(STYLE)
     fig, ax = plt.subplots(figsize=(7.0, 4.5), dpi=150)
 
-    peak = 0.0
+    repl_ys: list[np.ndarray] = []
     for key in ("pd_no_treatment", "pd_130hz"):
         meta = SERIES[key]
         x = np.asarray(cache["time_s"], dtype=float)
         y = np.asarray(cache["traces"][key], dtype=float)
-        peak = max(peak, float(np.max(y)))
+        repl_ys.append(y)
         ax.plot(x, y, color=meta["color"], linewidth=1.2, label=meta["label"])
+
+    paper_y = _paper_overlay.overlay_mehregan_fig2b(ax)
+    paper_ys = [py for _, (py, _) in paper_y.items()]
 
     ax.axvline(DBS_ONSET_S, color="#888888", linestyle="--", linewidth=1.2, zorder=0)
 
-    ymin = y_min if y_min is not None else DEFAULT_Y_MIN
-    ymax = y_max if y_max is not None else DEFAULT_Y_MAX
+    auto_ymin, auto_ymax = _auto_ylim(*repl_ys, *paper_ys)
+    ymin = y_min if y_min is not None else auto_ymin
+    ymax = y_max if y_max is not None else auto_ymax
+    peak = float(max((float(np.max(y)) for y in (*repl_ys, *paper_ys) if y.size), default=0.0))
 
     ax.set_xlim(0.0, DISPLAY_S)
     ax.set_ylim(ymin, ymax)
@@ -533,14 +569,14 @@ def main() -> int:
     parser.add_argument(
         "--y-min",
         type=float,
-        default=DEFAULT_Y_MIN,
-        help=f"Y-axis lower limit (default {DEFAULT_Y_MIN})",
+        default=None,
+        help="Y-axis lower limit (default: auto from replication + paper digitization)",
     )
     parser.add_argument(
         "--y-max",
         type=float,
-        default=DEFAULT_Y_MAX,
-        help=f"Y-axis upper limit (default {DEFAULT_Y_MAX})",
+        default=None,
+        help="Y-axis upper limit (default: auto from replication + paper digitization)",
     )
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--quiet", action="store_true")

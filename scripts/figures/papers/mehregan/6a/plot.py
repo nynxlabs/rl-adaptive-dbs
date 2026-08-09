@@ -78,6 +78,13 @@ if str(_DIG) not in sys.path:
     sys.path.insert(0, str(_DIG))
 from paper_gates import fig6_quant_gates  # noqa: E402
 
+_OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
+_overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
+assert _overlay_spec and _overlay_spec.loader
+_overlay_import = importlib.util.module_from_spec(_overlay_spec)
+_overlay_spec.loader.exec_module(_overlay_import)
+_paper_overlay = _overlay_import.load_paper_overlay()
+
 _FIG2A_PATH = Path(__file__).resolve().parents[1] / "2a" / "plot.py"
 _fig2a_spec = importlib.util.spec_from_file_location("fig2a_plot_for_6a", _FIG2A_PATH)
 assert _fig2a_spec and _fig2a_spec.loader
@@ -1231,6 +1238,7 @@ def plot_fig6a(
         linewidth=1.2,
         zorder=0,
     )
+    _paper_overlay.overlay_mehregan_fig6a(ax)
     ax.set_xlim(0.0, TIME_MAX_S)
     ax.set_ylim(y0, y1)
     ax.set_yticks(yticks)

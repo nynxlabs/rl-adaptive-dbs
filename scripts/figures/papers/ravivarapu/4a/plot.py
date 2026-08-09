@@ -67,7 +67,7 @@ DEFAULT_SEED = 0
 VARIANTS = ("baseline", "paper")
 DEFAULT_TRAIN_EPISODES = 150
 
-# Replication traces (paper overlays stay black/grey in paper_overlay.py).
+# Replication traces; paper overlays use lightened dashed versions of these colors.
 REPL_BASELINE_COLOR = "#1f77b4"
 REPL_SEA_COLOR = "#ff7f0e"
 

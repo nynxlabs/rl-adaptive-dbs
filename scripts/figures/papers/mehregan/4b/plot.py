@@ -39,6 +39,13 @@ if str(_DIG) not in sys.path:
     sys.path.insert(0, str(_DIG))
 from paper_gates import fig4b_gates  # noqa: E402
 
+_OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
+_overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
+assert _overlay_spec and _overlay_spec.loader
+_overlay_import = importlib.util.module_from_spec(_overlay_spec)
+_overlay_spec.loader.exec_module(_overlay_import)
+_paper_overlay = _overlay_import.load_paper_overlay()
+
 FIGURES_DIR = Path("figures/mehregan/images/4b")
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/4b")
 FIG4A_CACHE_DIR = Path("artifacts/figures/papers/mehregan/4a")
@@ -251,12 +258,16 @@ def _episode_x_axis(ax: plt.Axes, n_points: int) -> None:
 def _plot_reward_on_ax(ax: plt.Axes, episode_rewards: list[float]) -> dict[str, Any]:
     y = np.asarray(episode_rewards, dtype=float)
     x = _episode_x_coords(len(y))
-    ax.plot(x, y, marker="o", color="#16a34a", linewidth=1.2, markersize=4)
+    ax.plot(x, y, marker="o", color="#16a34a", linewidth=1.2, markersize=4, label="Replication")
+    paper = _paper_overlay.overlay_mehregan_fig4b_reward(ax)
+    paper_y = next(iter(paper.values()), (np.array([]),))[0]
+    y_all = np.concatenate([y, paper_y]) if paper_y.size else y
     _episode_x_axis(ax, len(y))
-    y0, y1, yticks = _ylim_for_rewards(y)
+    y0, y1, yticks = _ylim_for_rewards(y_all)
     ax.set_ylim(y0, y1)
     ax.set_yticks(yticks)
     ax.set_ylabel("Reward")
+    ax.legend(frameon=False, fontsize=8, loc="lower right")
     ax.grid(True, axis="y", color="#cccccc", linewidth=0.6, alpha=0.9)
     return {
         "n_episodes": int(y.size),
@@ -270,13 +281,17 @@ def _plot_reward_on_ax(ax: plt.Axes, episode_rewards: list[float]) -> dict[str, 
 def _plot_psd_on_ax(ax: plt.Axes, episode_mean_beta: list[float]) -> dict[str, Any]:
     y = np.asarray(episode_mean_beta, dtype=float)
     x = _episode_x_coords(len(y))
-    ax.plot(x, y, marker="o", color="#1f6f6f", linewidth=1.2, markersize=4)
+    ax.plot(x, y, marker="o", color="#1f6f6f", linewidth=1.2, markersize=4, label="Replication")
+    paper = _paper_overlay.overlay_mehregan_fig4b_psd(ax)
+    paper_y = next(iter(paper.values()), (np.array([]),))[0]
+    y_all = np.concatenate([y, paper_y]) if paper_y.size else y
     _episode_x_axis(ax, len(y))
-    y0, y1, yticks = _ylim_for_psd(y)
+    y0, y1, yticks = _ylim_for_psd(y_all)
     ax.set_ylim(y0, y1)
     ax.set_yticks(yticks)
     ax.set_xlabel("Episode")
     ax.set_ylabel(r"PSD($x10^3$)")
+    ax.legend(frameon=False, fontsize=8, loc="upper right")
     ax.grid(True, axis="y", color="#cccccc", linewidth=0.6, alpha=0.9)
     return {
         "n_episodes": int(y.size),
