@@ -38,6 +38,13 @@ assert _resume_spec and _resume_spec.loader
 _resume_cli = importlib.util.module_from_spec(_resume_spec)
 _resume_spec.loader.exec_module(_resume_cli)
 
+_OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
+_overlay_import_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
+assert _overlay_import_spec and _overlay_import_spec.loader
+_overlay_import = importlib.util.module_from_spec(_overlay_import_spec)
+_overlay_import_spec.loader.exec_module(_overlay_import)
+_paper_overlay = _overlay_import.load_paper_overlay()
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -176,20 +183,33 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
     fig, axes = plt.subplots(2, 1, figsize=(8.0, 7.0), sharex=True, constrained_layout=True)
 
     ax0 = axes[0]
-    ax0.plot(episodes, spikes, color="#7b6ba8", linewidth=0.9, alpha=0.85)
-    ax0.plot(episodes, spike_smooth, color="#4a148c", linewidth=1.8)
+    ax0.plot(episodes, spikes, color="#7b6ba8", linewidth=0.9, alpha=0.85, label="Raw")
+    ax0.plot(episodes, spike_smooth, color="#4a148c", linewidth=1.8, label="Smoothed")
     ax0.set_ylabel("Spike Count")
     ax0.set_title("CBGT Network Spikes")
-    ax0.set_ylim(PAPER_SPIKE_MIN - 50.0, PAPER_SPIKE_MAX + 50.0)
     ax0.grid(True, linestyle="--", alpha=0.6)
 
     ax1 = axes[1]
     ax1.plot(episodes, energies, color="#b2df8a", linewidth=0.8, alpha=0.85, label="Raw")
     ax1.plot(episodes, energy_smooth, color="#1b7837", linewidth=2.0, label="Smoothed")
+    paper_y = _paper_overlay.overlay_nguyen_fig5(ax0, axes[1])
+    spike_hi = max(
+        PAPER_SPIKE_MAX + 50.0,
+        float(np.nanmax(spikes)) + 50.0 if spikes.size else PAPER_SPIKE_MAX,
+        float(np.nanmax(paper_y["spikes"][0])) + 50.0,
+    )
+    ax0.set_ylim(PAPER_SPIKE_MIN - 50.0, spike_hi)
+    ax0.legend(frameon=False, fontsize=8, loc="upper right")
     ax1.set_xlabel("Episode")
     ax1.set_ylabel("Energy (a.u.)")
     ax1.set_title("DBS Energy Consumption")
-    ax1.set_ylim(0.0, PAPER_ENERGY_MAX + 200.0)
+    energy_hi = max(
+        PAPER_ENERGY_MAX + 200.0,
+        float(np.nanmax(energies)) + 200.0 if energies.size else PAPER_ENERGY_MAX,
+        float(np.nanmax(paper_y["energy"][0])) + 200.0,
+        float(np.nanmax(paper_y["energy"][1])) + 200.0,
+    )
+    ax1.set_ylim(0.0, energy_hi)
     ax1.legend(frameon=False, fontsize=8, loc="upper right")
     ax1.grid(True, linestyle="--", alpha=0.6)
 

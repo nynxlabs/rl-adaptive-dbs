@@ -59,7 +59,11 @@ def refresh_mehregan_gate_tables(*, update_docs: bool = True) -> None:
     spec = importlib.util.spec_from_file_location("mehregan_gate_status", path)
     if spec is None or spec.loader is None:
         return
+    import sys
+
     mod = importlib.util.module_from_spec(spec)
+    # dataclasses need the module registered before exec when loaded via importlib.
+    sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)
     mod.refresh_gate_tables(PAPER_1_DOC)
 

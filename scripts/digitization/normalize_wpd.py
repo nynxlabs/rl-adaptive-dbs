@@ -36,7 +36,14 @@ DEFAULT_SERIES_MAP = {
 
 
 def parse_wpd_json(path: Path) -> tuple[dict[str, np.ndarray], dict[str, list[int]]]:
-    """Return ({name: (x, y)}, {name: color_rgba})."""
+    """Return ({name: (x, y)}, {name: color_rgba}).
+
+    Uses the point ``value`` fields WPD writes at click/export time. Do **not**
+    recompute from pixels + axes here: many refined projects have stale or
+    non-XY calibration metadata, and remapping can shift traces a lot (see
+    Mehregan 4b/5a). If Automeris canvas and exported values disagree, re-save
+    the project in WPD so ``value`` matches the axes, then re-normalize.
+    """
     payload = json.loads(path.read_text())
     out: dict[str, np.ndarray] = {}
     colors: dict[str, list[int]] = {}
@@ -52,6 +59,7 @@ def parse_wpd_json(path: Path) -> tuple[dict[str, np.ndarray], dict[str, list[in
             rgba = [int(col[0]), int(col[1]), int(col[2]), int(col[3]) if len(col) > 3 else 255]
             colors[name] = rgba
     return out, colors
+
 
 
 def parse_wpd_csv(path: Path) -> tuple[dict[str, np.ndarray], dict[str, list[int]]]:

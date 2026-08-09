@@ -74,6 +74,13 @@ assert _resume_spec and _resume_spec.loader
 _resume_cli = importlib.util.module_from_spec(_resume_spec)
 _resume_spec.loader.exec_module(_resume_cli)
 
+_OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
+_overlay_import_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
+assert _overlay_import_spec and _overlay_import_spec.loader
+_overlay_import = importlib.util.module_from_spec(_overlay_import_spec)
+_overlay_import_spec.loader.exec_module(_overlay_import)
+_paper_overlay = _overlay_import.load_paper_overlay()
+
 FIGURES_DIR = Path("figures/mehregan/images/4a")
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/4a")
 DEFAULT_SERIES = CACHE_DIR / "series.json"
@@ -359,9 +366,12 @@ def plot_fig4a(cache: dict[str, Any], *, out_path: Path) -> dict[str, Any]:
     x = np.arange(y.size)
     fig, ax = plt.subplots(figsize=(8.0, 4.5), dpi=150)
     ax.plot(x, y, color="#1f6f6f", linewidth=1.0)
+    paper_y = _paper_overlay.overlay_mehregan_fig4a(ax)
+    paper_vals = np.concatenate([arr[0] for arr in paper_y.values() if arr[0].size]) if paper_y else np.array([])
+    y_combined = np.concatenate([y, paper_vals]) if paper_vals.size else y
     ax.set_xlim(0, 300)
     ax.set_xticks([0, 60, 120, 180, 240, 300])
-    y0, y1, yticks = _ylim_for_trace(y)
+    y0, y1, yticks = _ylim_for_trace(y_combined)
     ax.set_ylim(y0, y1)
     ax.set_yticks(yticks)
     ax.set_xlabel("Steps")
