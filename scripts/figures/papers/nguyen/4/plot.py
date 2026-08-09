@@ -40,6 +40,7 @@ from nguyen_gates import (  # noqa: E402
     attach_digitization,
     fig4_length_gates,
     fig4_reward_gates,
+    fig4_timing_shape_gates,
 )
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
@@ -77,6 +78,12 @@ assert _axes_spec and _axes_spec.loader
 _plot_axes = importlib.util.module_from_spec(_axes_spec)
 _axes_spec.loader.exec_module(_plot_axes)
 data_ylim = _plot_axes.data_ylim
+
+_OVERLAY = Path(__file__).resolve().parents[2] / "paper_overlay.py"
+_overlay_spec = importlib.util.spec_from_file_location("figure_paper_overlay", _OVERLAY)
+assert _overlay_spec and _overlay_spec.loader
+_paper_overlay = importlib.util.module_from_spec(_overlay_spec)
+_overlay_spec.loader.exec_module(_paper_overlay)
 
 FIGURES_DIR = Path("figures/nguyen/images/4")
 CACHE_DIR = Path("artifacts/figures/papers/nguyen/4")
@@ -219,6 +226,7 @@ REWARD_HEURISTIC_KEYS = (
 REWARD_SHAPE_KEYS = (
     "reward_scale_paper",
     "late_reward_above_early",
+    "reward_post100_plateau",
 )
 REWARD_SHAPE_PAPER_KEYS = (
     "paper_reward_improves_like_paper",
@@ -228,7 +236,13 @@ LENGTH_HEURISTIC_KEYS = (
     "late_length_paper_band",
     "early_near_max_length",
 )
-LENGTH_SHAPE_KEYS = LENGTH_HEURISTIC_KEYS
+LENGTH_SHAPE_KEYS = (
+    "length_decreases",
+    "late_length_paper_band",
+    "early_near_max_length",
+    "length_mid_glide_like_paper",
+    "length_post100_plateau",
+)
 LENGTH_SHAPE_PAPER_KEYS = (
     "paper_length_decreases_like_paper",
 )
@@ -304,8 +318,6 @@ def evaluate_gates(
         "pass": False,
         "shape_pass": False,
     }
-    reward_heur["shape_pass"] = _group_pass(reward_heur, REWARD_SHAPE_KEYS)
-    reward_heur["pass"] = _group_pass(reward_heur, REWARD_HEURISTIC_KEYS)
 
     length_heur = {
         "length_decreases": late_length_mean < early_length_mean - 1.0,
@@ -316,6 +328,16 @@ def evaluate_gates(
         "pass": False,
         "shape_pass": False,
     }
+
+    timing = fig4_timing_shape_gates(lengths, rewards)
+    for key, value in timing["length_gates"].items():
+        length_heur[key] = bool(value)
+    for key, value in timing["reward_gates"].items():
+        reward_heur[key] = bool(value)
+    length_heur["timing_metrics"] = timing.get("metrics", {})
+    reward_heur["timing_metrics"] = timing.get("metrics", {})
+    reward_heur["shape_pass"] = _group_pass(reward_heur, REWARD_SHAPE_KEYS)
+    reward_heur["pass"] = _group_pass(reward_heur, REWARD_HEURISTIC_KEYS)
     length_heur["shape_pass"] = _group_pass(length_heur, LENGTH_SHAPE_KEYS)
     length_heur["pass"] = _group_pass(length_heur, LENGTH_HEURISTIC_KEYS)
 
@@ -361,34 +383,53 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
     fig, axes = plt.subplots(2, 1, figsize=(8.0, 7.0), sharex=True, constrained_layout=True)
 
     ax0 = axes[0]
-    ax0.plot(episodes, rewards, color=COLOR_REWARD_RAW, linewidth=0.8, alpha=0.85, label="Raw")
+    ax0.plot(episodes, rewards, color=COLOR_REWARD_RAW, linewidth=0.8, alpha=0.85, label="Raw", zorder=3)
     ax0.plot(
         episodes,
         reward_smooth,
         color=COLOR_REWARD_SMOOTH,
         linewidth=2.0,
         label="Smoothed",
+        zorder=4,
     )
+    paper_y = _paper_overlay.overlay_nguyen_fig4(ax0, axes[1])
     ax0.set_ylabel("Reward")
     ax0.set_title("Episode Rewards")
-    ax0.set_ylim(*data_ylim(rewards, reward_smooth, extra_values=(0.0,)))
+    ax0.set_ylim(
+        *data_ylim(
+            rewards,
+            reward_smooth,
+            paper_y["reward"][0],
+            paper_y["reward"][1],
+            extra_values=(0.0,),
+        )
+    )
     ax0.ticklabel_format(axis="y", style="sci", scilimits=(-6, 6))
     ax0.legend(frameon=False, fontsize=8, loc="lower right")
     ax0.grid(True, linestyle="--", alpha=0.6)
 
     ax1 = axes[1]
-    ax1.plot(episodes, lengths, color=COLOR_LENGTH_RAW, linewidth=0.8, alpha=0.85, label="Raw")
+    ax1.plot(episodes, lengths, color=COLOR_LENGTH_RAW, linewidth=0.8, alpha=0.85, label="Raw", zorder=3)
     ax1.plot(
         episodes,
         length_smooth,
         color=COLOR_LENGTH_SMOOTH,
         linewidth=2.0,
         label="Smoothed",
+        zorder=4,
     )
     ax1.set_xlabel("Episode")
     ax1.set_ylabel("Length")
     ax1.set_title("Episode Lengths")
-    ax1.set_ylim(*data_ylim(lengths, length_smooth, integer_snap=True))
+    ax1.set_ylim(
+        *data_ylim(
+            lengths,
+            length_smooth,
+            paper_y["length"][0],
+            paper_y["length"][1],
+            integer_snap=True,
+        )
+    )
     ax1.legend(frameon=False, fontsize=8, loc="lower right")
     ax1.grid(True, linestyle="--", alpha=0.6)
 

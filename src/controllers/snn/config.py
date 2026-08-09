@@ -155,15 +155,19 @@ def fig4_nguyen_config(
     truncation penalty for 25-step timeouts, faster freq ramp. v11 removed
     shaping for negative-million digitization band only — regressed to energy
     collapse (v13); keep v9 shaping for learnable early-stop.
+
+    v10c: subthreshold_steps_required=2 for easier early-stop.
+    v23 base (2026-08-08): eps_ep100_2200 probe winner — decay_steps=2200,
+    epsilon_end=0.05 for exploit-by-~ep100 timing shape.
     """
     return SNNConfig(
         seed=seed,
         num_episodes=num_episodes,
         max_episode_steps=EVAL_MAX_STEPS,
         alpha_beta_threshold=BIOMARKER_THRESHOLD,
-        subthreshold_steps_required=3,
-        epsilon_decay_steps=3_500,
-        epsilon_end=0.15,
+        subthreshold_steps_required=2,
+        epsilon_decay_steps=2_200,
+        epsilon_end=0.05,
         learning_rate=5e-4,
         frequency_sensitivity=15.0,
         pulse_width_sensitivity=0.1,
