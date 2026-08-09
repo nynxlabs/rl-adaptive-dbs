@@ -392,20 +392,9 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
         label="Smoothed",
         zorder=4,
     )
-    paper_y = _paper_overlay.overlay_nguyen_fig4(ax0, axes[1])
     ax0.set_ylabel("Reward")
     ax0.set_title("Episode Rewards")
-    ax0.set_ylim(
-        *data_ylim(
-            rewards,
-            reward_smooth,
-            paper_y["reward"][0],
-            paper_y["reward"][1],
-            extra_values=(0.0,),
-        )
-    )
     ax0.ticklabel_format(axis="y", style="sci", scilimits=(-6, 6))
-    ax0.legend(frameon=False, fontsize=8, loc="lower right")
     ax0.grid(True, linestyle="--", alpha=0.6)
 
     ax1 = axes[1]
@@ -418,6 +407,17 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
         label="Smoothed",
         zorder=4,
     )
+    paper_y = _paper_overlay.overlay_nguyen_fig4(ax0, axes[1])
+    ax0.set_ylim(
+        *data_ylim(
+            rewards,
+            reward_smooth,
+            paper_y["reward"][0],
+            paper_y["reward"][1],
+            extra_values=(0.0,),
+        )
+    )
+    ax0.legend(frameon=False, fontsize=8, loc="lower right")
     ax1.set_xlabel("Episode")
     ax1.set_ylabel("Length")
     ax1.set_title("Episode Lengths")

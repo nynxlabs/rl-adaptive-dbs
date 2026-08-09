@@ -60,6 +60,13 @@ if str(_DIG) not in sys.path:
     sys.path.insert(0, str(_DIG))
 from paper_gates import fig5_efficacy_gates  # noqa: E402
 
+_OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
+_overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
+assert _overlay_spec and _overlay_spec.loader
+_overlay_import = importlib.util.module_from_spec(_overlay_spec)
+_overlay_spec.loader.exec_module(_overlay_import)
+_paper_overlay = _overlay_import.load_paper_overlay()
+
 _FIG2A_PATH = Path(__file__).resolve().parents[1] / "2a" / "plot.py"
 _fig2a_spec = importlib.util.spec_from_file_location("fig2a_plot", _FIG2A_PATH)
 assert _fig2a_spec and _fig2a_spec.loader
@@ -122,7 +129,7 @@ SERIES = {
     "trained": {
         "label": "Fully Trained 45Hz",
         "color": "#2ca02c",
-        "linestyle": "--",
+        "linestyle": "-",
         "linewidth": 2.2,
         "zorder": 4,
     },
@@ -663,13 +670,14 @@ def plot_fig5a(
         trained_equals_periodic = trained is not None and trained == periodic
 
     ax.axvline(STIM_ONSET_S, color="#888888", linestyle="--", linewidth=1.2, zorder=0)
+    _paper_overlay.overlay_mehregan_fig5a(ax)
     ax.set_xlim(0.0, TIME_MAX_S)
     ax.set_ylim(y0, y1)
     ax.set_yticks(yticks)
     ax.set_xticks(np.arange(0.0, TIME_MAX_S + 1e-9, 2.0))
     ax.set_xlabel("Time (sec)")
     ax.set_ylabel("PSD")
-    ax.legend(loc="upper right", fontsize=9, framealpha=0.95, ncol=1)
+    ax.legend(loc="upper left", fontsize=8, framealpha=0.95, ncol=1)
     ax.grid(True, axis="y", color="#cccccc", linewidth=0.6, alpha=0.9)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)

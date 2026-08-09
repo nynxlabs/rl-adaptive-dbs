@@ -20,6 +20,7 @@ Plant PSD only — no RL training; checkpoint resume is not applicable.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import sys
 import time
@@ -37,6 +38,13 @@ _DIG = Path(__file__).resolve().parents[4] / "digitization"
 if str(_DIG) not in sys.path:
     sys.path.insert(0, str(_DIG))
 from paper_gates import fig1b_gates  # noqa: E402
+
+_OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
+_overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
+assert _overlay_spec and _overlay_spec.loader
+_overlay_import = importlib.util.module_from_spec(_overlay_spec)
+_overlay_spec.loader.exec_module(_overlay_import)
+_paper_overlay = _overlay_import.load_paper_overlay()
 
 FIGURE_DIR = Path("artifacts/figures/papers/mehregan/1b")
 DEFAULT_CURVES = FIGURE_DIR / "curves.json"
@@ -232,7 +240,12 @@ def plot_fig1b(
         peak_by_series[curve["key"]] = float(np.max(psd[in_band]))
         ax.plot(freqs, psd, color=meta["color"], linewidth=1.8, label=meta["label"])
 
+    paper_y = _paper_overlay.overlay_mehregan_fig1b(ax)
+    paper_peaks = [arr[0] for arr in paper_y.values() if arr[0].size]
+
     data_max = max(peak_by_series.values(), default=0.0)
+    if paper_peaks:
+        data_max = max(data_max, max(float(np.max(y)) for y in paper_peaks))
     ymax = y_max if y_max is not None else float(np.ceil(data_max * y_headroom))
 
     ax.set_xlim(1.0, 50.0)

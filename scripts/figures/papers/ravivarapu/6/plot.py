@@ -35,6 +35,13 @@ if str(_DIG) not in sys.path:
     sys.path.insert(0, str(_DIG))
 from ravivarapu_gates import merge_gate_report, ravivarapu_fig6_gates  # noqa: E402
 
+_OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
+_overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
+assert _overlay_spec and _overlay_spec.loader
+_overlay_import = importlib.util.module_from_spec(_overlay_spec)
+_overlay_spec.loader.exec_module(_overlay_import)
+_paper_overlay = _overlay_import.load_paper_overlay()
+
 CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/6")
 FIGURES_DIR = Path("figures/ravivarapu/images/6")
 OUT_STEM = "ptq_fp16_50hz"
@@ -78,7 +85,15 @@ def main() -> None:
 
     fig, ax = plt.subplots(figsize=(6, 4))
     for _, label, _ in SERIES:
-        ax.plot(traces[label], label=label)
+        y = np.asarray(traces[label], dtype=float)
+        ax.plot(np.arange(y.size, dtype=float), y, label=label, linewidth=1.5)
+    paper = _paper_overlay.overlay_ravivarapu_fig6(ax)
+    ys = [np.asarray(v, dtype=float) for v in traces.values()]
+    ys.extend(v[0] for v in paper.values())
+    all_y = np.concatenate(ys) if ys else np.array([0.0, 1.0])
+    lo, hi = float(np.nanmin(all_y)), float(np.nanmax(all_y))
+    pad = 0.05 * (hi - lo + 1e-6)
+    ax.set_ylim(lo - pad, hi + pad)
     ax.set_xlabel("Stimulation step")
     ax.set_ylabel("Mean beta PSD (norm)")
     ax.legend(fontsize=8)

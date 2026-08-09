@@ -26,6 +26,13 @@ if str(_DIG) not in sys.path:
     sys.path.insert(0, str(_DIG))
 from nguyen_gates import attach_digitization, fig6_training_gates  # noqa: E402
 
+_OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
+_overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
+assert _overlay_spec and _overlay_spec.loader
+_overlay_import = importlib.util.module_from_spec(_overlay_spec)
+_overlay_spec.loader.exec_module(_overlay_import)
+_paper_overlay = _overlay_import.load_paper_overlay()
+
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
 _spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
 assert _spec and _spec.loader
@@ -153,13 +160,14 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
     ax0.axhline(BIOMARKER_THRESHOLD, color="#d62728", linestyle="--", linewidth=1.2, label="θ=150")
     ax0.set_ylabel("α–β Power")
     ax0.set_title("GPi α–β Oscillation Power")
-    ax0.legend(frameon=False, fontsize=8)
     ax0.grid(True, linestyle="--", alpha=0.6)
 
     ax1 = axes[1]
     ax1.plot(episodes, amp, color="#e41a1c", linewidth=1.2, label="Amplitude")
     ax1.plot(episodes, freq, color="#377eb8", linewidth=1.2, label="Frequency")
     ax1.plot(episodes, pw, color="#4daf4a", linewidth=1.2, label="Pulse width")
+    _paper_overlay.overlay_nguyen_fig6(ax0, axes[1])
+    ax0.legend(frameon=False, fontsize=8)
     ax1.set_xlabel("Episode")
     ax1.set_ylabel("DBS Parameters")
     ax1.set_title("DBS Parameters")
