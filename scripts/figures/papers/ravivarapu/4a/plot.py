@@ -52,6 +52,12 @@ assert _resume_spec and _resume_spec.loader
 _resume_cli = importlib.util.module_from_spec(_resume_spec)
 _resume_spec.loader.exec_module(_resume_cli)
 
+_OVERLAY = Path(__file__).resolve().parents[2] / "paper_overlay.py"
+_overlay_spec = importlib.util.spec_from_file_location("figure_paper_overlay", _OVERLAY)
+assert _overlay_spec and _overlay_spec.loader
+_paper_overlay = importlib.util.module_from_spec(_overlay_spec)
+_overlay_spec.loader.exec_module(_paper_overlay)
+
 FIGURES_DIR = Path("figures/ravivarapu/images/4a")
 CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/4")
 SHARED_SERIES = CACHE_DIR / "series.json"
@@ -60,6 +66,10 @@ OUT_STEM = "training_psd"
 DEFAULT_SEED = 0
 VARIANTS = ("baseline", "paper")
 DEFAULT_TRAIN_EPISODES = 150
+
+# Replication traces (paper overlays stay black/grey in paper_overlay.py).
+REPL_BASELINE_COLOR = "#1f77b4"
+REPL_SEA_COLOR = "#ff7f0e"
 
 
 def _vault_backed_png(path: Path) -> Path:
@@ -197,13 +207,26 @@ def evaluate_gates(series: dict[str, Any]) -> dict[str, Any]:
 
 def plot_series(series: dict[str, Any], png_path: Path) -> None:
     fig, ax = plt.subplots(figsize=(6, 4))
-    for variant, label in (("baseline", "Baseline (DDPG)"), ("paper", "SEA-DBS")):
+    paper_y: list[np.ndarray] = []
+    repl_styles = (
+        ("baseline", "Baseline (DDPG)", REPL_BASELINE_COLOR),
+        ("paper", "SEA-DBS", REPL_SEA_COLOR),
+    )
+    for variant, label, color in repl_styles:
         psd = series["variants"][variant]["episode_psd"]
         episodes = np.arange(1, len(psd) + 1)
-        ax.plot(episodes, psd, label=label, linewidth=1.5)
+        ax.plot(episodes, psd, label=label, linewidth=1.6 if variant == "baseline" else 1.8, color=color)
+        paper_y.append(np.asarray(psd, dtype=float))
+    paper_overlay_y = _paper_overlay.overlay_ravivarapu_fig4a(ax)
+    paper_y.extend(paper_overlay_y[name][0] for name in ("Baseline", "SEA-DBS"))
+    y_all = np.concatenate([np.ravel(y) for y in paper_y if y.size])
+    if y_all.size:
+        ymin, ymax = float(np.nanmin(y_all)), float(np.nanmax(y_all))
+        pad = max(0.02, 0.05 * (ymax - ymin))
+        ax.set_ylim(ymin - pad, ymax + pad)
     ax.set_xlabel("Training episode")
     ax.set_ylabel("Mean beta PSD (norm)")
-    ax.legend()
+    ax.legend(fontsize=8)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
     png_path.parent.mkdir(parents=True, exist_ok=True)
