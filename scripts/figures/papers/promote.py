@@ -76,7 +76,9 @@ PAPER_2_DOC = PAPER_NGUYEN_DOC
 PAPER_NGUYEN_2_3_MANIFEST = "artifacts/figures/papers/nguyen/3/manifest.json"
 PAPER_NGUYEN_2_3_REPLICATION_ALT = "Replication Fig 3"
 PAPER_NGUYEN_4_MANIFEST = "artifacts/figures/papers/nguyen/4/manifest.json"
-PAPER_NGUYEN_4_REPLICATION_ALT = "Replication Fig 4"
+PAPER_NGUYEN_4_REPLICATION_ALT = "Replication Fig 4"  # legacy single-image trackers
+PAPER_NGUYEN_4_REPLICATION_BEST_ALT = "Replication Fig 4 — best"
+PAPER_NGUYEN_4_REPLICATION_LATEST_ALT = "Replication Fig 4 — latest"
 PAPER_NGUYEN_5_MANIFEST = "artifacts/figures/papers/nguyen/5/manifest.json"
 PAPER_NGUYEN_5_REPLICATION_ALT = "Replication Fig 5"
 PAPER_NGUYEN_6_MANIFEST = "artifacts/figures/papers/nguyen/6/manifest.json"
@@ -89,6 +91,7 @@ NGUYEN_FIG4_GATE_TIER: dict[str, dict[str, str]] = {
     "reward": {
         "reward_scale_paper": "shape",
         "late_reward_above_early": "shape",
+        "reward_post100_plateau": "shape",
         "late_reward_near_zero": "full",
         "early_high_variance": "info",
         "paper_early_reward_mag_near_paper": "full",
@@ -99,6 +102,8 @@ NGUYEN_FIG4_GATE_TIER: dict[str, dict[str, str]] = {
         "length_decreases": "shape",
         "late_length_paper_band": "shape",
         "early_near_max_length": "shape",
+        "length_mid_glide_like_paper": "shape",
+        "length_post100_plateau": "shape",
         "paper_length_decreases_like_paper": "shape",
         "paper_late_length_near_paper": "full",
         "paper_early_near_max_length": "full",
@@ -111,6 +116,7 @@ NGUYEN_GATE_GROUPS: dict[str, dict[str, list[tuple[str, str]]]] = {
         "reward": [
             ("reward_scale_paper", "|mean reward ep 0–50| ≥ 5×10⁴"),
             ("late_reward_above_early", "late mean reward > first-50 mean"),
+            ("reward_post100_plateau", "smoothed reward flat ep 100–450"),
             ("late_reward_near_zero", "late mean > −2×10⁵ (full only)"),
             ("early_high_variance", "early reward variance (logged)"),
             ("paper_early_reward_mag_near_paper", "digitization — early reward magnitude"),
@@ -121,6 +127,8 @@ NGUYEN_GATE_GROUPS: dict[str, dict[str, list[tuple[str, str]]]] = {
             ("length_decreases", "late mean length < early mean − 1 step"),
             ("late_length_paper_band", "late mean length ≤ 12"),
             ("early_near_max_length", "median first 50 ≥ max_steps − 2"),
+            ("length_mid_glide_like_paper", "length glide ep 50–100 like paper"),
+            ("length_post100_plateau", "length plateau ep 100+ like paper"),
             ("paper_length_decreases_like_paper", "digitization — length decreases"),
             ("paper_late_length_near_paper", "digitization — late length"),
             ("paper_early_near_max_length", "digitization — early near max length"),
@@ -333,6 +341,15 @@ def papers_tracker_image_link(png_path: Path, *, doc: Path | None = None) -> str
     repo_rel = repo_rel_posix(Path(png_path))
     tracker = (doc or PAPER_1_DOC).resolve()
     abs_png = (REPO_ROOT / repo_rel).resolve()
+    try:
+        tracker.relative_to(REPO_ROOT.resolve())
+    except ValueError:
+        # Vault-backed tracker symlink (outside REPO_ROOT): use repo-relative
+        # ``figures/<paper>/images/...`` → ``images/...`` under that tracker.
+        for prefix in ("figures/nguyen/", "figures/mehregan/", "figures/ravivarapu/"):
+            if repo_rel.startswith(prefix):
+                return repo_rel[len(prefix) :]
+        return repo_rel
     return Path(os.path.relpath(abs_png, tracker.parent)).as_posix()
 
 
@@ -348,6 +365,18 @@ def _set_papers_tracker_image_link(
         msg = f"missing markdown image for alt={alt!r} in {doc}"
         raise ValueError(msg)
     return pattern.sub(f"![{alt}]({link})", text, count=1)
+
+
+def _set_papers_tracker_image_link_if_present(
+    text: str,
+    *,
+    alt: str,
+    link: str,
+) -> str:
+    pattern = re.compile(rf"!\[{re.escape(alt)}\]\([^)]+\)")
+    if pattern.search(text):
+        return pattern.sub(f"![{alt}]({link})", text, count=1)
+    return text
 
 
 def _replace_marker_in(text: str, marker: str, body: str, *, doc: Path) -> str:
@@ -1454,33 +1483,66 @@ def promote_nguyen_4(
 ) -> dict[str, str]:
     """Refresh Fig 4 caption + replication image link in ``figures/nguyen/replications.md``."""
     caption = manifest.get("caption") or "see manifest"
-    if manifest.get("png_version") is not None:
-        caption = f"{caption} (v{manifest['png_version']})"
+    version = manifest.get("png_version")
+    if version is not None:
+        caption = f"{caption} (v{version})"
     link = papers_tracker_image_link(png_path, doc=PAPER_NGUYEN_DOC)
     if update_docs and PAPER_NGUYEN_DOC.exists():
         text = PAPER_NGUYEN_DOC.read_text()
-        text = _replace_marker_in(
-            text,
-            "caption-4",
-            _caption_block(caption, PAPER_NGUYEN_4_MANIFEST),
-            doc=PAPER_NGUYEN_DOC,
-        )
-        text = _set_papers_tracker_image_link(
-            text,
-            alt=PAPER_NGUYEN_4_REPLICATION_ALT,
-            link=link,
-            doc=PAPER_NGUYEN_DOC,
-        )
+        latest_caption = _caption_block(caption, PAPER_NGUYEN_4_MANIFEST)
+        if "<!-- caption-4-latest:start -->" in text:
+            text = _replace_marker_in(
+                text,
+                "caption-4-latest",
+                latest_caption,
+                doc=PAPER_NGUYEN_DOC,
+            )
+        else:
+            text = _replace_marker_in(
+                text,
+                "caption-4",
+                latest_caption,
+                doc=PAPER_NGUYEN_DOC,
+            )
+        # Dual-image tracker: update latest; legacy single-alt trackers optional.
+        if PAPER_NGUYEN_4_REPLICATION_LATEST_ALT in text:
+            text = _set_papers_tracker_image_link(
+                text,
+                alt=PAPER_NGUYEN_4_REPLICATION_LATEST_ALT,
+                link=link,
+                doc=PAPER_NGUYEN_DOC,
+            )
+        else:
+            text = _set_papers_tracker_image_link_if_present(
+                text,
+                alt=PAPER_NGUYEN_4_REPLICATION_ALT,
+                link=link,
+            )
+            text = _set_papers_tracker_image_link_if_present(
+                text,
+                alt=PAPER_NGUYEN_4_REPLICATION_BEST_ALT,
+                link=link,
+            )
         # Refresh Fig 4 Status line (any prior Open/Pass wording after caption-4).
         import re as _re
         _pass = bool(manifest.get("gates", {}).get("pass"))
+        _shape = bool(manifest.get("gates", {}).get("shape_pass"))
+        gates = manifest.get("gates", {})
+        length = gates.get("length", {})
+        late_len = length.get("late_length_mean")
+        late_s = f"{late_len:.1f}" if isinstance(late_len, (int, float)) else "?"
         _status = (
             f"**Status:** Pass — see manifest gates (`{png_path.name}`)."
             if _pass
-            else f"**Status:** Open — see manifest gates (`{png_path.name}`)."
+            else (
+                f"**Status:** Timing shape open — latest **v{version}** "
+                f"(`late_len={late_s}`, `shape_pass={_shape}`); see manifest gates."
+                if version is not None
+                else f"**Status:** Open — see manifest gates (`{png_path.name}`)."
+            )
         )
         text = _re.sub(
-            r"(<!-- caption-4:end -->\s*\n)\*\*Status:\*\*[^\n]+",
+            r"(<!-- caption-4(?:-latest)?:end -->\s*\n)\*\*Status:\*\*[^\n]+",
             r"\1" + _status,
             text,
             count=1,
