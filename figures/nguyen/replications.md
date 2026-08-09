@@ -15,7 +15,7 @@ Figs **1–2** are schematics — **not** replication targets.
 | Fig 4 | Training reward + episode length | Fail (`reward shape:reward_post100_plateau`) |
 | Fig 5 | CBGT spikes + DBS energy over training | Fail (`shared_train`) |
 | Fig 6 | α–β + DBS parameters over training | Fail (`shared_train`) |
-| Fig 7 | 50-episode eval (25 steps) | Open |
+| Fig 7 | 50-episode eval (25 steps) | Fail (`checkpoint_lineage_ok`) |
 <!-- summary:end -->
 
 ---
@@ -30,18 +30,18 @@ Distribution of GPi **α–β** oscillation power (**7–35 Hz**) for **PD On** 
 
 ### Replication
 
-![Replication Fig 3](images/3/alpha_beta_dist_v5.png)
+![Replication Fig 3](images/3/alpha_beta_dist_v6.png)
 
 <!-- caption-3:start -->
-**Caption:** GPi α–β (7–35 Hz), 500 iters × 0.1 s; PD On mean=290.8, PD Off mean=219.5, PD On Q1=262.3; ordering_pass=True (v5)
+**Caption:** GPi α–β (7–35 Hz), 500 iters × 0.1 s; PD On mean=290.8, PD Off mean=219.5, PD On Q1=262.3; ordering_pass=True (v6)
 
 **Manifest:** `artifacts/figures/papers/nguyen/3/manifest.json`
 <!-- caption-3:end -->
 
-**Status:** Pass — 500 × 100 ms samples; see `alpha_beta_dist_v5.png`.
+**Status:** Pass — 500 × 100 ms samples; see `alpha_beta_dist_v6.png`.
 
 <!-- gates-3:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **`pass`**: yes, 2026-08-08). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **`pass`**: yes, 2026-08-09). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -97,7 +97,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 **Status:** Timing shape open — latest **v27** (`late_len=8.9`, `shape_pass=False`); see manifest gates.
 
 <!-- gates-4:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: no, **`pass`**: no, 2026-08-08). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
+**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: no, **`pass`**: no, 2026-08-09). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
 
 ### Reward (panel a) (`shape_pass`: no | `pass`: no)
 
@@ -160,7 +160,7 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 **Status:** Open — needs Fig 4 train `gates.pass`, then `scripts/figures/papers/nguyen/5/plot.py`.
 
 <!-- gates-5:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-08-08). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-08-09). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -169,10 +169,10 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 | `energy_series_has_variance` | energy series has variance | yes |
 | `energy_not_constant` | energy not constant | yes |
 | `spike_in_paper_band` | mean spikes 400–950/ep | no |
-| `energy_in_paper_band` | mean 300–3200/ep, max ≤ 3520 | no |
+| `energy_in_paper_band` | mean 300–3200/ep, max ≤ 3520 | yes |
 | `paper_spike_mean_near_paper` | digitization — spike mean | no |
 | `paper_energy_mean_near_paper` | digitization — energy mean | no |
-| `paper_spike_trend_near_paper` | digitization — spike trend | yes |
+| `paper_spike_trend_near_paper` | digitization — spike trend | no |
 | `paper_energy_trend_near_paper` | digitization — energy trend | no |
 | `paper_spike_series_has_variance` | digitization — spike variance | yes |
 | `paper_energy_not_constant` | digitization — energy not constant | yes |
@@ -203,7 +203,7 @@ GPi **α–β** (a) and DBS amplitude / frequency / pulse width (b) over **500**
 **Status:** Open.
 
 <!-- gates-6:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: no, 2026-08-08). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: no, 2026-08-09). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -245,11 +245,11 @@ Seeded eval of the trained policy: **50** episodes × **25** steps, different se
 **Status:** Open — needs Fig 4 checkpoint + `rl-dbs eval --controller snn` + panel script.
 
 <!-- gates-7:start -->
-**Gates set** (no manifest at `artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: —, 2026-08-08). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: no, 2026-08-09). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
-| `checkpoint_lineage_ok` | Fig 4 train passed | — |
+| `checkpoint_lineage_ok` | Fig 4 train passed | no |
 | `paper_eval_protocol_ok` | ≥20 steps | — |
 | `paper_overall_mean_near_paper` | digitization — overall mean | — |
 | `paper_late_early_ratio_near_paper` | digitization — late/early ratio | — |
