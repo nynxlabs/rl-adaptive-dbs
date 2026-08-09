@@ -8,7 +8,7 @@ Controller / adapter: [sea_dbs/replication.md](../../controllers/sea_dbs/replica
 
 | Panel | Script | Status |
 |-------|--------|--------|
-| Fig 4a — training PSD vs episode | `scripts/figures/papers/ravivarapu/4a/plot.py` | **Pass** — v8, all 16 gates true (digitization-anchored) |
+| Fig 4a — training PSD vs episode | `scripts/figures/papers/ravivarapu/4a/plot.py` | **Pass** — v40 (`shape_pass` + `pass`); lab notes [4a.md](../ravivarapu/4a.md) |
 | Fig 4b — training reward vs episode | `scripts/figures/papers/ravivarapu/4b/plot.py` | Open — paired with 4a |
 | Fig 5a — inference @ 50 Hz | `scripts/figures/papers/ravivarapu/5a/plot.py` | Open |
 | Fig 5b — inference @ 30 Hz | `scripts/figures/papers/ravivarapu/5b/plot.py` | Open |

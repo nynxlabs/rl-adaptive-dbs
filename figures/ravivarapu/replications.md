@@ -7,7 +7,7 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 <!-- summary:start -->
 | Panel | Description | Status |
 |-------|-------------|--------|
-| Fig 4a | Training PSD vs episode | Fail (`dig_gap_widens_mid_to_late` (shape), v39) |
+| Fig 4a | Training PSD vs episode | Pass (v42) |
 | Fig 4b | Training reward vs episode | Open |
 | Fig 5a | Inference @ 50 Hz | Open |
 | Fig 5b | Inference @ 30 Hz | Open |
@@ -21,6 +21,8 @@ Replication PNGs: `figures/ravivarapu/images/`. JSON caches: `artifacts/figures/
 
 ## Fig 4a — training PSD vs episode
 
+Panel lab notebook: [docs/figures/ravivarapu/4a.md](../../docs/figures/ravivarapu/4a.md).
+
 Average **beta-band PSD** across **training episodes** for **Baseline (DDPG)** vs **SEA-DBS** (§V.B / Fig. 4(a)). Paper claim: SEA-DBS shows a **more pronounced and consistent** beta suppression over episodes; Baseline declines only modestly.
 
 Related numeric protocol (not a separate panel): **Table II** — seed change every $n \in \{10, 20, 50, 75\}$ steps; SEA-DBS lower avg PSD and higher avg reward than Baseline at each $n$. Track with `sea_dbs_eval` / harness once training exists.
@@ -31,18 +33,18 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_psd_v39.png)
+![Replication Fig 4a](images/4a/training_psd_v42.png)
 
 <!-- caption-4a:start -->
-**Caption:** Training mean GPi beta PSD vs episode (seed 0); shape_pass=False pass=False; Baseline vs full SEA-DBS (PM+GS). (v39)
+**Caption:** Training mean GPi beta PSD vs episode (seed 0); shape_pass=True pass=True; Baseline vs full SEA-DBS (PM+GS). (v42)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`
 <!-- caption-4a:end -->
 
-**Status:** **Fail** — see manifest gates.
+**Status:** **Pass** (v42) — `shape_pass` and full `pass`; hybrid reset `fixed_episode_seed_until=2` (v89 train). Manifest `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`.
 
 <!-- gates-4a:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4a.json`; **`shape_pass`**: no, **`pass`**: no, 2026-08-08). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
+**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4a.json`; **`shape_pass`**: yes, **`pass`**: yes, 2026-08-08). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
 
 | Key | Description | Shape | Full |
 |-----|-------------|-------|------|
@@ -64,7 +66,7 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 | `dig_final_window_gap_near_paper` | digitization — final 10-episode gap vs paper | — | yes |
 | `dig_progressive_decline_baseline` | digitization — Baseline declines in every window | yes | yes |
 | `dig_progressive_decline_sea` | digitization — SEA-DBS declines in every window | yes | yes |
-| `dig_gap_widens_mid_to_late` | digitization — baseline−SEA gap widens ep 40→150 | no | no |
+| `dig_gap_widens_mid_to_late` | digitization — baseline−SEA gap widens ep 40→150 | yes | yes |
 | `dig_early_mid_to_mid_drop_sea_not_front_loaded` | digitization — SEA early drop is not front-loaded | yes | yes |
 | `dig_late_early_ratio_baseline_near_paper` | digitization — baseline late/early ratio | — | yes |
 | `dig_late_early_ratio_sea_near_paper` | digitization — SEA late/early ratio | — | yes |
