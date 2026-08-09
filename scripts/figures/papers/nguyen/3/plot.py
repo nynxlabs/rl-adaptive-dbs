@@ -38,6 +38,13 @@ assert _spec and _spec.loader
 _figure_promote = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_figure_promote)
 
+_OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
+_overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
+assert _overlay_spec and _overlay_spec.loader
+_overlay_import = importlib.util.module_from_spec(_overlay_spec)
+_overlay_spec.loader.exec_module(_overlay_import)
+_paper_overlay = _overlay_import.load_paper_overlay()
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -239,7 +246,6 @@ def plot_samples(samples: dict[str, Any], out_path: Path) -> None:
     ax0.set_xlabel("Simulation Iteration")
     ax0.set_ylabel("GPi α–β Oscillation Power")
     ax0.set_title("(a)")
-    ax0.legend(frameon=True, framealpha=0.75, fontsize=8, loc="lower right")
 
     ax1 = axes[1]
     ax1.boxplot(
@@ -251,6 +257,10 @@ def plot_samples(samples: dict[str, Any], out_path: Path) -> None:
     )
     ax1.set_ylabel("GPi α–β Oscillation Power")
     ax1.set_title("(b)")
+
+    # Documented paper means (gates) until refined curves_fig3 exists.
+    _paper_overlay.overlay_nguyen_fig3(ax0, ax1)
+    ax0.legend(frameon=True, framealpha=0.75, fontsize=8, loc="lower right")
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=150)

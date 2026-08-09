@@ -302,6 +302,39 @@ def overlay_smoothed_raw_axis(
 
 # --- Nguyen ---
 
+# Fig 3 is scatter/boxplot — no refined ``curves_fig3`` yet. Overlay the same
+# documented paper mean readouts used by ``nguyen_gates.fig3_gates`` (~215 / ~295).
+NGUYEN_FIG3_PD_OFF_MEAN = 215.0
+NGUYEN_FIG3_PD_ON_MEAN = 295.0
+NGUYEN_FIG3_MEAN_OFF = "#d62728"
+NGUYEN_FIG3_MEAN_ON = "#111111"
+
+
+def overlay_nguyen_fig3(ax_scatter, ax_box=None) -> dict[str, float]:
+    """Draw paper mean levels on Fig 3; return the documented mean values."""
+    means = {
+        "pd_off": NGUYEN_FIG3_PD_OFF_MEAN,
+        "pd_on": NGUYEN_FIG3_PD_ON_MEAN,
+    }
+    specs = (
+        (means["pd_off"], NGUYEN_FIG3_MEAN_OFF, "Paper mean PD Off"),
+        (means["pd_on"], NGUYEN_FIG3_MEAN_ON, "Paper mean PD On"),
+    )
+    axes = [ax_scatter] if ax_box is None else [ax_scatter, ax_box]
+    for ax in axes:
+        for y, outline, label in specs:
+            color = paper_color_from_outline(outline, raw=False)
+            ax.axhline(
+                y,
+                color=color,
+                linestyle=(0, (5.0, 2.5)),
+                linewidth=PAPER_LINEWIDTH,
+                alpha=0.95,
+                zorder=PAPER_ZORDER,
+                label=label if ax is ax_scatter else "_nolegend_",
+            )
+    return means
+
 
 def nguyen_fig4_digitization() -> tuple[
     dict[str, tuple[np.ndarray, np.ndarray]],
