@@ -12,7 +12,7 @@ Figs **1–2** are schematics — **not** replication targets.
 | Panel | Description | Status |
 |-------|-------------|--------|
 | Fig 3 | GPi α–β distribution (PD Off vs PD On) | Pass |
-| Fig 4 | Training reward + episode length | Shape OK (full open) |
+| Fig 4 | Training reward + episode length | Fail (`reward shape:reward_post100_plateau`) |
 | Fig 5 | CBGT spikes + DBS energy over training | Fail (`shared_train`) |
 | Fig 6 | α–β + DBS parameters over training | Fail (`shared_train`) |
 | Fig 7 | 50-episode eval (25 steps) | Open |
@@ -41,7 +41,7 @@ Distribution of GPi **α–β** oscillation power (**7–35 Hz**) for **PD On** 
 **Status:** Pass — 500 × 100 ms samples; see `alpha_beta_dist_v5.png`.
 
 <!-- gates-3:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **`pass`**: yes, 2026-08-07). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **`pass`**: yes, 2026-08-08). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -68,49 +68,59 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/3/plot.py --p
 
 ## Fig 4 — Training rewards and lengths
 
-Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init DBS **40 Hz / 0.3 ms / 300 nA/cm²**; seed **0**; max **25** steps/episode; early-stop streak $t_u=3$; θ = 150.
+Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init DBS **40 Hz / 0.3 ms / 300 nA/cm²**; seed **0**; max **25** steps/episode; early-stop streak $t_u=2$ (v10c best); θ = 150.
 
 ### Paper (Nguyen et al.)
 
 ![Paper Fig 4](images/4/paper.png)
 
-### Replication
+### Replication (best: v22, v10f)
 
-![Replication Fig 4](../../../../../../../bme/rl-adaptive-dbs/figures/nguyen/images/4/training_reward_length_v21.png)
+![Replication Fig 4 — best](images/4/training_reward_length_v22.png)
+
+### Latest attempt (v22, v10f)
+
+![Replication Fig 4 — latest](images/4/training_reward_length_v25.png)
 
 <!-- caption-4:start -->
-**Caption:** DSQN train 500 ep, seed=0; late_reward=576064, late_len=10.7; shape_pass=False pass=False (reward shape=False full=False, length shape=False full=True) (v21)
+**Caption (best v22):** DSQN train 500 ep, seed=0; late_reward=377858, late_len=8.9; shape_pass=False — best late length so far; timing gates still fail (v22)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4:end -->
 
-**Status:** Open — see manifest gates (`training_reward_length_v21.png`).
+<!-- caption-4-latest:start -->
+**Caption:** DSQN train 500 ep, seed=0; late_reward=377858, late_len=8.9; shape_pass=False pass=False (reward shape=False full=False, length shape=False full=True) (v25)
+
+**Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
+<!-- caption-4-latest:end -->
+
+**Status:** Timing shape open — latest **v25** (`late_len=8.9`, `shape_pass=False`); see manifest gates.
 
 <!-- gates-4:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: yes, **`pass`**: no, 2026-08-07). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
+**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: no, **`pass`**: no, 2026-08-08). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
 
-### Reward (panel a) (`shape_pass`: yes | `pass`: no)
+### Reward (panel a) (`shape_pass`: no | `pass`: no)
 
 | Key | Description | Shape | Full |
 |-----|-------------|-------|------|
 | `reward_scale_paper` | |mean reward ep 0–50| ≥ 5×10⁴ | yes | yes |
 | `late_reward_above_early` | late mean reward > first-50 mean | yes | yes |
-| `reward_post100_plateau` | smoothed reward flat ep 100–450 | — | — |
+| `reward_post100_plateau` | smoothed reward flat ep 100–450 | no | no |
 | `late_reward_near_zero` | late mean > −2×10⁵ (full only) | — | yes |
 | `early_high_variance` | early reward variance (logged) | — | — |
 | `paper_early_reward_mag_near_paper` | digitization — early reward magnitude | — | no |
 | `paper_reward_improves_like_paper` | digitization — reward improves | yes | yes |
 | `paper_late_reward_ratio_near_paper` | digitization — late/first-50 reward ratio | — | no |
 
-### Length (panel b) (`shape_pass`: yes | `pass`: yes)
+### Length (panel b) (`shape_pass`: no | `pass`: yes)
 
 | Key | Description | Shape | Full |
 |-----|-------------|-------|------|
 | `length_decreases` | late mean length < early mean − 1 step | yes | yes |
 | `late_length_paper_band` | late mean length ≤ 12 | yes | yes |
 | `early_near_max_length` | median first 50 ≥ max_steps − 2 | yes | yes |
-| `length_mid_glide_like_paper` | length glide ep 50–100 like paper | — | — |
-| `length_post100_plateau` | length plateau ep 100+ like paper | — | — |
+| `length_mid_glide_like_paper` | length glide ep 50–100 like paper | no | no |
+| `length_post100_plateau` | length plateau ep 100+ like paper | no | no |
 | `paper_length_decreases_like_paper` | digitization — length decreases | yes | yes |
 | `paper_late_length_near_paper` | digitization — late length | — | yes |
 | `paper_early_near_max_length` | digitization — early near max length | — | yes |
@@ -150,7 +160,7 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 **Status:** Open — needs Fig 4 train `gates.pass`, then `scripts/figures/papers/nguyen/5/plot.py`.
 
 <!-- gates-5:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-08-07). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-08-08). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -193,7 +203,7 @@ GPi **α–β** (a) and DBS amplitude / frequency / pulse width (b) over **500**
 **Status:** Open.
 
 <!-- gates-6:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: no, 2026-08-07). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: no, 2026-08-08). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -235,7 +245,7 @@ Seeded eval of the trained policy: **50** episodes × **25** steps, different se
 **Status:** Open — needs Fig 4 checkpoint + `rl-dbs eval --controller snn` + panel script.
 
 <!-- gates-7:start -->
-**Gates set** (no manifest at `artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: —, 2026-08-07). Every row is required for exit.
+**Gates set** (no manifest at `artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: —, 2026-08-08). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
