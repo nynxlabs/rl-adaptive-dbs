@@ -89,6 +89,9 @@ class SEADBSConfig:
     device: str = "cpu"
     log_episodes: bool = False
     fixed_episode_seed: bool = False  # optional; fixed seed can collapse paper GS policy
+    # Episodes with index < until reset with cfg.seed (smooth early IC); later episodes use
+    # cfg.seed + episode. 0 = off. Ignored when fixed_episode_seed is True.
+    fixed_episode_seed_until: int = 0
 
     # Fig 4a episode PSD logging: "mean" (all steps) or "last" (final step biomarker)
     episode_psd_metric: str = "mean"
@@ -145,6 +148,14 @@ class SEADBSConfig:
     def n_actions(self) -> int:
         return 2
 
+    def episode_plant_seed(self, episode: int) -> int:
+        """Plant ``reset(seed=…)`` for zero-based training episode index."""
+        if self.fixed_episode_seed:
+            return self.seed
+        if self.fixed_episode_seed_until > 0 and episode < self.fixed_episode_seed_until:
+            return self.seed
+        return self.seed + episode
+
     def with_variant_defaults(self) -> SEADBSConfig:
         if self.variant in {"baseline", "baseline-pm", "baseline-gs", "paper"}:
             return self
@@ -174,14 +185,20 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v87 (2026-08-08): v86 midlate 0.0633 — misses gate by ~0.0001. Counterfactual
-    −0.003 passes. Bump midlate stim 0.27 → 0.29 for margin.
+    v89 (2026-08-08): hybrid ``fixed_episode_seed_until=2`` — only ep 1–2 use
+    fixed IC (avoids seed=1 dip); reseed from ep 3. v88 until=15 failed progressive
+    decline (ep-16 transition spike).
+
+    v88 (2026-08-08): hybrid ``fixed_episode_seed_until=15`` — failed
+    ``dig_progressive_decline_*`` (ep-16 IC handoff bump). Superseded by v89.
+    @ 0.29; late ramp 138–150 max 0.40; mid stim 12–38 @ 0.4; gap_patch off.
     """
     cfg = SEADBSConfig(
         seed=seed,
         num_episodes=num_episodes,
         log_episodes=True,
         variant=variant,
+        fixed_episode_seed_until=2,
         carrier_hz=130.0,
         actor_no_stim_bias=1.8,
         episode_psd_metric="mean",

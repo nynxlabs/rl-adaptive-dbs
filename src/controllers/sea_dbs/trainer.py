@@ -368,8 +368,7 @@ class SEA_DBSTrainer:
 
         for episode in range(start_episode, cfg.num_episodes):
             self._current_episode = episode
-            ep_seed = cfg.seed if cfg.fixed_episode_seed else cfg.seed + episode
-            state, info = self.env.reset(seed=ep_seed)
+            state, info = self.env.reset(seed=cfg.episode_plant_seed(episode))
             episode_reward = 0.0
             episode_p_beta: list[float] = [float(info.get("p_beta_norm", 0.0))]
 
