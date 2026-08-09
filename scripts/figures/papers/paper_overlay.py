@@ -21,22 +21,22 @@ from paper_gates import load_refined  # noqa: E402
 NGUYEN_DIG = Path("artifacts/figures/papers/nguyen/paper_digitization")
 RAVIVARAPU_DIG = Path("artifacts/figures/papers/ravivarapu/paper_digitization")
 
-# Ravivarapu Fig 4a: Baseline black, SEA-DBS light grey (replication solid; paper dashed/dotted).
-RAVI_BASELINE_COLOR = "#000000"
-RAVI_SEA_COLOR = "#c8c8c8"
+# Ravivarapu Fig 4a paper overlays: baseline black solid; SEA-DBS dark grey solid.
+RAVI_PAPER_BASELINE_COLOR = "#000000"
+RAVI_PAPER_SEA_COLOR = "#5c5c5c"
 
 PAPER_SMOOTH_STYLE: dict[str, Any] = {
-    "color": "#1b4332",
-    "linestyle": "--",
+    "color": "#000000",
+    "linestyle": "-",
     "linewidth": 2.0,
-    "alpha": 0.92,
+    "alpha": 0.95,
     "zorder": 10,
 }
 PAPER_RAW_STYLE: dict[str, Any] = {
-    "color": "#7f8c8d",
-    "linestyle": "--",
-    "linewidth": 1.0,
-    "alpha": 0.65,
+    "color": "#4a4a4a",
+    "linestyle": "-",
+    "linewidth": 1.1,
+    "alpha": 0.85,
     "zorder": 9,
 }
 
@@ -126,22 +126,24 @@ def overlay_ravivarapu_fig4a(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
     """Draw digitized Baseline / SEA-DBS on the Fig 4a axis (1-based episode x)."""
     curves = ravivarapu_fig4a_digitization()
     out: dict[str, tuple[np.ndarray, np.ndarray]] = {}
-    for series_name, repl_label, paper_color, paper_ls in (
-        ("Baseline", "Paper Baseline (digitized)", RAVI_BASELINE_COLOR, "--"),
-        ("SEA-DBS", "Paper SEA-DBS (digitized)", RAVI_SEA_COLOR, ":"),
-    ):
+    paper_styles = (
+        ("Baseline", "Paper Baseline (digitized)", RAVI_PAPER_BASELINE_COLOR, "-", 2.0),
+        ("SEA-DBS", "Paper SEA-DBS (digitized)", RAVI_PAPER_SEA_COLOR, "-", 2.0),
+    )
+    for series_name, repl_label, paper_color, paper_ls, paper_lw in paper_styles:
         px, py = pick_series(curves, series_name)
         # WPD x is 0-based episode index; replication plots use 1..n.
         px_plot = np.asarray(px, dtype=float) + 1.0
-        overlay_on_axis(
-            ax,
+        ax.plot(
             px_plot,
             py,
             label=repl_label,
             color=paper_color,
             linestyle=paper_ls,
-            linewidth=2.4 if series_name == "SEA-DBS" else 2.0,
-            alpha=0.95 if series_name == "SEA-DBS" else 0.85,
+            linewidth=paper_lw,
+            alpha=1.0,
+            solid_capstyle="butt",
+            zorder=12,
         )
         out[series_name] = (py, py)
     return out
