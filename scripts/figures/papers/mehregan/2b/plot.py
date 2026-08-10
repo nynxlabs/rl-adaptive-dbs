@@ -466,7 +466,7 @@ def plot_fig2b(
         ax.plot(x, y, color=meta["color"], linewidth=1.2, label=meta["label"])
 
     paper_y = _paper_overlay.overlay_mehregan_fig2b(ax)
-    paper_ys = [py for _, (py, _) in paper_y.items()]
+    paper_ys = [py for _, py in paper_y.values()]
 
     ax.axvline(DBS_ONSET_S, color="#888888", linestyle="--", linewidth=1.2, zorder=0)
 
@@ -479,7 +479,7 @@ def plot_fig2b(
     ax.set_ylim(ymin, ymax)
     ax.set_xlabel("Time (sec)")
     ax.set_ylabel("Error Index")
-    _paper_overlay.place_legend(ax, loc="upper center", fontsize=9)
+    _paper_overlay.place_legend(ax, loc="lower left", fontsize=9)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
@@ -581,7 +581,19 @@ def main() -> int:
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--no-update-docs", action="store_true")
+    parser.add_argument(
+        "--push-kb",
+        action="store_true",
+        help="After promote, copy replication PNGs to the knowledge-base vault",
+    )
+    parser.add_argument(
+        "--update-report",
+        action="store_true",
+        help="After promote, refresh Report 3 gallery image links in the knowledge-base",
+    )
     args = parser.parse_args()
+    _figure_promote.set_push_kb_images(args.push_kb)
+    _figure_promote.set_update_report3(args.update_report)
 
     if args.out is None:
         FIGURES_DIR.mkdir(parents=True, exist_ok=True)

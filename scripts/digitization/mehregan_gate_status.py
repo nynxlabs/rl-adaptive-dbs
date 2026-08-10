@@ -350,12 +350,50 @@ MEHREGAN_SUMMARY_ROWS: tuple[tuple[str, str, str], ...] = (
 )
 
 MEHREGAN_STATUS_NOTES: dict[str, str] = {
-    "4a": "v18, τ 3→1.0",
-    "4b": "paired v18, v14",
-    "5b": "burst alphabet, v3",
-    "6a": "v40",
-    "6b": "honest v20, tier PTQ",
+    "4a": "τ 3→1.0, locked train v18",
+    "4b": "paired train v18, v14",
+    "5b": "burst alphabet, locked eval v3",
+    "6a": "honest trailing eval",
+    "6b": "tier PTQ",
 }
+
+MEHREGAN_MANIFEST_PATHS: dict[str, Path] = {
+    panel: ARTIFACT_ROOT / panel / "manifest.json"
+    for panel in ("1b", "2a", "2b", "4a", "4b", "5a", "5b", "6a", "6b")
+}
+
+_REP_VERSION_RE = re.compile(r"rep v\d+")
+
+
+def _replication_png_version(panel: str) -> int | None:
+    manifest_path = MEHREGAN_MANIFEST_PATHS.get(panel)
+    if manifest_path is None or not manifest_path.is_file():
+        return None
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    version = manifest.get("png_version")
+    if isinstance(version, int):
+        return version
+    output_png = manifest.get("output_png")
+    if not isinstance(output_png, str):
+        return None
+    match = re.search(r"_v(\d+)\.png$", output_png)
+    return int(match.group(1)) if match else None
+
+
+def _summary_note(panel: str) -> str:
+    base = MEHREGAN_STATUS_NOTES.get(panel, "")
+    version = _replication_png_version(panel)
+    if version is None:
+        return base
+    rep = f"rep v{version}"
+    if not base:
+        return rep
+    if _REP_VERSION_RE.search(base):
+        return _REP_VERSION_RE.sub(rep, base)
+    return f"{base}, {rep}"
 
 
 def _pass_cell(value: bool | None) -> str:
@@ -385,7 +423,7 @@ def render_summary_table(statuses: dict[str, PanelGateStatus]) -> str:
     ]
     for panel_key, label, description in MEHREGAN_SUMMARY_ROWS:
         status = statuses[panel_key]
-        note = MEHREGAN_STATUS_NOTES.get(panel_key, "")
+        note = _summary_note(panel_key)
         lines.append(
             f"| {label} | {description} | {_summary_status_line(status, note)} |"
         )

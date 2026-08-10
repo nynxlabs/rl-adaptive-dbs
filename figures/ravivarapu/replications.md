@@ -8,7 +8,7 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Panel | Description | Status |
 |-------|-------------|--------|
 | Fig 4a | Training PSD vs episode | Pass (v49) |
-| Fig 4b | Training reward vs episode | Pass |
+| Fig 4b | Training reward vs episode | Pass (rep v5) |
 | Fig 5a | Inference @ 50 Hz | Fail (`n_steps_ok`) |
 | Fig 5b | Inference @ 30 Hz | Open |
 | Fig 6 | FP16 PTQ @ 50 Hz | Open |
@@ -41,7 +41,7 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`
 <!-- caption-4a:end -->
 
-**Status:** **Pass** (v44) — `shape_pass` and full `pass`; hybrid reset `fixed_episode_seed_until=2` (v89 train); paper overlay (black baseline, grey SEA-DBS). Manifest `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`.
+**Status:** **Pass** (rep v57) — `shape_pass` and full `pass`; hybrid reset `fixed_episode_seed_until=2` (v89 train); paper overlay (black baseline, grey SEA-DBS). Manifest `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`.
 
 <!-- gates-4a:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4a.json`; **`shape_pass`**: yes, **`pass`**: yes, 2026-08-09). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
@@ -101,7 +101,7 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4a/plot.p
 
 ### Replication
 
-![Replication Fig 4b](images/4b/training_reward_v2.png)
+![Replication Fig 4b](images/4b/training_reward_v5.png)
 
 <!-- caption-4b:start -->
 **Caption:** Training episode reward vs episode (seed 0); paired with Fig 4a cache. (v2)

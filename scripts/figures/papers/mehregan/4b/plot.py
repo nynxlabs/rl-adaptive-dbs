@@ -258,7 +258,7 @@ def _episode_x_axis(ax: plt.Axes, n_points: int) -> None:
 def _plot_reward_on_ax(ax: plt.Axes, episode_rewards: list[float]) -> dict[str, Any]:
     y = np.asarray(episode_rewards, dtype=float)
     x = _episode_x_coords(len(y))
-    ax.plot(x, y, marker="o", color="#16a34a", linewidth=1.2, markersize=4, label="Replication")
+    ax.plot(x, y, color="#16a34a", linewidth=1.2, label="Replication")
     paper = _paper_overlay.overlay_mehregan_fig4b_reward(ax)
     _paper_xy = next(iter(paper.values()), (np.array([]), np.array([])))
     paper_y = _paper_xy[1] if len(_paper_xy) > 1 else np.array([])
@@ -282,7 +282,7 @@ def _plot_reward_on_ax(ax: plt.Axes, episode_rewards: list[float]) -> dict[str, 
 def _plot_psd_on_ax(ax: plt.Axes, episode_mean_beta: list[float]) -> dict[str, Any]:
     y = np.asarray(episode_mean_beta, dtype=float)
     x = _episode_x_coords(len(y))
-    ax.plot(x, y, marker="o", color="#1f6f6f", linewidth=1.2, markersize=4, label="Replication")
+    ax.plot(x, y, color="#1f6f6f", linewidth=1.2, label="Replication")
     paper = _paper_overlay.overlay_mehregan_fig4b_psd(ax)
     _paper_xy = next(iter(paper.values()), (np.array([]), np.array([])))
     paper_y = _paper_xy[1] if len(_paper_xy) > 1 else np.array([])
@@ -548,7 +548,19 @@ def main() -> int:
     )
     parser.set_defaults(update_checklist=False)
     parser.set_defaults(update_docs=True)
+    parser.add_argument(
+        "--push-kb",
+        action="store_true",
+        help="After promote, copy replication PNGs to the knowledge-base vault",
+    )
+    parser.add_argument(
+        "--update-report",
+        action="store_true",
+        help="After promote, refresh Report 3 gallery image links in the knowledge-base",
+    )
     args = parser.parse_args()
+    _figure_promote.set_push_kb_images(args.push_kb)
+    _figure_promote.set_update_report3(args.update_report)
 
     payload = _load_fig4a_payload(args.fig4a_series, args.fig4a_manifest)
     all_rewards = _episode_rewards_from_payload(payload)
@@ -646,6 +658,7 @@ def main() -> int:
             rewards_path=cache_path,
             reward_png_path=reward_path,
             psd_png_path=psd_path,
+            combined_png_path=combined_path,
             update_docs=True,
         )
         print(f"updated docs caption: {updated.get('caption')}", flush=True)

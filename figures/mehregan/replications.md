@@ -412,7 +412,7 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 **Manifest:** `artifacts/figures/papers/mehregan/6a/manifest.json`
 <!-- caption-6a:end -->
 
-**Status:** Fail — **v40** (`ptq_qat_45hz_v40.png`). Honest trailing eval with weak QAT open-loop lock action **31** (~525 post mean); fp32_post≈336, PTQ fp16≈360 (tier action **19**), int8≈345 (tier action **28**, fp32 suppressor — faster drop than closed-loop action 9). `non_qat_traces_distinct=true`. `all_pass=false` on digitization `paper_qat_level_ratio_near_paper` (QAT ~525 vs paper digitized ~434). Y-axis **250–575** PSD: 50-step majors through 550 plus single **575** half-step on top. `PAPER_DISPLAY_SHORTCUTS=False`.
+**Status:** Pass — **v61** (`ptq_qat_45hz_v61.png`). Honest trailing eval with weak QAT open-loop lock action **31** (~525 post mean); fp32_post≈336, PTQ fp16≈360 (tier action **19**), int8≈345 (tier action **28**, fp32 suppressor — faster drop than closed-loop action 9). `non_qat_traces_distinct=true`. Digitization gates including `paper_qat_level_ratio_near_paper` pass. Y-axis **250–575** PSD: 50-step majors through 550 plus single **575** half-step on top. `PAPER_DISPLAY_SHORTCUTS=False`.
 
 **Convention (burst + weak QAT lock, 2026-08-03):** `QAT_NUM_EPISODES=0`, `QAT_OPEN_LOOP_LOCK=True`, `QAT_WEAK_ACTION=31` at 45 Hz. fp32 `checkpoint_burst_skip_regular_02s.pt`. PTQ tier open-loop when quant locks on non-fp32 actions (fp16 **19**, int8 **28**). Prior **v36** retired int8 closed-loop action 9 (slow transient).
 
@@ -486,7 +486,7 @@ Same quantization panel layout as Fig 6a for the **30 Hz** trained model (§IV.A
 **Manifest:** `artifacts/figures/papers/mehregan/6b/manifest.json`
 <!-- caption-6b:end -->
 
-**Status:** Pass — **v20** (`ptq_qat_30hz_v20.png`, manifest `gates.all_pass=true`). Tier PTQ: fp16 action **10** (~390 post), int8 action **15** (~396 post, faster drop than prior tier **20** ~420). fp32_post≈367 (action 5 lock); QAT weak-lock action **8** (~499). Y-axis **300–550** (50-step majors, no ymin half-step). `PAPER_DISPLAY_SHORTCUTS=False`.
+**Status:** Pass — **v40** (`ptq_qat_30hz_v40.png`, manifest `gates.all_pass=true`). Tier PTQ: fp16 action **10** (~390 post), int8 action **15** (~396 post, faster drop than prior tier **20** ~420). fp32_post≈367 (action 5 lock); QAT weak-lock action **8** (~499). Y-axis **300–550** (50-step majors, no ymin half-step). `PAPER_DISPLAY_SHORTCUTS=False`.
 
 **Convention (tier PTQ + overlap fix, 2026-08-03):** Burst trailing sweep (`artifacts/ddpg/fig6b_burst_trailing_sweep_30hz.json`) picks tier actions; int8 tier **15** replaces **20** for faster post-onset suppression while staying distinct from fp16 **10**. Prior **v18** used int8 tier 20 (~420). int8 σ=0.10 weight noise during closed-loop rollout.
 

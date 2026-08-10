@@ -1254,7 +1254,7 @@ def plot_fig6b(
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
-    _paper_overlay.place_legend(ax, loc="upper right", fontsize=9)
+    _paper_overlay.place_legend(ax, loc="lower left", fontsize=9)
     fig.savefig(out_path, facecolor=fig.get_facecolor())
     plt.close(fig)
 
@@ -1344,6 +1344,7 @@ def main() -> int:
         help="Apply documented plot stylization for qualitative paper-panel match",
     )
     args = parser.parse_args()
+    _resume_cli.configure_promote_publish(args, _figure_promote)
     global PAPER_DISPLAY_SHORTCUTS
     if args.no_paper_display:
         PAPER_DISPLAY_SHORTCUTS = False
@@ -1435,8 +1436,11 @@ def main() -> int:
         payload = json.loads(args.eval_json.read_text())
 
     out_path = args.out
+    png_version: int | None
     if out_path is None:
-        out_path, _version = _figure_promote.next_versioned_png(FIGURES_DIR, OUT_STEM)
+        out_path, png_version = _figure_promote.next_versioned_png(FIGURES_DIR, OUT_STEM)
+    else:
+        png_version = _figure_promote.parse_png_version(out_path)
     out_path = _vault_backed_png(out_path)
 
     panel = plot_fig6b(payload, out_path=out_path)
@@ -1459,6 +1463,7 @@ def main() -> int:
         "fig5b_checkpoint": str(DEFAULT_FP32_CHECKPOINT),
         "qat_checkpoint": str(qat_ckpt),
         "output_png": _figure_promote.repo_rel_posix(out_path),
+        "png_version": png_version,
         "panel": panel,
     }
     args.manifest.parent.mkdir(parents=True, exist_ok=True)

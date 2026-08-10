@@ -203,7 +203,9 @@ def evaluate_gates(samples: dict[str, Any]) -> dict[str, Any]:
 
 def plot_samples(samples: dict[str, Any], out_path: Path) -> None:
     plt.rcParams.update(STYLE)
-    fig, axes = plt.subplots(1, 2, figsize=(9.0, 3.8), constrained_layout=True)
+    fig, axes = plt.subplots(
+        1, 2, figsize=(9.0, 3.8), constrained_layout=True, sharey=True
+    )
 
     pd_off = np.asarray(samples["pd_off"], dtype=float)
     pd_on = np.asarray(samples["pd_on"], dtype=float)
@@ -248,21 +250,47 @@ def plot_samples(samples: dict[str, Any], out_path: Path) -> None:
     ax0.set_title("(a)")
 
     ax1 = axes[1]
-    ax1.boxplot(
+    box_width = 0.2
+    box_positions = (1.0, 2.0)
+    box_bp = ax1.boxplot(
         [pd_off, pd_on],
+        positions=box_positions,
         tick_labels=["PD Off", "PD On"],
+        widths=box_width,
         patch_artist=True,
         boxprops={"facecolor": "#eeeeee"},
-        medianprops={"color": COLOR_PD_ON, "linewidth": 1.5},
+        medianprops={"linewidth": 0},
     )
+    for median in box_bp["medians"]:
+        median.set_visible(False)
+    half = box_width / 2.0
+    for x_center, y, color in (
+        (box_positions[0], mean_off, COLOR_MEAN_OFF),
+        (box_positions[1], mean_on, COLOR_MEAN_ON),
+    ):
+        ax1.plot(
+            [x_center - half, x_center + half],
+            [y, y],
+            color=color,
+            linewidth=1.5,
+            solid_capstyle="butt",
+            zorder=4,
+        )
     ax1.set_ylabel("GPi α–β Oscillation Power")
     ax1.set_title("(b)")
 
     # Documented paper means (gates) until refined curves_fig3 exists.
-    _paper_overlay.overlay_nguyen_fig3(ax0, ax1)
-    _paper_overlay.place_legend(ax0, frameon=True, fontsize=8, loc="lower right")
-
+    _paper_overlay.overlay_nguyen_fig3(
+        ax0,
+        ax1,
+        mean_off_color=COLOR_MEAN_OFF,
+        mean_on_color=COLOR_MEAN_ON,
+        box_positions=box_positions,
+        box_width=box_width,
+    )
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.tight_layout()
+    _paper_overlay.place_legend(ax0, fontsize=8, loc="lower right")
     fig.savefig(out_path, dpi=150)
     plt.close(fig)
 
@@ -311,7 +339,19 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--no-update-docs", action="store_true")
+    parser.add_argument(
+        "--push-kb",
+        action="store_true",
+        help="After promote, copy replication PNGs to the knowledge-base vault",
+    )
+    parser.add_argument(
+        "--update-report",
+        action="store_true",
+        help="After promote, refresh Report 3 gallery image links in the knowledge-base",
+    )
     args = parser.parse_args(argv)
+    _figure_promote.set_push_kb_images(args.push_kb)
+    _figure_promote.set_update_report3(args.update_report)
 
     if args.n_iterations < 1:
         print("--n-iterations must be >= 1", file=sys.stderr)

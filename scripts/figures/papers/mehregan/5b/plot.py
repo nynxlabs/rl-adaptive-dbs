@@ -633,10 +633,10 @@ def plot_fig5b(
     ax.set_xlabel("Time (sec)")
     ax.set_ylabel("PSD")
     ax.grid(True, axis="y", color="#cccccc", linewidth=0.6, alpha=0.9)
-    _paper_overlay.place_legend(ax, loc="upper left", fontsize=8, ncol=1)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
+    _paper_overlay.place_legend(ax, loc="upper left", fontsize=8, ncol=1)
     fig.savefig(out_path, facecolor=fig.get_facecolor())
     plt.close(fig)
 
@@ -805,6 +805,7 @@ def main() -> int:
     parser.set_defaults(update_docs=True)
     _resume_cli.add_training_resume_args(parser)
     args = parser.parse_args()
+    _resume_cli.configure_promote_publish(args, _figure_promote)
 
     if args.out is None:
         FIGURES_DIR.mkdir(parents=True, exist_ok=True)
