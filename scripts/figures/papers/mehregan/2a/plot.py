@@ -517,7 +517,7 @@ def plot_fig2a(
         ax.plot(x, y, **plot_kwargs)
 
     paper_y = _paper_overlay.overlay_mehregan_fig2(ax)
-    for _, (py, _) in paper_y.items():
+    for _x, py in paper_y.values():
         peak = max(peak, float(np.max(py)))
 
     ax.axvline(
@@ -535,7 +535,7 @@ def plot_fig2a(
     ax.set_ylim(ymin, ymax)
     ax.set_xlabel("Time (sec)")
     ax.set_ylabel("PSD")
-    _paper_overlay.place_legend(ax, loc="upper center", fontsize=9)
+    _paper_overlay.place_legend(ax, loc="center right", fontsize=9)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
@@ -610,7 +610,19 @@ def main() -> int:
         action="store_true",
         help="Skip figures/mehregan/replications.md caption refresh",
     )
+    parser.add_argument(
+        "--push-kb",
+        action="store_true",
+        help="After promote, copy replication PNGs to the knowledge-base vault",
+    )
+    parser.add_argument(
+        "--update-report",
+        action="store_true",
+        help="After promote, refresh Report 3 gallery image links in the knowledge-base",
+    )
     args = parser.parse_args()
+    _figure_promote.set_push_kb_images(args.push_kb)
+    _figure_promote.set_update_report3(args.update_report)
 
     sampling: SamplingMode = args.sampling
     verbose = not args.quiet

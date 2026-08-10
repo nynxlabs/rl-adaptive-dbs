@@ -47,8 +47,9 @@ _overlay_spec.loader.exec_module(_overlay_import)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
 FIGURE_DIR = Path("artifacts/figures/papers/mehregan/1b")
+FIGURES_DIR = Path("figures/mehregan/images/1b")
 DEFAULT_CURVES = FIGURE_DIR / "curves.json"
-DEFAULT_OUT = FIGURE_DIR / "gpi_psd.png"
+DEFAULT_OUT = FIGURES_DIR / "gpi_psd.png"
 DEFAULT_MANIFEST = FIGURE_DIR / "manifest.json"
 DEFAULT_DURATION_S = 10.0
 DEFAULT_SEEDS: tuple[int, ...] = tuple(range(10))

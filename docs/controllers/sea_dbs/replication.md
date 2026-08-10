@@ -4,7 +4,7 @@ This document specifies the **SEA-DBS** (sample-efficient actor–critic) contro
 
 **Companion spec:** The shared **Kumaravelu et al. (2016)** plant — [plant.md](../../plant.md). **Mehregan et al.** Gymnasium API — [environment.md](../../environment.md). **This document is authoritative for the Ravivarapu controller**—binary actions, predictive reward modeling, Gumbel-Softmax exploration, timing, reward shape, and training—unless the others explicitly describe the same quantity.
 
-**Scheduling:** SEA-DBS replication is **Phase 6** on the long-term roadmap ([roadmap.md](../../development/roadmap.md)). Panel tracker and **qualitative gates:** [docs/figures/papers/ravivarapu.md](../../figures/papers/ravivarapu.md) and [figures/ravivarapu/replications.md](../../../figures/ravivarapu/replications.md). Active work follows **Mehregan figure panels** ([figures/mehregan/replications.md](../../../figures/mehregan/replications.md)) first; implement `controllers/sea_dbs/` when Mehregan panels close or a task explicitly needs this adapter.
+**Scheduling:** SEA-DBS replication is **Phase 6** and is **active in parallel** with Nguyen ([roadmap.md](../../development/roadmap.md)). Panel tracker and **qualitative gates:** [figures/ravivarapu/replications.md](../../../figures/ravivarapu/replications.md) (Figs 4a/4b Pass; 5–7 open). Gate design notes: [docs/figures/papers/ravivarapu.md](../../figures/papers/ravivarapu.md). Mehregan panel set is Pass — [figures/mehregan/replications.md](../../../figures/mehregan/replications.md).
 
 ---
 

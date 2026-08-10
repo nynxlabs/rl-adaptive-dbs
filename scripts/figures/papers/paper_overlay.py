@@ -37,12 +37,13 @@ RAVIVARAPU_DIG = Path("artifacts/figures/papers/ravivarapu/paper_digitization")
 # Replication outline colors used by panel plot scripts (paper overlays lighten these).
 RAVI_REPL_BASELINE = "#1f77b4"
 RAVI_REPL_SEA = "#ff7f0e"
-# Back-compat aliases (older call sites / docs).
-RAVI_PAPER_BASELINE_COLOR = RAVI_REPL_BASELINE
-RAVI_PAPER_SEA_COLOR = RAVI_REPL_SEA
+# Ravivarapu Fig 4a paper overlays (solid; distinct from replication blue/orange).
+RAVI_PAPER_BASELINE_COLOR = "#ff7f0e"
+RAVI_PAPER_SEA_COLOR = "#2ca02c"
 
-NGUYEN_REWARD = "#08519c"
-NGUYEN_LENGTH = "#a50f15"
+# Nguyen Fig 4 paper overlays (distinct from replication blues/reds on each panel).
+NGUYEN_REWARD = "#ff7f0e"  # panel (a) — paper reward
+NGUYEN_LENGTH = "#2ca02c"  # panel (b) — paper length
 NGUYEN_SPIKES = "#4a148c"
 NGUYEN_ENERGY = "#1b7837"
 NGUYEN_POWER = "#08519c"
@@ -76,11 +77,24 @@ PAPER_RAW_ZORDER = 49
 PAPER_CONDENSED_LEGEND_LABEL = "paper digitalization"
 PAPER_CONDENSED_LEGEND_COLOR = "#000000"
 # Legend sits above paper overlays (PAPER_ZORDER) and all replication artists.
-# Frame is slightly translucent so traces/grid show through when they pass under.
 LEGEND_ZORDER = 1000
-LEGEND_FRAMEALPHA = 0.55
+LEGEND_FRAMEALPHA = 1.0
 LEGEND_FACECOLOR = "white"
 LEGEND_EDGECOLOR = "#cccccc"
+LEGEND_COMPACT_KW = {
+    "shadow": False,
+    "fancybox": False,
+    "borderpad": 0.22,
+    "labelspacing": 0.32,
+    "handlelength": 1.35,
+    "handletextpad": 0.48,
+    "borderaxespad": 0.35,
+}
+LEGEND_RCPARAMS = {
+    "legend.framealpha": LEGEND_FRAMEALPHA,
+    "legend.facecolor": LEGEND_FACECOLOR,
+    "legend.edgecolor": LEGEND_EDGECOLOR,
+}
 
 PAPER_SMOOTH_STYLE: dict[str, Any] = {
     "color": "#000000",
@@ -123,8 +137,81 @@ def paper_color_from_outline(outline: str, *, raw: bool = False) -> str:
     return lighten_color(outline, PAPER_RAW_LIGHTEN if raw else PAPER_LIGHTEN)
 
 
+def _compact_legend_frame(leg) -> None:
+    """Tight square frame — no rounded halo or extra interior pad."""
+    fr = leg.get_frame()
+    if fr is None:
+        return
+    try:
+        fr.set_boxstyle("square", pad=LEGEND_COMPACT_KW["borderpad"])
+    except Exception:
+        pass
+    fr.set_linewidth(0.6)
+
+
+def _reassert_legend_frame(leg, *, opaque: bool, alpha: float, edgecolor: str) -> None:
+    fr = leg.get_frame()
+    if fr is None:
+        return
+    if opaque:
+        fr.set_facecolor(LEGEND_FACECOLOR)
+        fr.set_alpha(1.0)
+    else:
+        fr.set_facecolor((1.0, 1.0, 1.0, alpha))
+        fr.set_alpha(alpha)
+    fr.set_edgecolor(edgecolor)
+    fr.set_linewidth(0.6)
+    fr.set_zorder(LEGEND_ZORDER)
+    leg.set_zorder(LEGEND_ZORDER)
+    leg.set_alpha(1.0)
+    _compact_legend_frame(leg)
+
+
+def finalize_figure_legends(fig) -> None:
+    """Re-assert opaque legend frames immediately before rasterizing."""
+    for ax in fig.get_axes():
+        leg = ax.get_legend()
+        if leg is None:
+            continue
+        opaque = bool(getattr(leg, "_overlay_opaque", True))
+        alpha = float(getattr(leg, "_overlay_alpha", LEGEND_FRAMEALPHA))
+        edgecolor = str(getattr(leg, "_overlay_edgecolor", LEGEND_EDGECOLOR))
+        _reassert_legend_frame(leg, opaque=opaque, alpha=alpha, edgecolor=edgecolor)
+
+
+def save_figure(fig, fname, *args, **kwargs):
+    """``fig.savefig`` wrapper that finalizes opaque legend tables first."""
+    finalize_figure_legends(fig)
+    try:
+        fig.canvas.draw()
+    except Exception:
+        pass
+    finalize_figure_legends(fig)
+    return fig.savefig(fname, *args, **kwargs)
+
+
+def _install_savefig_finalize() -> None:
+    from matplotlib.figure import Figure
+
+    if getattr(Figure.savefig, "_opaque_legend_patched", False):
+        return
+    _orig_savefig = Figure.savefig
+
+    def savefig(self, fname, *args, **kwargs):
+        finalize_figure_legends(self)
+        try:
+            self.canvas.draw()
+        except Exception:
+            pass
+        finalize_figure_legends(self)
+        return _orig_savefig(self, fname, *args, **kwargs)
+
+    savefig._opaque_legend_patched = True  # type: ignore[attr-defined]
+    Figure.savefig = savefig  # type: ignore[method-assign]
+
+
 def place_legend(ax, *args, **kwargs):
-    """Draw the axes legend in front of traces with a slightly translucent frame.
+    """Draw the axes legend in front of traces (opaque frame by default).
 
     Call this **last** among axes artists (after overlays, grid, vlines). The
     legend patch, handles, and texts share ``LEGEND_ZORDER`` so nothing from the
@@ -133,18 +220,19 @@ def place_legend(ax, *args, **kwargs):
     import matplotlib.pyplot as plt
 
     alpha = float(kwargs.pop("framealpha", LEGEND_FRAMEALPHA))
+    opaque = alpha >= 1.0 - 1e-6
+    if opaque:
+        alpha = 1.0
+    for key, value in LEGEND_COMPACT_KW.items():
+        kwargs.setdefault(key, value)
+    kwargs["fancybox"] = False
     kwargs.setdefault("frameon", True)
-    kwargs.setdefault("fancybox", True)
-    kwargs.setdefault("edgecolor", LEGEND_EDGECOLOR)
-    # Prefer framealpha over opaque facecolor from panel STYLE rcParams.
-    with plt.rc_context(
-        {
-            "legend.framealpha": alpha,
-            "legend.facecolor": LEGEND_FACECOLOR,
-            "legend.edgecolor": LEGEND_EDGECOLOR,
-        }
-    ):
+    edgecolor = kwargs.setdefault("edgecolor", LEGEND_EDGECOLOR)
+    with plt.rc_context(LEGEND_RCPARAMS | {"legend.framealpha": alpha}):
         leg = ax.legend(*args, framealpha=alpha, **kwargs)
+    leg._overlay_opaque = opaque  # type: ignore[attr-defined]
+    leg._overlay_alpha = alpha  # type: ignore[attr-defined]
+    leg._overlay_edgecolor = edgecolor  # type: ignore[attr-defined]
     for artist in list(ax.get_children()):
         if artist is leg:
             continue
@@ -153,16 +241,7 @@ def place_legend(ax, *args, **kwargs):
                 artist.set_zorder(LEGEND_ZORDER - 10)
         except Exception:
             pass
-    leg.set_zorder(LEGEND_ZORDER)
-    # Keep patch / handles / texts above every other axes artist.
-    frame = leg.get_frame()
-    if frame is not None:
-        frame.set_zorder(LEGEND_ZORDER)
-        # RGBA facecolor alone (avoid double-multiplying via set_alpha).
-        frame.set_facecolor((1.0, 1.0, 1.0, alpha))
-        frame.set_edgecolor(kwargs.get("edgecolor", LEGEND_EDGECOLOR))
-        frame.set_linewidth(0.8)
-        frame.set_alpha(alpha)
+    _reassert_legend_frame(leg, opaque=opaque, alpha=alpha, edgecolor=edgecolor)
     for handle in getattr(leg, "legend_handles", None) or []:
         try:
             handle.set_zorder(LEGEND_ZORDER + 1)
@@ -170,32 +249,27 @@ def place_legend(ax, *args, **kwargs):
             pass
     for text in leg.get_texts():
         text.set_zorder(LEGEND_ZORDER + 2)
-    # Re-assert frame alpha after layout/draw (some MPL paths reset it).
-    fig = ax.figure
-
-    def _reassert_legend_frame(event=None) -> None:
-        fr = leg.get_frame()
-        if fr is None:
-            return
-        fr.set_facecolor((1.0, 1.0, 1.0, alpha))
-        fr.set_alpha(alpha)
-        leg.set_zorder(LEGEND_ZORDER)
-
-    if fig is not None and not getattr(leg, "_overlay_frame_hook", False):
-        fig.canvas.mpl_connect("draw_event", _reassert_legend_frame)
-        leg._overlay_frame_hook = True  # type: ignore[attr-defined]
+    _compact_legend_frame(leg)
     return leg
 
 
-def add_condensed_paper_legend(ax, *, label: str = PAPER_CONDENSED_LEGEND_LABEL) -> None:
-    """Add one translucent dashed legend handle for paper digitization overlays."""
+def add_condensed_paper_legend(
+    ax,
+    *,
+    label: str = PAPER_CONDENSED_LEGEND_LABEL,
+    color: str | None = None,
+    alpha: float | None = None,
+) -> None:
+    """Add one dashed legend handle for paper digitization overlays."""
+    line_color = color if color is not None else PAPER_CONDENSED_LEGEND_COLOR
+    line_alpha = 0.75 if alpha is None else alpha
     ax.plot(
         [],
         [],
-        color=PAPER_CONDENSED_LEGEND_COLOR,
+        color=line_color,
         linestyle=(0, (5.0, 2.5)),
         linewidth=PAPER_LINEWIDTH,
-        alpha=0.75,
+        alpha=line_alpha,
         zorder=PAPER_ZORDER,
         label=label,
     )
@@ -233,15 +307,23 @@ def overlay_on_axis(
     linewidth: float | None = None,
     alpha: float | None = None,
     zorder: int | None = None,
+    lighten: bool = True,
+    mark_endpoints: bool = True,
 ) -> None:
-    """Draw one paper curve. Prefer ``outline_color`` (lightened + dashed)."""
+    """Draw one paper curve. Prefer ``outline_color`` (lightened + dashed by default)."""
     style = dict(PAPER_RAW_STYLE if raw else PAPER_SMOOTH_STYLE)
     if outline_color is not None:
-        style["color"] = paper_color_from_outline(outline_color, raw=raw)
-        style["linestyle"] = ":" if raw else PAPER_LINESTYLE
+        style["color"] = (
+            paper_color_from_outline(outline_color, raw=raw)
+            if lighten
+            else outline_color
+        )
+        style["linestyle"] = ":" if raw else (PAPER_LINESTYLE if lighten else "-")
     elif color is not None:
-        style["color"] = paper_color_from_outline(color, raw=raw)
-        style["linestyle"] = ":" if raw else PAPER_LINESTYLE
+        style["color"] = (
+            paper_color_from_outline(color, raw=raw) if lighten else color
+        )
+        style["linestyle"] = ":" if raw else (PAPER_LINESTYLE if lighten else "-")
     if linestyle is not None:
         style["linestyle"] = linestyle
     if linewidth is not None:
@@ -253,11 +335,15 @@ def overlay_on_axis(
     color = style["color"]
     zorder = int(style.get("zorder", PAPER_ZORDER))
     # Dash pattern that starts with ink (offset 0); default '--' can look inset.
-    if not raw and style.get("linestyle") in ("--", PAPER_LINESTYLE):
+    if (
+        lighten
+        and not raw
+        and style.get("linestyle") in ("--", PAPER_LINESTYLE)
+    ):
         style["linestyle"] = (0, (5.0, 2.5))
     ax.plot(x, y, label=label, **style)
     # Endpoint dots so 0/12 (or series ends) stay visible under dash gaps / legends.
-    if len(x) > 0:
+    if mark_endpoints and len(x) > 0:
         ax.plot(
             [float(x[0]), float(x[-1])],
             [float(y[0]), float(y[-1])],
@@ -404,33 +490,58 @@ def overlay_smoothed_raw_axis(
 # documented paper mean readouts used by ``nguyen_gates.fig3_gates`` (~215 / ~295).
 NGUYEN_FIG3_PD_OFF_MEAN = 215.0
 NGUYEN_FIG3_PD_ON_MEAN = 295.0
+# Match ``nguyen/3/plot.py`` replication mean-line colors (not lightened).
 NGUYEN_FIG3_MEAN_OFF = "#d62728"
-NGUYEN_FIG3_MEAN_ON = "#111111"
+NGUYEN_FIG3_MEAN_ON = "#000000"
 
 
-def overlay_nguyen_fig3(ax_scatter, ax_box=None) -> dict[str, float]:
-    """Draw paper mean levels on Fig 3; return the documented mean values."""
+def overlay_nguyen_fig3(
+    ax_scatter,
+    ax_box=None,
+    *,
+    mean_off_color: str = NGUYEN_FIG3_MEAN_OFF,
+    mean_on_color: str = NGUYEN_FIG3_MEAN_ON,
+    box_positions: tuple[float, float] = (1.0, 2.0),
+    box_width: float = 0.5,
+) -> dict[str, float]:
+    """Draw documented paper means: full-width on scatter (a), per-box on box (b)."""
     means = {
         "pd_off": NGUYEN_FIG3_PD_OFF_MEAN,
         "pd_on": NGUYEN_FIG3_PD_ON_MEAN,
     }
-    specs = (
-        (means["pd_off"], NGUYEN_FIG3_MEAN_OFF, "Paper mean PD Off"),
-        (means["pd_on"], NGUYEN_FIG3_MEAN_ON, "Paper mean PD On"),
+    scatter_specs = (
+        (means["pd_off"], mean_off_color),
+        (means["pd_on"], mean_on_color),
     )
-    axes = [ax_scatter] if ax_box is None else [ax_scatter, ax_box]
-    for ax in axes:
-        for y, outline, label in specs:
-            color = paper_color_from_outline(outline, raw=False)
-            ax.axhline(
-                y,
+    for y, color in scatter_specs:
+        ax_scatter.axhline(
+            y,
+            color=color,
+            linestyle=(0, (5.0, 2.5)),
+            linewidth=PAPER_LINEWIDTH,
+            alpha=0.95,
+            zorder=PAPER_ZORDER,
+            label="_nolegend_",
+        )
+    if ax_box is not None:
+        half = box_width / 2.0
+        off_x, on_x = box_positions
+        box_specs = (
+            (means["pd_off"], mean_off_color, off_x),
+            (means["pd_on"], mean_on_color, on_x),
+        )
+        for y, color, x_center in box_specs:
+            ax_box.plot(
+                [x_center - half, x_center + half],
+                [y, y],
                 color=color,
                 linestyle=(0, (5.0, 2.5)),
                 linewidth=PAPER_LINEWIDTH,
                 alpha=0.95,
                 zorder=PAPER_ZORDER,
-                label=label if ax is ax_scatter else "_nolegend_",
+                solid_capstyle="butt",
             )
+    add_condensed_paper_legend(ax_scatter)
     return means
 
 
@@ -454,6 +565,16 @@ def overlay_nguyen_fig4(
     reward_curves, length_curves = nguyen_fig4_digitization()
     prx, pry = pick_series(reward_curves, "Smoothed", "Raw")
     plx, ply = pick_series(length_curves, "Smoothed", "Raw")
+    paper_raw_style = {
+        "linestyle": "-",
+        "lighten": False,
+        "mark_endpoints": False,
+    }
+    paper_smooth_style = {
+        "linestyle": PAPER_LINESTYLE,
+        "lighten": False,
+        "mark_endpoints": False,
+    }
     if show_paper_raw and "Raw" in reward_curves:
         rx, ry = reward_curves["Raw"]
         overlay_on_axis(
@@ -461,8 +582,10 @@ def overlay_nguyen_fig4(
             rx,
             ry,
             label="Paper raw (digitized)",
-            outline_color=NGUYEN_REWARD,
+            color=NGUYEN_REWARD,
+            alpha=0.55,
             raw=True,
+            **paper_raw_style,
         )
     if show_paper_raw and "Raw" in length_curves:
         lx, ly = length_curves["Raw"]
@@ -471,22 +594,26 @@ def overlay_nguyen_fig4(
             lx,
             ly,
             label="Paper raw (digitized)",
-            outline_color=NGUYEN_LENGTH,
+            color=NGUYEN_LENGTH,
+            alpha=0.55,
             raw=True,
+            **paper_raw_style,
         )
     overlay_on_axis(
         ax_reward,
         prx,
         pry,
         label="Paper smoothed (digitized)",
-        outline_color=NGUYEN_REWARD,
+        color=NGUYEN_REWARD,
+        **paper_smooth_style,
     )
     overlay_on_axis(
         ax_length,
         plx,
         ply,
         label="Paper smoothed (digitized)",
-        outline_color=NGUYEN_LENGTH,
+        color=NGUYEN_LENGTH,
+        **paper_smooth_style,
     )
     r_raw_y = reward_curves["Raw"][1] if "Raw" in reward_curves else pry
     l_raw_y = length_curves["Raw"][1] if "Raw" in length_curves else ply
@@ -654,7 +781,11 @@ def overlay_mehregan_fig4a(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
     curves = load_panel_curves(MEHREGAN_DIG / "4a/paper_digitization/curves_wpd_refined.json")
     px, py = pick_series(curves, "training")
     overlay_on_axis(ax, px, py, label="_nolegend_", outline_color=MEH_TRAIN_TEAL)
-    add_condensed_paper_legend(ax)
+    add_condensed_paper_legend(
+        ax,
+        color=paper_color_from_outline(MEH_TRAIN_TEAL),
+        alpha=float(PAPER_SMOOTH_STYLE["alpha"]),
+    )
     return {"training": (py, py)}
 
 
@@ -779,7 +910,7 @@ def overlay_ravivarapu_fig4a(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
     )
     curves = ravivarapu_fig4a_digitization()
     out: dict[str, tuple[np.ndarray, np.ndarray]] = {}
-    outlines = (RAVI_REPL_BASELINE, RAVI_REPL_SEA)
+    paper_colors = (RAVI_PAPER_BASELINE_COLOR, RAVI_PAPER_SEA_COLOR)
     for idx, (series_name, legend_label) in enumerate(mapping):
         px, py = pick_series(curves, series_name)
         # WPD x is 0-based episode index; replication plots use 1..n.
@@ -789,7 +920,11 @@ def overlay_ravivarapu_fig4a(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
             px_plot,
             py,
             label=f"Paper {legend_label}",
-            outline_color=outlines[idx],
+            color=paper_colors[idx],
+            linestyle=PAPER_LINESTYLE,
+            alpha=0.72,
+            lighten=False,
+            mark_endpoints=False,
         )
         out[series_name] = (py, py)
     return out
@@ -896,3 +1031,6 @@ def overlay_ravivarapu_fig7(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
         outline_colors=outlines,
         y_scale=1.0 / RAVI_INFERENCE_PAPER_Y_TO_NORM,
     )
+
+
+_install_savefig_finalize()

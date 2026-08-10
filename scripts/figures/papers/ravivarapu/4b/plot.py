@@ -109,7 +109,19 @@ def main() -> None:
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--episodes", type=int, default=None)
+    parser.add_argument(
+        "--push-kb",
+        action="store_true",
+        help="After promote, copy replication PNGs to the knowledge-base vault",
+    )
+    parser.add_argument(
+        "--update-report",
+        action="store_true",
+        help="After promote, refresh Report 3 gallery image links in the knowledge-base",
+    )
     args = parser.parse_args()
+    _figure_promote.set_push_kb_images(args.push_kb)
+    _figure_promote.set_update_report3(args.update_report)
 
     t0 = time.time()
     if args.plot_only:

@@ -11,8 +11,11 @@ detached worktree copy of the index.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import re
+import shutil
+import sys
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -79,10 +82,12 @@ PAPER_NGUYEN_DOC = resolve_nguyen_doc()
 PAPER_2_DOC = PAPER_NGUYEN_DOC
 PAPER_NGUYEN_2_3_MANIFEST = "artifacts/figures/papers/nguyen/3/manifest.json"
 PAPER_NGUYEN_2_3_REPLICATION_ALT = "Replication Fig 3"
+PAPER_NGUYEN_3_PNG = "figures/nguyen/images/3/alpha_beta_dist.png"
 PAPER_NGUYEN_4_MANIFEST = "artifacts/figures/papers/nguyen/4/manifest.json"
 PAPER_NGUYEN_4_REPLICATION_ALT = "Replication Fig 4"  # legacy single-image trackers
 PAPER_NGUYEN_4_REPLICATION_BEST_ALT = "Replication Fig 4 — best"
 PAPER_NGUYEN_4_REPLICATION_LATEST_ALT = "Replication Fig 4 — latest"
+PAPER_NGUYEN_4_PNG = "figures/nguyen/images/4/training_reward_length.png"
 PAPER_NGUYEN_5_MANIFEST = "artifacts/figures/papers/nguyen/5/manifest.json"
 PAPER_NGUYEN_5_REPLICATION_ALT = "Replication Fig 5"
 PAPER_NGUYEN_6_MANIFEST = "artifacts/figures/papers/nguyen/6/manifest.json"
@@ -204,11 +209,12 @@ PAPER_1B_PNG = "figures/mehregan/images/1b/gpi_psd.png"
 PAPER_1B_MANIFEST = "artifacts/figures/papers/mehregan/1b/manifest.json"
 PAPER_2A_PNG = "figures/mehregan/images/2a/beta_power.png"
 PAPER_2A_MANIFEST = "artifacts/figures/papers/mehregan/2a/manifest.json"
-PAPER_2B_PNG = "figures/mehregan/images/2b/error_index_v1.png"
+PAPER_2B_PNG = "figures/mehregan/images/2b/error_index.png"
 PAPER_2B_MANIFEST = "artifacts/figures/papers/mehregan/2b/manifest.json"
 PAPER_4A_PNG = "figures/mehregan/images/4a/training_beta.png"
 PAPER_4A_MANIFEST = "artifacts/figures/papers/mehregan/4a/manifest.json"
 PAPER_4B_PNG = "figures/mehregan/images/4b/training_reward.png"
+PAPER_4B_COMBINED_PNG = "figures/mehregan/images/4b/training_fig4b.png"
 PAPER_4B_MANIFEST = "artifacts/figures/papers/mehregan/4b/manifest.json"
 PAPER_1B_REF = "figures/mehregan/images/1b/paper.png"
 PAPER_2A_REF = "figures/mehregan/images/2a/paper.png"
@@ -219,8 +225,10 @@ PAPER_4A_REPLICATION_ALT = "Replication Fig 4a"
 PAPER_4B_REF = "figures/mehregan/images/4b/paper.png"
 PAPER_4B_REPLICATION_ALT = "Replication Fig 4b reward"
 PAPER_4B_PSD_REPLICATION_ALT = "Replication Fig 4b PSD"
+PAPER_5A_PNG = "figures/mehregan/images/5a/efficacy_45hz.png"
 PAPER_5A_MANIFEST = "artifacts/figures/papers/mehregan/5a/manifest.json"
 PAPER_5A_REPLICATION_ALT = "Replication Fig 5a"
+PAPER_5B_PNG = "figures/mehregan/images/5b/efficacy_30hz.png"
 PAPER_5B_MANIFEST = "artifacts/figures/papers/mehregan/5b/manifest.json"
 PAPER_5B_REPLICATION_ALT = "Replication Fig 5b"
 PAPER_6A_PNG = "figures/mehregan/images/6a/ptq_qat_45hz.png"
@@ -269,6 +277,52 @@ def repo_rel_posix(path: Path) -> str:
     if idx >= 0:
         return text[idx:]
     return text
+
+
+def materialize_ship_png(source: Path, ship_repo_rel: str) -> Path:
+    """Copy a versioned replication PNG to a stable ship path (repo + vault).
+
+    Report 3 and other gallery embeds use unversioned ship names (e.g.
+  ``training_beta.png``) so Obsidian/Syncthing paths stay valid after each
+    ``_vN`` promote.
+    """
+    source = Path(source).resolve()
+    if not source.is_file():
+        msg = f"ship png source missing: {source}"
+        raise FileNotFoundError(msg)
+    ship_repo_rel = ship_repo_rel.replace("\\", "/")
+    repo_dest = REPO_ROOT / ship_repo_rel
+    repo_dest.parent.mkdir(parents=True, exist_ok=True)
+    if source.resolve() == repo_dest.resolve():
+        try:
+            push_path = Path(__file__).resolve().parent / "push_kb_images.py"
+            spec = importlib.util.spec_from_file_location("push_kb_images", push_path)
+            if spec is not None and spec.loader is not None:
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                tail = ship_repo_rel.removeprefix("figures/")
+                paper, _, rel = tail.partition("/")
+                if paper and rel:
+                    mod.push_image(paper, rel, dry_run=False)
+        except Exception:
+            pass
+        return repo_dest
+    if repo_dest.is_symlink():
+        repo_dest.unlink()
+    shutil.copy2(source, repo_dest)
+    try:
+        push_path = Path(__file__).resolve().parent / "push_kb_images.py"
+        spec = importlib.util.spec_from_file_location("push_kb_images", push_path)
+        if spec is not None and spec.loader is not None:
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            tail = ship_repo_rel.removeprefix("figures/")
+            paper, _, rel = tail.partition("/")
+            if paper and rel:
+                mod.push_image(paper, rel, dry_run=False)
+    except Exception:
+        pass
+    return repo_dest
 
 
 def _doc_figure_link(repo_rel: str) -> str:
@@ -628,6 +682,9 @@ def _nguyen_summary_status(panel: str, manifest: dict[str, Any] | None) -> str:
     gates = manifest.get("gates") or {}
     overall = _nguyen_all_gates_pass(gates, panel)
     if overall is True:
+        version = manifest.get("png_version")
+        if version is not None:
+            return f"Pass (rep v{version})"
         return "Pass"
     if overall is False:
         if panel == "4":
@@ -954,6 +1011,78 @@ def _ensure_paper_1_doc_4b(*, caption_4b: str) -> None:
     PAPER_1_DOC.write_text(text)
 
 
+_PUSH_KB_IMAGES = False
+
+
+def set_push_kb_images(enabled: bool) -> None:
+    """Enable/disable vault copy after promote (panel scripts: ``--push-kb``)."""
+    global _PUSH_KB_IMAGES
+    _PUSH_KB_IMAGES = bool(enabled)
+
+
+def push_kb_images_enabled() -> bool:
+    return _PUSH_KB_IMAGES
+
+
+def _push_kb_images_after_promote(
+    *png_paths: Path,
+    update_docs: bool = True,
+) -> None:
+    """Copy replication PNGs into the vault (``~/knowledge-base/.../figures``)."""
+    if not push_kb_images_enabled():
+        return
+    if not update_docs and not png_paths:
+        return
+    try:
+        push_path = Path(__file__).resolve().parent / "push_kb_images.py"
+        spec = importlib.util.spec_from_file_location("push_kb_images", push_path)
+        if spec is None or spec.loader is None:
+            return
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        for png in png_paths:
+            mod.push_repo_rel_png(repo_rel_posix(png))
+        if update_docs and not png_paths:
+            mod.push_all(verbose=False)
+    except Exception as exc:
+        print(f"warning: push_kb_images failed: {exc}", file=sys.stderr)
+
+
+_UPDATE_REPORT3 = False
+
+
+def set_update_report3(enabled: bool) -> None:
+    """Enable/disable Report 3 gallery refresh after promote (``--update-report``)."""
+    global _UPDATE_REPORT3
+    _UPDATE_REPORT3 = bool(enabled)
+
+
+def update_report3_enabled() -> bool:
+    return _UPDATE_REPORT3
+
+
+def _update_report3_after_promote(*, update_docs: bool = True) -> None:
+    if not update_report3_enabled() or not update_docs:
+        return
+    try:
+        report_path = Path(__file__).resolve().parent / "update_report3.py"
+        spec = importlib.util.spec_from_file_location("update_report3", report_path)
+        if spec is None or spec.loader is None:
+            return
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        mod.sync_report3_gallery_ships(verbose=False)
+        mod.sync_report3_gallery_embeds(verbose=False)
+        mod.update_report3(verbose=False)
+    except Exception as exc:
+        print(f"warning: update_report3 failed: {exc}", file=sys.stderr)
+
+
+def _after_promote_publish(*png_paths: Path, update_docs: bool = True) -> None:
+    _push_kb_images_after_promote(*png_paths, update_docs=update_docs)
+    _update_report3_after_promote(update_docs=update_docs)
+
+
 def promote_1b(
     *,
     manifest: dict[str, Any],
@@ -966,6 +1095,8 @@ def promote_1b(
     if update_docs:
         _ensure_paper_1_doc(caption_1b=caption, caption_2a=None, caption_2b=None)
     refresh_mehregan_gate_tables(update_docs=update_docs)
+    materialize_ship_png(png_path, PAPER_1B_PNG)
+    _after_promote_publish(png_path, update_docs=update_docs)
     return {
         "png": str(png_path),
         "manifest": PAPER_1B_MANIFEST,
@@ -987,6 +1118,8 @@ def promote_2a(
     if update_docs:
         _ensure_paper_1_doc(caption_1b=None, caption_2a=caption, caption_2b=None)
     refresh_mehregan_gate_tables(update_docs=update_docs)
+    materialize_ship_png(png_path, PAPER_2A_PNG)
+    _after_promote_publish(png_path, update_docs=update_docs)
     return {
         "png": str(png_path),
         "manifest": str(PAPER_2A_MANIFEST),
@@ -1017,6 +1150,8 @@ def promote_2b(
         PAPER_1_DOC.write_text(text)
     materialize_docs_figure_papers()
     refresh_mehregan_gate_tables(update_docs=update_docs)
+    materialize_ship_png(png_path, PAPER_2B_PNG)
+    _after_promote_publish(png_path, update_docs=update_docs)
     return {
         "png": str(png_path),
         "png_repo_rel": repo_rel,
@@ -1035,6 +1170,7 @@ def promote_4b(
     psd_png_path: Path,
     update_docs: bool = True,
     png_path: Path | None = None,
+    combined_png_path: Path | None = None,
 ) -> dict[str, str]:
     """Refresh Fig 4b caption + replication image links in ``figures/mehregan/replications.md``."""
     if png_path is not None:
@@ -1073,6 +1209,10 @@ def promote_4b(
         PAPER_1_DOC.write_text(text)
     materialize_docs_figure_papers()
     refresh_mehregan_gate_tables(update_docs=update_docs)
+    materialize_ship_png(reward_png_path, PAPER_4B_PNG)
+    if combined_png_path is not None:
+        materialize_ship_png(combined_png_path, PAPER_4B_COMBINED_PNG)
+    _after_promote_publish(reward_png_path, psd_png_path, update_docs=update_docs)
     return {
         "png": str(reward_png_path),
         "reward_png_repo_rel": reward_rel,
@@ -1094,6 +1234,7 @@ def promote_4a(
     """Refresh Fig 4a caption + replication image link in ``figures/mehregan/replications.md``."""
     caption = _caption_4a(manifest)
     repo_rel = repo_rel_posix(png_path)
+    materialize_ship_png(png_path, PAPER_4A_PNG)
     if update_docs:
         _ensure_paper_1_doc(
             caption_1b=None,
@@ -1110,6 +1251,7 @@ def promote_4a(
         PAPER_1_DOC.write_text(text)
     materialize_docs_figure_papers()
     refresh_mehregan_gate_tables(update_docs=update_docs)
+    _after_promote_publish(png_path, update_docs=update_docs)
     return {
         "png": str(png_path),
         "png_repo_rel": repo_rel,
@@ -1237,6 +1379,8 @@ def promote_5b(
         PAPER_1_DOC.write_text(text)
     materialize_docs_figure_papers()
     refresh_mehregan_gate_tables(update_docs=update_docs)
+    materialize_ship_png(png_path, PAPER_5B_PNG)
+    _after_promote_publish(png_path, update_docs=update_docs)
     return {
         "png": str(png_path),
         "png_repo_rel": repo_rel,
@@ -1275,6 +1419,8 @@ def promote_5a(
         PAPER_1_DOC.write_text(text)
     materialize_docs_figure_papers()
     refresh_mehregan_gate_tables(update_docs=update_docs)
+    materialize_ship_png(png_path, PAPER_5A_PNG)
+    _after_promote_publish(png_path, update_docs=update_docs)
     return {
         "png": str(png_path),
         "png_repo_rel": repo_rel,
@@ -1299,6 +1445,9 @@ def _caption_6a(manifest: dict[str, Any]) -> str:
         bits.append("PTQ tracks fp32")
     if gates.get("qat_elevated_vs_fp32"):
         bits.append("QAT elevated")
+    version = manifest.get("png_version")
+    if version is not None:
+        bits.append(f"v{version}")
     bits.append(_today())
     return ", ".join(bits)
 
@@ -1345,6 +1494,8 @@ def promote_6a(
         PAPER_1_DOC.write_text(text)
     materialize_docs_figure_papers()
     refresh_mehregan_gate_tables(update_docs=update_docs)
+    materialize_ship_png(png_path, PAPER_6A_PNG)
+    _after_promote_publish(png_path, update_docs=update_docs)
     return {
         "png": str(png_path),
         "png_repo_rel": repo_rel,
@@ -1369,6 +1520,9 @@ def _caption_6b(manifest: dict[str, Any]) -> str:
         bits.append("PTQ tracks fp32")
     if gates.get("qat_elevated_vs_fp32"):
         bits.append("QAT elevated")
+    version = manifest.get("png_version")
+    if version is not None:
+        bits.append(f"v{version}")
     bits.append(_today())
     return ", ".join(bits)
 
@@ -1415,6 +1569,8 @@ def promote_6b(
         PAPER_1_DOC.write_text(text)
     materialize_docs_figure_papers()
     refresh_mehregan_gate_tables(update_docs=update_docs)
+    materialize_ship_png(png_path, PAPER_6B_PNG)
+    _after_promote_publish(png_path, update_docs=update_docs)
     return {
         "png": str(png_path),
         "png_repo_rel": repo_rel,
@@ -1462,14 +1618,10 @@ def promote_nguyen_2_3(
             text,
             count=1,
         )
-        text = re.sub(
-            r"(\| Fig 3 — GPi α–β distribution \(PD Off vs PD On\) \|[^|]+\|[^|]+\| )(Open|Pass)( \|)",
-            r"\1" + ("Pass" if _pass else "Open") + r"\3",
-            text,
-            count=1,
-        )
         text = refresh_nguyen_gate_tables_in_text(text)
         PAPER_NGUYEN_DOC.write_text(text)
+    materialize_ship_png(png_path, PAPER_NGUYEN_3_PNG)
+    _after_promote_publish(png_path, update_docs=update_docs)
     return {
         "png": str(png_path),
         "png_link": link,
@@ -1564,6 +1716,8 @@ def promote_nguyen_4(
         )
         text = refresh_nguyen_gate_tables_in_text(text)
         PAPER_NGUYEN_DOC.write_text(text)
+    materialize_ship_png(png_path, PAPER_NGUYEN_4_PNG)
+    _after_promote_publish(png_path, update_docs=update_docs)
     return {
         "png": str(png_path),
         "png_link": link,
@@ -1625,6 +1779,7 @@ def _promote_nguyen_panel(
             text = text.replace(placeholder, f"![{replication_alt}]({link})")
         text = refresh_nguyen_gate_tables_in_text(text)
         PAPER_NGUYEN_DOC.write_text(text)
+    _after_promote_publish(png_path, update_docs=update_docs)
     return {
         "png": str(png_path),
         "png_link": link,
@@ -1703,6 +1858,7 @@ def resolve_ravivarapu_doc(checkout: Path | None = None) -> Path:
 
 
 PAPER_RAVIVARAPU_DOC = resolve_ravivarapu_doc()
+PAPER_RAVIVARAPU_4A_PNG = "figures/ravivarapu/images/4a/training_psd.png"
 
 
 def refresh_ravivarapu_gate_tables(*, update_docs: bool = True) -> None:
@@ -1762,6 +1918,8 @@ def promote_ravivarapu_4a(*, manifest: dict[str, Any], png_path: Path, update_do
         )
         PAPER_RAVIVARAPU_DOC.write_text(text)
     refresh_ravivarapu_gate_tables(update_docs=update_docs)
+    materialize_ship_png(png_path, PAPER_RAVIVARAPU_4A_PNG)
+    _after_promote_publish(png_path, update_docs=update_docs)
     return {"png": str(png_path), "caption": caption, "doc": str(PAPER_RAVIVARAPU_DOC)}
 
 
@@ -1787,4 +1945,5 @@ def promote_ravivarapu_4b(*, manifest: dict[str, Any], png_path: Path, update_do
         )
         PAPER_RAVIVARAPU_DOC.write_text(text)
     refresh_ravivarapu_gate_tables(update_docs=update_docs)
+    _after_promote_publish(png_path, update_docs=update_docs)
     return {"png": str(png_path), "caption": caption, "doc": str(PAPER_RAVIVARAPU_DOC)}

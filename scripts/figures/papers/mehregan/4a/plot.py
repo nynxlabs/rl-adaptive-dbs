@@ -365,7 +365,7 @@ def plot_fig4a(cache: dict[str, Any], *, out_path: Path) -> dict[str, Any]:
     y = np.asarray(cache["beta_norm_trace"], dtype=float)
     x = np.arange(y.size)
     fig, ax = plt.subplots(figsize=(8.0, 4.5), dpi=150)
-    ax.plot(x, y, color="#1f6f6f", linewidth=1.0)
+    ax.plot(x, y, color="#1f6f6f", linewidth=1.0, label="Replication")
     paper_y = _paper_overlay.overlay_mehregan_fig4a(ax)
     paper_vals = np.concatenate([arr[0] for arr in paper_y.values() if arr[0].size]) if paper_y else np.array([])
     y_combined = np.concatenate([y, paper_vals]) if paper_vals.size else y
@@ -560,6 +560,7 @@ def main() -> int:
     parser.set_defaults(update_docs=True)
     _resume_cli.add_training_resume_args(parser)
     args = parser.parse_args()
+    _resume_cli.configure_promote_publish(args, _figure_promote)
 
     if args.out is None:
         FIGURES_DIR.mkdir(parents=True, exist_ok=True)

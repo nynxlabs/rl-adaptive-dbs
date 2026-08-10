@@ -69,7 +69,7 @@ DEFAULT_TRAIN_EPISODES = 150
 
 # Replication traces; paper overlays use lightened dashed versions of these colors.
 REPL_BASELINE_COLOR = "#1f77b4"
-REPL_SEA_COLOR = "#ff7f0e"
+REPL_SEA_COLOR = "#d62728"
 
 
 def _vault_backed_png(path: Path) -> Path:
@@ -242,6 +242,7 @@ def main() -> None:
     parser.add_argument("--episodes", type=int, default=None)
     _resume_cli.add_training_resume_args(parser)
     args = parser.parse_args()
+    _resume_cli.configure_promote_publish(args, _figure_promote)
 
     t0 = time.time()
     if args.plot_only:

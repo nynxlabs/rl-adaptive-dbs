@@ -431,7 +431,7 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
         )
     )
     ax1.grid(True, linestyle="--", alpha=0.6)
-    _paper_overlay.place_legend(ax1, fontsize=8, loc="lower right")
+    _paper_overlay.place_legend(ax1, fontsize=8, loc="upper right")
 
     last_ep = max(0, rewards.size - 1)
     for ax in axes:
@@ -484,6 +484,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-update-docs", action="store_true")
     _resume_cli.add_training_resume_args(parser)
     args = parser.parse_args(argv)
+    _resume_cli.configure_promote_publish(args, _figure_promote)
 
     if args.out is None:
         FIGURES_DIR.mkdir(parents=True, exist_ok=True)

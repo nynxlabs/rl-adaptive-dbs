@@ -6,7 +6,7 @@ This is a short, visual summary of my **qualitative replications** of the paper'
 
 I built this from the paper text and figures (no released training or environment source). The shared dynamics use the **Kumaravelu et al. (2016)** cortex-basal ganglia-thalamus model. Full run commands, manifests, and internal gates live in [figures/mehregan/replications.md](https://github.com/wilzen3476/rl-adaptive-dbs/blob/main/figures/mehregan/replications.md).
 
-**Status (July 14, 2026):** Fig. 1b, 2a, 2b, 4a, and 4b pass my qualitative gates. Post-training efficacy (Fig. 5) and quantization panels (Fig. 6) are still in progress.
+**Status (August 10, 2026):** Figs 1b–6b pass automated qualitative gates in the Mehregan tracker.
 
 ---
 
@@ -118,9 +118,7 @@ uv run python scripts/figures/papers/mehregan/4b/plot.py --plot-only   # Fig. 4b
 
 ## What's next
 
-| Panel | Topic | Status |
-|-------|-------|--------|
-| Fig. 5a / 5b | Post-training efficacy (45 Hz / 30 Hz) | Open |
-| Fig. 6a / 6b | PTQ / QAT comparison | Open |
-
-I would welcome feedback on whether these early panels match your intent, especially Fig. 2b (thalamic drive convention) and the training-seed sensitivity for Fig. 4a-4b.
+| Panel set | Topic | Status |
+|-----------|-------|--------|
+| Nguyen Fig 4–7 | DSQN train / eval panels | Open (Fig 3 Pass) — [figures/nguyen/replications.md](../../figures/nguyen/replications.md) |
+| Ravivarapu Figs 5–7 | SEA-DBS inference / PTQ / ablation | Open (4a/4b Pass) — [figures/ravivarapu/replications.md](../../figures/ravivarapu/replications.md) |
