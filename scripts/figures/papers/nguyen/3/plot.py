@@ -260,7 +260,7 @@ def plot_samples(samples: dict[str, Any], out_path: Path) -> None:
 
     # Documented paper means (gates) until refined curves_fig3 exists.
     _paper_overlay.overlay_nguyen_fig3(ax0, ax1)
-    ax0.legend(frameon=True, framealpha=0.75, fontsize=8, loc="lower right")
+    _paper_overlay.place_legend(ax0, frameon=True, fontsize=8, loc="lower right")
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=150)

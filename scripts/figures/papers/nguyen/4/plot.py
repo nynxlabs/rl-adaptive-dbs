@@ -417,7 +417,7 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
             extra_values=(0.0,),
         )
     )
-    ax0.legend(frameon=False, fontsize=8, loc="lower right")
+    _paper_overlay.place_legend(ax0, fontsize=8, loc="lower right")
     ax1.set_xlabel("Episode")
     ax1.set_ylabel("Length")
     ax1.set_title("Episode Lengths")
@@ -430,7 +430,7 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
             integer_snap=True,
         )
     )
-    ax1.legend(frameon=False, fontsize=8, loc="lower right")
+    _paper_overlay.place_legend(ax1, fontsize=8, loc="lower right")
     ax1.grid(True, linestyle="--", alpha=0.6)
 
     last_ep = max(0, rewards.size - 1)

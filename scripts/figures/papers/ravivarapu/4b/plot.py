@@ -95,7 +95,7 @@ def plot_series(series: dict[str, Any], png_path: Path) -> None:
     ax.set_ylim(lo - pad, hi + pad)
     ax.set_xlabel("Training episode")
     ax.set_ylabel("Episode reward (Eq. 7)")
-    ax.legend(fontsize=8)
+    _paper_overlay.place_legend(ax, fontsize=8)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
     png_path.parent.mkdir(parents=True, exist_ok=True)

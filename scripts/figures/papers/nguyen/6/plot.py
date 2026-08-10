@@ -167,11 +167,11 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
     ax1.plot(episodes, freq, color="#377eb8", linewidth=1.2, label="Frequency")
     ax1.plot(episodes, pw, color="#4daf4a", linewidth=1.2, label="Pulse width")
     _paper_overlay.overlay_nguyen_fig6(ax0, axes[1])
-    ax0.legend(frameon=False, fontsize=8)
+    _paper_overlay.place_legend(ax0, fontsize=8)
     ax1.set_xlabel("Episode")
     ax1.set_ylabel("DBS Parameters")
     ax1.set_title("DBS Parameters")
-    ax1.legend(frameon=False, fontsize=8, ncol=3)
+    _paper_overlay.place_legend(ax1, fontsize=8, ncol=3)
     ax1.grid(True, linestyle="--", alpha=0.6)
 
     last_ep = max(0, ab.size - 1)

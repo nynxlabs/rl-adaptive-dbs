@@ -136,7 +136,7 @@ def main() -> None:
     ax.set_ylim(lo - pad, hi + pad)
     ax.set_xlabel("Stimulation step")
     ax.set_ylabel("Mean beta PSD (norm)")
-    ax.legend(fontsize=8)
+    _paper_overlay.place_legend(ax, fontsize=8)
     ax.grid(True, alpha=0.3)
     png_path, png_version = _figure_promote.next_versioned_png(FIGURES_DIR, OUT_STEM)
     fig.savefig(png_path, dpi=150)
