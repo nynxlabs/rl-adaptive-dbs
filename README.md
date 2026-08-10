@@ -54,7 +54,7 @@ Python packages live under **`src/`** (editable install via `uv sync`):
 - `docs/` — [setup.md](docs/setup.md) (setup & use), [development/](docs/development/) (roadmap, conventions, `uv`, pytest), [figures/paper_1.md](docs/figures/paper_1.md) (panel replication tracker), [plant.md](docs/plant.md), [environment.md](docs/environment.md), [controllers/](docs/controllers/), [benchmarking.md](docs/benchmarking.md), [cli.md](docs/cli.md), [tui.md](docs/tui.md).
 - `results/` — benchmark outputs from `rl-dbs benchmark` (local, gitignored).
 - `reference-material/` — Third-party models and scripts. Kumaravelu et al. (2016) MATLAB network: `reference-material/KumaraveluEtAl2016/` ([`readme.txt`](reference-material/KumaraveluEtAl2016/readme.txt) for citation and provenance).
-- `scripts/` — **`scripts/setup.sh`**, panel scripts under **`scripts/figures/papers/`** ([docs/figures/paper_1.md](docs/figures/paper_1.md)), **`scripts/matlab/`** (`setup.sh`, `install.sh`, `verify.sh`); diagnostic probes under `scripts/probes/` (promote findings into panel scripts before ship).
+- `scripts/` — layout in [`scripts/README.md`](scripts/README.md): panel ship scripts under **`scripts/figures/papers/`**, digitization/gates, MATLAB/plant helpers; **`scripts/probes/`** keeps only reusable extension diagnostics (see [`scripts/probes/README.md`](scripts/probes/README.md)).
 
 ```python
 from envs import MehreganEnv

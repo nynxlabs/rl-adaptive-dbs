@@ -2,7 +2,7 @@
 
 Usage::
 
-    uv run python -m rl_adaptive_dbs.run scripts/probes/foo.py --other-args
+    uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/4a/plot.py --plot-only
     uv run python -m rl_adaptive_dbs.run --max-threads 8 scripts/foo.py  # override default
 """
 
@@ -37,7 +37,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "script",
         type=Path,
-        help="Script path (e.g. scripts/probes/fig4a_three_trace_diagnostic.py)",
+        help="Script path (e.g. scripts/figures/papers/mehregan/4a/plot.py)",
     )
     parser.add_argument(
         "script_args",

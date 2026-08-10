@@ -10,7 +10,7 @@ Mehregan work is organized around **paper panels**, not roadmap phase numbers.
 
 1. **Exit criteria first** — list qualitative gates in [figures/paper_1.md](../figures/paper_1.md) (or the panel section) before large sweeps.
 2. **Ship surface** — committed train+plot entry points live under `scripts/figures/papers/<paper>/<panel>/plot.py` (indexed in [figures/paper_1.md](../figures/paper_1.md)). Shared helpers: `scripts/figures/papers/promote.py`, `scripts/lib/` when imported by panel scripts.
-3. **Promote, don’t thrash** — `scripts/probes/` and `scripts/debug/` are diagnostic; fold stable findings into the panel script and update the figure doc in the same pass.
+3. **Promote, don’t thrash** — `scripts/probes/` is diagnostic-only (currently alphabet-diversity extension probes). Fold stable panel findings into the panel `plot.py` and `docs/figures/`, then delete the one-off probe.
 4. **Specs follow panels** — plant/training/convention changes that unblock a panel update [plant.md](../plant.md), [environment.md](../environment.md), or the relevant [controllers/](../controllers/) spec and [replication-fidelity.md](replication-fidelity.md).
 
 ---

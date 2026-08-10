@@ -97,7 +97,7 @@ Global flags apply before the subcommand and affect logging only unless noted.
 Repo scripts under `scripts/` that import NumPy at module load should be launched through the runner so thread limits apply **before** those imports:
 
 ```bash
-uv run python -m rl_adaptive_dbs.run scripts/probes/run_task177_continuous_freq_probe.py --continuous-only
+uv run python -m rl_adaptive_dbs.run scripts/probes/alphabet_diversity/run_plant_continuity_probe.py
 ```
 
 By default the runner caps in-process thread pools at **1** (one OpenMP/OpenBLAS/Numba worker per process — typically one logical CPU of parallel math). Override with `--max-threads N` or `RL_DBS_MAX_THREADS`. Pair with `taskset` when you need a hard logical-CPU pin.
