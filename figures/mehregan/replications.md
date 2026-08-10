@@ -118,7 +118,7 @@ Windowed Error Index (EI, Eq. 2) over **12 s** with **So-style SMC pulses into T
 
 ### Replication
 
-![Replication Fig 2b](images/2b/error_index_v7.png)
+![Replication Fig 2b](images/2b/error_index_v8.png)
 
 <!-- caption-2b:start -->
 **Caption:** 14 s sim (2 s pre-roll), plot = sim − 2 s, 0.2 s trailing / 2 s EI window (end sim 14 s), SMC BoC inv-gamma Iappth, backend python, seed 0, v5 (2026-08-09)
@@ -222,11 +222,11 @@ Episode **total reward** and **episode-mean PSD(x10³)** during the same **45 Hz
 
 **Reward vs episode**
 
-![Replication Fig 4b reward](images/4b/training_reward_v22.png)
+![Replication Fig 4b reward](images/4b/training_reward_v23.png)
 
 **Episode-mean PSD vs episode**
 
-![Replication Fig 4b PSD](images/4b/training_psd_v22.png)
+![Replication Fig 4b PSD](images/4b/training_psd_v23.png)
 
 <!-- caption-4b:start -->
 **Caption:** 9 episodes, 45 Hz fixed_mean_pattern (Fig 4a paired run), seed 0, source series_v4.json, v17, reward ep0=-29.1 ep8=16.1, rise_ep=4, psd 0.437→0.292, gate pass (2026-08-09)
@@ -282,7 +282,7 @@ Dashed vertical at **2 s** (stimulation onset). Paper claims: trained stimulatio
 
 ### Replication
 
-![Replication Fig 5a](images/5a/efficacy_45hz_v10.png)
+![Replication Fig 5a](images/5a/efficacy_45hz_v11.png)
 
 <!-- caption-5a:start -->
 **Caption:** 45 Hz paper-protocol eval, seed 0, checkpoint=checkpoint_skip_regular_02s.pt, skip_regular, 0.2s trailing, v7, trained_mean=395, no_stim_mean=498, periodic_mean=327, trained>periodic, gates pass (2026-08-09)
@@ -344,7 +344,7 @@ Key paper claim: **periodic 30 Hz elevates** beta (stimulation rate inside the b
 
 ### Replication
 
-![Replication Fig 5b](images/5b/efficacy_30hz_v11.png)
+![Replication Fig 5b](images/5b/efficacy_30hz_v12.png)
 
 <!-- caption-5b:start -->
 **Caption:** 30 Hz paper-protocol eval, seed 0, checkpoint=checkpoint.pt, 0.2s trailing, v9, trained_mean=367, no_stim_mean=488, periodic_mean=638, trained<both, gates pass (2026-08-09)
@@ -400,7 +400,7 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 
 ### Replication
 
-![Replication Fig 6a](images/6a/ptq_qat_45hz_v46.png)
+![Replication Fig 6a](images/6a/ptq_qat_45hz_v47.png)
 
 <!-- caption-6a:start -->
 **Caption:** 45 Hz paper-protocol eval, seed 0, fp32_post=336, qat_post=525, PTQ tracks fp32, QAT elevated, 2026-08-09
@@ -474,7 +474,7 @@ Same quantization panel layout as Fig 6a for the **30 Hz** trained model (§IV.A
 
 ### Replication
 
-![Replication Fig 6b](images/6b/ptq_qat_30hz_v26.png)
+![Replication Fig 6b](images/6b/ptq_qat_30hz_v27.png)
 
 <!-- caption-6b:start -->
 **Caption:** 30 Hz paper-protocol eval, seed 0, fp32_post=367, qat_post=499, PTQ tracks fp32, QAT elevated, 2026-08-09

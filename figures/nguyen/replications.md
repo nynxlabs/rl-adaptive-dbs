@@ -30,7 +30,7 @@ Distribution of GPi **α–β** oscillation power (**7–35 Hz**) for **PD On** 
 
 ### Replication
 
-![Replication Fig 3](images/3/alpha_beta_dist_v6.png)
+![Replication Fig 3](images/3/alpha_beta_dist_v7.png)
 
 <!-- caption-3:start -->
 **Caption:** GPi α–β (7–35 Hz), 500 iters × 0.1 s; PD On mean=290.8, PD Off mean=219.5, PD On Q1=262.3; ordering_pass=True (v6)
@@ -80,7 +80,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 ### Latest attempt (v22, v10f)
 
-![Replication Fig 4 — latest](images/4/training_reward_length_v27.png)
+![Replication Fig 4 — latest](images/4/training_reward_length_v28.png)
 
 <!-- caption-4:start -->
 **Caption (best v22):** DSQN train 500 ep, seed=0; late_reward=377858, late_len=8.9; shape_pass=False — best late length so far; timing gates still fail (v22)

@@ -1245,7 +1245,7 @@ def plot_fig6a(
     ax.set_xticks(np.arange(0.0, TIME_MAX_S + 1e-9, 2.0))
     ax.set_xlabel("Time (sec)")
     ax.set_ylabel("PSD")
-    ax.legend(loc="upper right", fontsize=9, framealpha=0.95)
+    _paper_overlay.place_legend(ax, loc="upper right", fontsize=9)
     ax.grid(True, axis="y", color="#cccccc", linewidth=0.6, alpha=0.9)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
