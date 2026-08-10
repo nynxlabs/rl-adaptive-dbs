@@ -77,7 +77,7 @@ REPORT3_TRACKER_ALTS: dict[str, tuple[str, str]] = {
     "Rep 6a": ("mehregan", "Replication Fig 6a"),
     "Rep 6b": ("mehregan", "Replication Fig 6b"),
     "Rep N3": ("nguyen", "Replication Fig 3"),
-    "Rep N4": ("nguyen", "Replication Fig 4, latest"),
+    "Rep N4": ("nguyen", "Replication Fig 4 — latest"),
     "Rep R4a": ("ravivarapu", "Replication Fig 4a"),
 }
 
