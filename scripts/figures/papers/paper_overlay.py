@@ -73,7 +73,7 @@ PAPER_ZORDER = 50
 PAPER_RAW_ZORDER = 49
 # Single legend row for Mehregan (and optional callers): traces stay per-hue,
 # but the table only explains that dashed lightened lines are paper digitization.
-PAPER_CONDENSED_LEGEND_LABEL = "dashed = paper digitalization"
+PAPER_CONDENSED_LEGEND_LABEL = "paper digitalization"
 PAPER_CONDENSED_LEGEND_COLOR = "#000000"
 # Legend sits above paper overlays (PAPER_ZORDER) and all replication artists.
 # Frame is slightly translucent so traces/grid show through when they pass under.
