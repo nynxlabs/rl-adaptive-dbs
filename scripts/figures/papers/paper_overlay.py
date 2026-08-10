@@ -73,8 +73,8 @@ PAPER_ZORDER = 50
 PAPER_RAW_ZORDER = 49
 # Single legend row for Mehregan (and optional callers): traces stay per-hue,
 # but the table only explains that dashed lightened lines are paper digitization.
-PAPER_CONDENSED_LEGEND_LABEL = "dashed = paper"
-PAPER_CONDENSED_LEGEND_COLOR = "#9a9a9a"
+PAPER_CONDENSED_LEGEND_LABEL = "dashed = paper digitalization"
+PAPER_CONDENSED_LEGEND_COLOR = "#000000"
 
 PAPER_SMOOTH_STYLE: dict[str, Any] = {
     "color": "#000000",
