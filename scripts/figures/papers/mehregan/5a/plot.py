@@ -677,8 +677,8 @@ def plot_fig5a(
     ax.set_xticks(np.arange(0.0, TIME_MAX_S + 1e-9, 2.0))
     ax.set_xlabel("Time (sec)")
     ax.set_ylabel("PSD")
-    _paper_overlay.place_legend(ax, loc="upper left", fontsize=8, ncol=1)
     ax.grid(True, axis="y", color="#cccccc", linewidth=0.6, alpha=0.9)
+    _paper_overlay.place_legend(ax, loc="upper left", fontsize=8, ncol=1)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
