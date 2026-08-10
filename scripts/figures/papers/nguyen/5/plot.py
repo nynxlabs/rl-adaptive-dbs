@@ -256,6 +256,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-update-docs", action="store_true")
     _resume_cli.add_training_resume_args(parser)
     args = parser.parse_args(argv)
+    _resume_cli.configure_promote_publish(args, _figure_promote)
 
     if args.refresh_train:
         fig4_argv: list[str] = []
