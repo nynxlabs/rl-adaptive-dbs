@@ -71,6 +71,10 @@ PAPER_RAW_LINEWIDTH = 1.15
 # Above typical replication zorders (usually 1–5) and annotations.
 PAPER_ZORDER = 50
 PAPER_RAW_ZORDER = 49
+# Single legend row for Mehregan (and optional callers): traces stay per-hue,
+# but the table only explains that dashed lightened lines are paper digitization.
+PAPER_CONDENSED_LEGEND_LABEL = "dashed = paper"
+PAPER_CONDENSED_LEGEND_COLOR = "#9a9a9a"
 
 PAPER_SMOOTH_STYLE: dict[str, Any] = {
     "color": "#000000",
@@ -111,6 +115,20 @@ def lighten_color(color: str, amount: float = PAPER_LIGHTEN) -> str:
 
 def paper_color_from_outline(outline: str, *, raw: bool = False) -> str:
     return lighten_color(outline, PAPER_RAW_LIGHTEN if raw else PAPER_LIGHTEN)
+
+
+def add_condensed_paper_legend(ax, *, label: str = PAPER_CONDENSED_LEGEND_LABEL) -> None:
+    """Add one translucent dashed legend handle for paper digitization overlays."""
+    ax.plot(
+        [],
+        [],
+        color=PAPER_CONDENSED_LEGEND_COLOR,
+        linestyle=(0, (5.0, 2.5)),
+        linewidth=PAPER_LINEWIDTH,
+        alpha=0.75,
+        zorder=PAPER_ZORDER,
+        label=label,
+    )
 
 
 def load_panel_curves(path: Path | str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
@@ -227,12 +245,16 @@ def overlay_named_series(
     label_prefix: str = "Paper ",
     outline_colors: Sequence[str] | None = None,
     colors: Sequence[str] | None = None,
+    condensed_legend: bool = False,
+    condensed_legend_label: str = PAPER_CONDENSED_LEGEND_LABEL,
 ) -> dict[str, tuple[np.ndarray, np.ndarray]]:
     """Overlay digitized series listed as ``(digitization_name, legend_label)``.
 
     ``outline_colors`` / ``colors`` are replication outline hues; overlays are
     drawn lightened and dashed. ``snap_x=(lo, hi)`` linearly maps each series'
     x onto that window (use for panels whose paper axis is fixed, e.g. 0–12 s).
+    When ``condensed_legend`` is true, series use ``_nolegend_`` and one proxy
+    handle (``condensed_legend_label``) is added instead of per-series Paper rows.
     Returns ``{name: (x_plot, y_plot)}``.
     """
     curves = load_panel_curves(curves_path)
@@ -257,10 +279,16 @@ def overlay_named_series(
             ax,
             px_plot,
             py_plot,
-            label=f"{label_prefix}{legend_label}",
+            label=(
+                "_nolegend_"
+                if condensed_legend
+                else f"{label_prefix}{legend_label}"
+            ),
             outline_color=outline,
         )
         out[series_name] = (px_plot, py_plot)
+    if condensed_legend and out:
+        add_condensed_paper_legend(ax, label=condensed_legend_label)
     return out
 
 
@@ -518,6 +546,7 @@ def overlay_mehregan_fig1b(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
         mapping,
         label_prefix="Paper ",
         outline_colors=(MEH_HEALTHY, MEH_PD, MEH_PD_130),
+        condensed_legend=True,
     )
 
 
@@ -532,6 +561,7 @@ def overlay_mehregan_fig2(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
         mapping,
         label_prefix="Paper ",
         outline_colors=(MEH_PD, MEH_PD_130),
+        condensed_legend=True,
     )
 
 
@@ -546,13 +576,15 @@ def overlay_mehregan_fig2b(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
         mapping,
         label_prefix="Paper ",
         outline_colors=(MEH_PD, MEH_PD_130),
+        condensed_legend=True,
     )
 
 
 def overlay_mehregan_fig4a(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
     curves = load_panel_curves(MEHREGAN_DIG / "4a/paper_digitization/curves_wpd_refined.json")
     px, py = pick_series(curves, "training")
-    overlay_on_axis(ax, px, py, label="Paper (digitized)", outline_color=MEH_TRAIN_TEAL)
+    overlay_on_axis(ax, px, py, label="_nolegend_", outline_color=MEH_TRAIN_TEAL)
+    add_condensed_paper_legend(ax)
     return {"training": (py, py)}
 
 
@@ -563,6 +595,7 @@ def overlay_mehregan_fig4b_reward(ax) -> dict[str, tuple[np.ndarray, np.ndarray]
         (("Reward", "Reward"),),
         label_prefix="Paper ",
         outline_colors=(MEH_REWARD_GREEN,),
+        condensed_legend=True,
     )
 
 
@@ -573,6 +606,7 @@ def overlay_mehregan_fig4b_psd(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
         (("PSD (x10^3)", "PSD"),),
         label_prefix="Paper ",
         outline_colors=(MEH_TRAIN_TEAL,),
+        condensed_legend=True,
     )
 
 
@@ -602,6 +636,7 @@ def overlay_mehregan_fig5a(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
         label_prefix="Paper ",
         outline_colors=(MEH_NO_STIM, MEH_TRAINED, MEH_PERIODIC, MEH_CDBS),
         snap_x=(0.0, 12.0),
+        condensed_legend=True,
     )
 
 
@@ -618,6 +653,7 @@ def overlay_mehregan_fig5b(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
         label_prefix="Paper ",
         outline_colors=(MEH_NO_STIM, MEH_TRAINED, MEH_PERIODIC),
         snap_x=(0.0, 12.0),
+        condensed_legend=True,
     )
 
 
@@ -635,6 +671,7 @@ def overlay_mehregan_fig6a(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
         label_prefix="Paper ",
         outline_colors=(MEH_TRAINED, MEH_PTQ_INT8, MEH_PTQ_FP16, MEH_QAT),
         snap_x=(0.0, 12.0),
+        condensed_legend=True,
     )
 
 
@@ -652,6 +689,7 @@ def overlay_mehregan_fig6b(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
         label_prefix="Paper ",
         outline_colors=(MEH_TRAINED, MEH_PTQ_INT8, MEH_PTQ_FP16, MEH_QAT),
         snap_x=(0.0, 12.0),
+        condensed_legend=True,
     )
 
 
