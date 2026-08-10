@@ -133,10 +133,11 @@ def place_legend(ax, *args, **kwargs):
     leg.set_zorder(LEGEND_ZORDER)
     frame = leg.get_frame()
     if frame is not None:
-        frame.set_alpha(float(kwargs.get("framealpha", LEGEND_FRAMEALPHA)))
+        # Facecolor must be set before alpha; setting white after alpha resets opacity.
         frame.set_facecolor(kwargs.get("facecolor", LEGEND_FACECOLOR))
         frame.set_edgecolor(kwargs.get("edgecolor", LEGEND_EDGECOLOR))
         frame.set_linewidth(0.8)
+        frame.set_alpha(float(kwargs.get("framealpha", LEGEND_FRAMEALPHA)))
     return leg
 
 
