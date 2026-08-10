@@ -199,7 +199,7 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
         float(np.nanmax(paper_y["spikes"][0])) + 50.0,
     )
     ax0.set_ylim(PAPER_SPIKE_MIN - 50.0, spike_hi)
-    ax0.legend(frameon=False, fontsize=8, loc="upper right")
+    _paper_overlay.place_legend(ax0, fontsize=8, loc="upper right")
     ax1.set_xlabel("Episode")
     ax1.set_ylabel("Energy (a.u.)")
     ax1.set_title("DBS Energy Consumption")
@@ -210,7 +210,7 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
         float(np.nanmax(paper_y["energy"][1])) + 200.0,
     )
     ax1.set_ylim(0.0, energy_hi)
-    ax1.legend(frameon=False, fontsize=8, loc="upper right")
+    _paper_overlay.place_legend(ax1, fontsize=8, loc="upper right")
     ax1.grid(True, linestyle="--", alpha=0.6)
 
     last_ep = max(0, spikes.size - 1)

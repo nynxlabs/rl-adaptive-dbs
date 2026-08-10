@@ -254,7 +254,7 @@ def plot_fig1b(
     ax.set_ylabel("Power Spectral Density")
     ax.set_title(title)
     ax.grid(True, alpha=0.35)
-    ax.legend(loc="upper right", fontsize=9)
+    _paper_overlay.place_legend(ax, loc="upper right", fontsize=9)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()

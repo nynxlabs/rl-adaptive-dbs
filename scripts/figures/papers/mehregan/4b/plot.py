@@ -267,7 +267,7 @@ def _plot_reward_on_ax(ax: plt.Axes, episode_rewards: list[float]) -> dict[str, 
     ax.set_ylim(y0, y1)
     ax.set_yticks(yticks)
     ax.set_ylabel("Reward")
-    ax.legend(frameon=False, fontsize=8, loc="lower right")
+    _paper_overlay.place_legend(ax, fontsize=8, loc="lower right")
     ax.grid(True, axis="y", color="#cccccc", linewidth=0.6, alpha=0.9)
     return {
         "n_episodes": int(y.size),
@@ -291,7 +291,7 @@ def _plot_psd_on_ax(ax: plt.Axes, episode_mean_beta: list[float]) -> dict[str, A
     ax.set_yticks(yticks)
     ax.set_xlabel("Episode")
     ax.set_ylabel(r"PSD($x10^3$)")
-    ax.legend(frameon=False, fontsize=8, loc="upper right")
+    _paper_overlay.place_legend(ax, fontsize=8, loc="upper right")
     ax.grid(True, axis="y", color="#cccccc", linewidth=0.6, alpha=0.9)
     return {
         "n_episodes": int(y.size),

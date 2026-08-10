@@ -75,6 +75,11 @@ PAPER_RAW_ZORDER = 49
 # but the table only explains that dashed lightened lines are paper digitization.
 PAPER_CONDENSED_LEGEND_LABEL = "dashed = paper digitalization"
 PAPER_CONDENSED_LEGEND_COLOR = "#000000"
+# Legend sits above paper overlays (PAPER_ZORDER) and all replication artists.
+LEGEND_ZORDER = 1000
+LEGEND_FRAMEALPHA = 0.72
+LEGEND_FACECOLOR = "white"
+LEGEND_EDGECOLOR = "#cccccc"
 
 PAPER_SMOOTH_STYLE: dict[str, Any] = {
     "color": "#000000",
@@ -115,6 +120,24 @@ def lighten_color(color: str, amount: float = PAPER_LIGHTEN) -> str:
 
 def paper_color_from_outline(outline: str, *, raw: bool = False) -> str:
     return lighten_color(outline, PAPER_RAW_LIGHTEN if raw else PAPER_LIGHTEN)
+
+
+def place_legend(ax, *args, **kwargs):
+    """Draw the axes legend in front of traces with a slightly translucent frame."""
+    kwargs.setdefault("frameon", True)
+    kwargs.setdefault("framealpha", LEGEND_FRAMEALPHA)
+    kwargs.setdefault("facecolor", LEGEND_FACECOLOR)
+    kwargs.setdefault("edgecolor", LEGEND_EDGECOLOR)
+    kwargs.setdefault("fancybox", True)
+    leg = ax.legend(*args, **kwargs)
+    leg.set_zorder(LEGEND_ZORDER)
+    frame = leg.get_frame()
+    if frame is not None:
+        frame.set_alpha(float(kwargs.get("framealpha", LEGEND_FRAMEALPHA)))
+        frame.set_facecolor(kwargs.get("facecolor", LEGEND_FACECOLOR))
+        frame.set_edgecolor(kwargs.get("edgecolor", LEGEND_EDGECOLOR))
+        frame.set_linewidth(0.8)
+    return leg
 
 
 def add_condensed_paper_legend(ax, *, label: str = PAPER_CONDENSED_LEGEND_LABEL) -> None:

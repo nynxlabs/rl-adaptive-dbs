@@ -137,7 +137,7 @@ def plot_eval(eval_payload: dict[str, Any], out_path: Path) -> dict[str, Any]:
     ax.set_xlabel("Time Step")
     ax.set_ylabel("α–β Power")
     ax.set_title("Evaluation α–β (50 episodes)")
-    ax.legend(frameon=False, fontsize=8)
+    _paper_overlay.place_legend(ax, fontsize=8)
     ax.grid(True, linestyle="--", alpha=0.6)
     ax.set_xlim(0.0, max(24.0, float(steps[-1]) if steps.size else 24.0))
 

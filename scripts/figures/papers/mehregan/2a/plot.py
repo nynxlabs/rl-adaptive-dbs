@@ -535,7 +535,7 @@ def plot_fig2a(
     ax.set_ylim(ymin, ymax)
     ax.set_xlabel("Time (sec)")
     ax.set_ylabel("PSD")
-    ax.legend(loc="upper center", fontsize=9, framealpha=0.95)
+    _paper_overlay.place_legend(ax, loc="upper center", fontsize=9)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
