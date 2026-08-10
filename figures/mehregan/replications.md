@@ -78,12 +78,12 @@ GPi beta-band power ($P_\beta$, Eq. 1, 13–35 Hz) over **12 s**: **PD no treatm
 ![Replication Fig 2a](images/2a/beta_power.png)
 
 <!-- caption-2a:start -->
-**Caption:** 14 s sim (2 s pre-roll), plot = sim − 2 s, 0.2 s trailing / 2 s window (end sim 14 s), seed 0 (2026-08-09)
+**Caption:** 14 s sim (2 s pre-roll), plot = sim − 2 s, 0.2 s trailing / 2 s window (end sim 14 s), seed 0 (2026-08-10)
 
 **Manifest:** `artifacts/figures/papers/mehregan/2a/manifest.json`
 <!-- caption-2a:end -->
 
-**Status:** Pass — blue-below-red after $t=2$, shared 0–2 s baseline, dense trailing protocol. Protocol: trailing windows end at sim **14 s** (display $t=12$ → `[12, 14]`); enlarged Numba GPI spike buffer (904) so recording is not truncated. Remaining polish: blue floor slightly below paper at $t=12$; single seed (0).
+**Status:** Pass — blue-below-red after $t=2$, shared 0–2 s baseline, dense trailing protocol. Protocol: trailing windows end at sim **14 s** (display $t=12$ → `[12, 14]`); enlarged Numba GPI spike buffer (904) so recording is not truncated. Remaining polish: blue floor slightly below paper at $t=12$; single seed (0). **Ship image:** unversioned `beta_power.png` locked to Report 3 gallery (pre–legend-replot); do not replace with overlay `--plot-only` output unless intentionally re-promoting.
 
 <!-- gates-2a:start -->
 **Gates set** (`fig2_time_gates`, panel `2a`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/2a/series.json`, 2026-08-10). Every row is required for exit.
@@ -104,7 +104,7 @@ uv run python scripts/figures/papers/mehregan/2a/plot.py --plot-only
 uv run python scripts/figures/papers/mehregan/2a/plot.py --sampling segment
 ```
 
-**Defaults:** seed `0`, 0.2 s trailing samples, 2 s overlapping window, 14 s integrate with 2 s pre-roll.
+**Defaults:** seed `0`, 0.2 s trailing samples, 2 s overlapping window, 14 s integrate with 2 s pre-roll. Locked replication PNG: **`beta_power.png`** (Report 3; not versioned).
 
 ---
 
