@@ -260,7 +260,8 @@ def _plot_reward_on_ax(ax: plt.Axes, episode_rewards: list[float]) -> dict[str, 
     x = _episode_x_coords(len(y))
     ax.plot(x, y, marker="o", color="#16a34a", linewidth=1.2, markersize=4, label="Replication")
     paper = _paper_overlay.overlay_mehregan_fig4b_reward(ax)
-    paper_y = next(iter(paper.values()), (np.array([]),))[0]
+    _paper_xy = next(iter(paper.values()), (np.array([]), np.array([])))
+    paper_y = _paper_xy[1] if len(_paper_xy) > 1 else np.array([])
     y_all = np.concatenate([y, paper_y]) if paper_y.size else y
     _episode_x_axis(ax, len(y))
     y0, y1, yticks = _ylim_for_rewards(y_all)
@@ -283,7 +284,8 @@ def _plot_psd_on_ax(ax: plt.Axes, episode_mean_beta: list[float]) -> dict[str, A
     x = _episode_x_coords(len(y))
     ax.plot(x, y, marker="o", color="#1f6f6f", linewidth=1.2, markersize=4, label="Replication")
     paper = _paper_overlay.overlay_mehregan_fig4b_psd(ax)
-    paper_y = next(iter(paper.values()), (np.array([]),))[0]
+    _paper_xy = next(iter(paper.values()), (np.array([]), np.array([])))
+    paper_y = _paper_xy[1] if len(_paper_xy) > 1 else np.array([])
     y_all = np.concatenate([y, paper_y]) if paper_y.size else y
     _episode_x_axis(ax, len(y))
     y0, y1, yticks = _ylim_for_psd(y_all)
