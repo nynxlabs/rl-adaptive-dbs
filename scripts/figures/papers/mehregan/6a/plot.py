@@ -10,7 +10,7 @@ Four series on the **raw PSD** scale (paper panel ~300–550):
   1. Fully trained fp32 (green)
   2. PTQ int8 (blue)
   3. PTQ fp16 (purple)
-  4. QAT (orange dashed)
+  4. QAT (orange solid)
 
 **Paired workflow (default):** fp32 from the Fig 5a Pass checkpoint
 (``artifacts/figures/papers/1/4a/checkpoint_skip_regular_02s.pt``); train QAT only
@@ -199,7 +199,7 @@ SERIES = {
     "qat": {
         "label": "QAT",
         "color": "#ff7f0e",
-        "linestyle": "--",
+        "linestyle": "-",
     },
 }
 
