@@ -76,8 +76,9 @@ PAPER_RAW_ZORDER = 49
 PAPER_CONDENSED_LEGEND_LABEL = "dashed = paper digitalization"
 PAPER_CONDENSED_LEGEND_COLOR = "#000000"
 # Legend sits above paper overlays (PAPER_ZORDER) and all replication artists.
+# Frame is slightly translucent so traces/grid show through when they pass under.
 LEGEND_ZORDER = 1000
-LEGEND_FRAMEALPHA = 0.4
+LEGEND_FRAMEALPHA = 0.55
 LEGEND_FACECOLOR = "white"
 LEGEND_EDGECOLOR = "#cccccc"
 
@@ -123,22 +124,27 @@ def paper_color_from_outline(outline: str, *, raw: bool = False) -> str:
 
 
 def place_legend(ax, *args, **kwargs):
-    """Draw the axes legend in front of traces with a slightly translucent frame."""
+    """Draw the axes legend in front of traces with a slightly translucent frame.
+
+    Call this **last** among axes artists (after overlays, grid, vlines). The
+    legend patch, handles, and texts share ``LEGEND_ZORDER`` so nothing from the
+    plot paints over the table.
+    """
     import matplotlib.pyplot as plt
 
+    alpha = float(kwargs.pop("framealpha", LEGEND_FRAMEALPHA))
     kwargs.setdefault("frameon", True)
-    kwargs.setdefault("framealpha", LEGEND_FRAMEALPHA)
     kwargs.setdefault("fancybox", True)
     kwargs.setdefault("edgecolor", LEGEND_EDGECOLOR)
     # Prefer framealpha over opaque facecolor from panel STYLE rcParams.
     with plt.rc_context(
         {
-            "legend.framealpha": float(kwargs.get("framealpha", LEGEND_FRAMEALPHA)),
+            "legend.framealpha": alpha,
             "legend.facecolor": LEGEND_FACECOLOR,
             "legend.edgecolor": LEGEND_EDGECOLOR,
         }
     ):
-        leg = ax.legend(*args, **kwargs)
+        leg = ax.legend(*args, framealpha=alpha, **kwargs)
     for artist in list(ax.get_children()):
         if artist is leg:
             continue
@@ -148,13 +154,36 @@ def place_legend(ax, *args, **kwargs):
         except Exception:
             pass
     leg.set_zorder(LEGEND_ZORDER)
+    # Keep patch / handles / texts above every other axes artist.
     frame = leg.get_frame()
     if frame is not None:
-        alpha = float(kwargs.get("framealpha", LEGEND_FRAMEALPHA))
-        frame.set_alpha(alpha)
+        frame.set_zorder(LEGEND_ZORDER)
+        # RGBA facecolor alone (avoid double-multiplying via set_alpha).
         frame.set_facecolor((1.0, 1.0, 1.0, alpha))
         frame.set_edgecolor(kwargs.get("edgecolor", LEGEND_EDGECOLOR))
         frame.set_linewidth(0.8)
+        frame.set_alpha(alpha)
+    for handle in getattr(leg, "legend_handles", None) or []:
+        try:
+            handle.set_zorder(LEGEND_ZORDER + 1)
+        except Exception:
+            pass
+    for text in leg.get_texts():
+        text.set_zorder(LEGEND_ZORDER + 2)
+    # Re-assert frame alpha after layout/draw (some MPL paths reset it).
+    fig = ax.figure
+
+    def _reassert_legend_frame(event=None) -> None:
+        fr = leg.get_frame()
+        if fr is None:
+            return
+        fr.set_facecolor((1.0, 1.0, 1.0, alpha))
+        fr.set_alpha(alpha)
+        leg.set_zorder(LEGEND_ZORDER)
+
+    if fig is not None and not getattr(leg, "_overlay_frame_hook", False):
+        fig.canvas.mpl_connect("draw_event", _reassert_legend_frame)
+        leg._overlay_frame_hook = True  # type: ignore[attr-defined]
     return leg
 
 

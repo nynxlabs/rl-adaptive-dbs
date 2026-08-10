@@ -1251,10 +1251,10 @@ def plot_fig6b(
     ax.set_xlabel("Time (sec)")
     ax.set_ylabel("PSD")
     ax.grid(True, axis="y", color="#cccccc", linewidth=0.6, alpha=0.9)
-    _paper_overlay.place_legend(ax, loc="upper right", fontsize=9)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
+    _paper_overlay.place_legend(ax, loc="upper right", fontsize=9)
     fig.savefig(out_path, facecolor=fig.get_facecolor())
     plt.close(fig)
 

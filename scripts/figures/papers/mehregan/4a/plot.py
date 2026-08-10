@@ -378,6 +378,7 @@ def plot_fig4a(cache: dict[str, Any], *, out_path: Path) -> dict[str, Any]:
     ax.set_ylabel(r"PSD($x10^3$)")
     ax.grid(True, axis="y", color="#cccccc", linewidth=0.6, alpha=0.9)
     fig.tight_layout()
+    _paper_overlay.place_legend(ax, loc="upper right", fontsize=9)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path)
     plt.close(fig)
