@@ -11,7 +11,7 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Fig 2a | GPi $P_\beta$ time series | Pass |
 | Fig 2b | Error Index time series | Pass |
 | Fig 4a | Training $P_\beta$ vs step | Pass (v18, τ 3→1.0) |
-| Fig 4b | Training reward vs episode | Pass (paired v18, v14) |
+| Fig 4b | Training reward vs episode | Pass (paired v18, v28) |
 | Fig 5a | Post-train efficacy @ 45 Hz | Pass |
 | Fig 5b | Post-train efficacy @ 30 Hz | Pass (burst alphabet, v3) |
 | Fig 6a | PTQ / QAT @ 45 Hz | Pass (v40) |
@@ -222,19 +222,23 @@ Episode **total reward** and **episode-mean PSD(x10³)** during the same **45 Hz
 
 **Reward vs episode**
 
-![Replication Fig 4b reward](images/4b/training_reward_v27.png)
+![Replication Fig 4b reward](images/4b/training_reward_v28.png)
 
 **Episode-mean PSD vs episode**
 
-![Replication Fig 4b PSD](images/4b/training_psd_v27.png)
+![Replication Fig 4b PSD](images/4b/training_psd_v28.png)
+
+**Stacked panel (Report 3 gallery)**
+
+![Replication Fig 4b combined](images/4b/training_fig4b_v28.png)
 
 <!-- caption-4b:start -->
-**Caption:** 9 episodes, 45 Hz fixed_mean_pattern (Fig 4a paired run), seed 0, source series_v4.json, v27, reward ep0=-29.1 ep8=16.1, rise_ep=4, psd 0.437→0.292, gate pass (2026-08-09)
+**Caption:** 9 episodes, 45 Hz fixed_mean_pattern (Fig 4a paired run), seed 0, source series_v4.json, v28, reward ep0=-29.1 ep8=16.1, rise_ep=4, psd 0.437→0.292, gate pass (2026-08-10)
 
 **Manifest:** `artifacts/figures/papers/mehregan/4b/manifest.json`
 <!-- caption-4b:end -->
 
-**Status:** Pass — two panels × 9 episodes (indices 0–8), paired with Fig 4a v4 (seed 0; paper seed unspecified). Qualitative: reward↑, PSD↓. Y-limits snap to data extrema. Numeric bands differ — compare trends, not pointwise values.
+**Status:** Pass — two panels × 9 episodes (indices 0–8), paired with Fig 4a v4 (seed 0; paper seed unspecified). Qualitative: reward↑, PSD↓. **v28** fixes overlay y-limit snapping (paper digitization y, not x). Y-limits snap to data extrema. Numeric bands differ — compare trends, not pointwise values.
 
 <!-- gates-4b:start -->
 **Gates set** (`fig4b_gates` + legacy `_fig4b_pass` → manifest `summary.gates`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4b/manifest.json`, 2026-08-10). Every row is required for exit.
@@ -261,7 +265,7 @@ uv run python scripts/figures/papers/mehregan/4b/plot.py --plot-only
 
 Each run writes new ``training_reward_vN.png`` and ``training_psd_vN.png`` (same N) and updates the replication links above.
 
-**Defaults:** **9 episodes** from Fig 4a paired series. Locked replication images: **v20**.
+**Defaults:** **9 episodes** from Fig 4a paired series. Locked replication images: **v28** (overlay y-limit fix).
 
 ---
 
