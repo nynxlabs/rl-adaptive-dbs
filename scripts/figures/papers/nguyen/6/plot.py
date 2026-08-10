@@ -171,8 +171,8 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
     ax1.set_xlabel("Episode")
     ax1.set_ylabel("DBS Parameters")
     ax1.set_title("DBS Parameters")
-    _paper_overlay.place_legend(ax1, fontsize=8, ncol=3)
     ax1.grid(True, linestyle="--", alpha=0.6)
+    _paper_overlay.place_legend(ax1, fontsize=8, ncol=3)
 
     last_ep = max(0, ab.size - 1)
     for ax in axes:

@@ -400,7 +400,7 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 
 ### Replication
 
-![Replication Fig 6a](images/6a/ptq_qat_45hz_v48.png)
+![Replication Fig 6a](images/6a/ptq_qat_45hz_v50.png)
 
 <!-- caption-6a:start -->
 **Caption:** 45 Hz paper-protocol eval, seed 0, fp32_post=336, qat_post=525, PTQ tracks fp32, QAT elevated, 2026-08-09

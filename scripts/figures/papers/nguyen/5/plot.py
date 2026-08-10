@@ -210,8 +210,8 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
         float(np.nanmax(paper_y["energy"][1])) + 200.0,
     )
     ax1.set_ylim(0.0, energy_hi)
-    _paper_overlay.place_legend(ax1, fontsize=8, loc="upper right")
     ax1.grid(True, linestyle="--", alpha=0.6)
+    _paper_overlay.place_legend(ax1, fontsize=8, loc="upper right")
 
     last_ep = max(0, spikes.size - 1)
     for ax in axes:
