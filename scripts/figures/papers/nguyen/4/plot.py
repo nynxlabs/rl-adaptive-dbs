@@ -430,8 +430,8 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
             integer_snap=True,
         )
     )
-    _paper_overlay.place_legend(ax1, fontsize=8, loc="lower right")
     ax1.grid(True, linestyle="--", alpha=0.6)
+    _paper_overlay.place_legend(ax1, fontsize=8, loc="lower right")
 
     last_ep = max(0, rewards.size - 1)
     for ax in axes:

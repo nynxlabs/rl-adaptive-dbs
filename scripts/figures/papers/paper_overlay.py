@@ -77,7 +77,7 @@ PAPER_CONDENSED_LEGEND_LABEL = "dashed = paper digitalization"
 PAPER_CONDENSED_LEGEND_COLOR = "#000000"
 # Legend sits above paper overlays (PAPER_ZORDER) and all replication artists.
 LEGEND_ZORDER = 1000
-LEGEND_FRAMEALPHA = 0.72
+LEGEND_FRAMEALPHA = 0.4
 LEGEND_FACECOLOR = "white"
 LEGEND_EDGECOLOR = "#cccccc"
 
@@ -124,20 +124,37 @@ def paper_color_from_outline(outline: str, *, raw: bool = False) -> str:
 
 def place_legend(ax, *args, **kwargs):
     """Draw the axes legend in front of traces with a slightly translucent frame."""
+    import matplotlib.pyplot as plt
+
     kwargs.setdefault("frameon", True)
     kwargs.setdefault("framealpha", LEGEND_FRAMEALPHA)
-    kwargs.setdefault("facecolor", LEGEND_FACECOLOR)
-    kwargs.setdefault("edgecolor", LEGEND_EDGECOLOR)
     kwargs.setdefault("fancybox", True)
-    leg = ax.legend(*args, **kwargs)
+    kwargs.setdefault("edgecolor", LEGEND_EDGECOLOR)
+    # Prefer framealpha over opaque facecolor from panel STYLE rcParams.
+    with plt.rc_context(
+        {
+            "legend.framealpha": float(kwargs.get("framealpha", LEGEND_FRAMEALPHA)),
+            "legend.facecolor": LEGEND_FACECOLOR,
+            "legend.edgecolor": LEGEND_EDGECOLOR,
+        }
+    ):
+        leg = ax.legend(*args, **kwargs)
+    for artist in list(ax.get_children()):
+        if artist is leg:
+            continue
+        try:
+            if float(artist.get_zorder()) >= float(LEGEND_ZORDER):
+                artist.set_zorder(LEGEND_ZORDER - 10)
+        except Exception:
+            pass
     leg.set_zorder(LEGEND_ZORDER)
     frame = leg.get_frame()
     if frame is not None:
-        # Facecolor must be set before alpha; setting white after alpha resets opacity.
-        frame.set_facecolor(kwargs.get("facecolor", LEGEND_FACECOLOR))
+        alpha = float(kwargs.get("framealpha", LEGEND_FRAMEALPHA))
+        frame.set_alpha(alpha)
+        frame.set_facecolor((1.0, 1.0, 1.0, alpha))
         frame.set_edgecolor(kwargs.get("edgecolor", LEGEND_EDGECOLOR))
         frame.set_linewidth(0.8)
-        frame.set_alpha(float(kwargs.get("framealpha", LEGEND_FRAMEALPHA)))
     return leg
 
 
