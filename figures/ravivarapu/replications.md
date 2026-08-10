@@ -7,12 +7,12 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 <!-- summary:start -->
 | Panel | Description | Status |
 |-------|-------------|--------|
-| Fig 4a | Training PSD vs episode | Pass (v44) |
-| Fig 4b | Training reward vs episode | Open |
-| Fig 5a | Inference @ 50 Hz | Open |
+| Fig 4a | Training PSD vs episode | Pass (v49) |
+| Fig 4b | Training reward vs episode | Pass |
+| Fig 5a | Inference @ 50 Hz | Fail (`n_steps_ok`) |
 | Fig 5b | Inference @ 30 Hz | Open |
 | Fig 6 | FP16 PTQ @ 50 Hz | Open |
-| Fig 7 | Ablation (Baseline / +PM / +GS / SEA-DBS) | Open |
+| Fig 7 | Ablation (Baseline / +PM / +GS / SEA-DBS) | Fail (`n_steps_ok`) |
 <!-- summary:end -->
 
 Replication PNGs: `figures/ravivarapu/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/ravivarapu/images/<panel>/paper.png` (from KB paper-note embeds; Fig 4/5 split from combined panels). Full composites also under `figures/ravivarapu/images/_full/`. Controller spec: [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md). Schematics (paper Figs 1, 3) are **out of scope**. Fig 2 (reward curve) is optional polish, not a gate.
@@ -33,10 +33,10 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_psd_v47.png)
+![Replication Fig 4a](images/4a/training_psd_v49.png)
 
 <!-- caption-4a:start -->
-**Caption:** Training mean GPi beta PSD vs episode (seed 0); shape_pass=True pass=True; Baseline vs full SEA-DBS (PM+GS). (v44)
+**Caption:** Training mean GPi beta PSD vs episode (seed 0); shape_pass=True pass=True; Baseline vs full SEA-DBS (PM+GS). (v49)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`
 <!-- caption-4a:end -->
@@ -101,24 +101,24 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4a/plot.p
 
 ### Replication
 
-![Replication Fig 4b](images/4b/training_reward_v1.png)
+![Replication Fig 4b](images/4b/training_reward_v2.png)
 
 <!-- caption-4b:start -->
-**Caption:** Training episode reward vs episode (seed 0); paired with Fig 4a cache. (v1)
+**Caption:** Training episode reward vs episode (seed 0); paired with Fig 4a cache. (v2)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4b.json`
 <!-- caption-4b:end -->
 
-**Status:** Open — pair with Fig 4a locked run.
+**Status:** Pass — see manifest gates.
 
 <!-- gates-4b:start -->
-**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/4/manifest_4b.json``; overall **`pass`**: —, 2026-08-09). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4b.json`; overall **`pass`**: yes, 2026-08-09). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
-| `paper_above_baseline_late` | SEA-DBS late reward > baseline | — |
-| `paper_pull_ahead_mid` | SEA-DBS ahead in mid training window | — |
-| `both_rise` | both series rise from early to late | — |
+| `paper_above_baseline_late` | SEA-DBS late reward > baseline | yes |
+| `paper_pull_ahead_mid` | SEA-DBS ahead in mid training window | yes |
+| `both_rise` | both series rise from early to late | yes |
 <!-- gates-4b:end -->
 
 **Run:**
@@ -144,7 +144,7 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 
 ### Replication
 
-*Not yet generated.* Target: `figures/ravivarapu/images/5a/inference_50hz.png`
+![Replication Fig 5a](images/5a/inference_50hz_v3.png)
 
 <!-- caption-5a:start -->
 **Caption:** TBD
@@ -155,17 +155,17 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 **Status:** Open — needs trained `paper` + `baseline` actors and adapter carrier-frequency knob.
 
 <!-- gates-5a:start -->
-**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/5a/manifest.json``; overall **`pass`**: —, 2026-08-09). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/5a/manifest.json`; overall **`pass`**: no, 2026-08-09). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
-| `n_steps_ok` | 10 inference steps | — |
-| `shared_start` | baseline and SEA-DBS agree at step 0 | — |
-| `baseline_declines` | baseline PSD declines | — |
-| `paper_declines` | SEA-DBS PSD declines | — |
-| `paper_end_below_baseline` | SEA-DBS end PSD below baseline | — |
-| `paper_steeper_drop` | SEA-DBS drop steeper than baseline | — |
-| `carrier_hz_ok` | carrier frequency 50 Hz | — |
+| `n_steps_ok` | 10 inference steps | no |
+| `shared_start` | baseline and SEA-DBS agree at step 0 | yes |
+| `baseline_declines` | baseline PSD declines | no |
+| `paper_declines` | SEA-DBS PSD declines | no |
+| `paper_end_below_baseline` | SEA-DBS end PSD below baseline | no |
+| `paper_steeper_drop` | SEA-DBS drop steeper than baseline | no |
+| `carrier_hz_ok` | carrier frequency 50 Hz | yes |
 <!-- gates-5a:end -->
 
 **Run:**
@@ -189,7 +189,7 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 
 ### Replication
 
-*Not yet generated.* Target: `figures/ravivarapu/images/5b/inference_30hz.png`
+![Replication Fig 5b](images/5b/inference_30hz_v2.png)
 
 <!-- caption-5b:start -->
 **Caption:** TBD
@@ -200,7 +200,7 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 **Status:** Open — pair protocol with Fig 5a; only carrier differs.
 
 <!-- gates-5b:start -->
-**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/5b/manifest.json``; overall **`pass`**: —, 2026-08-09). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/5b/manifest.json`; overall **`pass`**: —, 2026-08-09). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -238,7 +238,9 @@ QAT is **out of scope** for SEA-DBS (not reported).
 
 ### Replication
 
-*Not yet generated.* Target: `figures/ravivarapu/images/6/ptq_fp16_50hz.png`
+### Replication
+
+![Replication Fig 6](images/6/ptq_fp16_50hz_v2.png)
 
 <!-- caption-6:start -->
 **Caption:** TBD
@@ -249,7 +251,7 @@ QAT is **out of scope** for SEA-DBS (not reported).
 **Status:** Open — needs FP16 PTQ path on SEA-DBS actor after full-precision train.
 
 <!-- gates-6:start -->
-**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/6/manifest.json``; overall **`pass`**: —, 2026-08-09). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/6/manifest.json`; overall **`pass`**: —, 2026-08-09). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -284,7 +286,9 @@ Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper` ([se
 
 ### Replication
 
-*Not yet generated.* Target: `figures/ravivarapu/images/7/ablation_psd.png`
+### Replication
+
+![Replication Fig 7](images/7/ablation_psd_v3.png)
 
 <!-- caption-7:start -->
 **Caption:** TBD
@@ -295,16 +299,16 @@ Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper` ([se
 **Status:** Open — needs all four variants trainable and a shared 10-step eval harness.
 
 <!-- gates-7:start -->
-**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/7/manifest.json``; overall **`pass`**: —, 2026-08-09). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/7/manifest.json`; overall **`pass`**: no, 2026-08-09). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
-| `four_variants_present` | baseline / +PM / +GS / SEA-DBS | — |
-| `sea_dbs_lowest_tail` | SEA-DBS lowest tail mean PSD | — |
-| `gs_highest_or_near_highest_tail` | GS highest or near-highest tail | — |
-| `pm_not_sea` | PM closer to baseline than to SEA-DBS | — |
-| `shared_start` | baseline and SEA-DBS agree at step 0 | — |
-| `n_steps_ok` | 10 inference steps | — |
+| `four_variants_present` | baseline / +PM / +GS / SEA-DBS | yes |
+| `sea_dbs_lowest_tail` | SEA-DBS lowest tail mean PSD | yes |
+| `gs_highest_or_near_highest_tail` | GS highest or near-highest tail | yes |
+| `pm_not_sea` | PM closer to baseline than to SEA-DBS | yes |
+| `shared_start` | baseline and SEA-DBS agree at step 0 | yes |
+| `n_steps_ok` | 10 inference steps | no |
 <!-- gates-7:end -->
 
 **Run:**

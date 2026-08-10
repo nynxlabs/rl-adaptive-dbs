@@ -30,15 +30,15 @@ Distribution of GPi **α–β** oscillation power (**7–35 Hz**) for **PD On** 
 
 ### Replication
 
-![Replication Fig 3](images/3/alpha_beta_dist_v8.png)
+![Replication Fig 3](images/3/alpha_beta_dist_v10.png)
 
 <!-- caption-3:start -->
-**Caption:** GPi α–β (7–35 Hz), 500 iters × 0.1 s; PD On mean=290.8, PD Off mean=219.5, PD On Q1=262.3; ordering_pass=True (v6)
+**Caption:** GPi α–β (7–35 Hz), 500 iters × 0.1 s; PD On mean=290.8, PD Off mean=219.5, PD On Q1=262.3; ordering_pass=True (v10)
 
 **Manifest:** `artifacts/figures/papers/nguyen/3/manifest.json`
 <!-- caption-3:end -->
 
-**Status:** Pass — 500 × 100 ms samples; see `alpha_beta_dist_v6.png`.
+**Status:** Pass — 500 × 100 ms samples; see `alpha_beta_dist_v10.png`.
 
 <!-- gates-3:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **`pass`**: yes, 2026-08-09). Every row is required for exit.
@@ -80,7 +80,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 ### Latest attempt (v22, v10f)
 
-![Replication Fig 4 — latest](images/4/training_reward_length_v29.png)
+![Replication Fig 4 — latest](images/4/training_reward_length_v32.png)
 
 <!-- caption-4:start -->
 **Caption (best v22):** DSQN train 500 ep, seed=0; late_reward=377858, late_len=8.9; shape_pass=False — best late length so far; timing gates still fail (v22)
@@ -89,12 +89,12 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 <!-- caption-4:end -->
 
 <!-- caption-4-latest:start -->
-**Caption:** DSQN train 500 ep, seed=0; late_reward=377858, late_len=8.9; shape_pass=False pass=False (reward shape=False full=False, length shape=False full=True) (v27)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=377858, late_len=8.9; shape_pass=False pass=False (reward shape=False full=False, length shape=False full=True) (v32)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4-latest:end -->
 
-**Status:** Timing shape open — latest **v27** (`late_len=8.9`, `shape_pass=False`); see manifest gates.
+**Status:** Timing shape open — latest **v32** (`late_len=8.9`, `shape_pass=False`); see manifest gates.
 
 <!-- gates-4:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: no, **`pass`**: no, 2026-08-09). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
@@ -149,15 +149,15 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 
 ### Replication
 
-*Not yet generated from a passing Fig 4 train.* Target: `figures/nguyen/images/5/spikes_energy_vN.png`
+![Replication Fig 5](images/5/spikes_energy_v5.png)
 
 <!-- caption-5:start -->
-**Caption:** TBD
+**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=1082, energy_mean=657.6; pass=False (v5)
 
 **Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json`
 <!-- caption-5:end -->
 
-**Status:** Open — needs Fig 4 train `gates.pass`, then `scripts/figures/papers/nguyen/5/plot.py`.
+**Status:** Open — see manifest gates (`spikes_energy_v5.png`).
 
 <!-- gates-5:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-08-09). Every row is required for exit.
@@ -192,15 +192,15 @@ GPi **α–β** (a) and DBS amplitude / frequency / pulse width (b) over **500**
 
 ### Replication
 
-*Not yet generated.* Target: `figures/nguyen/images/6/alpha_beta_params_vN.png`
+![Replication Fig 6](images/6/alpha_beta_params_v2.png)
 
 <!-- caption-6:start -->
-**Caption:** TBD
+**Caption:** Fig 4 shared train 500 ep; αβ_late=193.3, amp=230; pass=False (v2)
 
 **Manifest:** `artifacts/figures/papers/nguyen/6/manifest.json`
 <!-- caption-6:end -->
 
-**Status:** Open.
+**Status:** Open — see manifest gates (`alpha_beta_params_v2.png`).
 
 <!-- gates-6:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: no, 2026-08-09). Every row is required for exit.
@@ -234,15 +234,15 @@ Seeded eval of the trained policy: **50** episodes × **25** steps, different se
 
 ### Replication
 
-*Not yet generated.* Target: `figures/nguyen/images/7/eval_50ep_vN.png`
+![Replication Fig 7](images/7/eval_50ep_v4.png)
 
 <!-- caption-7:start -->
-**Caption:** TBD
+**Caption:** eval 50×26 steps; mean αβ=188.3; pass=False (v4)
 
 **Manifest:** `artifacts/figures/papers/nguyen/7/manifest.json`
 <!-- caption-7:end -->
 
-**Status:** Open — needs Fig 4 checkpoint + `rl-dbs eval --controller snn` + panel script.
+**Status:** Open — see manifest gates (`eval_50ep_v4.png`).
 
 <!-- gates-7:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: no, 2026-08-09). Every row is required for exit.

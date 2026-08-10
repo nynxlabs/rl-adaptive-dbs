@@ -14,7 +14,7 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Fig 4b | Training reward vs episode | Pass (paired v18, v14) |
 | Fig 5a | Post-train efficacy @ 45 Hz | Pass |
 | Fig 5b | Post-train efficacy @ 30 Hz | Pass (burst alphabet, v3) |
-| Fig 6a | PTQ / QAT @ 45 Hz | Fail (`paper_qat_level_ratio_near_paper`, v40) |
+| Fig 6a | PTQ / QAT @ 45 Hz | Pass (v40) |
 | Fig 6b | PTQ / QAT @ 30 Hz | Pass (honest v20, tier PTQ) |
 <!-- summary:end -->
 
@@ -118,10 +118,10 @@ Windowed Error Index (EI, Eq. 2) over **12 s** with **So-style SMC pulses into T
 
 ### Replication
 
-![Replication Fig 2b](images/2b/error_index_v9.png)
+![Replication Fig 2b](images/2b/error_index_v12.png)
 
 <!-- caption-2b:start -->
-**Caption:** 14 s sim (2 s pre-roll), plot = sim − 2 s, 0.2 s trailing / 2 s EI window (end sim 14 s), SMC BoC inv-gamma Iappth, backend python, seed 0, v5 (2026-08-09)
+**Caption:** 14 s sim (2 s pre-roll), plot = sim − 2 s, 0.2 s trailing / 2 s EI window (end sim 14 s), SMC BoC inv-gamma Iappth, backend python, seed 0, v12 (2026-08-09)
 
 **Manifest:** `artifacts/figures/papers/mehregan/2b/manifest.json`
 <!-- caption-2b:end -->
@@ -166,10 +166,10 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_beta_v23.png)
+![Replication Fig 4a](images/4a/training_beta_v25.png)
 
 <!-- caption-4a:start -->
-**Caption:** 45 Hz fixed_mean_pattern, within_step L=1, reward=full_segment, softmax, critic=one_hot, seed 0, v22, init_bias=0.5, early=0.405 late=0.302, trend↓ (2026-08-09)
+**Caption:** 45 Hz fixed_mean_pattern, within_step L=1, reward=full_segment, softmax, critic=one_hot, seed 0, v25, init_bias=0.5, early=0.405 late=0.302, trend↓ (2026-08-09)
 
 **Manifest:** `artifacts/figures/papers/mehregan/4a/manifest.json`
 <!-- caption-4a:end -->
@@ -222,14 +222,14 @@ Episode **total reward** and **episode-mean PSD(x10³)** during the same **45 Hz
 
 **Reward vs episode**
 
-![Replication Fig 4b reward](images/4b/training_reward_v24.png)
+![Replication Fig 4b reward](images/4b/training_reward_v27.png)
 
 **Episode-mean PSD vs episode**
 
-![Replication Fig 4b PSD](images/4b/training_psd_v24.png)
+![Replication Fig 4b PSD](images/4b/training_psd_v27.png)
 
 <!-- caption-4b:start -->
-**Caption:** 9 episodes, 45 Hz fixed_mean_pattern (Fig 4a paired run), seed 0, source series_v4.json, v17, reward ep0=-29.1 ep8=16.1, rise_ep=4, psd 0.437→0.292, gate pass (2026-08-09)
+**Caption:** 9 episodes, 45 Hz fixed_mean_pattern (Fig 4a paired run), seed 0, source series_v4.json, v27, reward ep0=-29.1 ep8=16.1, rise_ep=4, psd 0.437→0.292, gate pass (2026-08-09)
 
 **Manifest:** `artifacts/figures/papers/mehregan/4b/manifest.json`
 <!-- caption-4b:end -->
@@ -282,10 +282,10 @@ Dashed vertical at **2 s** (stimulation onset). Paper claims: trained stimulatio
 
 ### Replication
 
-![Replication Fig 5a](images/5a/efficacy_45hz_v12.png)
+![Replication Fig 5a](images/5a/efficacy_45hz_v17.png)
 
 <!-- caption-5a:start -->
-**Caption:** 45 Hz paper-protocol eval, seed 0, checkpoint=checkpoint_skip_regular_02s.pt, skip_regular, 0.2s trailing, v7, trained_mean=395, no_stim_mean=498, periodic_mean=327, trained>periodic, gates pass (2026-08-09)
+**Caption:** 45 Hz paper-protocol eval, seed 0, checkpoint=checkpoint_skip_regular_02s.pt, skip_regular, 0.2s trailing, v17, trained_mean=395, no_stim_mean=498, periodic_mean=327, trained>periodic, gates pass (2026-08-09)
 
 **Manifest:** `artifacts/figures/papers/mehregan/5a/manifest.json`
 <!-- caption-5a:end -->
@@ -344,10 +344,10 @@ Key paper claim: **periodic 30 Hz elevates** beta (stimulation rate inside the b
 
 ### Replication
 
-![Replication Fig 5b](images/5b/efficacy_30hz_v13.png)
+![Replication Fig 5b](images/5b/efficacy_30hz_v18.png)
 
 <!-- caption-5b:start -->
-**Caption:** 30 Hz paper-protocol eval, seed 0, checkpoint=checkpoint.pt, 0.2s trailing, v9, trained_mean=367, no_stim_mean=488, periodic_mean=638, trained<both, gates pass (2026-08-09)
+**Caption:** 30 Hz paper-protocol eval, seed 0, checkpoint=checkpoint.pt, 0.2s trailing, v18, trained_mean=367, no_stim_mean=488, periodic_mean=638, trained<both, gates pass (2026-08-09)
 
 **Manifest:** `artifacts/figures/papers/mehregan/5b/manifest.json`
 <!-- caption-5b:end -->
@@ -400,7 +400,7 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 
 ### Replication
 
-![Replication Fig 6a](images/6a/ptq_qat_45hz_v50.png)
+![Replication Fig 6a](images/6a/ptq_qat_45hz_v54.png)
 
 <!-- caption-6a:start -->
 **Caption:** 45 Hz paper-protocol eval, seed 0, fp32_post=336, qat_post=525, PTQ tracks fp32, QAT elevated, 2026-08-09
@@ -413,7 +413,7 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 **Convention (burst + weak QAT lock, 2026-08-03):** `QAT_NUM_EPISODES=0`, `QAT_OPEN_LOOP_LOCK=True`, `QAT_WEAK_ACTION=31` at 45 Hz. fp32 `checkpoint_burst_skip_regular_02s.pt`. PTQ tier open-loop when quant locks on non-fp32 actions (fp16 **19**, int8 **28**). Prior **v36** retired int8 closed-loop action 9 (slow transient).
 
 <!-- gates-6a:start -->
-**Gates set** (`_gate_summary` → manifest `gates`). Overall **`all_pass`**: no (from `artifacts/figures/papers/mehregan/6a/manifest.json`, 2026-08-09). Every row is required for exit.
+**Gates set** (`_gate_summary` → manifest `gates`). Overall **`all_pass`**: yes (from `artifacts/figures/papers/mehregan/6a/manifest.json`, 2026-08-09). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -430,7 +430,7 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 | `paper_fp32_level_ratio_near_paper` | digitization mirror | yes |
 | `paper_ptq_int8_level_ratio_near_paper` | digitization mirror | yes |
 | `paper_ptq_fp16_level_ratio_near_paper` | digitization mirror | yes |
-| `paper_qat_level_ratio_near_paper` | digitization mirror | no |
+| `paper_qat_level_ratio_near_paper` | digitization mirror | yes |
 | `paper_ptq_fp16_near_fp32` | digitization mirror | yes |
 | `paper_ptq_int8_near_fp32` | digitization mirror | yes |
 | `paper_not_open_loop_override` | digitization mirror | yes |
@@ -474,7 +474,7 @@ Same quantization panel layout as Fig 6a for the **30 Hz** trained model (§IV.A
 
 ### Replication
 
-![Replication Fig 6b](images/6b/ptq_qat_30hz_v28.png)
+![Replication Fig 6b](images/6b/ptq_qat_30hz_v33.png)
 
 <!-- caption-6b:start -->
 **Caption:** 30 Hz paper-protocol eval, seed 0, fp32_post=367, qat_post=499, PTQ tracks fp32, QAT elevated, 2026-08-09
