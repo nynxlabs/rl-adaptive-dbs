@@ -9,13 +9,13 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 |-------|-------------|--------|
 | Fig 1b | GPi PSD | Pass |
 | Fig 2a | GPi $P_\beta$ time series | Pass |
-| Fig 2b | Error Index time series | Pass |
-| Fig 4a | Training $P_\beta$ vs step | Pass (v18, τ 3→1.0) |
-| Fig 4b | Training reward vs episode | Pass (paired v18, v28) |
-| Fig 5a | Post-train efficacy @ 45 Hz | Pass |
-| Fig 5b | Post-train efficacy @ 30 Hz | Pass (burst alphabet, v3) |
-| Fig 6a | PTQ / QAT @ 45 Hz | Pass (v40) |
-| Fig 6b | PTQ / QAT @ 30 Hz | Pass (honest v20, tier PTQ) |
+| Fig 2b | Error Index time series | Pass (rep v16) |
+| Fig 4a | Training $P_\beta$ vs step | Pass (τ 3→1.0, locked train v18, rep v29) |
+| Fig 4b | Training reward vs episode | Pass (paired train v18, v14, rep v31) |
+| Fig 5a | Post-train efficacy @ 45 Hz | Pass (rep v23) |
+| Fig 5b | Post-train efficacy @ 30 Hz | Pass (burst alphabet, locked eval v3, rep v23) |
+| Fig 6a | PTQ / QAT @ 45 Hz | Pass (honest trailing eval, rep v61) |
+| Fig 6b | PTQ / QAT @ 30 Hz | Pass (tier PTQ, rep v40) |
 <!-- summary:end -->
 
 Replication PNGs: `figures/mehregan/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/mehregan/images/<panel>/paper.png` (from paper-note embeds; composite Figs 1/2/4/5/6 split into panels). Full composites under `figures/mehregan/images/_full/`.
@@ -253,7 +253,7 @@ Episode **total reward** and **episode-mean PSD(x10³)** during the same **45 Hz
 | `beta_drop_ratio_near_paper` | PSD late/early ratio vs digitization | yes |
 | `reward_recovers_like_paper` | qualitative rise (not magnitude match) | yes |
 | `plot_style` | ≥ 2 episodes plotted | yes |
-| `automation` | legacy `_fig4b_pass` mirror | yes |
+| `automation` | manifest summary.automation_pass mirrors fig4b bundle | yes |
 <!-- gates-4b:end -->
 
 **Run:**
