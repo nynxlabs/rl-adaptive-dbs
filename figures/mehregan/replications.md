@@ -118,10 +118,10 @@ Windowed Error Index (EI, Eq. 2) over **12 s** with **So-style SMC pulses into T
 
 ### Replication
 
-![Replication Fig 2b](images/2b/error_index_v13.png)
+![Replication Fig 2b](images/2b/error_index_v16.png)
 
 <!-- caption-2b:start -->
-**Caption:** 14 s sim (2 s pre-roll), plot = sim − 2 s, 0.2 s trailing / 2 s EI window (end sim 14 s), SMC BoC inv-gamma Iappth, backend python, seed 0, v13 (2026-08-10)
+**Caption:** 14 s sim (2 s pre-roll), plot = sim − 2 s, 0.2 s trailing / 2 s EI window (end sim 14 s), SMC BoC inv-gamma Iappth, backend python, seed 0, v16 (2026-08-10)
 
 **Manifest:** `artifacts/figures/papers/mehregan/2b/manifest.json`
 <!-- caption-2b:end -->
