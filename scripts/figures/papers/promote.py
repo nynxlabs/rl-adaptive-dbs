@@ -123,7 +123,7 @@ NGUYEN_FIG4_GATE_TIER: dict[str, dict[str, str]] = {
 NGUYEN_GATE_GROUPS: dict[str, dict[str, list[tuple[str, str]]]] = {
     "4": {
         "reward": [
-            ("reward_scale_paper", "|mean reward ep 0–50| ≥ 5×10⁴"),
+            ("reward_scale_paper", "abs(mean reward ep 0–50) ≥ 5×10⁴"),
             ("late_reward_above_early", "late mean reward > first-50 mean"),
             ("reward_post100_plateau", "smoothed reward flat ep 100–450"),
             ("late_reward_near_zero", "late mean > −2×10⁵ (full only)"),

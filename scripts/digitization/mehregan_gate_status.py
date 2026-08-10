@@ -29,6 +29,19 @@ from paper_gates import (  # noqa: E402
 _REPO = Path(__file__).resolve().parents[2]
 _MEHREGAN_PLOTS = _REPO / "scripts" / "figures" / "papers" / "mehregan"
 
+MEHREGAN_FIG6_PAPER_GATE_DESCRIPTIONS: dict[str, str] = {
+    "paper_qat_elevated_vs_fp32": "QAT post-onset mean > fp32",
+    "paper_fp32_level_ratio_near_paper": "fp32 post level ratio vs digitized paper",
+    "paper_ptq_int8_level_ratio_near_paper": "PTQ int8 post level ratio vs digitized paper",
+    "paper_ptq_fp16_level_ratio_near_paper": "PTQ fp16 post level ratio vs digitized paper",
+    "paper_qat_level_ratio_near_paper": "QAT post level ratio vs digitized paper",
+    "paper_ptq_fp16_near_fp32": "PTQ fp16 post mean within 15% of fp32",
+    "paper_ptq_int8_near_fp32": "PTQ int8 post mean within 20% of fp32",
+    "paper_not_open_loop_override": "eval uses trained/quantized policy, not open-loop lock",
+    "paper_not_shared_constant_action_lock": "fp32+PTQ lack shared identical constant action",
+    "paper_qat_late_sustained": "QAT stays elevated late (no end crash)",
+}
+
 
 @dataclass(frozen=True)
 class GateRow:
@@ -222,7 +235,7 @@ def evaluate_4b() -> PanelGateStatus:
         GateRow("beta_drop_ratio_near_paper", "PSD late/early ratio vs digitization"),
         GateRow("reward_recovers_like_paper", "qualitative rise (not magnitude match)"),
         GateRow("plot_style", "≥ 2 episodes plotted"),
-        GateRow("automation", "legacy `_fig4b_pass` mirror"),
+        GateRow("automation", "manifest summary.automation_pass mirrors fig4b bundle"),
     )
     return PanelGateStatus(
         panel="4b",
@@ -302,18 +315,31 @@ def _evaluate_6(panel: str) -> PanelGateStatus:
         GateRow("qat_elevated_vs_fp32", "QAT post-onset > fp32"),
         GateRow("qat_near_baseline_band", "QAT in elevated pre-stim band, not suppressed"),
         GateRow("not_shared_constant_action_lock", "fp32+PTQ do not share one constant action"),
-        GateRow("paper_qat_elevated_vs_fp32", "digitization mirror"),
-        GateRow("paper_fp32_level_ratio_near_paper", "digitization mirror"),
-        GateRow("paper_ptq_int8_level_ratio_near_paper", "digitization mirror"),
-        GateRow("paper_ptq_fp16_level_ratio_near_paper", "digitization mirror"),
-        GateRow("paper_qat_level_ratio_near_paper", "digitization mirror"),
-        GateRow("paper_ptq_fp16_near_fp32", "digitization mirror"),
-        GateRow("paper_ptq_int8_near_fp32", "digitization mirror"),
-        GateRow("paper_not_open_loop_override", "digitization mirror"),
+    )
+    rows = rows + tuple(
+        GateRow(key, MEHREGAN_FIG6_PAPER_GATE_DESCRIPTIONS[key])
+        for key in (
+            "paper_qat_elevated_vs_fp32",
+            "paper_fp32_level_ratio_near_paper",
+            "paper_ptq_int8_level_ratio_near_paper",
+            "paper_ptq_fp16_level_ratio_near_paper",
+            "paper_qat_level_ratio_near_paper",
+            "paper_ptq_fp16_near_fp32",
+            "paper_ptq_int8_near_fp32",
+            "paper_not_open_loop_override",
+        )
     )
     if panel == "6a":
-        rows = rows + (GateRow("paper_not_shared_constant_action_lock", "digitization mirror"),)
-        rows = rows + (GateRow("paper_qat_late_sustained", "QAT stays elevated late (no end crash)"),)
+        rows = rows + (
+            GateRow(
+                "paper_not_shared_constant_action_lock",
+                MEHREGAN_FIG6_PAPER_GATE_DESCRIPTIONS["paper_not_shared_constant_action_lock"],
+            ),
+            GateRow(
+                "paper_qat_late_sustained",
+                MEHREGAN_FIG6_PAPER_GATE_DESCRIPTIONS["paper_qat_late_sustained"],
+            ),
+        )
     return PanelGateStatus(
         panel=panel,
         pass_field="all_pass",
