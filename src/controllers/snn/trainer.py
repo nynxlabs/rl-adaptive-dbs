@@ -182,6 +182,9 @@ class DSQNTrainer:
         actions = torch.as_tensor(batch.action, dtype=torch.int64, device=self.device)
         rewards = torch.as_tensor(batch.reward, dtype=torch.float32, device=self.device)
         done = torch.as_tensor(batch.done, dtype=torch.float32, device=self.device)
+        learn_scale = float(cfg.reward_learning_scale)
+        if learn_scale != 1.0:
+            rewards = rewards * learn_scale
 
         self.dsqn.train()
         q_out = self.dsqn(states)
