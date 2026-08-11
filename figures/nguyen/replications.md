@@ -11,7 +11,7 @@ Figs **1–2** are schematics — **not** replication targets.
 <!-- summary:start -->
 | Panel | Description | Status |
 |-------|-------------|--------|
-| Fig 3 | GPi α–β distribution (PD Off vs PD On) | Pass (rep v21) |
+| Fig 3 | GPi α–β distribution (PD Off vs PD On) | Pass (rep v22) |
 | Fig 4 | Training reward + episode length | Fail (`reward shape:reward_post100_plateau`) |
 | Fig 5 | CBGT spikes + DBS energy over training | Fail (`shared_train`) |
 | Fig 6 | α–β + DBS parameters over training | Fail (`shared_train`) |
@@ -30,18 +30,18 @@ Distribution of GPi **α–β** oscillation power (**7–35 Hz**) for **PD On** 
 
 ### Replication
 
-![Replication Fig 3](images/3/alpha_beta_dist_v10.png)
+![Replication Fig 3](images/3/alpha_beta_dist_v22.png)
 
 <!-- caption-3:start -->
-**Caption:** GPi α–β (7–35 Hz), 500 iters × 0.1 s; PD On mean=290.8, PD Off mean=219.5, PD On Q1=262.3; ordering_pass=True (v10)
+**Caption:** GPi α–β (7–35 Hz), 500 iters × 0.1 s; PD On mean=290.8, PD Off mean=219.5, PD On Q1=262.3; ordering_pass=True (v22)
 
 **Manifest:** `artifacts/figures/papers/nguyen/3/manifest.json`
 <!-- caption-3:end -->
 
-**Status:** Pass — 500 × 100 ms samples; see `alpha_beta_dist_v10.png`.
+**Status:** Pass — 500 × 100 ms samples; see `alpha_beta_dist_v22.png`.
 
 <!-- gates-3:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **`pass`**: yes, 2026-08-10). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **`pass`**: yes, 2026-08-11). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -97,7 +97,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 **Status:** Timing shape open — latest **v38** (`late_len=8.9`, `shape_pass=False`); see manifest gates.
 
 <!-- gates-4:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: no, **`pass`**: no, 2026-08-10). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
+**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: no, **`pass`**: no, 2026-08-11). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
 
 ### Reward (panel a) (`shape_pass`: no | `pass`: no)
 
@@ -160,7 +160,7 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 **Status:** Open — see manifest gates (`spikes_energy_v5.png`).
 
 <!-- gates-5:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-08-10). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-08-11). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -203,7 +203,7 @@ GPi **α–β** (a) and DBS amplitude / frequency / pulse width (b) over **500**
 **Status:** Open — see manifest gates (`alpha_beta_params_v2.png`).
 
 <!-- gates-6:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: no, 2026-08-10). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: no, 2026-08-11). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -245,7 +245,7 @@ Seeded eval of the trained policy: **50** episodes × **25** steps, different se
 **Status:** Open — see manifest gates (`eval_50ep_v4.png`).
 
 <!-- gates-7:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: no, 2026-08-10). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: no, 2026-08-11). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
