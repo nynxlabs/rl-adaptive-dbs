@@ -48,6 +48,8 @@ def nguyen_reward(
         and cfg.alpha_beta_progress_coef > 0.0
     ):
         progress = cfg.alpha_beta_progress_coef * max(0.0, float(prev_alpha_beta) - alpha_beta)
+        if cfg.alpha_beta_progress_cap_per_step > 0.0:
+            progress = min(progress, cfg.alpha_beta_progress_cap_per_step)
 
     warm = 0.0
     if (

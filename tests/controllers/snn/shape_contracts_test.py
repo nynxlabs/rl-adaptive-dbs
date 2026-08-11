@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import numpy as np
 import pytest
 import torch
@@ -139,6 +141,31 @@ def test_nguyen_reward_terminated_bonus() -> None:
         remaining_steps=5,
     )
     assert isinstance(reward, float)
+
+
+def test_nguyen_reward_progress_cap() -> None:
+    cfg = SNNConfig(
+        alpha_beta_threshold=150.0,
+        alpha_beta_progress_coef=2000.0,
+        alpha_beta_progress_cap_per_step=10_000.0,
+    )
+    capped = nguyen_reward(
+        alpha_beta=200.0,
+        energy=0.0,
+        terminated=False,
+        remaining_steps=10,
+        prev_alpha_beta=220.0,
+        config=cfg,
+    )
+    uncapped = nguyen_reward(
+        alpha_beta=200.0,
+        energy=0.0,
+        terminated=False,
+        remaining_steps=10,
+        prev_alpha_beta=220.0,
+        config=replace(cfg, alpha_beta_progress_cap_per_step=0.0),
+    )
+    assert capped < uncapped
 
 
 def test_adapter_spaces_and_step_shapes() -> None:

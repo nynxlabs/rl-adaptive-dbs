@@ -76,11 +76,15 @@ class SNNConfig:
     threshold_reward: float = 1.0  # τ
     # Dense shaping when α–β drops but remains above θ (paper-silent; Fig 4 only).
     alpha_beta_progress_coef: float = 0.0
+    # Cap per-step progress bonus (0 = no cap); blocks α–β wiggle farming on timeouts.
+    alpha_beta_progress_cap_per_step: float = 0.0
     # Bonus when α–β is above θ but within warm_zone_upper (approaching suppression).
     warm_zone_upper: float = 0.0
     warm_zone_bonus_coef: float = 0.0
     # Penalty on max-length timeout without early stop (Fig 4 learnability).
     truncation_penalty: float = 0.0
+    # Bellman reward scale for DQN updates only (episode logs stay raw).
+    reward_learning_scale: float = 1.0
 
     # DBS parameter bounds (adapter clamping)
     amplitude_min: float = 0.0
@@ -159,6 +163,8 @@ def fig4_nguyen_config(
     v10c: subthreshold_steps_required=2 for easier early-stop.
     v23 base (2026-08-08): eps_ep100_2200 probe winner — decay_steps=2200,
     epsilon_end=0.05 for exploit-by-~ep100 timing shape.
+    v15 anti-farming: cap progress bonus per step, scale Bellman targets only,
+    stronger truncation penalty — raw episode logs unchanged for gates.
     """
     return SNNConfig(
         seed=seed,
@@ -174,9 +180,11 @@ def fig4_nguyen_config(
         threshold_reward=300.0,
         energy_penalty=0.0,
         alpha_beta_progress_coef=2000.0,
+        alpha_beta_progress_cap_per_step=10_000.0,
         warm_zone_upper=220.0,
         warm_zone_bonus_coef=150.0,
-        truncation_penalty=600_000.0,
+        truncation_penalty=1_000_000.0,
+        reward_learning_scale=1e-4,
         stimulated_neurons=1,
         log_episodes=True,
     )
