@@ -80,7 +80,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 ### Latest attempt (v22, v10f)
 
-![Replication Fig 4 — latest](images/4/training_reward_length_v39.png)
+![Replication Fig 4 — latest](images/4/training_reward_length_v40.png)
 
 <!-- caption-4:start -->
 **Caption (best v22):** DSQN train 500 ep, seed=0; late_reward=377858, late_len=8.9; shape_pass=False — best late length so far; timing gates still fail (v22)
@@ -89,12 +89,12 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 <!-- caption-4:end -->
 
 <!-- caption-4-latest:start -->
-**Caption:** DSQN train 500 ep, seed=0; late_reward=377858, late_len=8.9; shape_pass=False pass=False (reward shape=False full=False, length shape=False full=True) (v39)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=-401154, late_len=16.6; shape_pass=False pass=False (reward shape=False full=False, length shape=False full=False) (v40)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4-latest:end -->
 
-**Status:** Timing shape open — latest **v39** (`late_len=8.9`, `shape_pass=False`); see manifest gates.
+**Status:** Timing shape open — latest **v40** (`late_len=16.6`, `shape_pass=False`); see manifest gates.
 
 <!-- gates-4:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: no, **`pass`**: no, 2026-08-11). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
@@ -112,17 +112,17 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 | `paper_reward_improves_like_paper` | digitization — reward improves | yes | yes |
 | `paper_late_reward_ratio_near_paper` | digitization — late/first-50 reward ratio (diagnostic) | — | — |
 
-### Length (panel b) (`shape_pass`: no | `pass`: yes)
+### Length (panel b) (`shape_pass`: no | `pass`: no)
 
 | Key | Description | Shape | Full |
 |-----|-------------|-------|------|
 | `length_decreases` | late mean length < early mean − 1 step | yes | yes |
-| `late_length_paper_band` | late mean length ≤ 12 | yes | yes |
+| `late_length_paper_band` | late mean length ≤ 12 | no | no |
 | `early_near_max_length` | median first 50 ≥ max_steps − 2 | yes | yes |
 | `length_mid_glide_like_paper` | length glide ep 50–100 like paper | no | no |
 | `length_post100_plateau` | length plateau ep 100+ like paper | no | no |
 | `paper_length_decreases_like_paper` | digitization — length decreases | yes | yes |
-| `paper_late_length_near_paper` | digitization — late length | — | yes |
+| `paper_late_length_near_paper` | digitization — late length | — | no |
 | `paper_early_near_max_length` | digitization — early near max length | — | yes |
 <!-- gates-4:end -->
 
