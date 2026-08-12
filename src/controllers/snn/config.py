@@ -161,10 +161,10 @@ def fig4_nguyen_config(
     collapse (v13); keep v9 shaping for learnable early-stop.
 
     v10c: subthreshold_steps_required=2 for easier early-stop.
-    v43 (2026-08-12): restore the v10 PASS recipe (decay=3500, ε_end=0.15,
-    prog=2000, trunc=600k, unscaled Bellman) after v40–v42 lost the late
-    length floor chasing faster anneal / stronger shaping. Mild progress
-    cap kept; learning_scale=1 so Q updates are not delayed vs v10.
+    v43 FAIL: unscaled Bellman (`reward_learning_scale=1.0`) blew up Q
+    (loss ~10^9–10^10); early-stops vanished after ep ~60; late_len=25,
+    late_reward≈−1.07e6, energy 660→82. v44: same v10 schedule/shaping
+    with v15 `reward_learning_scale=1e-4` restored.
     """
     return SNNConfig(
         seed=seed,
@@ -184,7 +184,7 @@ def fig4_nguyen_config(
         warm_zone_upper=220.0,
         warm_zone_bonus_coef=150.0,
         truncation_penalty=600_000.0,
-        reward_learning_scale=1.0,
+        reward_learning_scale=1e-4,
         stimulated_neurons=1,
         log_episodes=True,
     )
