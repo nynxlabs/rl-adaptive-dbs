@@ -1895,10 +1895,13 @@ def _ravivarapu_4a_status_line(manifest: dict[str, Any]) -> str:
     ver = manifest.get("png_version")
     rep = f" (rep v{ver})" if ver is not None else ""
     manifest_rel = "artifacts/figures/papers/ravivarapu/4/manifest_4a.json"
+    train = manifest.get("train_config") or "fig4_ravivarapu_config"
+    roll = manifest.get("display_roll_window")
+    roll_note = f"; display roll{roll} (gates on raw)" if roll else ""
     if gates.get("pass"):
         return (
             f"**Status:** **Pass**{rep} — `shape_pass` and full `pass`; "
-            "hybrid reset `fixed_episode_seed_until=2` (v89 train); "
+            f"`fixed_episode_seed_until=2`; `{train}`{roll_note}; "
             "paper overlay (black baseline, grey SEA-DBS). "
             f"Manifest `{manifest_rel}`."
         )
