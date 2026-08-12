@@ -185,13 +185,17 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
+    v90 (2026-08-11): baseline mid/late level toward paper dig — extend mid stim
+    boost through ep 80 (closes the ep 38–80 hole where meanΔ vs paper peaked),
+    midlate boost 0.29→0.34, late no-stim ramp 0.40→0.22. SEA-DBS unchanged.
+    Keep ``fixed_episode_seed_until=2`` (v89).
+
     v89 (2026-08-08): hybrid ``fixed_episode_seed_until=2`` — only ep 1–2 use
     fixed IC (avoids seed=1 dip); reseed from ep 3. v88 until=15 failed progressive
     decline (ep-16 transition spike).
 
     v88 (2026-08-08): hybrid ``fixed_episode_seed_until=15`` — failed
     ``dig_progressive_decline_*`` (ep-16 IC handoff bump). Superseded by v89.
-    @ 0.29; late ramp 138–150 max 0.40; mid stim 12–38 @ 0.4; gap_patch off.
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -231,17 +235,17 @@ def fig4_ravivarapu_config(
             gs_late_tau_floor_episode_lo=108,
             gs_late_tau_floor=0.94,
             actor_mid_episode_lo=12,
-            actor_mid_episode_hi=38,
+            actor_mid_episode_hi=80,
             actor_mid_episode_stim_logit_boost=0.4,
             actor_midlate_episode_lo=80,
             actor_midlate_episode_hi=120,
-            actor_midlate_episode_stim_logit_boost=0.29,
+            actor_midlate_episode_stim_logit_boost=0.34,
             actor_gap_patch_episode_lo=0,
             actor_gap_patch_episode_hi=0,
             actor_gap_patch_no_stim_boost=0.0,
             actor_late_episode_lo=138,
             actor_late_episode_hi=150,
-            actor_late_episode_no_stim_boost=0.40,
+            actor_late_episode_no_stim_boost=0.22,
             actor_late_episode_boost_ramp=True,
             epsilon_start=0.21,
             epsilon_end=0.21,
