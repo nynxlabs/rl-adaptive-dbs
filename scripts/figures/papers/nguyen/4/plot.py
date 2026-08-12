@@ -218,37 +218,33 @@ def train_series(
         env.close()
 
 
-# late_reward_near_zero is diagnostic only (paper approaches ~0 from below;
-# positive progress shaping makes the floor check a free pass).
-REWARD_HEURISTIC_KEYS = (
-    "reward_scale_paper",
-    "late_reward_above_early",
+# Required: how far up/down (levels) and how fast (timing). All other keys stay
+# logged as diagnostics (info tier in promote.py).
+REWARD_LEVEL_TIMING_KEYS = (
+    "reward_scale_paper",  # early |mean| — started far from the plateau
+    "late_reward_near_zero",  # late mean toward paper ~0
+    "reward_post100_plateau",  # flattened by ~ep 100 and stays
 )
-REWARD_SHAPE_KEYS = (
-    "reward_scale_paper",
-    "late_reward_above_early",
-    "reward_post100_plateau",
+LENGTH_LEVEL_TIMING_KEYS = (
+    "early_near_max_length",  # start at horizon (~25)
+    "late_length_paper_band",  # end ≤ 12
+    "paper_late_length_near_paper",  # end near digitized ~8
+    "length_mid_glide_like_paper",  # drop during ep 50–100
+    "length_post100_plateau",  # arrived ~ep 100 and stays
 )
-REWARD_SHAPE_PAPER_KEYS = (
-    "paper_reward_improves_like_paper",
-)
-# Full ship = shape (+ dig direction). Mag/ratio dig gates are info-only.
-REWARD_FULL_KEYS = REWARD_SHAPE_KEYS + REWARD_SHAPE_PAPER_KEYS
+REWARD_HEURISTIC_KEYS = REWARD_LEVEL_TIMING_KEYS
+REWARD_SHAPE_KEYS = REWARD_LEVEL_TIMING_KEYS
+REWARD_SHAPE_PAPER_KEYS: tuple[str, ...] = ()
+REWARD_FULL_KEYS = REWARD_LEVEL_TIMING_KEYS
 LENGTH_HEURISTIC_KEYS = (
-    "length_decreases",
-    "late_length_paper_band",
     "early_near_max_length",
-)
-LENGTH_SHAPE_KEYS = (
-    "length_decreases",
     "late_length_paper_band",
-    "early_near_max_length",
     "length_mid_glide_like_paper",
     "length_post100_plateau",
 )
-LENGTH_SHAPE_PAPER_KEYS = (
-    "paper_length_decreases_like_paper",
-)
+LENGTH_SHAPE_KEYS = LENGTH_LEVEL_TIMING_KEYS
+LENGTH_SHAPE_PAPER_KEYS = ("paper_late_length_near_paper",)
+LENGTH_FULL_KEYS = LENGTH_LEVEL_TIMING_KEYS
 
 
 def _group_pass(group: dict[str, Any], keys: tuple[str, ...]) -> bool:
@@ -362,10 +358,10 @@ def evaluate_gates(
     dig_length = fig4_length_gates(lengths, max_episode_steps=max_episode_steps)
     reward = attach_digitization(reward_heur, dig_reward)
     length = attach_digitization(length_heur, dig_length)
-    reward["shape_pass"] = _group_pass(reward, REWARD_SHAPE_KEYS + REWARD_SHAPE_PAPER_KEYS)
-    reward["pass"] = _group_pass(reward, REWARD_FULL_KEYS)
-    length["shape_pass"] = _group_pass(length, LENGTH_SHAPE_KEYS + LENGTH_SHAPE_PAPER_KEYS)
-    # length full pass keeps attach_digitization (heuristics + dig levels)
+    reward["shape_pass"] = _group_pass(reward, REWARD_LEVEL_TIMING_KEYS)
+    reward["pass"] = _group_pass(reward, REWARD_LEVEL_TIMING_KEYS)
+    length["shape_pass"] = _group_pass(length, LENGTH_LEVEL_TIMING_KEYS)
+    length["pass"] = _group_pass(length, LENGTH_LEVEL_TIMING_KEYS)
 
     return {
         "pass": bool(reward["pass"] and length["pass"]),

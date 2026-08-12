@@ -161,12 +161,10 @@ def fig4_nguyen_config(
     collapse (v13); keep v9 shaping for learnable early-stop.
 
     v10c: subthreshold_steps_required=2 for easier early-stop.
-    v15 anti-farming: cap progress bonus per step, scale Bellman targets only,
-    stronger truncation penalty — raw episode logs unchanged for gates.
-    v42 (2026-08-12): restore v39 late-quality floor decay=4200 / freq_sens=15
-    after v40 (2200) and v41 (3200+freq20) late-regressed (late_len 16.6 / 18.7
-    vs Report 3 v22 ≈8.9). Keep prog=2500 so early-stop pays during high-ε
-    mid-window (paper 50–100 glide) without speeding the anneal.
+    v43 (2026-08-12): restore the v10 PASS recipe (decay=3500, ε_end=0.15,
+    prog=2000, trunc=600k, unscaled Bellman) after v40–v42 lost the late
+    length floor chasing faster anneal / stronger shaping. Mild progress
+    cap kept; learning_scale=1 so Q updates are not delayed vs v10.
     """
     return SNNConfig(
         seed=seed,
@@ -174,19 +172,19 @@ def fig4_nguyen_config(
         max_episode_steps=EVAL_MAX_STEPS,
         alpha_beta_threshold=BIOMARKER_THRESHOLD,
         subthreshold_steps_required=2,
-        epsilon_decay_steps=4_200,
-        epsilon_end=0.05,
+        epsilon_decay_steps=3_500,
+        epsilon_end=0.15,
         learning_rate=5e-4,
         frequency_sensitivity=15.0,
         pulse_width_sensitivity=0.1,
         threshold_reward=300.0,
         energy_penalty=0.0,
-        alpha_beta_progress_coef=2500.0,
+        alpha_beta_progress_coef=2000.0,
         alpha_beta_progress_cap_per_step=10_000.0,
         warm_zone_upper=220.0,
         warm_zone_bonus_coef=150.0,
-        truncation_penalty=1_000_000.0,
-        reward_learning_scale=1e-4,
+        truncation_penalty=600_000.0,
+        reward_learning_scale=1.0,
         stimulated_neurons=1,
         log_episodes=True,
     )
