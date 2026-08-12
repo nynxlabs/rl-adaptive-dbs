@@ -1892,11 +1892,25 @@ def refresh_ravivarapu_gate_tables(*, update_docs: bool = True) -> None:
 
 def _ravivarapu_4a_status_line(manifest: dict[str, Any]) -> str:
     gates = manifest.get("gates") or {}
+    ver = manifest.get("png_version")
+    rep = f" (rep v{ver})" if ver is not None else ""
+    manifest_rel = "artifacts/figures/papers/ravivarapu/4/manifest_4a.json"
     if gates.get("pass"):
-        return "**Status:** Pass — all gates true; see manifest."
+        return (
+            f"**Status:** **Pass**{rep} — `shape_pass` and full `pass`; "
+            "hybrid reset `fixed_episode_seed_until=2` (v89 train); "
+            "paper overlay (black baseline, grey SEA-DBS). "
+            f"Manifest `{manifest_rel}`."
+        )
     if gates.get("shape_pass"):
-        return "**Status:** Shape OK (full open) — see manifest gates."
-    return "**Status:** Fail — see manifest gates (`shape_pass` / `pass`)."
+        return (
+            f"**Status:** Shape OK (full open){rep} — see manifest gates. "
+            f"Manifest `{manifest_rel}`."
+        )
+    return (
+        f"**Status:** Fail{rep} — see manifest gates (`shape_pass` / `pass`). "
+        f"Manifest `{manifest_rel}`."
+    )
 
 
 def promote_ravivarapu_4a(*, manifest: dict[str, Any], png_path: Path, update_docs: bool = True) -> dict[str, str]:
@@ -1921,9 +1935,13 @@ def promote_ravivarapu_4a(*, manifest: dict[str, Any], png_path: Path, update_do
             f"![Replication Fig 4a](images/4a/{png_path.name})",
             text,
         )
-        text = text.replace(
-            "**Status:** Open — needs SEA-DBS trainer + Baseline ablation.",
+        # Rewrite the first panel Status line (Fig 4a) on every promote — including
+        # Pass→Pass version bumps. The old Open-only replace left stale ``rep vN``.
+        text = re.sub(
+            r"(?m)^\*\*Status:\*\*.*$",
             _ravivarapu_4a_status_line(manifest),
+            text,
+            count=1,
         )
         PAPER_RAVIVARAPU_DOC.write_text(text)
     refresh_ravivarapu_gate_tables(update_docs=update_docs)
