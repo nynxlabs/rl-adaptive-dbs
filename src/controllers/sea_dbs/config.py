@@ -185,17 +185,18 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v90 (2026-08-11): baseline mid/late level toward paper dig — extend mid stim
-    boost through ep 80 (closes the ep 38–80 hole where meanΔ vs paper peaked),
-    midlate boost 0.29→0.34, late no-stim ramp 0.40→0.22. SEA-DBS unchanged.
-    Keep ``fixed_episode_seed_until=2`` (v89).
+    v91 (2026-08-12): earlier / steeper early–mid decline vs paper dig (both
+    variants). Digitized paper drops ~40% of its early→late fall by ep 50; v90
+    only ~25% and baseline late stayed ~+0.046 above paper. Changes:
+    - Baseline: no-stim bias 2.19→1.90; mid stim ep 3–80 @ 0.55 (was 12–80 @ 0.4);
+      midlate 0.40; late no-stim 0.08.
+    - SEA-DBS: no-stim bias 1.55→1.30; mid stim ep 3–50 @ 0.40 (new — paper was
+      almost flat ep 0–40). Keep ``fixed_episode_seed_until=2``. Dig gates unchanged.
 
-    v89 (2026-08-08): hybrid ``fixed_episode_seed_until=2`` — only ep 1–2 use
-    fixed IC (avoids seed=1 dip); reseed from ep 3. v88 until=15 failed progressive
-    decline (ep-16 transition spike).
+    v90 (2026-08-11): baseline mid stim through ep 80; midlate 0.34; late no-stim
+    0.22. Level barely moved; SEA unchanged.
 
-    v88 (2026-08-08): hybrid ``fixed_episode_seed_until=15`` — failed
-    ``dig_progressive_decline_*`` (ep-16 IC handoff bump). Superseded by v89.
+    v89 (2026-08-08): hybrid ``fixed_episode_seed_until=2``.
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -213,7 +214,7 @@ def fig4_ravivarapu_config(
     if variant == "paper":
         return replace(
             cfg,
-            actor_no_stim_bias=1.55,
+            actor_no_stim_bias=1.30,
             gs_tau0=5.0,
             gs_lambda=1.25e-5,
             gs_tau_min=0.42,
@@ -221,11 +222,15 @@ def fig4_ravivarapu_config(
             pm_warmup_steps=15000,
             actor_lr=7.5e-6,
             critic_lr=1.45e-4,
+            # Paper-silent early stim nudge: v90 SEA slope ep 0–40 was ~0.06× paper.
+            actor_mid_episode_lo=3,
+            actor_mid_episode_hi=50,
+            actor_mid_episode_stim_logit_boost=0.40,
         )
     if variant == "baseline":
         return replace(
             cfg,
-            actor_no_stim_bias=2.19,
+            actor_no_stim_bias=1.90,
             force_gumbel_softmax=True,
             gs_tau0=5.0,
             gs_lambda=6.1e-5,
@@ -234,18 +239,18 @@ def fig4_ravivarapu_config(
             gs_early_lambda_scale=4.5,
             gs_late_tau_floor_episode_lo=108,
             gs_late_tau_floor=0.94,
-            actor_mid_episode_lo=12,
+            actor_mid_episode_lo=3,
             actor_mid_episode_hi=80,
-            actor_mid_episode_stim_logit_boost=0.4,
+            actor_mid_episode_stim_logit_boost=0.55,
             actor_midlate_episode_lo=80,
             actor_midlate_episode_hi=120,
-            actor_midlate_episode_stim_logit_boost=0.34,
+            actor_midlate_episode_stim_logit_boost=0.40,
             actor_gap_patch_episode_lo=0,
             actor_gap_patch_episode_hi=0,
             actor_gap_patch_no_stim_boost=0.0,
             actor_late_episode_lo=138,
             actor_late_episode_hi=150,
-            actor_late_episode_no_stim_boost=0.22,
+            actor_late_episode_no_stim_boost=0.08,
             actor_late_episode_boost_ramp=True,
             epsilon_start=0.21,
             epsilon_end=0.21,
