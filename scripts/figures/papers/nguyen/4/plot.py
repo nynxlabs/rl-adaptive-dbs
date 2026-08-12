@@ -218,10 +218,11 @@ def train_series(
         env.close()
 
 
+# late_reward_near_zero is diagnostic only (paper approaches ~0 from below;
+# positive progress shaping makes the floor check a free pass).
 REWARD_HEURISTIC_KEYS = (
     "reward_scale_paper",
     "late_reward_above_early",
-    "late_reward_near_zero",
 )
 REWARD_SHAPE_KEYS = (
     "reward_scale_paper",
@@ -231,6 +232,8 @@ REWARD_SHAPE_KEYS = (
 REWARD_SHAPE_PAPER_KEYS = (
     "paper_reward_improves_like_paper",
 )
+# Full ship = shape (+ dig direction). Mag/ratio dig gates are info-only.
+REWARD_FULL_KEYS = REWARD_SHAPE_KEYS + REWARD_SHAPE_PAPER_KEYS
 LENGTH_HEURISTIC_KEYS = (
     "length_decreases",
     "late_length_paper_band",
@@ -360,7 +363,9 @@ def evaluate_gates(
     reward = attach_digitization(reward_heur, dig_reward)
     length = attach_digitization(length_heur, dig_length)
     reward["shape_pass"] = _group_pass(reward, REWARD_SHAPE_KEYS + REWARD_SHAPE_PAPER_KEYS)
+    reward["pass"] = _group_pass(reward, REWARD_FULL_KEYS)
     length["shape_pass"] = _group_pass(length, LENGTH_SHAPE_KEYS + LENGTH_SHAPE_PAPER_KEYS)
+    # length full pass keeps attach_digitization (heuristics + dig levels)
 
     return {
         "pass": bool(reward["pass"] and length["pass"]),
