@@ -66,10 +66,24 @@ OUT_STEM = "training_psd"
 DEFAULT_SEED = 0
 VARIANTS = ("baseline", "paper")
 DEFAULT_TRAIN_EPISODES = 150
+# Paper-silent display convention: ship PNG uses a rolling mean so single-seed
+# roughness matches digitized paper (~std Δ≈0.004). Gates / series.json stay raw.
+DISPLAY_ROLL_WINDOW = 10
 
 # Replication traces; paper overlays use lightened dashed versions of these colors.
 REPL_BASELINE_COLOR = "#1f77b4"
 REPL_SEA_COLOR = "#d62728"
+
+
+def _rolling_mean(values: list[float] | np.ndarray, window: int) -> np.ndarray:
+    y = np.asarray(values, dtype=float)
+    if window <= 1 or y.size == 0:
+        return y
+    out = np.empty_like(y)
+    for i in range(y.size):
+        lo = max(0, i - window + 1)
+        out[i] = float(y[lo : i + 1].mean())
+    return out
 
 
 def _vault_backed_png(path: Path) -> Path:
@@ -190,10 +204,25 @@ def train_all(
     resume: Path | None = None,
     start_episode: int | None = None,
     checkpoint_interval: int = _resume_cli.DEFAULT_CHECKPOINT_INTERVAL,
+    train_variants: tuple[str, ...] = VARIANTS,
 ) -> dict[str, Any]:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     series: dict[str, Any] = {"seed": seed, "smoke": smoke, "variants": {}}
+    cached: dict[str, Any] = {}
+    if SHARED_SERIES.is_file():
+        try:
+            cached = json.loads(SHARED_SERIES.read_text(encoding="utf-8")).get("variants") or {}
+        except json.JSONDecodeError:
+            cached = {}
     for variant in VARIANTS:
+        if variant not in train_variants:
+            if variant not in cached:
+                raise SystemExit(
+                    f"--variants omitted {variant!r} but {SHARED_SERIES} has no cached series"
+                )
+            print(f"reusing cached variant={variant} from {SHARED_SERIES}", flush=True)
+            series["variants"][variant] = cached[variant]
+            continue
         print(f"training variant={variant} seed={seed} smoke={smoke}", flush=True)
         variant_resume = resume
         if resume is not None and variant != "paper" and str(resume).find(variant) < 0:
@@ -230,12 +259,13 @@ def evaluate_gates(series: dict[str, Any]) -> dict[str, Any]:
 def plot_series(series: dict[str, Any], png_path: Path) -> None:
     fig, ax = plt.subplots(figsize=(6, 4))
     paper_y: list[np.ndarray] = []
+    roll_w = DISPLAY_ROLL_WINDOW
     repl_styles = (
-        ("baseline", "Baseline (DDPG)", REPL_BASELINE_COLOR),
-        ("paper", "SEA-DBS", REPL_SEA_COLOR),
+        ("baseline", f"Baseline (DDPG, roll{roll_w})", REPL_BASELINE_COLOR),
+        ("paper", f"SEA-DBS (roll{roll_w})", REPL_SEA_COLOR),
     )
     for variant, label, color in repl_styles:
-        psd = series["variants"][variant]["episode_psd"]
+        psd = _rolling_mean(series["variants"][variant]["episode_psd"], roll_w)
         episodes = np.arange(1, len(psd) + 1)
         ax.plot(episodes, psd, label=label, linewidth=1.6 if variant == "baseline" else 1.8, color=color)
         paper_y.append(np.asarray(psd, dtype=float))
@@ -262,6 +292,13 @@ def main() -> None:
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--episodes", type=int, default=None)
+    parser.add_argument(
+        "--variants",
+        nargs="+",
+        choices=list(VARIANTS),
+        default=None,
+        help="Train only these variants; omitted ones are reused from series.json",
+    )
     _resume_cli.add_training_resume_args(parser)
     args = parser.parse_args()
     _resume_cli.configure_promote_publish(args, _figure_promote)
@@ -272,6 +309,7 @@ def main() -> None:
             raise SystemExit(f"missing cache: {SHARED_SERIES}")
         series = json.loads(SHARED_SERIES.read_text(encoding="utf-8"))
     else:
+        train_variants = tuple(args.variants) if args.variants else VARIANTS
         series = train_all(
             seed=args.seed,
             smoke=args.smoke,
@@ -279,6 +317,7 @@ def main() -> None:
             resume=args.resume,
             start_episode=args.start_episode,
             checkpoint_interval=args.checkpoint_interval,
+            train_variants=train_variants,
         )
 
     gates = evaluate_gates(series)
@@ -288,7 +327,8 @@ def main() -> None:
     caption = (
         f"Training mean GPi beta PSD vs episode (seed {args.seed}); "
         f"shape_pass={gates['shape_pass']} pass={gates['pass']}; "
-        "Baseline vs full SEA-DBS (PM+GS)."
+        f"Baseline vs full SEA-DBS (PM+GS); display roll{DISPLAY_ROLL_WINDOW} "
+        "(gates on raw)."
     )
     manifest = {
         "panel": "4a",
@@ -300,6 +340,8 @@ def main() -> None:
         "elapsed_s": round(time.time() - t0, 1),
         "caption": caption,
         "series_cache": SHARED_SERIES.as_posix(),
+        "display_roll_window": DISPLAY_ROLL_WINDOW,
+        "train_config": "fig4_ravivarapu_config_v90",
     }
     DEFAULT_MANIFEST.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     if hasattr(_figure_promote, "promote_ravivarapu_4a"):
