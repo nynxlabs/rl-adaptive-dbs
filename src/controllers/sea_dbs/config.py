@@ -185,13 +185,14 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v92 (2026-08-12): more suppression on **both** traces vs paper dig. v91 late
-    baseline 0.401 (paper ~0.369) and SEA 0.355 (paper ~0.341) — SEA sat on the
-    60 ms burst floor. Raise ``dbs_burst_ms`` 60→70 so the stim floor can reach
-    paper SEA late; keep a modest baseline late no-stim so ``dig_gap_widens``
-    does not fail (v91 late gap 0.046 < midlate 0.052). Dig gates unchanged.
+    v93 (2026-08-12): walk back v92 overshoot. 70 ms burst + SEA midlate stim
+    collapsed SEA late to 0.274 (paper ~0.340) and front-loaded the mid drop.
+    Burst 62 ms (between the 60 ms ~0.35 floor and the 70 ms collapse) with
+    v91-like SEA logits; baseline ~60% of the way from v91 (late 0.401) toward
+    v92 (late 0.346) to aim at paper ~0.368. Dig gates unchanged.
     ``fixed_episode_seed_until=2``.
 
+    v92: burst 70 + extra SEA stim; Fail front-loaded SEA + gap_widens.
     v91: earlier stim nudges; baseline late improved; failed gap_widens.
     """
     cfg = SEADBSConfig(
@@ -205,12 +206,12 @@ def fig4_ravivarapu_config(
         episode_psd_metric="mean",
         min_buffer_size=192,
         polyak_tau=0.0035,
-        dbs_burst_ms=70.0,
+        dbs_burst_ms=62.0,
     )
     if variant == "paper":
         return replace(
             cfg,
-            actor_no_stim_bias=1.15,
+            actor_no_stim_bias=1.25,
             gs_tau0=5.0,
             gs_lambda=1.25e-5,
             gs_tau_min=0.42,
@@ -219,16 +220,13 @@ def fig4_ravivarapu_config(
             actor_lr=7.5e-6,
             critic_lr=1.45e-4,
             actor_mid_episode_lo=3,
-            actor_mid_episode_hi=80,
-            actor_mid_episode_stim_logit_boost=0.45,
-            actor_midlate_episode_lo=80,
-            actor_midlate_episode_hi=120,
-            actor_midlate_episode_stim_logit_boost=0.25,
+            actor_mid_episode_hi=50,
+            actor_mid_episode_stim_logit_boost=0.40,
         )
     if variant == "baseline":
         return replace(
             cfg,
-            actor_no_stim_bias=1.75,
+            actor_no_stim_bias=1.81,
             force_gumbel_softmax=True,
             gs_tau0=5.0,
             gs_lambda=6.1e-5,
@@ -239,16 +237,16 @@ def fig4_ravivarapu_config(
             gs_late_tau_floor=0.94,
             actor_mid_episode_lo=3,
             actor_mid_episode_hi=80,
-            actor_mid_episode_stim_logit_boost=0.60,
+            actor_mid_episode_stim_logit_boost=0.58,
             actor_midlate_episode_lo=80,
             actor_midlate_episode_hi=120,
-            actor_midlate_episode_stim_logit_boost=0.48,
+            actor_midlate_episode_stim_logit_boost=0.45,
             actor_gap_patch_episode_lo=0,
             actor_gap_patch_episode_hi=0,
             actor_gap_patch_no_stim_boost=0.0,
             actor_late_episode_lo=138,
             actor_late_episode_hi=150,
-            actor_late_episode_no_stim_boost=0.16,
+            actor_late_episode_no_stim_boost=0.13,
             actor_late_episode_boost_ramp=True,
             epsilon_start=0.21,
             epsilon_end=0.21,
