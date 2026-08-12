@@ -161,10 +161,13 @@ def fig4_nguyen_config(
     collapse (v13); keep v9 shaping for learnable early-stop.
 
     v10c: subthreshold_steps_required=2 for easier early-stop.
-    v23 base (2026-08-08): eps_ep100_2200 probe winner — decay_steps=2200,
-    epsilon_end=0.05 for exploit-by-~ep100 timing shape.
     v15 anti-farming: cap progress bonus per step, scale Bellman targets only,
     stronger truncation penalty — raw episode logs unchanged for gates.
+    v41 (2026-08-11): full 500ep with decay=2200 (v40) late-regressed
+    (late_len≈16.6, never reached smoothed len≤12) vs v39 decay=4200
+    late_len≈8.9. Middle anneal decay=3200 + prog=2500 (shaping-probe
+    mid-glide) + frequency_sensitivity=20 to pull early-stop earlier without
+    hard-locking a weak greedy policy.
     """
     return SNNConfig(
         seed=seed,
@@ -172,14 +175,14 @@ def fig4_nguyen_config(
         max_episode_steps=EVAL_MAX_STEPS,
         alpha_beta_threshold=BIOMARKER_THRESHOLD,
         subthreshold_steps_required=2,
-        epsilon_decay_steps=2_200,
+        epsilon_decay_steps=3_200,
         epsilon_end=0.05,
         learning_rate=5e-4,
-        frequency_sensitivity=15.0,
+        frequency_sensitivity=20.0,
         pulse_width_sensitivity=0.1,
         threshold_reward=300.0,
         energy_penalty=0.0,
-        alpha_beta_progress_coef=2000.0,
+        alpha_beta_progress_coef=2500.0,
         alpha_beta_progress_cap_per_step=10_000.0,
         warm_zone_upper=220.0,
         warm_zone_bonus_coef=150.0,
