@@ -143,18 +143,29 @@ def iter_all_push_targets(*, include_repo_materialized: bool = True) -> list[tup
 
 
 def _resolve_source(paper: str, rel: str) -> Path | None:
-    """Prefer materialized bytes in the repo checkout, then vault."""
-    repo_path = REPO_ROOT / "figures" / paper / rel
-    if repo_path.is_file() and not repo_path.is_symlink():
-        return repo_path
-    if repo_path.is_symlink() and repo_path.is_file():
-        return repo_path.resolve()
+    """Prefer materialized bytes in the active checkout, then main, then vault.
+
+    Panel plots often run from a ``.worktrees/`` checkout where ``REPO_ROOT`` is the
+    main tree (for tracker promote) but the new ``_vN.png`` was written under the
+    worktree. Search the worktree first when it differs from main.
+    """
+    candidates: list[Path] = []
+    checkout = getattr(_promote, "CHECKOUT_ROOT", None)
+    if isinstance(checkout, Path) and checkout.resolve() != REPO_ROOT.resolve():
+        candidates.append(checkout / "figures" / paper / rel)
+    candidates.append(REPO_ROOT / "figures" / paper / rel)
+    for repo_path in candidates:
+        if repo_path.is_file() and not repo_path.is_symlink():
+            return repo_path
+        if repo_path.is_symlink() and repo_path.is_file():
+            return repo_path.resolve()
     vault_path = kb_figures_root() / paper / rel
     if vault_path.is_file():
         return vault_path.resolve()
-    resolved = (REPO_ROOT / "figures" / paper / rel).resolve()
-    if resolved.is_file():
-        return resolved
+    for repo_path in candidates:
+        resolved = repo_path.resolve()
+        if resolved.is_file():
+            return resolved
     return None
 
 

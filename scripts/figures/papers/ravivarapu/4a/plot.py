@@ -73,19 +73,41 @@ REPL_SEA_COLOR = "#d62728"
 
 
 def _vault_backed_png(path: Path) -> Path:
+    """Write versioned PNGs into the vault-backed main figures tree when possible.
+
+    Worktree checkouts often materialize ``paper.png`` as a real file, so the local
+    ``figures/...`` tree is not a vault symlink. Prefer the main-checkout
+    ``paper.png`` symlink (via ``promote.REPO_ROOT``) so ``savefig`` + ``--push-kb``
+    land bytes where the tracker and Report 3 expect them.
+    """
     path = Path(path)
-    paper = path.parent / "paper.png"
-    if not paper.is_symlink():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return path
-    vault_dir = paper.resolve().parent
-    vault_target = vault_dir / path.name
+    roots: list[Path] = []
+    main_root = getattr(_figure_promote, "REPO_ROOT", None)
+    if isinstance(main_root, Path):
+        roots.append(main_root)
+    roots.append(Path.cwd())
+    for root in roots:
+        paper = root / path.parent / "paper.png"
+        if not paper.is_symlink():
+            continue
+        vault_dir = paper.resolve().parent
+        vault_target = vault_dir / path.name
+        local = path if path.is_absolute() else Path.cwd() / path
+        local.parent.mkdir(parents=True, exist_ok=True)
+        if not vault_target.exists():
+            vault_target.parent.mkdir(parents=True, exist_ok=True)
+            vault_target.touch()
+        if local.exists() or local.is_symlink():
+            if local.resolve() != vault_target.resolve():
+                # Prefer vault target for the actual write.
+                return vault_target
+            return local
+        try:
+            local.symlink_to(vault_target)
+        except OSError:
+            return vault_target
+        return local
     path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() or path.is_symlink():
-        return path
-    if not vault_target.exists():
-        vault_target.touch()
-    path.symlink_to(vault_target)
     return path
 
 
