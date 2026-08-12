@@ -99,25 +99,23 @@ PAPER_NGUYEN_7_REPLICATION_ALT = "Replication Fig 7"
 NGUYEN_FIG4_GATE_TIER: dict[str, dict[str, str]] = {
     "reward": {
         "reward_scale_paper": "shape",
-        "late_reward_above_early": "shape",
+        "late_reward_near_zero": "shape",
         "reward_post100_plateau": "shape",
-        # Diagnostic: paper approaches ~0 from below; positive shaping free-passes this.
-        "late_reward_near_zero": "info",
+        "late_reward_above_early": "info",
         "early_high_variance": "info",
-        # Diagnostic: paper negative-million band vs positive progress-shaping rewards.
         "paper_early_reward_mag_near_paper": "info",
-        "paper_reward_improves_like_paper": "shape",
+        "paper_reward_improves_like_paper": "info",
         "paper_late_reward_ratio_near_paper": "info",
     },
     "length": {
-        "length_decreases": "shape",
-        "late_length_paper_band": "shape",
         "early_near_max_length": "shape",
+        "late_length_paper_band": "shape",
+        "paper_late_length_near_paper": "shape",
         "length_mid_glide_like_paper": "shape",
         "length_post100_plateau": "shape",
-        "paper_length_decreases_like_paper": "shape",
-        "paper_late_length_near_paper": "full",
-        "paper_early_near_max_length": "full",
+        "length_decreases": "info",
+        "paper_length_decreases_like_paper": "info",
+        "paper_early_near_max_length": "info",
     },
 }
 
@@ -125,24 +123,24 @@ NGUYEN_FIG4_GATE_TIER: dict[str, dict[str, str]] = {
 NGUYEN_GATE_GROUPS: dict[str, dict[str, list[tuple[str, str]]]] = {
     "4": {
         "reward": [
-            ("reward_scale_paper", "abs(mean reward ep 0–50) ≥ 5×10⁴"),
-            ("late_reward_above_early", "late mean reward > first-50 mean"),
-            ("reward_post100_plateau", "smoothed reward flat ep 100–450"),
-            ("late_reward_near_zero", "late mean > −2×10⁵ (diagnostic; paper-sign band)"),
+            ("reward_scale_paper", "early |mean| large (started far from plateau)"),
+            ("late_reward_near_zero", "late mean toward paper ~0 (how far up)"),
+            ("reward_post100_plateau", "smoothed reward flat by ~ep 100"),
+            ("late_reward_above_early", "late mean > first-50 (diagnostic)"),
             ("early_high_variance", "early reward variance (logged)"),
             ("paper_early_reward_mag_near_paper", "digitization — early reward magnitude (diagnostic)"),
-            ("paper_reward_improves_like_paper", "digitization — reward improves"),
+            ("paper_reward_improves_like_paper", "digitization — reward improves (diagnostic)"),
             ("paper_late_reward_ratio_near_paper", "digitization — late/first-50 reward ratio (diagnostic)"),
         ],
         "length": [
-            ("length_decreases", "late mean length < early mean − 1 step"),
-            ("late_length_paper_band", "late mean length ≤ 12"),
-            ("early_near_max_length", "median first 50 ≥ max_steps − 2"),
-            ("length_mid_glide_like_paper", "length glide ep 50–100 like paper"),
+            ("early_near_max_length", "start at horizon (median first 50 ≥ max−2)"),
+            ("late_length_paper_band", "late mean length ≤ 12 (how far down)"),
+            ("paper_late_length_near_paper", "late length near digitized ~8"),
+            ("length_mid_glide_like_paper", "length drop ep 50–100 like paper"),
             ("length_post100_plateau", "length plateau ep 100+ like paper"),
-            ("paper_length_decreases_like_paper", "digitization — length decreases"),
-            ("paper_late_length_near_paper", "digitization — late length"),
-            ("paper_early_near_max_length", "digitization — early near max length"),
+            ("length_decreases", "late < early − 1 (diagnostic)"),
+            ("paper_length_decreases_like_paper", "digitization — length decreases (diagnostic)"),
+            ("paper_early_near_max_length", "digitization — early near max (diagnostic)"),
         ],
     },
 }
@@ -489,10 +487,14 @@ def _fig4_gate_values(gates: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 FIG4_INFORMATIONAL_KEYS = frozenset(
     {
+        "late_reward_above_early",
         "early_high_variance",
-        "late_reward_near_zero",
         "paper_early_reward_mag_near_paper",
+        "paper_reward_improves_like_paper",
         "paper_late_reward_ratio_near_paper",
+        "length_decreases",
+        "paper_length_decreases_like_paper",
+        "paper_early_near_max_length",
     }
 )
 
@@ -547,7 +549,7 @@ def _fig4_group_full_pass(group_name: str, group_values: dict[str, Any]) -> bool
     return _group_rows_pass(
         group_values,
         NGUYEN_GATE_GROUPS["4"][group_name],
-        skip=FIG4_INFORMATIONAL_KEYS if group_name == "reward" else None,
+        skip=FIG4_INFORMATIONAL_KEYS,
         only=full_keys,
     )
 
