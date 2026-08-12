@@ -5,12 +5,16 @@ from __future__ import annotations
 import importlib.util
 import json
 import re
+import sys
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any
 
 _REPO = Path(__file__).resolve().parents[2]
+_DIG = Path(__file__).resolve().parent
+if str(_DIG) not in sys.path:
+    sys.path.insert(0, str(_DIG))
 
 RAVIVARAPU_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
     "4a": [
