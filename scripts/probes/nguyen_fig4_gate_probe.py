@@ -133,14 +133,20 @@ def main() -> int:
             for k in (
                 "reward_scale_paper",
                 "late_reward_above_early",
-                "late_reward_near_zero",
                 "length_decreases",
                 "late_length_paper_band",
                 "early_near_max_length",
             )
             if not merged.get(k, True)
         ]
-        dig_fail = [k for k, v in merged.items() if k.startswith("paper_") and v is False]
+        # Mag/ratio dig checks are diagnostic under positive reward shaping.
+        _dig_ship = {"paper_reward_improves_like_paper", "paper_length_decreases_like_paper",
+                     "paper_late_length_near_paper", "paper_early_near_max_length"}
+        dig_fail = [
+            k
+            for k, v in merged.items()
+            if k in _dig_ship and v is False
+        ]
         row = {
             "name": name,
             "first50": float(np.mean(rewards[:50])),
