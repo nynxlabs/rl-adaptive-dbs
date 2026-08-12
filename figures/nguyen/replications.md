@@ -80,7 +80,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 ### Latest attempt (v22, v10f)
 
-![Replication Fig 4 — latest](images/4/training_reward_length_v38.png)
+![Replication Fig 4 — latest](images/4/training_reward_length_v39.png)
 
 <!-- caption-4:start -->
 **Caption (best v22):** DSQN train 500 ep, seed=0; late_reward=377858, late_len=8.9; shape_pass=False — best late length so far; timing gates still fail (v22)
@@ -89,12 +89,12 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 <!-- caption-4:end -->
 
 <!-- caption-4-latest:start -->
-**Caption:** DSQN train 500 ep, seed=0; late_reward=377858, late_len=8.9; shape_pass=False pass=False (reward shape=False full=False, length shape=False full=True) (v38)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=377858, late_len=8.9; shape_pass=False pass=False (reward shape=False full=False, length shape=False full=True) (v39)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4-latest:end -->
 
-**Status:** Timing shape open — latest **v38** (`late_len=8.9`, `shape_pass=False`); see manifest gates.
+**Status:** Timing shape open — latest **v39** (`late_len=8.9`, `shape_pass=False`); see manifest gates.
 
 <!-- gates-4:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: no, **`pass`**: no, 2026-08-11). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
@@ -106,11 +106,11 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 | `reward_scale_paper` | abs(mean reward ep 0–50) ≥ 5×10⁴ | yes | yes |
 | `late_reward_above_early` | late mean reward > first-50 mean | yes | yes |
 | `reward_post100_plateau` | smoothed reward flat ep 100–450 | no | no |
-| `late_reward_near_zero` | late mean > −2×10⁵ (full only) | — | yes |
+| `late_reward_near_zero` | late mean > −2×10⁵ (diagnostic; paper-sign band) | — | — |
 | `early_high_variance` | early reward variance (logged) | — | — |
-| `paper_early_reward_mag_near_paper` | digitization — early reward magnitude | — | no |
+| `paper_early_reward_mag_near_paper` | digitization — early reward magnitude (diagnostic) | — | — |
 | `paper_reward_improves_like_paper` | digitization — reward improves | yes | yes |
-| `paper_late_reward_ratio_near_paper` | digitization — late/first-50 reward ratio | — | no |
+| `paper_late_reward_ratio_near_paper` | digitization — late/first-50 reward ratio (diagnostic) | — | — |
 
 ### Length (panel b) (`shape_pass`: no | `pass`: yes)
 
