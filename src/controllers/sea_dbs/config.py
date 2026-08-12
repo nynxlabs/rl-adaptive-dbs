@@ -185,18 +185,14 @@ def fig4_ravivarapu_config(
 ) -> SEADBSConfig:
     """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
 
-    v91 (2026-08-12): earlier / steeper early–mid decline vs paper dig (both
-    variants). Digitized paper drops ~40% of its early→late fall by ep 50; v90
-    only ~25% and baseline late stayed ~+0.046 above paper. Changes:
-    - Baseline: no-stim bias 2.19→1.90; mid stim ep 3–80 @ 0.55 (was 12–80 @ 0.4);
-      midlate 0.40; late no-stim 0.08.
-    - SEA-DBS: no-stim bias 1.55→1.30; mid stim ep 3–50 @ 0.40 (new — paper was
-      almost flat ep 0–40). Keep ``fixed_episode_seed_until=2``. Dig gates unchanged.
+    v92 (2026-08-12): more suppression on **both** traces vs paper dig. v91 late
+    baseline 0.401 (paper ~0.369) and SEA 0.355 (paper ~0.341) — SEA sat on the
+    60 ms burst floor. Raise ``dbs_burst_ms`` 60→70 so the stim floor can reach
+    paper SEA late; keep a modest baseline late no-stim so ``dig_gap_widens``
+    does not fail (v91 late gap 0.046 < midlate 0.052). Dig gates unchanged.
+    ``fixed_episode_seed_until=2``.
 
-    v90 (2026-08-11): baseline mid stim through ep 80; midlate 0.34; late no-stim
-    0.22. Level barely moved; SEA unchanged.
-
-    v89 (2026-08-08): hybrid ``fixed_episode_seed_until=2``.
+    v91: earlier stim nudges; baseline late improved; failed gap_widens.
     """
     cfg = SEADBSConfig(
         seed=seed,
@@ -209,12 +205,12 @@ def fig4_ravivarapu_config(
         episode_psd_metric="mean",
         min_buffer_size=192,
         polyak_tau=0.0035,
-        dbs_burst_ms=60.0,
+        dbs_burst_ms=70.0,
     )
     if variant == "paper":
         return replace(
             cfg,
-            actor_no_stim_bias=1.30,
+            actor_no_stim_bias=1.15,
             gs_tau0=5.0,
             gs_lambda=1.25e-5,
             gs_tau_min=0.42,
@@ -222,15 +218,17 @@ def fig4_ravivarapu_config(
             pm_warmup_steps=15000,
             actor_lr=7.5e-6,
             critic_lr=1.45e-4,
-            # Paper-silent early stim nudge: v90 SEA slope ep 0–40 was ~0.06× paper.
             actor_mid_episode_lo=3,
-            actor_mid_episode_hi=50,
-            actor_mid_episode_stim_logit_boost=0.40,
+            actor_mid_episode_hi=80,
+            actor_mid_episode_stim_logit_boost=0.45,
+            actor_midlate_episode_lo=80,
+            actor_midlate_episode_hi=120,
+            actor_midlate_episode_stim_logit_boost=0.25,
         )
     if variant == "baseline":
         return replace(
             cfg,
-            actor_no_stim_bias=1.90,
+            actor_no_stim_bias=1.75,
             force_gumbel_softmax=True,
             gs_tau0=5.0,
             gs_lambda=6.1e-5,
@@ -241,16 +239,16 @@ def fig4_ravivarapu_config(
             gs_late_tau_floor=0.94,
             actor_mid_episode_lo=3,
             actor_mid_episode_hi=80,
-            actor_mid_episode_stim_logit_boost=0.55,
+            actor_mid_episode_stim_logit_boost=0.60,
             actor_midlate_episode_lo=80,
             actor_midlate_episode_hi=120,
-            actor_midlate_episode_stim_logit_boost=0.40,
+            actor_midlate_episode_stim_logit_boost=0.48,
             actor_gap_patch_episode_lo=0,
             actor_gap_patch_episode_hi=0,
             actor_gap_patch_no_stim_boost=0.0,
             actor_late_episode_lo=138,
             actor_late_episode_hi=150,
-            actor_late_episode_no_stim_boost=0.08,
+            actor_late_episode_no_stim_boost=0.16,
             actor_late_episode_boost_ramp=True,
             epsilon_start=0.21,
             epsilon_end=0.21,
