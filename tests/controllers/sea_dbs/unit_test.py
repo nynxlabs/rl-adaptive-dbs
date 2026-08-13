@@ -27,6 +27,35 @@ def test_adapter_reset_nonzero_p_beta() -> None:
         env.close()
 
 
+def test_set_carrier_hz_survives_reset() -> None:
+    """Fig 5 eval sets 50/30 Hz then reset(); must not restore train carrier."""
+    from types import SimpleNamespace
+
+    class _FakePlant:
+        def reset(self, seed: int | None = None) -> None:
+            return None
+
+        def integrate(self, duration_s, dbs_spec=None, *, record_spikes: bool = True):
+            return SimpleNamespace(p_beta=196.0)
+
+        def close(self) -> None:
+            return None
+
+    cfg = SEADBSConfig(seed=0, carrier_hz=130.0, dbs_burst_ms=62.0)
+    env = SEA_DBSEnvAdapter(plant=_FakePlant(), config=cfg)
+    try:
+        env.set_carrier_hz(50.0)
+        _obs, info = env.reset(seed=0)
+        assert info["carrier_hz"] == 50.0
+        _obs, _reward, _term, _trunc, step_info = env.step(1)
+        assert step_info["carrier_hz"] == 50.0
+        env.set_carrier_hz(30.0)
+        _obs, info = env.reset(seed=1)
+        assert info["carrier_hz"] == 30.0
+    finally:
+        env.close()
+
+
 def test_reward_eq7_below_threshold_positive() -> None:
     r = sea_dbs_reward(0.2, beta_threshold=0.35, reward_scale=10.0)
     assert r > 0
