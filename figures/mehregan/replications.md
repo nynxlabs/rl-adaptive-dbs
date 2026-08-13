@@ -186,6 +186,7 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 | `drop_vs_paper` | drop ≥ 70% of digitized paper drop | pending |
 | `late_early_ratio_near_paper` | late/early ratio vs digitization | pending |
 | `mid_fade_vs_paper` | mid [120,150] fade ≥ 50% of paper mid-drop | pending |
+| `ep0_near_paper` | steps 0–29 mean within 10% of digitized paper ep0 | pending |
 <!-- gates-4a:end -->
 
 **Panel notes:** extended tuning history (skip_regular workflow, entropy experiments) — [docs/figures/mehregan/4a.md](../../docs/figures/mehregan/4a.md).
@@ -206,7 +207,7 @@ tmux new-session -d -s fig4a-train \
  "setsid nohup uv run python scripts/figures/papers/mehregan/4a/plot.py >> logs/fig4a-train.log 2>&1 < /dev/null"
 ```
 
-**Defaults:** seed `0`, **45 Hz** mean init, `state_length=1`, `fixed_mean_pattern`, **softmax** exploration (τ **3→1.4** linear), **`critic_action_input=one_hot`**, `init_bias_scale=0.5`, `entropy_coeff=0.01`, `plant.dt_ms=0.02`. Live cache: `series.json` (previous lock `series_v18.json`).
+**Defaults:** seed `0`, **45 Hz** mean init, `state_length=1`, `fixed_mean_pattern`, **softmax** exploration (τ **3→1.4** linear), **`critic_action_input=one_hot`**, `init_bias_scale=0`, `jitter_fraction=0.5`, `entropy_coeff=0.01`, `plant.dt_ms=0.02`. Live cache: `series.json` (previous lock `series_v18.json`). Phase 1: match ep0 (~0.50) before the late floor.
 
 ---
 
@@ -255,6 +256,7 @@ Episode **total reward** and **episode-mean PSD(x10³)** during the same **45 Hz
 | `late_beta_above_threshold` | late episode-mean PSD ≥ $β_t=0.35$ | pending |
 | `late_beta_near_paper` | late PSD within 15% of digitized paper | pending |
 | `late_reward_near_zero` | late mean reward in $(-10, 2]$ | pending |
+| `ep0_beta_near_paper` | episode 0 PSD within 10% of digitized paper | pending |
 | `plot_style` | ≥ 2 episodes plotted | pending |
 | `automation` | manifest summary.automation_pass mirrors fig4b bundle | pending |
 <!-- gates-4b:end -->
