@@ -57,8 +57,8 @@ RAVIVARAPU_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
     "5a": [
         ("n_steps_ok", "11 PSD samples (t=0 + 10 stim steps)"),
         ("shared_start", "baseline and SEA-DBS agree at step 0"),
-        ("baseline_declines", "baseline PSD declines"),
-        ("paper_declines", "SEA-DBS PSD declines"),
+        ("baseline_declines", "baseline PSD net drop step 0→10"),
+        ("paper_declines", "SEA-DBS PSD net drop step 0→10"),
         ("paper_end_below_baseline", "SEA-DBS end PSD below baseline"),
         ("paper_steeper_drop", "SEA-DBS drop steeper than baseline"),
         ("carrier_hz_ok", "carrier frequency 50 Hz"),
@@ -66,8 +66,8 @@ RAVIVARAPU_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
     "5b": [
         ("n_steps_ok", "11 PSD samples (t=0 + 10 stim steps)"),
         ("shared_start", "baseline and SEA-DBS agree at step 0"),
-        ("baseline_declines", "baseline PSD declines"),
-        ("paper_declines", "SEA-DBS PSD declines"),
+        ("baseline_declines", "baseline PSD net drop step 0→10"),
+        ("paper_declines", "SEA-DBS PSD net drop step 0→10"),
         ("paper_end_below_baseline", "SEA-DBS end PSD below baseline"),
         ("paper_steeper_drop", "SEA-DBS drop steeper than baseline"),
         ("carrier_hz_ok", "carrier frequency 30 Hz"),

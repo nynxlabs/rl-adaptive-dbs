@@ -77,6 +77,15 @@ def test_gumbel_softmax_binary_shape() -> None:
     assert int(action.item()) in {0, 1}
 
 
+def test_hard_gumbel_action_independent_of_tau() -> None:
+    logits = torch.tensor([0.2, 0.5])
+    torch.manual_seed(0)
+    _, a_lo = gumbel_softmax_sample(logits, tau=0.42, hard=True)
+    torch.manual_seed(0)
+    _, a_hi = gumbel_softmax_sample(logits, tau=5.0, hard=True)
+    assert int(a_lo.item()) == int(a_hi.item())
+
+
 @pytest.mark.parametrize(
     ("variant", "pm", "gs"),
     [

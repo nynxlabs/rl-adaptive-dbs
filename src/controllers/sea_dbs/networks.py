@@ -82,7 +82,9 @@ def gumbel_softmax_sample(
 ) -> tuple[Tensor, Tensor]:
     """Gumbel-Softmax for binary actions (Eqs. 11–13).
 
-    Returns ``(relaxed_probs, hard_action_index)``.
+    Returns ``(relaxed_probs, hard_action_index)``. The hard index is
+    Gumbel-max on the raw logits and does **not** depend on ``tau``;
+    temperature only scales the straight-through soft probabilities.
     """
     if logits.dim() == 1:
         logits = logits.unsqueeze(0)

@@ -6,7 +6,8 @@ Eval-only panel. Train or resume SEA-DBS weights via Fig 4a ``plot.py``
 
 Paper panel: steps 0–10 (untreated + 10 stim); SEA-DBS below Baseline;
 stronger than 30 Hz. Env knobs (burst, scale) come from the Fig 4a checkpoint;
-carrier 50 Hz is the eval override.
+carrier 50 Hz is the eval override. Actions are hard Gumbel-max
+(``action_mode="gumbel"``) so Baseline and SEA can split.
 """
 from __future__ import annotations
 
@@ -143,6 +144,7 @@ def main() -> None:
                 config=SEADBSConfig(variant=variant, seed=args.seed),
                 max_steps=steps,
                 carrier_hz=INFERENCE_CARRIER_50HZ,
+                action_mode="gumbel",
             )
             traces[variant] = payload["p_beta_trajectories"][0]
             actions[variant] = payload["action_trajectories"][0]
@@ -150,6 +152,8 @@ def main() -> None:
                 "carrier_hz": payload["carrier_hz"],
                 "dbs_burst_ms": payload["dbs_burst_ms"],
                 "n_psd_samples": payload["n_psd_samples"],
+                "action_mode": payload["action_mode"],
+                "stim_frac": float(np.mean(payload["action_trajectories"][0])),
             }
 
     fig, ax = plt.subplots(figsize=(6, 4))
@@ -194,7 +198,7 @@ def main() -> None:
             + "\n"
         )
     caption = (
-        f"Inference GPi beta PSD vs step @ 50 Hz (seed {args.seed}); "
+        f"Inference GPi beta PSD vs step @ 50 Hz (seed {args.seed}, Gumbel-max); "
         f"pass={gates.get('pass')}; Baseline vs SEA-DBS."
     )
     manifest = {

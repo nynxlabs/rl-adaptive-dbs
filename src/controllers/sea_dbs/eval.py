@@ -12,7 +12,7 @@ import torch
 from controllers.sea_dbs.adapter import SEA_DBSEnvAdapter
 from controllers.sea_dbs.checkpoint import load_actor_from_payload, load_checkpoint
 from controllers.sea_dbs.config import ABLATION_EVAL_STEPS, SEADBSConfig
-from controllers.sea_dbs.networks import Actor
+from controllers.sea_dbs.networks import Actor, gumbel_softmax_sample
 from controllers.sea_dbs.quantization import FP16ActorWrapper, apply_fp16_ptq, is_ptq_variant
 
 
@@ -25,6 +25,7 @@ def evaluate(
     max_steps: int | None = None,
     carrier_hz: float | None = None,
     use_fp16_ptq: bool = False,
+    action_mode: str = "argmax",
 ) -> dict[str, Any]:
     """Roll out a trained actor; returns summary metrics and per-step traces.
 
@@ -32,6 +33,11 @@ def evaluate(
     checkpoint so Fig 5 eval matches the Fig 4a train plant. ``carrier_hz``
     is the Fig 5 inference override and is written into the config so
     ``reset()`` cannot restore the training carrier.
+
+    ``action_mode``: ``argmax`` (greedy) or ``gumbel`` (hard Gumbel-max on
+    actor logits). Hard Gumbel-max is temperature-invariant; P(stim) equals
+    softmax(logits). Fig 5 uses ``gumbel`` because greedy collapses both
+    Fig 4a actors to always-on.
     """
     device = (config or SEADBSConfig()).device
     payload = load_checkpoint(checkpoint, device=device)
@@ -48,6 +54,10 @@ def evaluate(
     if use_fp16_ptq or is_ptq_variant(cfg.variant):
         policy = FP16ActorWrapper(apply_fp16_ptq(actor))
 
+    mode = str(action_mode).strip().lower()
+    if mode not in {"argmax", "gumbel"}:
+        raise ValueError(f"unknown action_mode {action_mode!r}")
+
     env = SEA_DBSEnvAdapter(plant=plant, config=cfg)
     env.set_carrier_hz(hz)
 
@@ -61,6 +71,7 @@ def evaluate(
             # seeds (e.g. +10000) land in a different IC and can *rise* toward
             # the 50 Hz always-on floor instead of declining from the high start.
             state, info = env.reset(seed=cfg.seed + ep)
+            torch.manual_seed(int(cfg.seed) + ep)
             ep_reward = 0.0
             ep_p_beta = [float(info.get("p_beta_norm", 0.0))]
             ep_actions: list[int] = []
@@ -68,11 +79,17 @@ def evaluate(
                 state_t = torch.as_tensor(state, dtype=torch.float32, device=cfg.device).unsqueeze(0)
                 with torch.no_grad():
                     logits = policy(state_t)
-                    if isinstance(policy, FP16ActorWrapper):
+                    if mode == "gumbel":
+                        _, action_t = gumbel_softmax_sample(
+                            logits.float(),
+                            tau=1.0,
+                            hard=True,
+                        )
+                    elif isinstance(policy, FP16ActorWrapper):
                         action_t, _ = FP16ActorWrapper.select_action(logits)
                     else:
                         action_t, _ = Actor.select_action(logits)
-                action = int(action_t.item())
+                action = int(action_t.item() if action_t.ndim == 0 else action_t.reshape(-1)[0].item())
                 state, reward, _term, truncated, step_info = env.step(action)
                 ep_reward += float(reward)
                 ep_p_beta.append(float(step_info.get("p_beta_norm", ep_p_beta[-1])))
@@ -105,6 +122,7 @@ def evaluate(
         "n_psd_samples": len(p_beta_trajectories[0]) if p_beta_trajectories else 0,
         "dbs_burst_ms": cfg.dbs_burst_ms,
         "fp16_ptq": bool(use_fp16_ptq or is_ptq_variant(cfg.variant)),
+        "action_mode": mode,
     }
 
 
