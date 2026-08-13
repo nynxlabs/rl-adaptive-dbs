@@ -21,8 +21,9 @@ from typing import Any
 
 import numpy as np
 
-# Ravivarapu Figs 5–7 paper crops use raw-ish PSD (~300–480); replication plots
-# ``p_beta_norm`` (~0.3–0.5). Digitized paper y / this scale → norm axis.
+# Ravivarapu Figs 5–7 paper crops use PSD ~300–480. Fig 4a is the same
+# biomarker labeled ×10⁻³ (~0.3–0.5). Multiply ``p_beta_norm`` by this to
+# plot Figs 5–7 in paper y-units; overlay on those panels uses y_scale=1.
 RAVI_INFERENCE_PAPER_Y_TO_NORM = 1000.0
 
 _DIG = Path(__file__).resolve().parents[2] / "digitization"
@@ -965,7 +966,11 @@ def overlay_ravivarapu_fig4b(
     )
 
 
-def overlay_ravivarapu_fig5a(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+def overlay_ravivarapu_fig5a(
+    ax, *, y_scale: float = 1.0
+) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """Paper Fig 5a overlay in crop PSD units (~300–480). Pass ``y_scale``
+    only if the replication axis is normalized instead."""
     mapping = (
         ("Baseline 50Hz", "Baseline 50Hz"),
         ("SEA-DBS 50Hz", "SEA-DBS 50Hz"),
@@ -976,11 +981,13 @@ def overlay_ravivarapu_fig5a(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
         mapping,
         label_prefix="Paper ",
         outline_colors=(RAVI_REPL_BASELINE, RAVI_REPL_SEA),
-        y_scale=1.0 / RAVI_INFERENCE_PAPER_Y_TO_NORM,
+        y_scale=y_scale,
     )
 
 
-def overlay_ravivarapu_fig5b(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+def overlay_ravivarapu_fig5b(
+    ax, *, y_scale: float = 1.0
+) -> dict[str, tuple[np.ndarray, np.ndarray]]:
     mapping = (
         ("Baseline 30Hz", "Baseline 30Hz"),
         ("SEA-DBS 30Hz", "SEA-DBS 30Hz"),
@@ -991,7 +998,7 @@ def overlay_ravivarapu_fig5b(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
         mapping,
         label_prefix="Paper ",
         outline_colors=(RAVI_REPL_BASELINE, RAVI_REPL_SEA),
-        y_scale=1.0 / RAVI_INFERENCE_PAPER_Y_TO_NORM,
+        y_scale=y_scale,
     )
 
 
