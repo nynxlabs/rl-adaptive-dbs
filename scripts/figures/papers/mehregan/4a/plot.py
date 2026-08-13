@@ -7,7 +7,8 @@ raw $P_\\beta$ / 1000.
 
 Defaults (see ``figures/mehregan/replications.md``):
   seed 0, state_length=1, fixed_mean_pattern, softmax + one_hot critic,
-  init_bias=0.5, plant.dt_ms=0.02.
+  init_bias=0.0 (phase-1 ep0; library fig4a profile is still 0.5),
+  jitter_fraction=0.5 (library alphabet default 1/3), plant.dt_ms=0.02.
 
 Run:
   uv run python scripts/figures/papers/mehregan/4a/plot.py
@@ -97,6 +98,11 @@ DEFAULT_SEED = 0
 EARLY_END = 130
 LATE_START = 150
 WINDOW = 30
+# Paper-silent Fig 4a knobs for the ep0-first revisit. Library alphabet jitter
+# is 1/3; init_bias in fig4a_ddpg_config remains 0.5. Regular 45 Hz (pattern 0)
+# is a *suppressor* on this plant (~0.29), so biasing toward it cannot raise ep0.
+FIG4A_JITTER_FRACTION = 0.5
+FIG4A_INIT_BIAS_SCALE = 0.0
 
 STYLE = {
     "figure.facecolor": "white",
@@ -132,6 +138,7 @@ def _make_env(
     *,
     seed: int,
     state_length: int = STATE_LENGTH,
+    jitter_fraction: float = FIG4A_JITTER_FRACTION,
 ) -> tuple[MehreganEnv, Any]:
     resolved = resolve_config()
     plant_cfg = replace(resolved.plant, dt_ms=PAPER_DT_MS)
@@ -145,6 +152,7 @@ def _make_env(
         mean_hz=MEAN_HZ,
         step_duration_s=env_cfg.step_duration_s,
         dt_ms=plant_cfg.dt_ms,
+        jitter_fraction=jitter_fraction,
     )
     plant = PythonPlant(config=plant_cfg)
     env = MehreganEnv(plant=plant, config=env_cfg, alphabet=alphabet)
@@ -158,7 +166,7 @@ def _train_trace(
     seed: int,
     num_episodes: int,
     exploration_mode: str = "softmax",
-    init_bias_scale: float = 0.5,
+    init_bias_scale: float = FIG4A_INIT_BIAS_SCALE,
     temperature_start: float = 3.0,
     temperature_end: float = 1.4,
     logit_noise_std: float = 0.1,
@@ -264,6 +272,7 @@ def _train_trace(
     meta = {
         "exploration_mode": config.exploration_mode,
         "init_bias_scale": config.init_bias_scale,
+        "jitter_fraction": getattr(env.alphabet, "jitter_fraction", None),
         "temperature_start": config.exploration_temperature_start,
         "temperature_end": config.exploration_temperature_end,
         "logit_noise_std": config.logit_noise_std,
@@ -417,6 +426,13 @@ def _checklist_rows(gates: dict[str, Any], summary: dict[str, Any]) -> list[tupl
             "✓",
         ),
         (
+            "**Episode 0**",
+            "First 30 steps near digitized paper ~0.50 (untreated-like)",
+            f"ep0 mean {_fmt(summary.get('paper_gate_metrics', {}).get('ep0_mean'))}; "
+            f"paper {_fmt(summary.get('paper_gate_metrics', {}).get('paper_ep0'))}",
+            "✓" if gates.get("ep0_near_paper") else "✗",
+        ),
+        (
             "**Drop vs paper**",
             "Digitized early→late drop (seed-robust)",
             f"early {_fmt(early)} → late {_fmt(late)}; "
@@ -507,8 +523,21 @@ def main() -> int:
     parser.add_argument(
         "--init-bias-scale",
         type=float,
-        default=0.5,
-        help="Actor head bias toward pattern 0 (default 0.5 for Fig 4a)",
+        default=FIG4A_INIT_BIAS_SCALE,
+        help=(
+            "Actor head bias toward pattern 0 (Fig 4a phase-1 default 0.0; "
+            "library fig4a profile is 0.5). Pattern 0 suppresses on this plant."
+        ),
+    )
+    parser.add_argument(
+        "--jitter-fraction",
+        type=float,
+        default=FIG4A_JITTER_FRACTION,
+        help=(
+            "Interior-onset jitter as a fraction of the regular ISI "
+            f"(default {FIG4A_JITTER_FRACTION}; library alphabet is 1/3). "
+            "Paper-silent; larger jitter weakens the irregular mix vs untreated."
+        ),
     )
     parser.add_argument(
         "--temperature-start",
@@ -582,7 +611,7 @@ def main() -> int:
             f"Fig 4a train — {args.episodes} ep × {STEPS_PER_EPISODE} "
             f"({expected} steps), 45 Hz, L={args.state_length}, "
             f"exploration={args.exploration}, init_bias={args.init_bias_scale}, "
-            f"critic={args.critic_action_input}",
+            f"jitter={args.jitter_fraction}, critic={args.critic_action_input}",
             flush=True,
         )
         prior_beta: list[float] | None = None
@@ -595,6 +624,7 @@ def main() -> int:
         env, plant_cfg = _make_env(
             seed=args.seed,
             state_length=args.state_length,
+            jitter_fraction=args.jitter_fraction,
         )
         t0 = time.time()
         trainer: DDPGTrainer | None = None
@@ -662,6 +692,7 @@ def main() -> int:
             "plant_dt_ms": plant_cfg.dt_ms,
             "exploration_mode": args.exploration,
             "init_bias_scale": args.init_bias_scale,
+            "jitter_fraction": args.jitter_fraction,
             "temperature_start": args.temperature_start,
             "temperature_end": args.temperature_end,
             "logit_noise_std": args.logit_noise_std,
@@ -683,10 +714,12 @@ def main() -> int:
         print(f"wrote {versioned_series}", flush=True)
         print(
             f"gates: trend_down={summary['trend_down']} "
+            f"ep0={summary['paper_gate_metrics'].get('ep0_mean', float('nan')):.3f} "
             f"early={summary['early_mean_0_130']:.3f} "
             f"late={summary['late_mean_150_end']:.3f} "
             f"unique_actions={train_meta['unique_actions']} "
             f"dominant={train_meta['dominant_action']} "
+            f"gates_pass={summary['gates_pass']} "
             f"({elapsed:.0f}s)",
             flush=True,
         )
@@ -708,6 +741,7 @@ def main() -> int:
         "plant_dt_ms": cache.get("plant_dt_ms", PAPER_DT_MS),
         "exploration_mode": cache.get("exploration_mode", "greedy"),
         "init_bias_scale": cache.get("init_bias_scale"),
+        "jitter_fraction": cache.get("jitter_fraction"),
         "temperature_start": cache.get("temperature_start"),
         "temperature_end": cache.get("temperature_end"),
         "logit_noise_std": cache.get("logit_noise_std"),

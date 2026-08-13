@@ -203,6 +203,7 @@ def evaluate_4a() -> PanelGateStatus:
         GateRow("drop_vs_paper", "drop ≥ 70% of digitized paper drop"),
         GateRow("late_early_ratio_near_paper", "late/early ratio vs digitization"),
         GateRow("mid_fade_vs_paper", "mid [120,150] fade ≥ 50% of paper mid-drop"),
+        GateRow("ep0_near_paper", "steps 0–29 mean within 10% of digitized paper ep0"),
     )
     return PanelGateStatus(
         panel="4a",
@@ -237,6 +238,7 @@ def evaluate_4b() -> PanelGateStatus:
         GateRow("late_beta_above_threshold", "late episode-mean PSD ≥ β_t=0.35"),
         GateRow("late_beta_near_paper", "late PSD within 15% of digitized paper"),
         GateRow("late_reward_near_zero", "late mean reward in (−10, 2] (paper ~−2)"),
+        GateRow("ep0_beta_near_paper", "episode 0 PSD within 10% of digitized paper"),
         GateRow("plot_style", "≥ 2 episodes plotted"),
         GateRow("automation", "manifest summary.automation_pass mirrors fig4b bundle"),
     )

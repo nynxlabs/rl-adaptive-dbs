@@ -367,6 +367,7 @@ def _checklist_rows(gates: dict[str, Any], summary: dict[str, Any]) -> list[tupl
     g = summary.get("gates") or {}
     ep_pass = summary.get("fig4b_pass") or {}
     n = summary.get("n_episodes", "—")
+    metrics = summary.get("paper_gate_metrics") or {}
 
     def _fmt(v: Any) -> str:
         if isinstance(v, float):
@@ -437,6 +438,18 @@ def _checklist_rows(gates: dict[str, Any], summary: dict[str, Any]) -> list[tupl
             "Plateau near **0** from below",
             f"mean {_fmt(summary.get('late_mean_ep6_end'))}",
             "✓" if g.get("late_reward_near_zero") else "✗",
+        ),
+        (
+            "**Episode 0 PSD**",
+            "ep0 near digitized paper ~0.50",
+            (
+                f"ep0 {metrics.get('ep0_beta'):.3f} vs paper "
+                f"{metrics.get('paper_ep0_beta'):.3f}"
+                if isinstance(metrics.get("ep0_beta"), float)
+                and isinstance(metrics.get("paper_ep0_beta"), float)
+                else "see manifest"
+            ),
+            "✓" if g.get("ep0_beta_near_paper") else "✗",
         ),
         (
             "**Episode-mean PSD**",
@@ -647,10 +660,12 @@ def main() -> int:
     print(f"wrote {psd_path}", flush=True)
     print(f"wrote {args.manifest}", flush=True)
     print(
-        f"gates: automation={gates.get('automation')} "
+        f"gates: gates_pass={summary.get('gates_pass')} "
+        f"automation={gates.get('automation')} "
         f"rise_ep={summary.get('rise_episode')} "
         f"ep1={fig4b_pass.get('ep1'):.1f} ep{args.episodes - 1}={fig4b_pass.get('ep_last'):.1f} "
-        f"psd {episode_mean_beta[0]:.3f}→{episode_mean_beta[-1]:.3f}",
+        f"psd {episode_mean_beta[0]:.3f}→{episode_mean_beta[-1]:.3f} "
+        f"ep0_beta_near_paper={gates.get('ep0_beta_near_paper')}",
         flush=True,
     )
 
@@ -666,14 +681,15 @@ def main() -> int:
         print(f"updated docs caption: {updated.get('caption')}", flush=True)
         print(f"updated reward image: {updated.get('reward_png_repo_rel')}", flush=True)
         print(f"updated psd image: {updated.get('psd_png_repo_rel')}", flush=True)
-        if gates.get("automation"):
+        if summary.get("gates_pass"):
             update_status_in_doc(
                 passed=True,
                 note=(
                     "two panels × 9 episodes (indices 0–8), paired with the latest "
                     "Fig 4a series.json (seed 0; paper seed unspecified). "
-                    "Digitization revisit: late episode-mean PSD above β_t=0.35 and "
-                    "near the digitized paper floor; reward approaches 0 from below."
+                    "Digitization revisit: ep0 PSD near paper, late episode-mean "
+                    "PSD above β_t=0.35 and near the digitized paper floor; "
+                    "reward approaches 0 from below."
                 ),
             )
             print("updated docs status → Pass", flush=True)
@@ -682,7 +698,7 @@ def main() -> int:
         update_checklist_in_doc(_checklist_rows(gates, summary))
         print("updated docs checklist", flush=True)
 
-    return 0 if gates.get("automation") else 1
+    return 0 if summary.get("gates_pass") else 1
 
 
 if __name__ == "__main__":
