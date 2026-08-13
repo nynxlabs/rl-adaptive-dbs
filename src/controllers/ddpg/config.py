@@ -146,14 +146,15 @@ def fig4a_ddpg_config(
     exploration_mode: str = "softmax",
     init_bias_scale: float = 0.5,
     exploration_temperature_start: float = 3.0,
-    exploration_temperature_end: float = 1.0,
+    exploration_temperature_end: float = 1.4,
     logit_noise_std: float = 0.1,
     entropy_coeff: float = 0.01,
     critic_action_input: str = "one_hot",
 ) -> DDPGConfig:
     """Mehregan Fig 4a — 45 Hz pattern DDPG.
 
-    Default profile: softmax + one_hot critic (v4 learning curve). For paper-faithful
+    Default profile: softmax + one_hot critic, τ 3→1.4 (softer late mix than
+    the locked v18 τ→1.0 collapse). For paper-faithful
     Alg. 1 interaction use ``exploration_mode="greedy"`` + ``critic_action_input="logits"``
     (no online exploration noise, no replay warmup extensions).
     """
