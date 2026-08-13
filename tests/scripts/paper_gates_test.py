@@ -14,6 +14,7 @@ from paper_gates import (  # noqa: E402
     fig1b_gates,
     fig2_time_gates,
     fig4a_gates,
+    fig4b_gates,
     fig5_efficacy_gates,
     load_refined,
     refined_path,
@@ -62,6 +63,25 @@ def test_fig4a_paper_self_drop():
     report = fig4a_gates(trace)
     assert report["gates"]["overall_trend_down"]
     assert report["gates"]["drop_vs_paper"]
+
+
+@pytest.mark.skipif(
+    not (ARTIFACT / "4b/paper_digitization/curves_wpd_refined_psd.json").exists(),
+    reason="no digitization artifact",
+)
+def test_fig4b_paper_self_late_floor():
+    psd = load_refined(refined_path("4b", stem="curves_wpd_refined_psd"))
+    rew = load_refined(refined_path("4b", stem="curves_wpd_refined_reward"))
+    px, py = psd[next(iter(psd))]
+    rx, ry = rew[next(iter(rew))]
+    episodes = np.arange(9, dtype=float)
+    beta = np.interp(episodes, px, py)
+    reward = np.interp(episodes, rx, ry)
+    report = fig4b_gates(reward, beta)
+    assert report["gates"]["late_beta_above_threshold"]
+    assert report["gates"]["late_beta_near_paper"]
+    assert report["gates"]["late_reward_near_zero"]
+    assert report["pass"]
 
 
 @pytest.mark.skipif(not (ARTIFACT / "5b/paper_digitization/curves_wpd_refined.json").exists(), reason="no digitization artifact")

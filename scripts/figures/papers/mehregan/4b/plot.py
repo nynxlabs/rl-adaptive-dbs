@@ -7,14 +7,14 @@ Paper §IV.A.1 companion to Fig 4a: two panels over **9 episodes** indexed
   1. **Episode total reward** vs episode
   2. **Episode-mean PSD(x10³)** ($P_\\beta / 1000$) vs episode
 
-Loads traces from the Fig 4a series cache (default: locked ``series_v4.json``,
-first 8 episodes). Resume training via Fig 4a ``--resume`` (this panel replots cache only). (``training_fig4b_vN.png``)
+Loads traces from the Fig 4a series cache (default: latest ``series.json``,
+first 9 episodes). Resume training via Fig 4a ``--resume`` (this panel replots cache only). (``training_fig4b_vN.png``)
 for showcase side-by-side use, plus separate reward/PSD PNGs for debugging.
 
 Run:
   uv run python scripts/figures/papers/mehregan/4b/plot.py
   uv run python scripts/figures/papers/mehregan/4b/plot.py --plot-only
-  uv run python scripts/figures/papers/mehregan/4b/plot.py --episodes 8 --fig4a-series artifacts/figures/papers/mehregan/4a/series_v4.json
+  uv run python scripts/figures/papers/mehregan/4b/plot.py --episodes 9 --fig4a-series artifacts/figures/papers/mehregan/4a/series.json
 """
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ _paper_overlay = _overlay_import.load_paper_overlay()
 FIGURES_DIR = Path("figures/mehregan/images/4b")
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/4b")
 FIG4A_CACHE_DIR = Path("artifacts/figures/papers/mehregan/4a")
-DEFAULT_FIG4A_SERIES = FIG4A_CACHE_DIR / "series_v4.json"
+DEFAULT_FIG4A_SERIES = FIG4A_CACHE_DIR / "series.json"
 DEFAULT_MANIFEST = CACHE_DIR / "manifest.json"
 REWARD_STEM = "training_reward"
 PSD_STEM = "training_psd"
@@ -434,15 +434,17 @@ def _checklist_rows(gates: dict[str, Any], summary: dict[str, Any]) -> list[tupl
         ),
         (
             "**Late episodes (6–8)**",
-            "Plateau near **0**",
-            f"mean {_fmt(summary.get('late_mean_ep6_end'))} (improved, not near 0)",
-            "~",
+            "Plateau near **0** from below",
+            f"mean {_fmt(summary.get('late_mean_ep6_end'))}",
+            "✓" if g.get("late_reward_near_zero") else "✗",
         ),
         (
             "**Episode-mean PSD**",
-            "Gradual fall ~0.50→~0.37",
+            "Gradual fall ~0.50→~0.37 (late above β_t=0.35)",
             beta_txt if beta_txt != "—" else "see manifest",
-            "~" if g.get("beta_inverse_trend") else "✗",
+            "✓"
+            if g.get("late_beta_above_threshold") and g.get("late_beta_near_paper")
+            else "✗",
         ),
         (
             "**Automation gate**",
@@ -515,7 +517,7 @@ def main() -> int:
         "--fig4a-series",
         type=Path,
         default=DEFAULT_FIG4A_SERIES,
-        help="Fig 4a series JSON (default: locked series_v4.json)",
+        help="Fig 4a series JSON (default: latest series.json)",
     )
     parser.add_argument(
         "--fig4a-manifest",
@@ -668,9 +670,10 @@ def main() -> int:
             update_status_in_doc(
                 passed=True,
                 note=(
-                    "two panels × 9 episodes (indices 0–8), paired with Fig 4a v4 (seed 0; "
-                    "paper seed unspecified). Qualitative: reward↑, PSD↓. "
-                    "Y-limits snap to data extrema. Numeric bands differ — compare trends, not pointwise values."
+                    "two panels × 9 episodes (indices 0–8), paired with the latest "
+                    "Fig 4a series.json (seed 0; paper seed unspecified). "
+                    "Digitization revisit: late episode-mean PSD above β_t=0.35 and "
+                    "near the digitized paper floor; reward approaches 0 from below."
                 ),
             )
             print("updated docs status → Pass", flush=True)
