@@ -490,17 +490,25 @@ def update_checklist_in_doc(rows: list[tuple[str, str, str, str]]) -> None:
 
 
 def update_status_in_doc(*, passed: bool, note: str) -> None:
+    """Rewrite only the Fig 4b **Status:** line — never through the next heading.
+
+    A previous ``find("\\n\\n###")`` end-cut ate the 4b gates block and the
+    ``## Fig 5a`` heading (vault tracker, 2026-08-13).
+    """
     doc = _figure_promote.PAPER_1_DOC
     text = doc.read_text()
     new_status = f"**Status:** Pass — {note}" if passed else f"**Status:** Open — {note}"
     start = text.find("## Fig 4b — training reward vs episode")
     if start < 0:
         return
+    next_h2 = text.find("\n## ", start + 1)
     status_pos = text.find("**Status:**", start)
-    end = text.find("\n\n###", status_pos)
-    if status_pos < 0 or end < 0:
+    if status_pos < 0 or (next_h2 >= 0 and status_pos > next_h2):
         return
-    doc.write_text(text[:status_pos] + new_status + text[end:])
+    line_end = text.find("\n", status_pos)
+    if line_end < 0:
+        return
+    doc.write_text(text[:status_pos] + new_status + text[line_end:])
 
 
 def _load_fig4a_payload(series_path: Path, manifest_path: Path | None) -> dict[str, Any]:
