@@ -26,6 +26,8 @@ DEFAULT_CARRIER_HZ: float = 50.0
 INFERENCE_CARRIER_30HZ: float = 30.0
 INFERENCE_CARRIER_50HZ: float = 50.0
 ABLATION_EVAL_STEPS: int = 10
+# Paper Figs 5–7 x-axis is steps 0–10: untreated PSD at t=0 plus 10 stim actions.
+INFERENCE_PSD_SAMPLES: int = ABLATION_EVAL_STEPS + 1
 
 
 @dataclass(frozen=True)

@@ -163,7 +163,7 @@ Post-train **inference** at **50 Hz** over **10 steps** (Fig. 5(a)).
 | 5 | **vs Fig 5b** | 50 Hz stronger than 30 Hz | 30 Hz beats 50 Hz |
 | 6 | **Checkpoints** | From Fig 4 train | Untrained / mismatched |
 
-**Proposed automated mirrors:** `n_steps==10`; `shared_start`; `baseline_declines`; `paper_declines`; `paper_end_below_baseline`; `paper_drop > baseline_drop`; cross-check vs 5b when both exist.
+**Proposed automated mirrors:** `n_steps_ok` = **11 PSD samples** (t=0 untreated + 10 stim actions; paper x-axis 0–10); `shared_start`; `baseline_declines`; `paper_declines`; `paper_end_below_baseline`; `paper_drop > baseline_drop`; cross-check vs 5b when both exist. Gates run on **normalized** PSD (`p_beta_norm`, overlay ÷1000 from paper crop ~300–480).
 
 ---
 
@@ -173,7 +173,7 @@ Same layout at **30 Hz** (Fig. 5(b)).
 
 **Qualitative gates:** weaker suppression than 5a; SEA still slightly below Baseline at end; shared start; both decline modestly.
 
-**Proposed automated mirrors:** `carrier_hz==30`; `paper_end_below_baseline`; `end_psd_30 > end_psd_50` (both variants); absolute end band ≫ Fig 5a floor (~390+ vs ~310–350).
+**Proposed automated mirrors:** `carrier_hz==30`; `n_steps_ok` = 11 PSD samples; `paper_end_below_baseline`; `end_psd_30 > end_psd_50` (both variants); absolute end band ≫ Fig 5a floor (~0.39+ vs ~0.31–0.35 on the normalized axis).
 
 ---
 

@@ -561,8 +561,14 @@ def ravivarapu_inference_gates(
     carrier_hz: float,
     sea_trace_50hz: Sequence[float] | None = None,
     baseline_trace_50hz: Sequence[float] | None = None,
-    n_expected: int = 10,
+    n_expected: int = 11,
 ) -> dict[str, Any]:
+    """Shape gates for Fig 5a/5b on **normalized** PSD (~0.3–0.5).
+
+    Paper crops label the same biomarker as raw ~300–480 (×1000 vs Fig 4a).
+    Traces here are ``p_beta_norm``. ``n_expected`` is PSD samples: t=0
+    untreated plus 10 stimulation steps (paper x-axis 0–10).
+    """
     b = _as_fy(baseline_trace)
     p = _as_fy(paper_trace)
     b0, b_end = float(b[0]), float(b[-1])
@@ -571,9 +577,9 @@ def ravivarapu_inference_gates(
     p_drop = p0 - p_end
     gates: dict[str, bool] = {
         "n_steps_ok": int(b.size) == n_expected and int(p.size) == n_expected,
-        "shared_start": abs(p0 - b0) < 15.0,
-        "baseline_declines": b_drop > 5.0,
-        "paper_declines": p_drop > 5.0,
+        "shared_start": abs(p0 - b0) < 0.05,
+        "baseline_declines": b_drop > 0.02,
+        "paper_declines": p_drop > 0.04,
         "paper_end_below_baseline": p_end < b_end,
         "paper_steeper_drop": p_drop > b_drop,
         "carrier_hz_ok": carrier_hz in (30.0, 50.0),

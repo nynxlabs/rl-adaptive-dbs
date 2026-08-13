@@ -134,6 +134,8 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4b/plot.p
 
 ## Fig 5a — inference @ 50 Hz
 
+Panel lab notebook: [docs/figures/ravivarapu/5a.md](../../docs/figures/ravivarapu/5a.md).
+
 Post-train **inference** comparison of SEA-DBS vs Baseline with stimulation **carrier frequency 50 Hz** (above beta band; Fig. 5(a)). Paper claim: **50 Hz** more effectively disrupts pathological oscillations → **greater PSD reduction** than the 30 Hz panel; SEA-DBS **below** Baseline on PSD (and higher reward).
 
 Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md) §14.10).
@@ -171,8 +173,8 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 **Run:**
 
 ```bash
-uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5a/plot.py
-uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5a/plot.py --plot-only
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5a/plot.py --push-kb --update-report
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5a/plot.py --plot-only --push-kb --update-report
 ```
 
 **Defaults:** seed `0`; carrier **50 Hz**; binary pulse policy from trained SEA-DBS / Baseline.
@@ -180,6 +182,8 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5a/plot.p
 ---
 
 ## Fig 5b — inference @ 30 Hz
+
+Panel lab notebook: [docs/figures/ravivarapu/5b.md](../../docs/figures/ravivarapu/5b.md).
 
 Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b)). Paper claim: **less effective** than 50 Hz; SEA-DBS still **beats** Baseline on PSD / reward.
 
@@ -218,8 +222,8 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 **Run:**
 
 ```bash
-uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5b/plot.py
-uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5b/plot.py --plot-only
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5b/plot.py --push-kb --update-report
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5b/plot.py --plot-only --push-kb --update-report
 ```
 
 **Defaults:** seed `0`; carrier **30 Hz**; same checkpoints as Fig 5a where possible.

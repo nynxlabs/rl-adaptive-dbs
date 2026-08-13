@@ -305,7 +305,7 @@ Scope notes full layer counts and widths are out of scope where the paper is sil
 
 ### 10. Stimulation carrier frequency at inference
 
-Fig. 5 compares **50 Hz** vs **30 Hz** carrier during inference; this is not a per-step RL action. **Fixed:** binary pulse/no-pulse control during training. **Open:** how the adapter/plant exposes carrier frequency for eval. **Decide in** benchmark harness as a fixed eval setting, not an RL action dimension.
+Fig. 5 compares **50 Hz** vs **30 Hz** carrier during inference; this is not a per-step RL action. **Fixed:** binary pulse/no-pulse control during training. **Chosen (adapter):** `SEA_DBSEnvAdapter.set_carrier_hz` is the eval override and **survives `reset()`** (reset used to restore `config.carrier_hz`, which silently ran Fig 5 at the Fig 4a train carrier of 130 Hz). `evaluate()` loads plant knobs (`dbs_burst_ms`, `observation_scale`, …) from the checkpoint, then writes the eval carrier into the config. **Open:** paper-silent inference action selection (argmax vs late-training GS τ) when greedy policies collapse to always-on — see [docs/figures/ravivarapu/5a.md](../../figures/ravivarapu/5a.md).
 
 ### 11. Beta normalization scale
 

@@ -63,6 +63,7 @@ class SEA_DBSEnvAdapter(gym.Env):
         self._rng: np.random.Generator | None = None
         self._step_count = 0
         self._obs_window: deque[float] = deque(maxlen=self.config.n_obs)
+        # Eval may override via set_carrier_hz; reset must not clobber that.
         self._carrier_hz = float(self.config.carrier_hz)
 
     def close(self) -> None:
@@ -70,7 +71,11 @@ class SEA_DBSEnvAdapter(gym.Env):
             self._plant.close()
 
     def set_carrier_hz(self, hz: float) -> None:
-        """Fixed eval knob for inference (Fig 5a/5b); not an RL action."""
+        """Fixed eval knob for inference (Fig 5a/5b); not an RL action.
+
+        Survives ``reset()``. Fig 4 training uses 130 Hz; Fig 5 eval switches
+        the same adapter to 50 Hz or 30 Hz without rebuilding the env.
+        """
         self._carrier_hz = float(hz)
 
     def _normalize_p_beta(self, raw: float) -> float:
@@ -123,7 +128,6 @@ class SEA_DBSEnvAdapter(gym.Env):
         self._plant.reset(seed=seed)
         self._step_count = 0
         self._obs_window.clear()
-        self._carrier_hz = float(self.config.carrier_hz)
 
         result = self._plant.integrate(
             self.config.integration_duration_s,
