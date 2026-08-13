@@ -153,18 +153,21 @@ def main() -> None:
             }
 
     fig, ax = plt.subplots(figsize=(6, 4))
+    scale = float(_paper_overlay.RAVI_INFERENCE_PAPER_Y_TO_NORM)
+    ys: list[np.ndarray] = []
     for variant, label in (("baseline", "Baseline 50Hz"), ("paper", "SEA-DBS 50Hz")):
-        y = np.asarray(traces[variant], dtype=float)
+        y = np.asarray(traces[variant], dtype=float) * scale
         ax.plot(np.arange(y.size, dtype=float), y, label=label, linewidth=1.5)
+        ys.append(y)
     paper = _paper_overlay.overlay_ravivarapu_fig5a(ax)
-    ys = [np.asarray(v, dtype=float) for v in traces.values()]
-    ys.extend(v[0] for v in paper.values())
-    all_y = np.concatenate(ys) if ys else np.array([0.0, 1.0])
+    ys.extend(py for _px, py in paper.values())
+    all_y = np.concatenate(ys) if ys else np.array([300.0, 480.0])
     lo, hi = float(np.nanmin(all_y)), float(np.nanmax(all_y))
     pad = 0.05 * (hi - lo + 1e-6)
+    ax.set_xlim(0, 10)
     ax.set_ylim(lo - pad, hi + pad)
     ax.set_xlabel("Steps")
-    ax.set_ylabel("PSD (norm)")
+    ax.set_ylabel("PSD")
     ax.set_title("Beta stimulation freq. 50 Hz")
     ax.grid(True, alpha=0.3)
     _paper_overlay.place_legend(ax, fontsize=8)
