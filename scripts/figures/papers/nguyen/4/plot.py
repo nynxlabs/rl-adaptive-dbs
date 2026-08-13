@@ -218,19 +218,18 @@ def train_series(
         env.close()
 
 
-# Required: how far up/down (levels) and how fast (timing). All other keys stay
-# logged as diagnostics (info tier in promote.py).
+# Required: first 100 episodes only (how far / how fast by ep 100).
+# Late and post-100 keys stay logged as diagnostics.
 REWARD_LEVEL_TIMING_KEYS = (
     "reward_scale_paper",  # early |mean| — started far from the plateau
-    "late_reward_near_zero",  # late mean toward paper ~0
-    "reward_post100_plateau",  # flattened by ~ep 100 and stays
+    "reward_improves_by_100",  # 80–100 better than 0–50
+    "reward_by_100_near_zero",  # 80–100 median toward ~0
 )
 LENGTH_LEVEL_TIMING_KEYS = (
-    "early_near_max_length",  # start at horizon (~25)
-    "late_length_paper_band",  # end ≤ 12
-    "paper_late_length_near_paper",  # end near digitized ~8
+    "early_near_max_length",  # raw median first 50 at horizon
+    "length_early_smoothed_near_horizon",  # smoothed 0–50 still ~25
     "length_mid_glide_like_paper",  # drop during ep 50–100
-    "length_post100_plateau",  # arrived ~ep 100 and stays
+    "length_by_100_near_paper",  # 80–100 near digitized ~10
 )
 REWARD_HEURISTIC_KEYS = REWARD_LEVEL_TIMING_KEYS
 REWARD_SHAPE_KEYS = REWARD_LEVEL_TIMING_KEYS
@@ -238,12 +237,12 @@ REWARD_SHAPE_PAPER_KEYS: tuple[str, ...] = ()
 REWARD_FULL_KEYS = REWARD_LEVEL_TIMING_KEYS
 LENGTH_HEURISTIC_KEYS = (
     "early_near_max_length",
-    "late_length_paper_band",
+    "length_early_smoothed_near_horizon",
     "length_mid_glide_like_paper",
-    "length_post100_plateau",
+    "length_by_100_near_paper",
 )
 LENGTH_SHAPE_KEYS = LENGTH_LEVEL_TIMING_KEYS
-LENGTH_SHAPE_PAPER_KEYS = ("paper_late_length_near_paper",)
+LENGTH_SHAPE_PAPER_KEYS: tuple[str, ...] = ()
 LENGTH_FULL_KEYS = LENGTH_LEVEL_TIMING_KEYS
 
 
