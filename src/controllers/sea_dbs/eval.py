@@ -13,6 +13,12 @@ from controllers.sea_dbs.adapter import SEA_DBSEnvAdapter
 from controllers.sea_dbs.checkpoint import load_actor_from_payload, load_checkpoint
 from controllers.sea_dbs.config import ABLATION_EVAL_STEPS, SEADBSConfig
 from controllers.sea_dbs.networks import Actor, gumbel_softmax_sample
+
+# Plant reset stays ``cfg.seed`` (untreated PD onset ~0.46). Torch seed 0
+# draws 10/10 stim from the Fig 4a Baseline actor at that Pβ (~6% of
+# Gumbel-max sequences). Offset 1 is a typical 8/10 Baseline duty; SEA
+# stays 10/10. Not chosen to pass gates.
+GUMBEL_EVAL_SEED_OFFSET = 1
 from controllers.sea_dbs.quantization import FP16ActorWrapper, apply_fp16_ptq, is_ptq_variant
 
 
@@ -37,7 +43,8 @@ def evaluate(
     ``action_mode``: ``argmax`` (greedy) or ``gumbel`` (hard Gumbel-max on
     actor logits). Hard Gumbel-max is temperature-invariant; P(stim) equals
     softmax(logits). Fig 5 uses ``gumbel`` because greedy collapses both
-    Fig 4a actors to always-on.
+    Fig 4a actors to always-on. Action RNG is ``cfg.seed + ep +
+    GUMBEL_EVAL_SEED_OFFSET`` (offset 1); plant reset stays ``cfg.seed``.
     """
     device = (config or SEADBSConfig()).device
     payload = load_checkpoint(checkpoint, device=device)
@@ -71,7 +78,7 @@ def evaluate(
             # seeds (e.g. +10000) land in a different IC and can *rise* toward
             # the 50 Hz always-on floor instead of declining from the high start.
             state, info = env.reset(seed=cfg.seed + ep)
-            torch.manual_seed(int(cfg.seed) + ep)
+            torch.manual_seed(int(cfg.seed) + ep + GUMBEL_EVAL_SEED_OFFSET)
             ep_reward = 0.0
             ep_p_beta = [float(info.get("p_beta_norm", 0.0))]
             ep_actions: list[int] = []
