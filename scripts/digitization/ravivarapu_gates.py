@@ -585,6 +585,10 @@ def ravivarapu_inference_gates(
     p0, p_end = float(p[0]), float(p[-1])
     b_drop = b0 - b_end
     p_drop = p0 - p_end
+    b1 = float(b[1]) if b.size > 1 else b0
+    p1 = float(p[1]) if p.size > 1 else p0
+    b2 = float(b[2]) if b.size > 2 else b_end
+    p2 = float(p[2]) if p.size > 2 else p_end
     gates: dict[str, bool] = {
         "n_steps_ok": int(b.size) == n_expected and int(p.size) == n_expected,
         "shared_start": abs(p0 - b0) < INFERENCE_SHARED_START_MAX,
@@ -609,6 +613,12 @@ def ravivarapu_inference_gates(
         "p_end": p_end,
         "b_drop": b_drop,
         "p_drop": p_drop,
+        "b_step1": b1,
+        "p_step1": p1,
+        "b_step2": b2,
+        "p_step2": p2,
+        "b_drop_0_2": b0 - b2,
+        "p_drop_0_2": p0 - p2,
     }
     return _gate_pack(gates, metrics)
 
