@@ -918,7 +918,7 @@ def _caption_4a(manifest: dict[str, Any]) -> str:
 
 def _caption_4b(manifest: dict[str, Any]) -> str:
     seed = manifest.get("seed", 0)
-    fig4a_series = manifest.get("fig4a_series", "artifacts/figures/papers/mehregan/4a/series_v4.json")
+    fig4a_series = manifest.get("fig4a_series", "artifacts/figures/papers/mehregan/4a/series.json")
     version = manifest.get("png_version")
     n_ep = manifest.get("num_episodes", 8)
     summary = manifest.get("summary") or {}

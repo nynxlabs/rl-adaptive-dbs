@@ -406,8 +406,18 @@ def fig4b_gates(
     early_n: int = 3,
     late_start: int = 6,
     ratio_tol: float = DEFAULT_RATIO_TOL,
+    late_beta_rel_tol: float = 0.15,
+    reward_threshold: float = 0.35,
+    late_reward_hi: float = 2.0,
 ) -> dict[str, Any]:
-    """Reward rise + episode PSD drop vs paper digitizations."""
+    """Reward rise + episode PSD drop vs paper digitizations.
+
+    Digitization revisit (Report 3): paper late episode-mean PSD sits *above*
+    reward threshold ``β_t = 0.35`` (~0.37) so episode reward approaches 0
+    from below. A full collapse onto one suppressing pattern drives late PSD
+    ~0.30 and flips reward positive — reject that floor even when the
+    late/early *ratio* still looks paper-like.
+    """
     paper_reward = paper_reward or load_refined(
         reward_path or refined_path("4b", stem="curves_wpd_refined_reward")
     )
@@ -455,6 +465,13 @@ def fig4b_gates(
         "reward_recovers_like_paper": bool(
             late_r > early_r and p_late_r > p_early_r and late_r > -10.0
         ),
+        # Paper late PSD ~0.37 stays above β_t so Eq. (8) never enters the
+        # positive linear branch. Locked v4/v18 collapse to ~0.30 and go to +16.
+        "late_beta_above_threshold": bool(np.isfinite(late_b) and late_b >= reward_threshold),
+        "late_beta_near_paper": rel_close(late_b, p_late_b, tol=late_beta_rel_tol),
+        "late_reward_near_zero": bool(
+            np.isfinite(late_r) and late_r > -10.0 and late_r <= late_reward_hi
+        ),
     }
     return _gate_pack(
         gates,
@@ -468,6 +485,8 @@ def fig4b_gates(
             "paper_late_reward": p_late_r,
             "paper_early_beta": p_early_b,
             "paper_late_beta": p_late_b,
+            "reward_threshold": reward_threshold,
+            "late_beta_rel_tol": late_beta_rel_tol,
         },
         paper_ref={
             "reward": str(reward_path or refined_path("4b", stem="curves_wpd_refined_reward")),

@@ -174,18 +174,18 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 **Manifest:** `artifacts/figures/papers/mehregan/4a/manifest.json`
 <!-- caption-4a:end -->
 
-**Status:** Pass — locked **v18** (`training_beta_v18.png`, `series_v18.json`): linear softmax τ **3→1.0**, late fixture-seed skip, `gates_pass=true` (mid_drop≈0.024 vs paper≈0.047). Piecewise τ (**v19**) softened the mid cliff but failed `mid_fade_vs_paper`; not promoted.
+**Status:** Digitization revisit in progress — locked **v18** (`training_beta_v18.png`, `series_v18.json`, τ **3→1.0**) passed ratio gates but collapsed onto pattern 0 from episode 5 (late β≈0.30 vs digitized paper ≈0.38). Retrain default is τ **3→1.4**, paired with Fig 4b on live `series.json`.
 
 <!-- gates-4a:start -->
-**Gates set** (`fig4a_gates` → locked `series_v18.json`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4a/series_v18.json`, 2026-08-10). Every row is required for exit.
+**Gates set** (`fig4a_gates` → live `series.json`). Overall **`gates_pass`**: pending new train (was yes on locked `series_v18.json`). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
-| `plot_style` | 300 training steps | yes |
-| `overall_trend_down` | end window mean < start window mean | yes |
-| `drop_vs_paper` | drop ≥ 70% of digitized paper drop | yes |
-| `late_early_ratio_near_paper` | late/early ratio vs digitization | yes |
-| `mid_fade_vs_paper` | mid [120,150] fade ≥ 50% of paper mid-drop | yes |
+| `plot_style` | 300 training steps | pending |
+| `overall_trend_down` | end window mean < start window mean | pending |
+| `drop_vs_paper` | drop ≥ 70% of digitized paper drop | pending |
+| `late_early_ratio_near_paper` | late/early ratio vs digitization | pending |
+| `mid_fade_vs_paper` | mid [120,150] fade ≥ 50% of paper mid-drop | pending |
 <!-- gates-4a:end -->
 
 **Panel notes:** extended tuning history (skip_regular workflow, entropy experiments) — [docs/figures/mehregan/4a.md](../../docs/figures/mehregan/4a.md).
@@ -206,7 +206,7 @@ tmux new-session -d -s fig4a-train \
  "setsid nohup uv run python scripts/figures/papers/mehregan/4a/plot.py >> logs/fig4a-train.log 2>&1 < /dev/null"
 ```
 
-**Defaults:** seed `0`, **45 Hz** mean init, `state_length=1`, `fixed_mean_pattern`, **softmax** exploration (τ **3→1.0** linear), **`critic_action_input=one_hot`**, `init_bias_scale=0.5`, `entropy_coeff=0.01`, `plant.dt_ms=0.02`. Locked cache: `series_v18.json`.
+**Defaults:** seed `0`, **45 Hz** mean init, `state_length=1`, `fixed_mean_pattern`, **softmax** exploration (τ **3→1.4** linear), **`critic_action_input=one_hot`**, `init_bias_scale=0.5`, `entropy_coeff=0.01`, `plant.dt_ms=0.02`. Live cache: `series.json` (previous lock `series_v18.json`).
 
 ---
 
@@ -238,22 +238,25 @@ Episode **total reward** and **episode-mean PSD(x10³)** during the same **45 Hz
 **Manifest:** `artifacts/figures/papers/mehregan/4b/manifest.json`
 <!-- caption-4b:end -->
 
-**Status:** Pass — two panels × 9 episodes (indices 0–8), paired with Fig 4a v4 (seed 0; paper seed unspecified). Qualitative: reward↑, PSD↓. **v28** fixes overlay y-limit snapping (paper digitization y, not x). Y-limits snap to data extrema. Numeric bands differ — compare trends, not pointwise values.
+**Status:** Digitization revisit in progress — paired with live Fig 4a `series.json`. Previous lock (`series_v4.json`) passed ratio gates with late PSD ~0.30 (below $β_t$) and late reward ~+14; new gates require late PSD ≥ 0.35 and near digitized ~0.37, reward in $(-10, 2]$.
 
 <!-- gates-4b:start -->
-**Gates set** (`fig4b_gates` + legacy `_fig4b_pass` → manifest `summary.gates`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4b/manifest.json`, 2026-08-10). Every row is required for exit.
+**Gates set** (`fig4b_gates` + legacy `_fig4b_pass` → manifest `summary.gates`). Overall **`gates_pass`**: pending new paired train. Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
-| `early_negative` | mean reward ep 0–2 < 0 | yes |
-| `reward_rises` | late mean reward > early mean | yes |
-| `late_plateau_improved` | late mean reward > −10 | yes |
-| `rise_timing` | reward exceeds ep0 + 10 by ep ≤ 6 | yes |
-| `beta_drops` | late episode-mean PSD < early | yes |
-| `beta_drop_ratio_near_paper` | PSD late/early ratio vs digitization | yes |
-| `reward_recovers_like_paper` | qualitative rise (not magnitude match) | yes |
-| `plot_style` | ≥ 2 episodes plotted | yes |
-| `automation` | manifest summary.automation_pass mirrors fig4b bundle | yes |
+| `early_negative` | mean reward ep 0–2 < 0 | pending |
+| `reward_rises` | late mean reward > early mean | pending |
+| `late_plateau_improved` | late mean reward > −10 | pending |
+| `rise_timing` | reward exceeds ep0 + 10 by ep ≤ 6 | pending |
+| `beta_drops` | late episode-mean PSD < early | pending |
+| `beta_drop_ratio_near_paper` | PSD late/early ratio vs digitization | pending |
+| `reward_recovers_like_paper` | qualitative rise (not magnitude match) | pending |
+| `late_beta_above_threshold` | late episode-mean PSD ≥ $β_t=0.35$ | pending |
+| `late_beta_near_paper` | late PSD within 15% of digitized paper | pending |
+| `late_reward_near_zero` | late mean reward in $(-10, 2]$ | pending |
+| `plot_style` | ≥ 2 episodes plotted | pending |
+| `automation` | manifest summary.automation_pass mirrors fig4b bundle | pending |
 <!-- gates-4b:end -->
 
 **Run:**
@@ -265,7 +268,7 @@ uv run python scripts/figures/papers/mehregan/4b/plot.py --plot-only
 
 Each run writes new ``training_reward_vN.png`` and ``training_psd_vN.png`` (same N) and updates the replication links above.
 
-**Defaults:** **9 episodes** from Fig 4a paired series. Locked replication images: **v28** (overlay y-limit fix).
+**Defaults:** **9 episodes** from Fig 4a live `series.json`. Previous lock: **v28** from `series_v4.json`.
 
 ---
 

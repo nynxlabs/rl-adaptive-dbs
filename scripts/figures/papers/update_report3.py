@@ -146,8 +146,8 @@ REPORT3_PANEL_META: dict[str, dict[str, str]] = {
             "training)."
         ),
         "status": (
-            "Pass: locked training cache (softmax τ 3→1.0). "
-            "Flagged for revisit since the digitizations."
+            "Revisit in progress: pair with 4b; softmax τ 3→1.4 to avoid "
+            "pattern-0 collapse (locked v18 was τ→1.0)."
         ),
         "caption": (
             "The average power of the beta frequency band for each step during "
@@ -163,8 +163,8 @@ REPORT3_PANEL_META: dict[str, dict[str, str]] = {
             "Over episodes 0–8, reward rises toward zero while episode-mean β falls."
         ),
         "status": (
-            "Pass: stacked reward / PSD panel paired with the Fig. 4a training cache. "
-            "Flagged for revisit since the digitizations."
+            "Revisit in progress: match digitized late PSD floor (~0.37, above "
+            "β_t) so reward approaches 0 from below; paired with latest Fig. 4a series."
         ),
         "caption": (
             "Beta power in GPi during each episode of training of the $45\\text{Hz}$ "
@@ -173,7 +173,8 @@ REPORT3_PANEL_META: dict[str, dict[str, str]] = {
         ),
         "gates": (
             "Reward rises from negative early values; episode-mean PSD falls; rise "
-            "timing and PSD drop ratio vs digitized paper."
+            "timing and PSD drop ratio vs digitized paper; late PSD ≥ 0.35 and "
+            "within 15% of paper; late reward in (−10, 2]."
         ),
     },
     "Rep 5a": {
