@@ -26,22 +26,29 @@ def evaluate(
     carrier_hz: float | None = None,
     use_fp16_ptq: bool = False,
 ) -> dict[str, Any]:
-    """Roll out a trained actor; returns summary metrics and per-step traces."""
-    cfg = (config or SEADBSConfig()).with_variant_defaults()
+    """Roll out a trained actor; returns summary metrics and per-step traces.
+
+    Environment knobs (burst length, observation scale, …) come from the
+    checkpoint so Fig 5 eval matches the Fig 4a train plant. ``carrier_hz``
+    is the Fig 5 inference override and is written into the config so
+    ``reset()`` cannot restore the training carrier.
+    """
+    device = (config or SEADBSConfig()).device
+    payload = load_checkpoint(checkpoint, device=device)
+    actor, ckpt_cfg = load_actor_from_payload(payload, device=device)
+    cfg = ckpt_cfg
+    if config is not None:
+        cfg = replace(cfg, variant=config.variant, seed=config.seed, device=config.device)
     if max_steps is not None:
         cfg = replace(cfg, max_episode_steps=int(max_steps))
-
-    payload = load_checkpoint(checkpoint, device=cfg.device)
-    actor, ckpt_cfg = load_actor_from_payload(payload, device=cfg.device)
-    if config is not None:
-        cfg = replace(cfg, variant=config.variant, seed=config.seed)
+    hz = float(carrier_hz if carrier_hz is not None else cfg.carrier_hz)
+    cfg = replace(cfg, carrier_hz=hz)
 
     policy: Actor | FP16ActorWrapper = actor
     if use_fp16_ptq or is_ptq_variant(cfg.variant):
         policy = FP16ActorWrapper(apply_fp16_ptq(actor))
 
     env = SEA_DBSEnvAdapter(plant=plant, config=cfg)
-    hz = float(carrier_hz if carrier_hz is not None else cfg.carrier_hz)
     env.set_carrier_hz(hz)
 
     episode_rewards: list[float] = []
@@ -50,7 +57,10 @@ def evaluate(
 
     try:
         for ep in range(int(episodes)):
-            state, info = env.reset(seed=cfg.seed + 10_000 + ep)
+            # Fig 5/6/7 step 0 is untreated PD onset (paper ~0.46). Offset
+            # seeds (e.g. +10000) land in a different IC and can *rise* toward
+            # the 50 Hz always-on floor instead of declining from the high start.
+            state, info = env.reset(seed=cfg.seed + ep)
             ep_reward = 0.0
             ep_p_beta = [float(info.get("p_beta_norm", 0.0))]
             ep_actions: list[int] = []
@@ -92,6 +102,8 @@ def evaluate(
         "p_beta_mean": float(np.mean(p_beta_final)) if p_beta_final else 0.0,
         "n_episodes": len(episode_rewards),
         "max_steps": cfg.max_episode_steps,
+        "n_psd_samples": len(p_beta_trajectories[0]) if p_beta_trajectories else 0,
+        "dbs_burst_ms": cfg.dbs_burst_ms,
         "fp16_ptq": bool(use_fp16_ptq or is_ptq_variant(cfg.variant)),
     }
 

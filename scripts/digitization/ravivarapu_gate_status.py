@@ -55,7 +55,7 @@ RAVIVARAPU_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
         ("both_rise", "both series rise from early to late"),
     ],
     "5a": [
-        ("n_steps_ok", "10 inference steps"),
+        ("n_steps_ok", "11 PSD samples (t=0 + 10 stim steps)"),
         ("shared_start", "baseline and SEA-DBS agree at step 0"),
         ("baseline_declines", "baseline PSD declines"),
         ("paper_declines", "SEA-DBS PSD declines"),
@@ -64,7 +64,7 @@ RAVIVARAPU_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
         ("carrier_hz_ok", "carrier frequency 50 Hz"),
     ],
     "5b": [
-        ("n_steps_ok", "10 inference steps"),
+        ("n_steps_ok", "11 PSD samples (t=0 + 10 stim steps)"),
         ("shared_start", "baseline and SEA-DBS agree at step 0"),
         ("baseline_declines", "baseline PSD declines"),
         ("paper_declines", "SEA-DBS PSD declines"),

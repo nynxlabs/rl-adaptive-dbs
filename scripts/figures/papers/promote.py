@@ -1977,3 +1977,103 @@ def promote_ravivarapu_4b(*, manifest: dict[str, Any], png_path: Path, update_do
     refresh_ravivarapu_gate_tables(update_docs=update_docs)
     _after_promote_publish(png_path, update_docs=update_docs)
     return {"png": str(png_path), "caption": caption, "doc": str(PAPER_RAVIVARAPU_DOC)}
+
+
+PAPER_RAVIVARAPU_5A_PNG = "figures/ravivarapu/images/5a/inference_50hz.png"
+PAPER_RAVIVARAPU_5B_PNG = "figures/ravivarapu/images/5b/inference_30hz.png"
+
+
+def _ravivarapu_inference_status_line(manifest: dict[str, Any], *, panel: str) -> str:
+    gates = manifest.get("gates") or {}
+    ver = manifest.get("png_version")
+    rep = f" (rep v{ver})" if ver is not None else ""
+    hz = manifest.get("carrier_hz")
+    manifest_rel = f"artifacts/figures/papers/ravivarapu/{panel}/manifest.json"
+    if gates.get("smoke_override"):
+        return (
+            f"**Status:** Open{rep} — smoke override; not a ship pass. "
+            f"Manifest `{manifest_rel}`."
+        )
+    if gates.get("pass"):
+        hz_s = f"{hz:g}" if isinstance(hz, (int, float)) else "?"
+        return (
+            f"**Status:** **Pass**{rep} — inference @ {hz_s} Hz; "
+            f"Manifest `{manifest_rel}`."
+        )
+    failed = [k for k, v in gates.items() if v is False and k not in {"pass", "smoke_override"}]
+    fail_note = ", ".join(failed[:4]) if failed else "see gates"
+    return (
+        f"**Status:** Fail{rep} (`{fail_note}`). Manifest `{manifest_rel}`."
+    )
+
+
+def _promote_ravivarapu_inference(
+    *,
+    manifest: dict[str, Any],
+    png_path: Path,
+    panel: str,
+    caption_marker: str,
+    replication_alt: str,
+    ship_alias: str,
+    update_docs: bool = True,
+) -> dict[str, str]:
+    caption = manifest.get("caption") or "see manifest"
+    if manifest.get("png_version") is not None:
+        caption = f"{caption} (v{manifest['png_version']})"
+    if PAPER_RAVIVARAPU_DOC.exists() and update_docs:
+        text = PAPER_RAVIVARAPU_DOC.read_text()
+        if f"<!-- {caption_marker}:start -->" in text:
+            text = _replace_marker(
+                text,
+                caption_marker,
+                _caption_block(
+                    caption,
+                    f"artifacts/figures/papers/ravivarapu/{panel}/manifest.json",
+                ),
+            )
+        text = re.sub(
+            rf"!\[{re.escape(replication_alt)}\]\(images/{panel}/\w+_v\d+\.png\)",
+            f"![{replication_alt}](images/{panel}/{png_path.name})",
+            text,
+        )
+        # Rewrite this panel's Status line (first match after the caption marker).
+        parts = text.split(f"<!-- {caption_marker}:end -->", 1)
+        if len(parts) == 2:
+            head, tail = parts
+            tail = re.sub(
+                r"(?m)^\*\*Status:\*\*.*$",
+                _ravivarapu_inference_status_line(manifest, panel=panel),
+                tail,
+                count=1,
+            )
+            text = f"<!-- {caption_marker}:end -->".join((head, tail))
+        PAPER_RAVIVARAPU_DOC.write_text(text)
+    refresh_ravivarapu_gate_tables(update_docs=update_docs)
+    materialize_ship_png(png_path, ship_alias)
+    _after_promote_publish(png_path, update_docs=update_docs)
+    return {"png": str(png_path), "caption": caption, "doc": str(PAPER_RAVIVARAPU_DOC)}
+
+
+def promote_ravivarapu_5a(*, manifest: dict[str, Any], png_path: Path, update_docs: bool = True) -> dict[str, str]:
+    return _promote_ravivarapu_inference(
+        manifest=manifest,
+        png_path=png_path,
+        panel="5a",
+        caption_marker="caption-5a",
+        replication_alt="Replication Fig 5a",
+        ship_alias=PAPER_RAVIVARAPU_5A_PNG,
+        update_docs=update_docs,
+    )
+
+
+def promote_ravivarapu_5b(*, manifest: dict[str, Any], png_path: Path, update_docs: bool = True) -> dict[str, str]:
+    return _promote_ravivarapu_inference(
+        manifest=manifest,
+        png_path=png_path,
+        panel="5b",
+        caption_marker="caption-5b",
+        replication_alt="Replication Fig 5b",
+        ship_alias=PAPER_RAVIVARAPU_5B_PNG,
+        update_docs=update_docs,
+    )
+

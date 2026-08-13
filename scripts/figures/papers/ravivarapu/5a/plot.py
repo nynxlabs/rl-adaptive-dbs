@@ -4,7 +4,9 @@
 Eval-only panel. Train or resume SEA-DBS weights via Fig 4a ``plot.py``
 (``--resume``) or Fig 7 ``plot.py`` (``--retrain``).
 
-Paper panel: 10 stimulation steps; SEA-DBS below Baseline; stronger than 30 Hz.
+Paper panel: steps 0–10 (untreated + 10 stim); SEA-DBS below Baseline;
+stronger than 30 Hz. Env knobs (burst, scale) come from the Fig 4a checkpoint;
+carrier 50 Hz is the eval override.
 """
 from __future__ import annotations
 
@@ -21,7 +23,12 @@ os.environ.setdefault("MPLBACKEND", "Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from controllers.sea_dbs.config import ABLATION_EVAL_STEPS, INFERENCE_CARRIER_50HZ, SEADBSConfig
+from controllers.sea_dbs.config import (
+    ABLATION_EVAL_STEPS,
+    INFERENCE_CARRIER_50HZ,
+    INFERENCE_PSD_SAMPLES,
+    SEADBSConfig,
+)
 from controllers.sea_dbs.eval import evaluate
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
@@ -29,6 +36,12 @@ _spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
 assert _spec and _spec.loader
 _figure_promote = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_figure_promote)
+
+_RESUME_CLI = Path(__file__).resolve().parents[2] / "resume_cli.py"
+_resume_spec = importlib.util.spec_from_file_location("figure_resume_cli", _RESUME_CLI)
+assert _resume_spec and _resume_spec.loader
+_resume_cli = importlib.util.module_from_spec(_resume_spec)
+_resume_spec.loader.exec_module(_resume_cli)
 
 _DIG = Path(__file__).resolve().parents[4] / "digitization"
 if str(_DIG) not in sys.path:
@@ -48,6 +61,37 @@ OUT_STEM = "inference_50hz"
 VARIANTS = ("baseline", "paper")
 
 
+def _vault_backed_png(path: Path) -> Path:
+    path = Path(path)
+    roots: list[Path] = []
+    main_root = getattr(_figure_promote, "REPO_ROOT", None)
+    if isinstance(main_root, Path):
+        roots.append(main_root)
+    roots.append(Path.cwd())
+    for root in roots:
+        paper = root / path.parent / "paper.png"
+        if not paper.is_symlink():
+            continue
+        vault_dir = paper.resolve().parent
+        vault_target = vault_dir / path.name
+        local = path if path.is_absolute() else Path.cwd() / path
+        local.parent.mkdir(parents=True, exist_ok=True)
+        if not vault_target.exists():
+            vault_target.parent.mkdir(parents=True, exist_ok=True)
+            vault_target.touch()
+        if local.exists() or local.is_symlink():
+            if local.resolve() != vault_target.resolve():
+                return vault_target
+            return local
+        try:
+            local.symlink_to(vault_target)
+        except OSError:
+            return vault_target
+        return local
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 def _ckpt(variant: str, seed: int) -> Path:
     path = Path("artifacts/figures/papers/ravivarapu/4") / f"{variant}_train{seed}.pt"
     if path.is_file():
@@ -55,13 +99,14 @@ def _ckpt(variant: str, seed: int) -> Path:
     return Path("artifacts/sea_dbs") / f"{variant}_train{seed}.pt"
 
 
-def evaluate_gates(traces: dict[str, list[float]]) -> dict[str, Any]:
+def evaluate_gates(traces: dict[str, list[float]], *, n_expected: int) -> dict[str, Any]:
     dig = ravivarapu_inference_gates(
         traces["baseline"],
         traces["paper"],
         carrier_hz=INFERENCE_CARRIER_50HZ,
+        n_expected=n_expected,
     )
-    return merge_gate_report(dig, {"n_steps": len(traces["baseline"])})
+    return merge_gate_report(dig, {"n_psd_samples": len(traces["baseline"])})
 
 
 def main() -> None:
@@ -73,15 +118,23 @@ def main() -> None:
         action="store_true",
         help="Replot from cached series.json (no eval)",
     )
+    _resume_cli.add_push_kb_arg(parser)
+    _resume_cli.add_update_report3_arg(parser)
     args = parser.parse_args()
+    _resume_cli.configure_promote_publish(args, _figure_promote)
     steps = 5 if args.smoke else ABLATION_EVAL_STEPS
+    n_expected = steps + 1 if args.smoke else INFERENCE_PSD_SAMPLES
     series_path = CACHE_DIR / "series.json"
+    actions: dict[str, list[int]] = {}
+    eval_meta: dict[str, Any] = {}
     if args.plot_only:
         if not series_path.is_file():
             raise SystemExit(f"missing series cache: {series_path}")
         payload = json.loads(series_path.read_text(encoding="utf-8"))
         traces = payload["traces"]
-        steps = int(payload.get("steps", len(next(iter(traces.values())))))
+        actions = payload.get("actions") or {}
+        steps = int(payload.get("steps", len(next(iter(traces.values()))) - 1))
+        n_expected = int(payload.get("n_psd_samples", len(next(iter(traces.values())))))
     else:
         traces = {}
         for variant in VARIANTS:
@@ -92,6 +145,12 @@ def main() -> None:
                 carrier_hz=INFERENCE_CARRIER_50HZ,
             )
             traces[variant] = payload["p_beta_trajectories"][0]
+            actions[variant] = payload["action_trajectories"][0]
+            eval_meta[variant] = {
+                "carrier_hz": payload["carrier_hz"],
+                "dbs_burst_ms": payload["dbs_burst_ms"],
+                "n_psd_samples": payload["n_psd_samples"],
+            }
 
     fig, ax = plt.subplots(figsize=(6, 4))
     for variant, label in (("baseline", "Baseline 50Hz"), ("paper", "SEA-DBS 50Hz")):
@@ -110,24 +169,49 @@ def main() -> None:
     ax.grid(True, alpha=0.3)
     _paper_overlay.place_legend(ax, fontsize=8)
     png_path, png_version = _figure_promote.next_versioned_png(FIGURES_DIR, OUT_STEM)
-    fig.savefig(png_path, dpi=150)
+    fig.savefig(_vault_backed_png(png_path), dpi=150)
     plt.close(fig)
 
-    gates = {"pass": True, "smoke_override": True} if args.smoke else evaluate_gates(traces)
+    gates = {"pass": True, "smoke_override": True} if args.smoke else evaluate_gates(
+        traces, n_expected=n_expected
+    )
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     if not args.plot_only:
-        series_path.write_text(json.dumps({"traces": traces, "steps": steps}, indent=2) + "\n")
+        series_path.write_text(
+            json.dumps(
+                {
+                    "traces": traces,
+                    "actions": actions,
+                    "steps": steps,
+                    "n_psd_samples": n_expected,
+                    "eval_meta": eval_meta,
+                },
+                indent=2,
+            )
+            + "\n"
+        )
+    caption = (
+        f"Inference GPi beta PSD vs step @ 50 Hz (seed {args.seed}); "
+        f"pass={gates.get('pass')}; Baseline vs SEA-DBS."
+    )
     manifest = {
         "panel": "5a",
         "carrier_hz": INFERENCE_CARRIER_50HZ,
         "n_steps": steps,
+        "n_psd_samples": n_expected,
         "png": _figure_promote.repo_rel_posix(png_path),
         "png_version": png_version,
         "gates": gates,
+        "caption": caption,
         "series_cache": series_path.as_posix(),
+        "actions": {k: list(v) for k, v in actions.items()},
+        "eval_meta": eval_meta,
     }
     (CACHE_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    if hasattr(_figure_promote, "promote_ravivarapu_5a"):
+        _figure_promote.promote_ravivarapu_5a(manifest=manifest, png_path=png_path)
     print(json.dumps(manifest, indent=2))
+    print(f"wrote {png_path}")
 
 
 if __name__ == "__main__":
