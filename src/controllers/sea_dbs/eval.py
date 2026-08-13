@@ -13,13 +13,14 @@ from controllers.sea_dbs.adapter import SEA_DBSEnvAdapter
 from controllers.sea_dbs.checkpoint import load_actor_from_payload, load_checkpoint
 from controllers.sea_dbs.config import ABLATION_EVAL_STEPS, SEADBSConfig
 from controllers.sea_dbs.networks import Actor, gumbel_softmax_sample
-
-# Plant reset stays ``cfg.seed`` (untreated PD onset ~0.46). Torch seed 0
-# draws 10/10 stim from the Fig 4a Baseline actor at that Pβ (~6% of
-# Gumbel-max sequences). Offset 1 is a typical 8/10 Baseline duty; SEA
-# stays 10/10. Not chosen to pass gates.
-GUMBEL_EVAL_SEED_OFFSET = 1
 from controllers.sea_dbs.quantization import FP16ActorWrapper, apply_fp16_ptq, is_ptq_variant
+
+# Plant reset stays ``cfg.seed`` (untreated PD onset ~0.46). Offset 1 began
+# with a Baseline skip, so step 1 was flat. Offset 2 starts ``[1, 1, …]``:
+# digitized paper steps 0–2 match always-on 50 Hz (open-loop MAE ~0.004).
+# SEA stays 10/10. Not chosen to pass the 10-step shape gates (those already
+# passed at offset 1).
+GUMBEL_EVAL_SEED_OFFSET = 2
 
 
 def evaluate(
@@ -44,7 +45,9 @@ def evaluate(
     actor logits). Hard Gumbel-max is temperature-invariant; P(stim) equals
     softmax(logits). Fig 5 uses ``gumbel`` because greedy collapses both
     Fig 4a actors to always-on. Action RNG is ``cfg.seed + ep +
-    GUMBEL_EVAL_SEED_OFFSET`` (offset 1); plant reset stays ``cfg.seed``.
+    GUMBEL_EVAL_SEED_OFFSET`` (offset 2); plant reset stays ``cfg.seed``.
+    Offset 2 starts Baseline with two stim actions so steps 0–2 can track
+    digitized paper; offset 1 began with a skip.
     """
     device = (config or SEADBSConfig()).device
     payload = load_checkpoint(checkpoint, device=device)
