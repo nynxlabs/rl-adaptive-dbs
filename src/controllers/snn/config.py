@@ -161,29 +161,30 @@ def fig4_nguyen_config(
     collapse (v13); keep v9 shaping for learnable early-stop.
 
     v10c: subthreshold_steps_required=2 for easier early-stop.
-    v44 FAIL: scale restored, direction correct (late_len 19.5, 57% late
-    early-stop) but ε_end=0.15 kept late episodes long (α–β~245, not ~150).
-    v45: v22-like exploit floor — decay=4200, ε_end=0.05, prog=2000,
-    trunc=600k, keep scale=1e-4 / tu=2 / freq_sens=15 / mild cap.
+    v45: decay=4200 / ε_end=0.05 recovered late_len≈14.5 but first-100
+    length stayed ~22 (paper 0–50≈25, 80–100≈10). v46: first-100 focus —
+    paper t_u=3 (fewer lucky early-stops in ep 0–50) + v41 mid-glide
+    schedule (decay=3200, freq_sens=20, prog=2500, trunc=1e6), keep
+    scale=1e-4.
     """
     return SNNConfig(
         seed=seed,
         num_episodes=num_episodes,
         max_episode_steps=EVAL_MAX_STEPS,
         alpha_beta_threshold=BIOMARKER_THRESHOLD,
-        subthreshold_steps_required=2,
-        epsilon_decay_steps=4_200,
+        subthreshold_steps_required=3,
+        epsilon_decay_steps=3_200,
         epsilon_end=0.05,
         learning_rate=5e-4,
-        frequency_sensitivity=15.0,
+        frequency_sensitivity=20.0,
         pulse_width_sensitivity=0.1,
         threshold_reward=300.0,
         energy_penalty=0.0,
-        alpha_beta_progress_coef=2000.0,
+        alpha_beta_progress_coef=2500.0,
         alpha_beta_progress_cap_per_step=10_000.0,
         warm_zone_upper=220.0,
         warm_zone_bonus_coef=150.0,
-        truncation_penalty=600_000.0,
+        truncation_penalty=1_000_000.0,
         reward_learning_scale=1e-4,
         stimulated_neurons=1,
         log_episodes=True,

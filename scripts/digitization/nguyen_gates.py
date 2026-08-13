@@ -249,6 +249,9 @@ def fig4_length_gates(
 # Fig 4 training-curve timing (explore wiggle → mid glide → post-100 plateau).
 FIG4_TIMING_SMOOTH = 20
 FIG4_MID_GLIDE = (50.0, 100.0)
+FIG4_BY_100 = (80.0, 100.0)
+FIG4_EARLY_SMOOTHED_MIN = 23.0
+FIG4_REWARD_BY_100_FLOOR = -2.0e5
 FIG4_POST_PLATEAU_LEVEL = (100.0, 150.0)
 FIG4_POST_PLATEAU_SLOPE = (100.0, 250.0)
 FIG4_POST_PLATEAU_RANGE = (100.0, 200.0)
@@ -308,8 +311,17 @@ def fig4_timing_shape_gates(
     n = int(lengths.size)
     if n < 120:
         return {
-            "length_gates": {"length_mid_glide_like_paper": False, "length_post100_plateau": False},
-            "reward_gates": {"reward_post100_plateau": False},
+            "length_gates": {
+                "length_early_smoothed_near_horizon": False,
+                "length_mid_glide_like_paper": False,
+                "length_by_100_near_paper": False,
+                "length_post100_plateau": False,
+            },
+            "reward_gates": {
+                "reward_improves_by_100": False,
+                "reward_by_100_near_zero": False,
+                "reward_post100_plateau": False,
+            },
             "metrics": {"n_episodes": n, "reason": "too_few_episodes_for_timing"},
         }
 
@@ -328,17 +340,23 @@ def fig4_timing_shape_gates(
 
     len_early_0_50 = _median_in_window(lx, ls, 0.0, 50.0)
     len_mid_50_100 = _median_in_window(lx, ls, mid_lo, mid_hi)
+    by100_lo, by100_hi = FIG4_BY_100
+    len_80_100 = _median_in_window(lx, ls, by100_lo, by100_hi)
     len_lvl_100_150 = _median_in_window(lx, ls, lvl_lo, lvl_hi)
     len_slope_100_250 = _slope_in_window(lx, ls, slope_lo, slope_hi)
     len_ptp_100_200 = _ptp_in_window(lx, ls, range_lo, range_hi)
 
+    p_len_early = _median_in_window(plx, ply, 0.0, 50.0)
     p_len_mid = _median_in_window(plx, ply, mid_lo, mid_hi)
+    p_len_80_100 = _median_in_window(plx, ply, by100_lo, by100_hi)
     p_len_lvl = _median_in_window(plx, ply, lvl_lo, lvl_hi)
 
+    length_early_smoothed = bool(len_early_0_50 >= FIG4_EARLY_SMOOTHED_MIN)
     length_mid_glide = bool(
         len_mid_50_100 < len_early_0_50 - 1.5
         and rel_close(len_mid_50_100, p_len_mid, tol=rel_tol)
     )
+    length_by_100 = bool(rel_close(len_80_100, p_len_80_100, tol=rel_tol))
     length_post100 = bool(
         abs(len_slope_100_250) <= 0.055
         and len_ptp_100_200 <= 4.5
@@ -349,6 +367,8 @@ def fig4_timing_shape_gates(
     rw_rng_lo, rw_rng_hi = FIG4_REWARD_PLATEAU_RANGE
     rw_slope_lo, rw_slope_hi = FIG4_REWARD_PLATEAU_SLOPE
     rew_med_late = _median_in_window(rx, rs, rw_lo, rw_hi)
+    rew_0_50 = _median_in_window(rx, rs, 0.0, 50.0)
+    rew_80_100 = _median_in_window(rx, rs, by100_lo, by100_hi)
     rew_ptp_100_250 = _ptp_in_window(rx, rs, rw_rng_lo, rw_rng_hi)
     rew_slope_100_450 = _slope_in_window(rx, rs, rw_slope_lo, rw_slope_hi)
     scale = max(abs(rew_med_late), 1.0e5)
@@ -356,23 +376,34 @@ def fig4_timing_shape_gates(
         rew_ptp_100_250 <= max(0.30 * scale, 5.0e4)
         and abs(rew_slope_100_450) <= max(0.00015 * scale, 150.0)
     )
+    reward_improves_by_100 = bool(rew_80_100 > rew_0_50)
+    reward_by_100_near_zero = bool(rew_80_100 > FIG4_REWARD_BY_100_FLOOR)
 
     return {
         "length_gates": {
+            "length_early_smoothed_near_horizon": length_early_smoothed,
             "length_mid_glide_like_paper": length_mid_glide,
+            "length_by_100_near_paper": length_by_100,
             "length_post100_plateau": length_post100,
         },
         "reward_gates": {
+            "reward_improves_by_100": reward_improves_by_100,
+            "reward_by_100_near_zero": reward_by_100_near_zero,
             "reward_post100_plateau": reward_post100,
         },
         "metrics": {
             "len_early_0_50": len_early_0_50,
             "len_mid_50_100": len_mid_50_100,
+            "len_80_100": len_80_100,
             "len_lvl_100_150": len_lvl_100_150,
             "len_slope_100_250": len_slope_100_250,
             "len_ptp_100_200": len_ptp_100_200,
+            "paper_len_early_0_50": p_len_early,
             "paper_len_mid_50_100": p_len_mid,
+            "paper_len_80_100": p_len_80_100,
             "paper_len_lvl_100_150": p_len_lvl,
+            "rew_0_50": rew_0_50,
+            "rew_80_100": rew_80_100,
             "rew_med_175_325": rew_med_late,
             "rew_ptp_100_250": rew_ptp_100_250,
             "rew_slope_100_450": rew_slope_100_450,
