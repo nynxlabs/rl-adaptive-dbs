@@ -890,11 +890,13 @@ def _caption_4a(manifest: dict[str, Any]) -> str:
     exploration = manifest.get("exploration_mode", "softmax")
     critic = manifest.get("critic_action_input", "one_hot")
     init_bias = manifest.get("init_bias_scale")
+    jitter = manifest.get("jitter_fraction")
     version = manifest.get("png_version")
     summary = manifest.get("summary") or {}
     trend = summary.get("trend_down")
     early = summary.get("early_mean_0_130")
     late = summary.get("late_mean_150_end")
+    ep0 = (summary.get("paper_gate_metrics") or {}).get("ep0_mean")
     bits = [
         f"{mean_hz:g} Hz fixed_mean_pattern",
         f"{state_mode} L={state_length}",
@@ -907,6 +909,10 @@ def _caption_4a(manifest: dict[str, Any]) -> str:
         bits.append(f"v{version}")
     if isinstance(init_bias, (int, float)):
         bits.append(f"init_bias={init_bias:g}")
+    if isinstance(jitter, (int, float)):
+        bits.append(f"jitter={jitter:g}")
+    if isinstance(ep0, (int, float)):
+        bits.append(f"ep0={ep0:.3f}")
     if isinstance(early, (int, float)) and isinstance(late, (int, float)):
         bits.append(f"early={early:.3f} late={late:.3f}")
     if trend is True:

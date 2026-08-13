@@ -63,6 +63,7 @@ def test_fig4a_paper_self_drop():
     report = fig4a_gates(trace)
     assert report["gates"]["overall_trend_down"]
     assert report["gates"]["drop_vs_paper"]
+    assert report["gates"]["ep0_near_paper"]
 
 
 @pytest.mark.skipif(
@@ -81,6 +82,7 @@ def test_fig4b_paper_self_late_floor():
     assert report["gates"]["late_beta_above_threshold"]
     assert report["gates"]["late_beta_near_paper"]
     assert report["gates"]["late_reward_near_zero"]
+    assert report["gates"]["ep0_beta_near_paper"]
     assert report["pass"]
 
 
