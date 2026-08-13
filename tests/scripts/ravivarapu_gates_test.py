@@ -14,6 +14,7 @@ from ravivarapu_gates import (  # noqa: E402
     ravivarapu_fig4a_attach_tiered_pass,
     ravivarapu_fig4a_gates,
     ravivarapu_fig4a_digitization_gates,
+    ravivarapu_inference_gates,
 )
 
 
@@ -104,3 +105,50 @@ def test_fig4a_tiered_shape_pass_without_full_polish():
     tiered = ravivarapu_fig4a_attach_tiered_pass(flat)
     assert tiered["shape_pass"]
     assert not tiered["pass"]
+
+
+def test_inference_shape_gates_pass_on_split_decline():
+    baseline = np.linspace(0.46, 0.36, 11)
+    sea = np.linspace(0.46, 0.31, 11)
+    report = ravivarapu_inference_gates(baseline, sea, carrier_hz=50.0)
+    assert report["pass"]
+    assert report["gates"]["baseline_declines"]
+    assert report["gates"]["paper_declines"]
+    assert report["gates"]["paper_end_below_baseline"]
+    assert report["gates"]["paper_steeper_drop"]
+
+
+def test_inference_shape_gates_any_net_drop_counts():
+    """Modest 50 Hz always-on drop (~0.033) is still a decline."""
+    y = np.linspace(0.461, 0.428, 11)
+    report = ravivarapu_inference_gates(y, y, carrier_hz=50.0)
+    assert report["gates"]["baseline_declines"]
+    assert report["gates"]["paper_declines"]
+    assert not report["gates"]["paper_end_below_baseline"]
+    assert not report["gates"]["paper_steeper_drop"]
+    assert not report["pass"]
+
+
+def test_inference_shape_gates_reject_rise():
+    y = np.linspace(0.461, 0.468, 11)
+    report = ravivarapu_inference_gates(y, y, carrier_hz=30.0)
+    assert not report["gates"]["baseline_declines"]
+    assert not report["gates"]["paper_declines"]
+    assert not report["pass"]
+
+
+def test_inference_5b_weaker_than_50hz():
+    b30 = np.linspace(0.46, 0.40, 11)
+    s30 = np.linspace(0.46, 0.39, 11)
+    b50 = np.linspace(0.46, 0.36, 11)
+    s50 = np.linspace(0.46, 0.31, 11)
+    report = ravivarapu_inference_gates(
+        b30,
+        s30,
+        carrier_hz=30.0,
+        sea_trace_50hz=s50,
+        baseline_trace_50hz=b50,
+    )
+    assert report["pass"]
+    assert report["gates"]["weaker_than_50hz_sea"]
+    assert report["gates"]["weaker_than_50hz_baseline"]
