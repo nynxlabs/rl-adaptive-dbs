@@ -161,10 +161,10 @@ def fig4_nguyen_config(
     collapse (v13); keep v9 shaping for learnable early-stop.
 
     v10c: subthreshold_steps_required=2 for easier early-stop.
-    v43 FAIL: unscaled Bellman (`reward_learning_scale=1.0`) blew up Q
-    (loss ~10^9–10^10); early-stops vanished after ep ~60; late_len=25,
-    late_reward≈−1.07e6, energy 660→82. v44: same v10 schedule/shaping
-    with v15 `reward_learning_scale=1e-4` restored.
+    v44 FAIL: scale restored, direction correct (late_len 19.5, 57% late
+    early-stop) but ε_end=0.15 kept late episodes long (α–β~245, not ~150).
+    v45: v22-like exploit floor — decay=4200, ε_end=0.05, prog=2000,
+    trunc=600k, keep scale=1e-4 / tu=2 / freq_sens=15 / mild cap.
     """
     return SNNConfig(
         seed=seed,
@@ -172,8 +172,8 @@ def fig4_nguyen_config(
         max_episode_steps=EVAL_MAX_STEPS,
         alpha_beta_threshold=BIOMARKER_THRESHOLD,
         subthreshold_steps_required=2,
-        epsilon_decay_steps=3_500,
-        epsilon_end=0.15,
+        epsilon_decay_steps=4_200,
+        epsilon_end=0.05,
         learning_rate=5e-4,
         frequency_sensitivity=15.0,
         pulse_width_sensitivity=0.1,
