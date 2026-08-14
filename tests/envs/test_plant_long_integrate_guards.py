@@ -1,4 +1,4 @@
-"""Guards for long single-shot PythonPlant integrates (Fig 4a continuous stitch)."""
+"""Guards for long sequential PythonPlant integrates (Fig 4a continuous carry)."""
 
 from __future__ import annotations
 
@@ -30,3 +30,21 @@ def test_ca_floor_keeps_nernst_finite() -> None:
     zeros = np.zeros(3)
     ecasn_vec = np.log(cao / np.maximum(zeros, INTRACELL_CA_MIN))
     assert np.all(np.isfinite(ecasn_vec))
+
+
+def test_python_plant_carry_short_segments_finite() -> None:
+    from envs.plant.config import PlantConfig
+    from envs.plant.dbs import DbsSpec
+    from envs.plant.python_backend import PythonPlant
+
+    plant = PythonPlant(config=PlantConfig(dt_ms=0.02))
+    plant.reset(seed=0)
+    none = DbsSpec.none()
+    dbs = DbsSpec.from_frequency_hz(45.0)
+    r0 = plant.integrate(0.02, none, carry=True)
+    r1 = plant.integrate(0.02, dbs, carry=True)
+    r2 = plant.integrate(0.02, dbs, carry=True)
+    for result in (r0, r1, r2):
+        assert result.p_beta is not None
+        assert np.isfinite(result.p_beta)
+    assert "_dyn_state" not in r2.info

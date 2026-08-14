@@ -129,7 +129,9 @@ The plant lives under `envs/plant/` as a **non-Gym** service the Mehregan `Env` 
 
 **Performance (2026-07-03, WSL, seed=42, 2 s, no DBS):** MATLAB **≈58–66 s**; PythonPlant **≈6–7 s** with Numba JIT (`envs/plant/network/numba_loop.py`) — **≈10× faster** than MATLAB. NumPy fallback loop remains when Numba is unavailable or trace/debug hooks are requested. The Numba path records GPi spikes in a per-neuron buffer: **512** for a 2 s segment; longer single-shot integrates auto-size via `default_gpi_spike_buffer_size` (`ceil(duration_s × 80 Hz) + 64`, at least 512). Callers may still pass `gpi_spike_buffer_size` (Fig 2a uses a 60 Hz helper). Without a duration-scaled buffer, trains truncate after ~12 s.
 
-**Intracellular Ca floor:** STN Ca reversal is `log(Cao/Ca)`. MATLAB has no floor; 2 s segments stay positive. Sequential episode stitches (Mehregan Fig 4a `continuous`, ≳20 s) can drive Ca to 0 and `ZeroDivisionError` in Numba. Python/Numba clamp STN/GPe/GPi Ca at **10⁻⁸ mM** before the Nernst/IAHP divisions. This is numerical stability for long sequential segments, not a paper parameter.
+**Hodgkin–Huxley `vtrap`:** striatal Na/K/M rates are of the form $x/(1-e^{-x/k})$. MATLAB has no guard; 2 s segments almost never land exactly on $V=-54,-52,-30,-27$. Sequential 2 s carry (and long single-shot integrates) can, and Numba then raises `ZeroDivisionError`. Python/Numba replace those divisions with the usual HH limit ($k$ or $-k$ as $x\to 0$). Same class of numerical stability as the Ca floor, not a paper parameter.
+
+**Intracellular Ca floor:** STN Ca reversal is `log(Cao/Ca)`. MATLAB has no floor; 2 s segments stay positive. Sequential 2 s carry across an episode (Mehregan Fig 4a `continuous`, ≳20 s of Ca accumulation) can drive Ca to 0 and `ZeroDivisionError` in Numba. Python/Numba clamp STN/GPe/GPi Ca at **10⁻⁸ mM** before the Nernst/IAHP divisions. This is numerical stability for long sequential segments, not a paper parameter.
 
 ```python
 from envs.plant import DbsSpec, MatlabPlant, PythonPlant
