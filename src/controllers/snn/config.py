@@ -164,11 +164,11 @@ def fig4_nguyen_config(
 
     v10c: subthreshold_steps_required=2 for easier early-stop.
     v46 FAIL: t_u=3 + 500ep; first-100 length rose (80–100 ≈24.6 vs paper ~10).
-    v48 FAIL: decay=1900 hit ε=0.05 by ~ep 85 but greedy still timed out
-    (80–100 median 25, smoothed ~22; lost v47 mid-glide). Faster linear
-    anneal locks a weak policy. v49: paper-silent delayed ε — hold ε=1 for
-    ~50 ep (1100 steps) then decay over 800 steps so ε≈0.05 by ep 85,
-    matching v47's learn-then-drop without annealing during the first half.
+    v48 FAIL: decay=1900 from step 0 locked a weak greedy policy.
+    v49 FAIL: delay=1100 held ε=1 through ep 50 (lucky early-stops pulled
+    0–50 to ~19; mid-glide rose). 80–100 improved to ~16.7 vs v48 ~22.
+    v50: shorter delay (~22 ep / 500 steps) then decay=1500 so 0–50 is
+    not all random, 50–80 tracks v47's glide window, ε≈0.05 by ~ep 90.
     """
     return SNNConfig(
         seed=seed,
@@ -176,8 +176,8 @@ def fig4_nguyen_config(
         max_episode_steps=EVAL_MAX_STEPS,
         alpha_beta_threshold=BIOMARKER_THRESHOLD,
         subthreshold_steps_required=2,
-        epsilon_decay_steps=800,
-        epsilon_decay_delay_steps=1_100,
+        epsilon_decay_steps=1_500,
+        epsilon_decay_delay_steps=500,
         epsilon_end=0.05,
         learning_rate=5e-4,
         frequency_sensitivity=20.0,
