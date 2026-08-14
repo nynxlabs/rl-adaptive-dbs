@@ -562,6 +562,7 @@ INFERENCE_SHARED_START_MAX = 0.05
 # match the early window "to an extent", not Fig 4a-style magnitude polish.
 INFERENCE_EARLY_N = 6
 INFERENCE_EARLY_MAE_MAX = 0.030
+INFERENCE_EARLY_SEA_MAE_3_5_MAX = 0.015
 INFERENCE_EARLY_SEA_DROP_MIN = 0.050
 INFERENCE_PAPER_Y_TO_NORM = 1000.0
 INFERENCE_EARLY_SERIES_50HZ = ("Baseline 50Hz", "SEA-DBS 50Hz")
@@ -633,6 +634,7 @@ def ravivarapu_inference_gates(
         gates["weaker_than_50hz_baseline"] = base_30 > base_50
     early_mae_b = float("nan")
     early_mae_p = float("nan")
+    early_mae_p_35 = float("nan")
     early_drop_p = float("nan")
     if carrier_hz == 50.0 and b.size >= INFERENCE_EARLY_N and p.size >= INFERENCE_EARLY_N:
         paper_b = _paper_early_norm("fig5a", INFERENCE_EARLY_SERIES_50HZ[0])
@@ -642,10 +644,12 @@ def ravivarapu_inference_gates(
         if paper_b is not None and paper_s is not None:
             early_mae_b = float(np.mean(np.abs(b_early - paper_b)))
             early_mae_p = float(np.mean(np.abs(p_early - paper_s)))
+            early_mae_p_35 = float(np.mean(np.abs(p_early[3:] - paper_s[3:])))
             early_drop_p = float(p_early[0] - p_early[-1])
             early_drop_b = float(b_early[0] - b_early[-1])
             gates["early_mae_baseline"] = early_mae_b <= INFERENCE_EARLY_MAE_MAX
             gates["early_mae_sea"] = early_mae_p <= INFERENCE_EARLY_MAE_MAX
+            gates["early_mae_sea_3_5"] = early_mae_p_35 <= INFERENCE_EARLY_SEA_MAE_3_5_MAX
             gates["early_sea_declines"] = early_drop_p > INFERENCE_EARLY_SEA_DROP_MIN
             gates["early_baseline_declines"] = early_drop_b > INFERENCE_DECLINE_MIN
             # Paper: Baseline above SEA from step 1 through 5, not overlaid.
@@ -668,6 +672,7 @@ def ravivarapu_inference_gates(
         "p_drop_0_2": p0 - p2,
         "early_mae_baseline": early_mae_b,
         "early_mae_sea": early_mae_p,
+        "early_mae_sea_3_5": early_mae_p_35,
         "early_drop_sea_0_5": early_drop_p,
     }
     return _gate_pack(gates, metrics)

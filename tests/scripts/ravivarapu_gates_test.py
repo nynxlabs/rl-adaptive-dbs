@@ -108,14 +108,16 @@ def test_fig4a_tiered_shape_pass_without_full_polish():
 
 
 def test_inference_shape_gates_pass_on_split_decline():
-    baseline = np.linspace(0.46, 0.36, 11)
-    sea = np.linspace(0.46, 0.31, 11)
+    # 140 ms / 8-pulse 50 Hz shape: Baseline above SEA, steps 3–5 near paper.
+    baseline = [0.4795, 0.4795, 0.4326, 0.4092, 0.3951, 0.3670, 0.360, 0.355, 0.350, 0.348, 0.345]
+    sea = [0.4795, 0.4092, 0.3857, 0.3740, 0.3670, 0.3388, 0.338, 0.338, 0.338, 0.338, 0.338]
     report = ravivarapu_inference_gates(baseline, sea, carrier_hz=50.0)
     assert report["pass"]
     assert report["gates"]["baseline_declines"]
     assert report["gates"]["paper_declines"]
     assert report["gates"]["paper_end_below_baseline"]
     assert report["gates"]["paper_steeper_drop"]
+    assert report["gates"]["early_mae_sea_3_5"]
 
 
 def test_inference_shape_gates_any_net_drop_counts():
@@ -155,37 +157,38 @@ def test_inference_5b_weaker_than_50hz():
 
 
 def test_inference_early_window_passes_on_five_pulse_50hz():
-    """100 ms / 5-pulse 50 Hz with an early Baseline skip (paper ordering)."""
+    """140 ms / 8-pulse 50 Hz with an early Baseline skip (paper 3–5)."""
     sea = [
-        0.4606,
-        0.4241,
-        0.4120,
-        0.4059,
-        0.4023,
-        0.3877,
-        0.3877,
-        0.3877,
-        0.3877,
-        0.3877,
-        0.3877,
+        0.4795,
+        0.4092,
+        0.3857,
+        0.3740,
+        0.3670,
+        0.3388,
+        0.3388,
+        0.3388,
+        0.3388,
+        0.3388,
+        0.3388,
     ]
     baseline = [
-        0.4606,
-        0.4606,
-        0.4363,
-        0.4241,
-        0.4169,
-        0.4023,
-        0.4023,
-        0.4000,
-        0.4000,
-        0.4000,
-        0.4000,
+        0.4795,
+        0.4795,
+        0.4326,
+        0.4092,
+        0.3951,
+        0.3670,
+        0.3670,
+        0.3600,
+        0.3550,
+        0.3500,
+        0.3450,
     ]
     report = ravivarapu_inference_gates(baseline, sea, carrier_hz=50.0)
     if "early_mae_sea" not in report["gates"]:
         return
     assert report["gates"]["early_mae_sea"]
+    assert report["gates"]["early_mae_sea_3_5"]
     assert report["gates"]["early_mae_baseline"]
     assert report["gates"]["early_sea_declines"]
     assert report["gates"]["early_baseline_declines"]
