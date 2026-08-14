@@ -41,6 +41,19 @@ FIG5A_INFERENCE_N_OBS: int = 6
 # which pulls Baseline back up after step 5 (untreated IC restart in the mean).
 # Offset 2 started Baseline on stim and overlaid SEA through step 4.
 FIG5A_GUMBEL_SEED_OFFSET: int = 34
+# Fig 5b eval-only (30 Hz). Same 5a lesson: last-window vs untreated sets
+# the n_obs slope. At 30 Hz, 2+ pulses in a 100 ms window raise Pβ
+# (62 ms burst → last ~0.468 > untreated ~0.461). One pulse (burst < ISI
+# 33.3 ms) last ~0.424, so the Eq. 4–5 mean declines. Do not copy 5a's
+# 150 ms window — extra 30 Hz pulses raise further. Fig 4a train stays
+# 100 ms / 62 ms @ 130 Hz.
+FIG5B_INFERENCE_WINDOW_S: float = 0.10
+FIG5B_INFERENCE_BURST_MS: float = 20.0
+# n_obs=6 floors both actors on the 1-pulse last (~0.424) once Baseline's
+# skip-first ages out, so end levels tie. n_obs=8 keeps that skip in the
+# Eq. 4–5 mean through step 10 (SEA still all-stim → lower end).
+FIG5B_INFERENCE_N_OBS: int = 8
+FIG5B_GUMBEL_SEED_OFFSET: int = 34
 ABLATION_EVAL_STEPS: int = 10
 # Paper Figs 5–7 x-axis is steps 0–10: untreated PSD at t=0 plus 10 stim actions.
 INFERENCE_PSD_SAMPLES: int = ABLATION_EVAL_STEPS + 1

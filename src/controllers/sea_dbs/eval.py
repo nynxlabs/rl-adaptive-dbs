@@ -48,7 +48,10 @@ def evaluate(
     100 ms floors at ~0.39 and 140 ms at ~0.339. Fig 5a also sets
     ``n_obs=6`` so onset ages out at step 6 and SEA sits on that floor for
     steps 6–10 (``n_obs=10`` holds SEA ~0.35 through step 9; ``n_obs=5`` is
-    all-floor by step 5). ``carrier_hz`` is the
+    all-floor by step 5). Fig 5b uses a 20 ms burst at 30 Hz (one pulse
+    per 100 ms window) so last-window Pβ ~0.424 is *below* untreated
+    ~0.461; two 30 Hz pulses (62 ms) raise last-window and the mean
+    climbs. ``carrier_hz`` is the
     Fig 5 inference override and is written into the config so ``reset()``
     cannot restore the training carrier.
 
