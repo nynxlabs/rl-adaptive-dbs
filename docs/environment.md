@@ -78,6 +78,15 @@ Values from **§IV.A.1 (computational setup)** unless noted.
 - `reset()` → new parkinsonian initial conditions (and optional noise seed); integrate for duration **$l$** (2 s) per Algorithm 1 step 7, compute **$P_\beta$** over the biomarker window, form initial observation **$s_0$**, and return it (plus optional initial **$R$** and info). The first `step` then applies an action for another **$l$**.
 - `step(action)` → apply selected **pattern** to STN for **2 s** simulated time, integrate the network, compute **$P_\beta$** over the window policy, return observation, reward, terminated, truncated, info.
 
+**Plant integration across steps (`MehreganEnvConfig.plant_integration_mode`):**
+
+| Mode | What each 2 s step does | Repeat the same pattern |
+|------|-------------------------|-------------------------|
+| **`disconnected`** (library default) | Cold integrate from the **episode initial voltages** | Bit-identical $P_\beta$ (ruler-flat traces) |
+| **`continuous`** (Fig 4a default) | Stitch the episode's STN drive and integrate from those ICs through the current step (Alg. 1 sequential segments; Python plant only) | $P_\beta$ keeps moving — membrane state has advanced |
+
+Disconnected repeats are a plant-wrapper artifact, not paper Fig 4a. Do **not** add plot-time wiggles. `continuous` re-simulates the growing stitched timeline each step, so wall-clock is longer than disconnected.
+
 ---
 
 ## 6. Reward
