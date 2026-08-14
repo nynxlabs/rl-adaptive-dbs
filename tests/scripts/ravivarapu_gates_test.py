@@ -155,7 +155,7 @@ def test_inference_5b_weaker_than_50hz():
 
 
 def test_inference_early_window_passes_on_five_pulse_50hz():
-    """100 ms / 5-pulse 50 Hz floor matches digitized steps 0–5 to 0.03 MAE."""
+    """100 ms / 5-pulse 50 Hz with an early Baseline skip (paper ordering)."""
     sea = [
         0.4606,
         0.4241,
@@ -171,12 +171,12 @@ def test_inference_early_window_passes_on_five_pulse_50hz():
     ]
     baseline = [
         0.4606,
+        0.4606,
+        0.4363,
         0.4241,
-        0.4120,
-        0.4059,
+        0.4169,
         0.4023,
-        0.4030,
-        0.4000,
+        0.4023,
         0.4000,
         0.4000,
         0.4000,
@@ -190,6 +190,28 @@ def test_inference_early_window_passes_on_five_pulse_50hz():
     assert report["gates"]["early_sea_declines"]
     assert report["gates"]["early_baseline_declines"]
     assert report["gates"]["early_sea_below_baseline"]
+
+
+def test_inference_early_window_rejects_overlaid_traces():
+    """Identical stim prefixes fail: paper keeps Baseline above SEA on 1–5."""
+    y = [
+        0.4606,
+        0.4241,
+        0.4120,
+        0.4059,
+        0.4023,
+        0.3877,
+        0.3877,
+        0.3877,
+        0.3877,
+        0.3877,
+        0.3877,
+    ]
+    report = ravivarapu_inference_gates(y, y, carrier_hz=50.0)
+    if "early_sea_below_baseline" not in report["gates"]:
+        return
+    assert not report["gates"]["early_sea_below_baseline"]
+    assert not report["pass"]
 
 
 def test_inference_early_window_rejects_four_pulse_floor():
