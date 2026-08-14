@@ -10,8 +10,8 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Fig 1b | GPi PSD | Pass |
 | Fig 2a | GPi $P_\beta$ time series | Pass |
 | Fig 2b | Error Index time series | Pass (rep v16) |
-| Fig 4a | Training $P_\beta$ vs step | Pass (τ 3→1.0, locked train v18, rep v29) |
-| Fig 4b | Training reward vs episode | Pass (paired train v18, v14, rep v31) |
+| Fig 4a | Training $P_\beta$ vs step | Pass (rep v36, continuous 2 s carry) |
+| Fig 4b | Training reward vs episode | Parked (rep v37; late PSD below $\beta_t$) |
 | Fig 5a | Post-train efficacy @ 45 Hz | Pass (rep v23) |
 | Fig 5b | Post-train efficacy @ 30 Hz | Pass (burst alphabet, locked eval v3, rep v23) |
 | Fig 6a | PTQ / QAT @ 45 Hz | Pass (honest trailing eval, rep v61) |
@@ -166,27 +166,27 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_beta_v25.png)
+![Replication Fig 4a](images/4a/training_beta_v36.png)
 
 <!-- caption-4a:start -->
-**Caption:** 45 Hz fixed_mean_pattern, within_step L=1, reward=full_segment, softmax, critic=one_hot, seed 0, v25, init_bias=0.5, early=0.405 late=0.302, trend↓ (2026-08-09)
+**Caption:** 45 Hz fixed_mean_pattern, within_step L=1, reward=full_segment, softmax, critic=one_hot, seed 0, v36, init_bias=0, jitter=0.5, ep0=0.491, early=0.487 late=0.333, trend↓ (2026-08-14)
 
 **Manifest:** `artifacts/figures/papers/mehregan/4a/manifest.json`
 <!-- caption-4a:end -->
 
-**Status:** Digitization revisit in progress — locked **v18** (`training_beta_v18.png`, `series_v18.json`, τ **3→1.0**) passed ratio gates but collapsed onto pattern 0 from episode 5 (late β≈0.30 vs digitized paper ≈0.38). Retrain default is τ **3→1.4**, paired with Fig 4b on live `series.json`.
+**Status:** Pass — **rep v36**, sequential 2 s plant carry (Alg. 1). Live `series.json` `gates_pass=true` (ep0=0.491, early=0.487, late=0.333). Late pattern-0 repeats **wiggle** (0 bit-identical same-action $P_\beta$ runs); the v35 ruler-flat 0.28352 segments are gone. Late floor vs digitized ~0.38 is parked.
 
 <!-- gates-4a:start -->
-**Gates set** (`fig4a_gates` → live `series.json`). Overall **`gates_pass`**: pending new train (was yes on locked `series_v18.json`). Every row is required for exit.
+**Gates set** (`fig4a_gates` → live `series.json` (digitization revisit; was locked `series_v18.json`)). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4a/series.json`, 2026-08-14). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
-| `plot_style` | 300 training steps | pending |
-| `overall_trend_down` | end window mean < start window mean | pending |
-| `drop_vs_paper` | drop ≥ 70% of digitized paper drop | pending |
-| `late_early_ratio_near_paper` | late/early ratio vs digitization | pending |
-| `mid_fade_vs_paper` | mid [120,150] fade ≥ 50% of paper mid-drop | pending |
-| `ep0_near_paper` | steps 0–29 mean within 10% of digitized paper ep0 | pending |
+| `plot_style` | 300 training steps | yes |
+| `overall_trend_down` | end window mean < start window mean | yes |
+| `drop_vs_paper` | drop ≥ 70% of digitized paper drop | yes |
+| `late_early_ratio_near_paper` | late/early ratio vs digitization | yes |
+| `mid_fade_vs_paper` | mid [120,150] fade ≥ 50% of paper mid-drop | yes |
+| `ep0_near_paper` | steps 0–29 mean within 10% of digitized paper ep0 | yes |
 <!-- gates-4a:end -->
 
 **Panel notes:** extended tuning history (skip_regular workflow, entropy experiments) — [docs/figures/mehregan/4a.md](../../docs/figures/mehregan/4a.md).
@@ -223,42 +223,42 @@ Episode **total reward** and **episode-mean PSD(x10³)** during the same **45 Hz
 
 **Reward vs episode**
 
-![Replication Fig 4b reward](images/4b/training_reward_v28.png)
+![Replication Fig 4b reward](images/4b/training_reward_v37.png)
 
 **Episode-mean PSD vs episode**
 
-![Replication Fig 4b PSD](images/4b/training_psd_v28.png)
+![Replication Fig 4b PSD](images/4b/training_psd_v37.png)
 
 **Stacked panel (Report 3 gallery)**
 
-![Replication Fig 4b combined](images/4b/training_fig4b_v28.png)
+![Replication Fig 4b combined](images/4b/training_fig4b_v37.png)
 
 <!-- caption-4b:start -->
-**Caption:** 9 episodes, 45 Hz fixed_mean_pattern (Fig 4a paired run), seed 0, source series_v4.json, v28, reward ep0=-29.1 ep8=16.1, rise_ep=4, psd 0.437→0.292, gate pass (2026-08-10)
+**Caption:** 9 episodes, 45 Hz fixed_mean_pattern (Fig 4a paired run), seed 0, source series.json, v37, reward ep0=-68.8 ep8=10.4, rise_ep=3, psd 0.491→0.313, gate pass (2026-08-14)
 
 **Manifest:** `artifacts/figures/papers/mehregan/4b/manifest.json`
 <!-- caption-4b:end -->
 
-**Status:** Digitization revisit in progress — paired with live Fig 4a `series.json`. Previous lock (`series_v4.json`) passed ratio gates with late PSD ~0.30 (below $β_t$) and late reward ~+14; new gates require late PSD ≥ 0.35 and near digitized ~0.37, reward in $(-10, 2]$.
+**Status:** Parked — **rep v37**, paired to Fig 4a v36 continuous carry. `gates_pass=false`: `late_beta_above_threshold` and `late_reward_near_zero` fail (late PSD 0.321, reward +7.0 vs paper ~0.37 / ~−2). Pattern-0 late episodes still suppress below $\beta_t$; 4a flats are gone. Do not add entropy.
 
 <!-- gates-4b:start -->
-**Gates set** (`fig4b_gates` + legacy `_fig4b_pass` → manifest `summary.gates`). Overall **`gates_pass`**: pending new paired train. Every row is required for exit.
+**Gates set** (`fig4b_gates` + legacy `_fig4b_pass` → manifest `summary.gates`). Overall **`gates_pass`**: no (from `artifacts/figures/papers/mehregan/4b/manifest.json`, 2026-08-14). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
-| `early_negative` | mean reward ep 0–2 < 0 | pending |
-| `reward_rises` | late mean reward > early mean | pending |
-| `late_plateau_improved` | late mean reward > −10 | pending |
-| `rise_timing` | reward exceeds ep0 + 10 by ep ≤ 6 | pending |
-| `beta_drops` | late episode-mean PSD < early | pending |
-| `beta_drop_ratio_near_paper` | PSD late/early ratio vs digitization | pending |
-| `reward_recovers_like_paper` | qualitative rise (not magnitude match) | pending |
-| `late_beta_above_threshold` | late episode-mean PSD ≥ $β_t=0.35$ | pending |
-| `late_beta_near_paper` | late PSD within 15% of digitized paper | pending |
-| `late_reward_near_zero` | late mean reward in $(-10, 2]$ | pending |
-| `ep0_beta_near_paper` | episode 0 PSD within 10% of digitized paper | pending |
-| `plot_style` | ≥ 2 episodes plotted | pending |
-| `automation` | manifest summary.automation_pass mirrors fig4b bundle | pending |
+| `early_negative` | mean reward ep 0–2 < 0 | yes |
+| `reward_rises` | late mean reward > early mean | yes |
+| `late_plateau_improved` | late mean reward > −10 | yes |
+| `rise_timing` | reward exceeds ep0 + 10 by ep ≤ 6 | yes |
+| `beta_drops` | late episode-mean PSD < early | yes |
+| `beta_drop_ratio_near_paper` | PSD late/early ratio vs digitization | yes |
+| `reward_recovers_like_paper` | qualitative rise (not magnitude match) | yes |
+| `late_beta_above_threshold` | late episode-mean PSD ≥ $β_t=0.35$ | no |
+| `late_beta_near_paper` | late PSD within 15% of digitized paper | yes |
+| `late_reward_near_zero` | late mean reward in $(-10, 2]$ | no |
+| `ep0_beta_near_paper` | episode 0 PSD within 10% of digitized paper | yes |
+| `plot_style` | ≥ 2 episodes plotted | yes |
+| `automation` | manifest summary.automation_pass mirrors fig4b bundle | yes |
 <!-- gates-4b:end -->
 
 **Run:**
