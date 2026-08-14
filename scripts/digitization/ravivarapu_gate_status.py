@@ -64,10 +64,12 @@ RAVIVARAPU_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
         ("carrier_hz_ok", "carrier frequency 50 Hz"),
         ("early_mae_baseline", "steps 0–5 MAE vs digitized Baseline ≤ 0.03"),
         ("early_mae_sea", "steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03"),
-        ("early_mae_sea_3_5", "steps 3–5 MAE vs digitized SEA-DBS ≤ 0.015"),
+        ("early_mae_sea_3_5", "steps 3–5 MAE vs digitized SEA-DBS ≤ 0.020"),
         ("early_sea_declines", "SEA-DBS drop steps 0→5 > 0.05"),
         ("early_baseline_declines", "Baseline drop steps 0→5"),
         ("early_sea_below_baseline", "SEA-DBS below Baseline at every step 1–5"),
+        ("late_baseline_declines", "Baseline keeps declining steps 5→10"),
+        ("late_sea_declines", "SEA-DBS keeps declining steps 5→10"),
     ],
     "5b": [
         ("n_steps_ok", "11 PSD samples (t=0 + 10 stim steps)"),

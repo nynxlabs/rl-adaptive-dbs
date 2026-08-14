@@ -6,10 +6,10 @@ Eval-only panel. Train or resume SEA-DBS weights via Fig 4a ``plot.py``
 
 Paper panel: steps 0–10 (untreated + 10 stim); SEA-DBS below Baseline;
 stronger than 30 Hz. Observation scale comes from the Fig 4a checkpoint;
-carrier 50 Hz, 140 ms window (eight 50 Hz pulses) are Fig 5a eval
-overrides so steps 3–5 can reach digitized paper. Fig 4a train stays
-100 ms / 62 ms @ 130 Hz. Actions are hard Gumbel-max so Baseline and SEA
-can split.
+carrier 50 Hz, 140 ms window (eight 50 Hz pulses), and n_obs=11 are Fig 5a eval
+overrides so steps 3–5 can reach digitized paper and steps 5–10 keep declining.
+Fig 4a train stays 100 ms / 62 ms @ 130 Hz, n_obs=5. Actions are hard Gumbel-max
+(offset 34: skip-first, no late skips) so Baseline and SEA can split.
 """
 from __future__ import annotations
 
@@ -28,7 +28,9 @@ import numpy as np
 
 from controllers.sea_dbs.config import (
     ABLATION_EVAL_STEPS,
+    FIG5A_GUMBEL_SEED_OFFSET,
     FIG5A_INFERENCE_BURST_MS,
+    FIG5A_INFERENCE_N_OBS,
     FIG5A_INFERENCE_WINDOW_S,
     INFERENCE_CARRIER_50HZ,
     INFERENCE_PSD_SAMPLES,
@@ -151,6 +153,8 @@ def main() -> None:
                 action_mode="gumbel",
                 dbs_burst_ms=FIG5A_INFERENCE_BURST_MS,
                 biomarker_window_s=FIG5A_INFERENCE_WINDOW_S,
+                n_obs=FIG5A_INFERENCE_N_OBS,
+                gumbel_seed_offset=FIG5A_GUMBEL_SEED_OFFSET,
             )
             traces[variant] = payload["p_beta_trajectories"][0]
             actions[variant] = payload["action_trajectories"][0]
@@ -158,6 +162,8 @@ def main() -> None:
                 "carrier_hz": payload["carrier_hz"],
                 "dbs_burst_ms": payload["dbs_burst_ms"],
                 "biomarker_window_s": payload.get("biomarker_window_s"),
+                "n_obs": payload.get("n_obs"),
+                "gumbel_seed_offset": FIG5A_GUMBEL_SEED_OFFSET,
                 "n_psd_samples": payload["n_psd_samples"],
                 "action_mode": payload["action_mode"],
                 "stim_frac": float(np.mean(payload["action_trajectories"][0])),

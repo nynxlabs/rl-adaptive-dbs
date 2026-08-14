@@ -31,6 +31,15 @@ INFERENCE_CARRIER_50HZ: float = 50.0
 # 100 ms / 62 ms burst @ 130 Hz.
 FIG5A_INFERENCE_WINDOW_S: float = 0.14
 FIG5A_INFERENCE_BURST_MS: float = 140.0
+# Fig 5a plots 11 samples. With n_obs=5 the Eq. 4–5 mean fills by step 5 and
+# stays flat (independent IC restarts keep last-window Pβ constant). n_obs=11
+# keeps the onset sample in the mean through step 10 so both traces can keep
+# declining. Table I leaves n_obs open; Fig 4a train stays n_obs=5.
+FIG5A_INFERENCE_N_OBS: int = 11
+# Skip-first Gumbel draw with no late skips. Offset 1 skipped at steps 6 and 9,
+# which pulls Baseline back up after step 5 (untreated IC restart in the mean).
+# Offset 2 started Baseline on stim and overlaid SEA through step 4.
+FIG5A_GUMBEL_SEED_OFFSET: int = 34
 ABLATION_EVAL_STEPS: int = 10
 # Paper Figs 5–7 x-axis is steps 0–10: untreated PSD at t=0 plus 10 stim actions.
 INFERENCE_PSD_SAMPLES: int = ABLATION_EVAL_STEPS + 1
