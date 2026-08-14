@@ -49,6 +49,10 @@ FIG5A_GUMBEL_SEED_OFFSET: int = 34
 # 100 ms / 62 ms @ 130 Hz.
 FIG5B_INFERENCE_WINDOW_S: float = 0.10
 FIG5B_INFERENCE_BURST_MS: float = 20.0
+# One 30 Hz pulse at t=5 ms of the 100 ms window (paper-silent phase).
+# Delay 0 last ~0.424 (v10); delay 5 ms last ~0.393 (paper SEA end ~0.390).
+# Delay 10 ms jumps last to ~0.486 (above untreated).
+FIG5B_INFERENCE_PULSE_DELAY_MS: float = 5.0
 # n_obs=6 floors both actors on the 1-pulse last (~0.424) once Baseline's
 # skip-first ages out, so end levels tie. n_obs=8 keeps that skip in the
 # Eq. 4–5 mean through step 10 (SEA still all-stim → lower end).
@@ -114,6 +118,10 @@ class SEADBSConfig:
     # shorter burst yields an intermediate beta floor; paper 3 describes pulses
     # as "short bursts rather than continuously" (Eq. 6). Fig 4a override below.
     dbs_burst_ms: float = 100.0
+    # Shift the carrier train later in the biomarker window (ms). 0 = first
+    # pulse at t=0. Fig 5b eval uses 5 ms so one 30 Hz pulse last-window
+    # ~0.393 (paper SEA end ~0.390); delay 0 is ~0.424.
+    dbs_pulse_delay_ms: float = 0.0
 
     variant: str = "paper"
     seed: int = 0
