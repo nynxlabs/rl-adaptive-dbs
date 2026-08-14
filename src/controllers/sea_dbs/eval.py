@@ -19,7 +19,8 @@ from controllers.sea_dbs.quantization import FP16ActorWrapper, apply_fp16_ptq, i
 # Baseline ``[1, 1, 1, 1, 0, …]``, so steps 0–4 overlaid SEA (both stim) and
 # contradicted digitized paper (Baseline above SEA from step 1). Offset 1
 # starts Baseline with a skip (``P(stim)≈0.76``); SEA stays 10/10. That is
-# the only binary-action way to split at step 1.
+# the only binary-action way to split at step 1. Fig 5a uses offset 34
+# (still skip-first) so Baseline does not skip again after step 5.
 GUMBEL_EVAL_SEED_OFFSET = 1
 
 
@@ -35,16 +36,20 @@ def evaluate(
     action_mode: str = "argmax",
     dbs_burst_ms: float | None = None,
     biomarker_window_s: float | None = None,
+    n_obs: int | None = None,
+    gumbel_seed_offset: int | None = None,
 ) -> dict[str, Any]:
     """Roll out a trained actor; returns summary metrics and per-step traces.
 
     Environment knobs (burst length, observation scale, …) come from the
     checkpoint so Fig 5 eval matches the Fig 4a train plant unless
-    ``dbs_burst_ms`` / ``biomarker_window_s`` are set. Fig 5a uses a 140 ms
-    window (eight 50 Hz pulses) so steps 3–5 can fall toward digitized paper
-    (~0.34); a 100 ms window floors at ~0.39. ``carrier_hz`` is the Fig 5
-    inference override and is written into the config so ``reset()`` cannot
-    restore the training carrier.
+    ``dbs_burst_ms`` / ``biomarker_window_s`` / ``n_obs`` are set. Fig 5a uses
+    a 140 ms window (eight 50 Hz pulses) so steps 3–5 can fall toward
+    digitized paper (~0.34); a 100 ms window floors at ~0.39. Fig 5a also
+    sets ``n_obs=11`` so the Eq. 4–5 mean still includes onset through step
+    10 (``n_obs=5`` is already all-floor by step 5). ``carrier_hz`` is the
+    Fig 5 inference override and is written into the config so ``reset()``
+    cannot restore the training carrier.
 
     ``action_mode``: ``argmax`` (greedy) or ``gumbel`` (hard Gumbel-max on
     actor logits). Hard Gumbel-max is temperature-invariant; P(stim) equals
@@ -53,6 +58,9 @@ def evaluate(
     GUMBEL_EVAL_SEED_OFFSET`` (offset 1); plant reset stays ``cfg.seed``.
     Offset 1 starts Baseline with a skip so steps 1–5 stay above SEA, matching
     digitized paper ordering. Offset 2 overlaid the two traces through step 4.
+    Fig 5a passes ``gumbel_seed_offset=34`` (still skip-first, no late skips)
+    so Baseline’s mean is not pulled back up by untreated restarts after
+    step 5.
     """
     device = (config or SEADBSConfig()).device
     payload = load_checkpoint(checkpoint, device=device)
@@ -68,6 +76,8 @@ def evaluate(
         cfg = replace(cfg, dbs_burst_ms=float(dbs_burst_ms))
     if biomarker_window_s is not None:
         cfg = replace(cfg, biomarker_window_s=float(biomarker_window_s))
+    if n_obs is not None:
+        cfg = replace(cfg, n_obs=int(n_obs))
 
     policy: Actor | FP16ActorWrapper = actor
     if use_fp16_ptq or is_ptq_variant(cfg.variant):
@@ -90,7 +100,8 @@ def evaluate(
             # seeds (e.g. +10000) land in a different IC and can *rise* toward
             # the 50 Hz always-on floor instead of declining from the high start.
             state, info = env.reset(seed=cfg.seed + ep)
-            torch.manual_seed(int(cfg.seed) + ep + GUMBEL_EVAL_SEED_OFFSET)
+            offset = GUMBEL_EVAL_SEED_OFFSET if gumbel_seed_offset is None else int(gumbel_seed_offset)
+            torch.manual_seed(int(cfg.seed) + ep + offset)
             ep_reward = 0.0
             ep_p_beta = [float(info.get("p_beta_norm", 0.0))]
             ep_actions: list[int] = []
@@ -141,6 +152,7 @@ def evaluate(
         "n_psd_samples": len(p_beta_trajectories[0]) if p_beta_trajectories else 0,
         "dbs_burst_ms": cfg.dbs_burst_ms,
         "biomarker_window_s": cfg.biomarker_window_s,
+        "n_obs": cfg.n_obs,
         "fp16_ptq": bool(use_fp16_ptq or is_ptq_variant(cfg.variant)),
         "action_mode": mode,
     }
