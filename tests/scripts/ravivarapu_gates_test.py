@@ -108,9 +108,9 @@ def test_fig4a_tiered_shape_pass_without_full_polish():
 
 
 def test_inference_shape_gates_pass_on_split_decline():
-    # n_obs=11 filling: Baseline above SEA, both still declining after step 5.
-    baseline = [0.4795, 0.4795, 0.4326, 0.4443, 0.4232, 0.4092, 0.3991, 0.3916, 0.3857, 0.3810, 0.3772]
-    sea = [0.4795, 0.4092, 0.3857, 0.3740, 0.3670, 0.3623, 0.3589, 0.3564, 0.3545, 0.3529, 0.3516]
+    # 150 ms / n_obs=6: SEA reaches the last-window floor at step 6.
+    baseline = [0.4981, 0.4981, 0.4414, 0.4556, 0.4300, 0.4130, 0.3846, 0.3563, 0.3563, 0.3563, 0.3563]
+    sea = [0.4981, 0.4130, 0.3846, 0.3704, 0.3619, 0.3563, 0.3279, 0.3279, 0.3279, 0.3279, 0.3279]
     report = ravivarapu_inference_gates(baseline, sea, carrier_hz=50.0)
     assert report["pass"]
     assert report["gates"]["baseline_declines"]
@@ -120,6 +120,7 @@ def test_inference_shape_gates_pass_on_split_decline():
     assert report["gates"]["early_mae_sea_3_5"]
     assert report["gates"]["late_sea_declines"]
     assert report["gates"]["late_baseline_declines"]
+    assert report["gates"]["mid_mae_sea"]
 
 
 def test_inference_shape_gates_any_net_drop_counts():
@@ -260,4 +261,37 @@ def test_inference_late_window_rejects_n_obs_floor():
     report = ravivarapu_inference_gates(baseline, sea, carrier_hz=50.0)
     assert not report["gates"]["late_sea_declines"]
     assert not report["gates"]["late_baseline_declines"]
+    assert not report["pass"]
+
+
+def test_inference_mid_window_rejects_onset_fill():
+    """n_obs=10 leftover untreated holds SEA ~0.35 on steps 5–9."""
+    sea = [
+        0.4981,
+        0.4130,
+        0.3846,
+        0.3704,
+        0.3619,
+        0.3563,
+        0.3522,
+        0.3492,
+        0.3468,
+        0.3449,
+        0.3279,
+    ]
+    baseline = [
+        0.4981,
+        0.4981,
+        0.4414,
+        0.4556,
+        0.4300,
+        0.4130,
+        0.4009,
+        0.3917,
+        0.3846,
+        0.3790,
+        0.3619,
+    ]
+    report = ravivarapu_inference_gates(baseline, sea, carrier_hz=50.0)
+    assert not report["gates"]["mid_mae_sea"]
     assert not report["pass"]
