@@ -61,6 +61,9 @@ class SNNConfig:
     epsilon_decay_steps: int = 2_500
     # Hold ε at start for this many env steps, then linear decay (0 = no delay).
     epsilon_decay_delay_steps: int = 0
+    # After this many env steps, dump remaining ε to epsilon_end faster (0 = off).
+    epsilon_accelerate_after_steps: int = 0
+    epsilon_accelerate_decay_steps: int = 0
 
     # Logging
     log_episodes: bool = False
@@ -165,10 +168,10 @@ def fig4_nguyen_config(
     v10c: subthreshold_steps_required=2 for easier early-stop.
     v46 FAIL: t_u=3 + 500ep; first-100 length rose (80–100 ≈24.6 vs paper ~10).
     v48 FAIL: decay=1900 from step 0 locked a weak greedy policy.
-    v49 FAIL: delay=1100 held ε=1 through ep 50 (lucky early-stops pulled
-    0–50 to ~19; mid-glide rose). 80–100 improved to ~16.7 vs v48 ~22.
-    v50: shorter delay (~22 ep / 500 steps) then decay=1500 so 0–50 is
-    not all random, 50–80 tracks v47's glide window, ε≈0.05 by ~ep 90.
+    v49 FAIL: delay=1100 held ε=1 through ep 50. v50 FAIL: delay=500
+    flattened length ~18.5. v51: restore v47's slow slope (decay=3200,
+    no hold) then dump after ~70 ep (accelerate_after=1400, dump=500)
+    so 50–70 can still glide and 80–100 can show greedy length.
     """
     return SNNConfig(
         seed=seed,
@@ -176,8 +179,10 @@ def fig4_nguyen_config(
         max_episode_steps=EVAL_MAX_STEPS,
         alpha_beta_threshold=BIOMARKER_THRESHOLD,
         subthreshold_steps_required=2,
-        epsilon_decay_steps=1_500,
-        epsilon_decay_delay_steps=500,
+        epsilon_decay_steps=3_200,
+        epsilon_decay_delay_steps=0,
+        epsilon_accelerate_after_steps=1_400,
+        epsilon_accelerate_decay_steps=500,
         epsilon_end=0.05,
         learning_rate=5e-4,
         frequency_sensitivity=20.0,
