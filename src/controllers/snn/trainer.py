@@ -147,9 +147,13 @@ class DSQNTrainer:
 
     def current_epsilon(self) -> float:
         cfg = self.config
+        delay = max(0, int(getattr(cfg, "epsilon_decay_delay_steps", 0) or 0))
+        if self._total_steps < delay:
+            return cfg.epsilon_start
         if cfg.epsilon_decay_steps <= 0:
             return cfg.epsilon_end
-        progress = min(1.0, self._total_steps / cfg.epsilon_decay_steps)
+        elapsed = self._total_steps - delay
+        progress = min(1.0, elapsed / cfg.epsilon_decay_steps)
         return cfg.epsilon_start + progress * (cfg.epsilon_end - cfg.epsilon_start)
 
     def note_step(self) -> None:
