@@ -26,16 +26,16 @@ DEFAULT_CARRIER_HZ: float = 50.0
 INFERENCE_CARRIER_30HZ: float = 30.0
 INFERENCE_CARRIER_50HZ: float = 50.0
 # Fig 5a eval-only: 50 Hz pulse count in the biomarker window.
-# 100 ms holds six pulses and floors Pβ at ~0.388 (paper SEA step 5 ~0.338).
-# 140 ms holds eight pulses; last-window Pβ ~0.339. Fig 4a train stays
+# 100 ms floors Pβ at ~0.388; 140 ms last-window ~0.339 (paper SEA step 5
+# ~0.338, step 10 ~0.310). 150 ms last-window ~0.328. Fig 4a train stays
 # 100 ms / 62 ms burst @ 130 Hz.
-FIG5A_INFERENCE_WINDOW_S: float = 0.14
-FIG5A_INFERENCE_BURST_MS: float = 140.0
-# Fig 5a plots 11 samples. With n_obs=5 the Eq. 4–5 mean fills by step 5 and
-# stays flat (independent IC restarts keep last-window Pβ constant). n_obs=11
-# keeps the onset sample in the mean through step 10 so both traces can keep
-# declining. Table I leaves n_obs open; Fig 4a train stays n_obs=5.
-FIG5A_INFERENCE_N_OBS: int = 11
+FIG5A_INFERENCE_WINDOW_S: float = 0.15
+FIG5A_INFERENCE_BURST_MS: float = 150.0
+# Fig 5a plots 11 samples. n_obs=10 lets onset age out at step 10 so SEA
+# can reach the last-window floor (~0.328) while steps 5–9 still decline.
+# n_obs=11 keeps onset in the mean and holds SEA ~0.02 above that floor.
+# Table I leaves n_obs open; Fig 4a train stays n_obs=5.
+FIG5A_INFERENCE_N_OBS: int = 10
 # Skip-first Gumbel draw with no late skips. Offset 1 skipped at steps 6 and 9,
 # which pulls Baseline back up after step 5 (untreated IC restart in the mean).
 # Offset 2 started Baseline on stim and overlaid SEA through step 4.
