@@ -173,8 +173,9 @@ def fig4_nguyen_config(
     no hold) then dump after ~70 ep (accelerate_after=1400, dump=500)
     so 50–70 can still glide and 80–100 can show greedy length.
     v51 FAIL: mid-glide true (~17.2) but dump too late (ε=0.46 at ep 80);
-    80–100 stayed ~17. v52: dump after ~50 ep (accelerate_after=1000,
-    dump=500) and frequency_sensitivity=15 so lucky 0–50 stops are rarer.
+    80–100 stayed ~17. v52 FAIL: after=1000 + freq_sens=15 hit ε floor by
+    ep 70 and greedy timed out (80–100 ≈19.4, lost glide). v53: freq=20
+    again; dump after ~60 ep (1200) over 350 steps so floor by ~ep 80.
     """
     return SNNConfig(
         seed=seed,
@@ -184,11 +185,11 @@ def fig4_nguyen_config(
         subthreshold_steps_required=2,
         epsilon_decay_steps=3_200,
         epsilon_decay_delay_steps=0,
-        epsilon_accelerate_after_steps=1_000,
-        epsilon_accelerate_decay_steps=500,
+        epsilon_accelerate_after_steps=1_200,
+        epsilon_accelerate_decay_steps=350,
         epsilon_end=0.05,
         learning_rate=5e-4,
-        frequency_sensitivity=15.0,
+        frequency_sensitivity=20.0,
         pulse_width_sensitivity=0.1,
         threshold_reward=300.0,
         energy_penalty=0.0,
