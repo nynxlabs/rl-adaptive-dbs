@@ -108,9 +108,9 @@ def test_fig4a_tiered_shape_pass_without_full_polish():
 
 
 def test_inference_shape_gates_pass_on_split_decline():
-    # 140 ms / 8-pulse 50 Hz shape: Baseline above SEA, steps 3–5 near paper.
-    baseline = [0.4795, 0.4795, 0.4326, 0.4092, 0.3951, 0.3670, 0.360, 0.355, 0.350, 0.348, 0.345]
-    sea = [0.4795, 0.4092, 0.3857, 0.3740, 0.3670, 0.3388, 0.338, 0.338, 0.338, 0.338, 0.338]
+    # n_obs=11 filling: Baseline above SEA, both still declining after step 5.
+    baseline = [0.4795, 0.4795, 0.4326, 0.4443, 0.4232, 0.4092, 0.3991, 0.3916, 0.3857, 0.3810, 0.3772]
+    sea = [0.4795, 0.4092, 0.3857, 0.3740, 0.3670, 0.3623, 0.3589, 0.3564, 0.3545, 0.3529, 0.3516]
     report = ravivarapu_inference_gates(baseline, sea, carrier_hz=50.0)
     assert report["pass"]
     assert report["gates"]["baseline_declines"]
@@ -118,6 +118,8 @@ def test_inference_shape_gates_pass_on_split_decline():
     assert report["gates"]["paper_end_below_baseline"]
     assert report["gates"]["paper_steeper_drop"]
     assert report["gates"]["early_mae_sea_3_5"]
+    assert report["gates"]["late_sea_declines"]
+    assert report["gates"]["late_baseline_declines"]
 
 
 def test_inference_shape_gates_any_net_drop_counts():
@@ -164,25 +166,25 @@ def test_inference_early_window_passes_on_five_pulse_50hz():
         0.3857,
         0.3740,
         0.3670,
-        0.3388,
-        0.3388,
-        0.3388,
-        0.3388,
-        0.3388,
-        0.3388,
+        0.3623,
+        0.3589,
+        0.3564,
+        0.3545,
+        0.3529,
+        0.3516,
     ]
     baseline = [
         0.4795,
         0.4795,
         0.4326,
+        0.4443,
+        0.4232,
         0.4092,
-        0.3951,
-        0.3670,
-        0.3670,
-        0.3600,
-        0.3550,
-        0.3500,
-        0.3450,
+        0.3991,
+        0.3916,
+        0.3857,
+        0.3810,
+        0.3772,
     ]
     report = ravivarapu_inference_gates(baseline, sea, carrier_hz=50.0)
     if "early_mae_sea" not in report["gates"]:
@@ -224,4 +226,38 @@ def test_inference_early_window_rejects_four_pulse_floor():
     if "early_sea_declines" not in report["gates"]:
         return
     assert not report["gates"]["early_sea_declines"]
+    assert not report["pass"]
+
+
+def test_inference_late_window_rejects_n_obs_floor():
+    """n_obs=5 always-on floors at step 5; paper keeps falling through 10."""
+    sea = [
+        0.4795,
+        0.4092,
+        0.3857,
+        0.3740,
+        0.3670,
+        0.3388,
+        0.3388,
+        0.3388,
+        0.3388,
+        0.3388,
+        0.3388,
+    ]
+    baseline = [
+        0.4795,
+        0.4795,
+        0.4326,
+        0.4092,
+        0.3951,
+        0.3670,
+        0.3670,
+        0.3670,
+        0.3670,
+        0.3670,
+        0.3951,
+    ]
+    report = ravivarapu_inference_gates(baseline, sea, carrier_hz=50.0)
+    assert not report["gates"]["late_sea_declines"]
+    assert not report["gates"]["late_baseline_declines"]
     assert not report["pass"]

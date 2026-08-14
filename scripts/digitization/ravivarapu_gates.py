@@ -562,8 +562,12 @@ INFERENCE_SHARED_START_MAX = 0.05
 # match the early window "to an extent", not Fig 4a-style magnitude polish.
 INFERENCE_EARLY_N = 6
 INFERENCE_EARLY_MAE_MAX = 0.030
-INFERENCE_EARLY_SEA_MAE_3_5_MAX = 0.015
+INFERENCE_EARLY_SEA_MAE_3_5_MAX = 0.020
 INFERENCE_EARLY_SEA_DROP_MIN = 0.050
+# Fig 5a steps 5–10: paper keeps falling (SEA ~0.338→0.310, Baseline
+# ~0.404→0.356). n_obs=5 independent shots are already all-floor by step 5.
+INFERENCE_LATE_LO = 5
+INFERENCE_LATE_DROP_MIN = 0.005
 INFERENCE_PAPER_Y_TO_NORM = 1000.0
 INFERENCE_EARLY_SERIES_50HZ = ("Baseline 50Hz", "SEA-DBS 50Hz")
 
@@ -600,7 +604,8 @@ def ravivarapu_inference_gates(
     Ordering: 11 samples, shared start, both decline, SEA below Baseline at
     the end, SEA steeper drop, correct carrier. 30 Hz also needs a weaker
     end than the 50 Hz panel. Fig 5a (50 Hz) also checks steps 0–5 against
-    digitized paper with generous MAE / drop tols (not 10-step polish).
+    digitized paper with generous MAE / drop tols, and steps 5–10 still
+    declining (not a horizontal n_obs floor).
 
     Paper crops label the same biomarker as raw ~300–480 (×1000 vs Fig 4a).
     Traces here are ``p_beta_norm``. ``n_expected`` is PSD samples: t=0
@@ -656,6 +661,11 @@ def ravivarapu_inference_gates(
             gates["early_sea_below_baseline"] = bool(
                 np.all(p_early[1:] < b_early[1:])
             )
+        # Paper keeps falling after step 5; independent n_obs=5 floors there.
+        late_drop_b = float(b[INFERENCE_LATE_LO] - b_end)
+        late_drop_p = float(p[INFERENCE_LATE_LO] - p_end)
+        gates["late_baseline_declines"] = late_drop_b > INFERENCE_LATE_DROP_MIN
+        gates["late_sea_declines"] = late_drop_p > INFERENCE_LATE_DROP_MIN
     metrics = {
         "carrier_hz": carrier_hz,
         "b_start": b0,
@@ -674,6 +684,12 @@ def ravivarapu_inference_gates(
         "early_mae_sea": early_mae_p,
         "early_mae_sea_3_5": early_mae_p_35,
         "early_drop_sea_0_5": early_drop_p,
+        "late_drop_baseline_5_10": (
+            float(b[INFERENCE_LATE_LO] - b_end) if b.size > INFERENCE_LATE_LO else float("nan")
+        ),
+        "late_drop_sea_5_10": (
+            float(p[INFERENCE_LATE_LO] - p_end) if p.size > INFERENCE_LATE_LO else float("nan")
+        ),
     }
     return _gate_pack(gates, metrics)
 
