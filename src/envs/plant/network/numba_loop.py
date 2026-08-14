@@ -25,25 +25,42 @@ except ImportError:  # pragma: no cover
 @njit(cache=True)
 def _vtrap_1mexp(x: float, k: float) -> float:
     """x / (1 - exp(-x/k)); limit k as x -> 0."""
-    if abs(x) < 1e-6 * abs(k):
+    if (not np.isfinite(x)) or abs(x) < 1e-4 * abs(k):
         return k
-    return x / (1.0 - np.exp(-x / k))
+    den = 1.0 - np.exp(-x / k)
+    if den == 0.0 or (not np.isfinite(den)):
+        return k
+    return x / den
 
 
 @njit(cache=True)
 def _vtrap_expm1(x: float, k: float) -> float:
     """x / (exp(x/k) - 1); limit k as x -> 0."""
-    if abs(x) < 1e-6 * abs(k):
+    if (not np.isfinite(x)) or abs(x) < 1e-4 * abs(k):
         return k
-    return x / (np.exp(x / k) - 1.0)
+    den = np.exp(x / k) - 1.0
+    if den == 0.0 or (not np.isfinite(den)):
+        return k
+    return x / den
 
 
 @njit(cache=True)
 def _vtrap_1mexp_pos(x: float, k: float) -> float:
     """x / (1 - exp(x/k)); limit -k as x -> 0."""
-    if abs(x) < 1e-6 * abs(k):
+    if (not np.isfinite(x)) or abs(x) < 1e-4 * abs(k):
         return -k
-    return x / (1.0 - np.exp(x / k))
+    den = 1.0 - np.exp(x / k)
+    if den == 0.0 or (not np.isfinite(den)):
+        return -k
+    return x / den
+
+
+@njit(cache=True)
+def _tau_floor(tau: float) -> float:
+    """Keep HH time constants off 0/inf so gate updates cannot 0/0."""
+    if (not np.isfinite(tau)) or tau < 1e-12:
+        return 1e-12
+    return tau
 
 
 MAX_SPIKE_SLOTS = 512
@@ -137,7 +154,9 @@ def _conv_eval_all(
         total = 0.0
         cnt = spike_n[conv_idx, j]
         for k in range(cnt):
-            total += syn_func[spike_idx[conv_idx, j, k] - 1]
+            idx = spike_idx[conv_idx, j, k]
+            if 1 <= idx <= syn_func.size:
+                total += syn_func[idx - 1]
         out[j] = total
 
 
@@ -539,8 +558,8 @@ def run_cbgt_loop(
             den_th1 = ah_i + bh_i
             if den_th1 < 1e-12:
                 den_th1 = 1e-12
-            th1_i = 1.0 / den_th1
-            tr1_i = 0.15 * (28.0 + np.exp(-(V1 + 25.0) / 10.5))
+            th1_i = _tau_floor(1.0 / den_th1)
+            tr1_i = _tau_floor(0.15 * (28.0 + np.exp(-(V1 + 25.0) / 10.5)))
             il1 = _GL0 * (V1 - _EL0)
             ina1 = _GNA0 * (m1_i**3) * H1[i] * (V1 - _ENA0)
             ik1 = _GK0 * ((0.75 * (1.0 - H1[i])) ** 4) * (V1 - _EK0)
@@ -584,33 +603,33 @@ def run_cbgt_loop(
             tn2_den = np.exp(-(V2 + 40.0) / -40.0) + np.exp(-(V2 + 40.0) / 50.0)
             if tn2_den < 1e-12:
                 tn2_den = 1e-12
-            tn2_i = 11.0 / tn2_den
-            tm2_i = 0.2 + 3.0 / (1.0 + np.exp(-(V2 + 53.0) / -0.7))
+            tn2_i = _tau_floor(11.0 / tn2_den)
+            tm2_i = _tau_floor(0.2 + 3.0 / (1.0 + np.exp(-(V2 + 53.0) / -0.7)))
             th2_den = np.exp(-(V2 + 50.0) / -15.0) + np.exp(-(V2 + 50.0) / 16.0)
             if th2_den < 1e-12:
                 th2_den = 1e-12
-            th2_i = 24.5 / th2_den
-            ta2_i = 1.0 + 1.0 / (1.0 + np.exp(-(V2 + 40.0) / -0.5))
+            th2_i = _tau_floor(24.5 / th2_den)
+            ta2_i = _tau_floor(1.0 + 1.0 / (1.0 + np.exp(-(V2 + 40.0) / -0.5)))
             tb2_den = np.exp(-(V2 + 60.0) / -30.0) + np.exp(-(V2 + 40.0) / 10.0)
             if tb2_den < 1e-12:
                 tb2_den = 1e-12
-            tb2_i = 200.0 / tb2_den
+            tb2_i = _tau_floor(200.0 / tb2_den)
             tc2_den = np.exp(-(V2 + 27.0) / -20.0) + np.exp(-(V2 + 50.0) / 15.0)
             if tc2_den < 1e-12:
                 tc2_den = 1e-12
-            tc2_i = 45.0 + 10.0 / tc2_den
+            tc2_i = _tau_floor(45.0 + 10.0 / tc2_den)
             td1_den = np.exp(-(V2 + 40.0) / -15.0) + np.exp(-(V2 + 20.0) / 20.0)
             if td1_den < 1e-12:
                 td1_den = 1e-12
-            td1_i = 400.0 + 500.0 / td1_den
+            td1_i = _tau_floor(400.0 + 500.0 / td1_den)
             tp2_den = np.exp(-(V2 + 27.0) / -10.0) + np.exp(-(V2 + 102.0) / 15.0)
             if tp2_den < 1e-12:
                 tp2_den = 1e-12
-            tp2_i = 5.0 + 0.33 / tp2_den
+            tp2_i = _tau_floor(5.0 + 0.33 / tp2_den)
             tq2_den = np.exp(-(V2 + 50.0) / -15.0) + np.exp(-(V2 + 50.0) / 16.0)
             if tq2_den < 1e-12:
                 tq2_den = 1e-12
-            tq2_i = 400.0 / tq2_den
+            tq2_i = _tau_floor(400.0 / tq2_den)
             casn_i = CAsn2[i]
             if casn_i < _CA_MIN:
                 casn_i = _CA_MIN
@@ -655,8 +674,8 @@ def run_cbgt_loop(
             a3_i = 1.0 / (1.0 + np.exp(-(V3 + 57.0) / 2.0))
             s3_i = 1.0 / (1.0 + np.exp(-(V3 + 35.0) / 2.0))
             r3_i = 1.0 / (1.0 + np.exp((V3 + 70.0) / 2.0))
-            tn3_i = 0.05 + 0.27 / (1.0 + np.exp(-(V3 + 40.0) / -12.0))
-            th3_i = 0.05 + 0.27 / (1.0 + np.exp(-(V3 + 40.0) / -12.0))
+            tn3_i = _tau_floor(0.05 + 0.27 / (1.0 + np.exp(-(V3 + 40.0) / -12.0)))
+            th3_i = _tau_floor(0.05 + 0.27 / (1.0 + np.exp(-(V3 + 40.0) / -12.0)))
             il3 = _GL2 * (V3 - _EL2)
             ik3 = _GK2 * (N3[i] ** 4) * (V3 - _EK2)
             ina3 = _GNA2 * (m3_i**3) * H3[i] * (V3 - _ENA2)
@@ -692,8 +711,8 @@ def run_cbgt_loop(
             a4_i = 1.0 / (1.0 + np.exp(-(V4 + 57.0) / 2.0))
             s4_i = 1.0 / (1.0 + np.exp(-(V4 + 35.0) / 2.0))
             r4_i = 1.0 / (1.0 + np.exp((V4 + 70.0) / 2.0))
-            tn4_i = 0.05 + 0.27 / (1.0 + np.exp(-(V4 + 40.0) / -12.0))
-            th4_i = 0.05 + 0.27 / (1.0 + np.exp(-(V4 + 40.0) / -12.0))
+            tn4_i = _tau_floor(0.05 + 0.27 / (1.0 + np.exp(-(V4 + 40.0) / -12.0)))
+            th4_i = _tau_floor(0.05 + 0.27 / (1.0 + np.exp(-(V4 + 40.0) / -12.0)))
             il4 = _GL2 * (V4 - _EL2)
             ik4 = _GK2 * (N4[i] ** 4) * (V4 - _EK2)
             ina4 = _GNA2 * (m4_i**3) * H4[i] * (V4 - _ENA2)

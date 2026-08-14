@@ -131,11 +131,13 @@ def _vtrap_1mexp(x: np.ndarray, k: float) -> np.ndarray:
     """``x / (1 - exp(-x/k))``; limit ``k`` as ``x -> 0`` (HH singularity)."""
     x = np.asarray(x, dtype=np.float64)
     out = np.empty_like(x, dtype=np.float64)
-    thresh = 1e-6 * abs(k)
+    thresh = 1e-4 * abs(k)
     small = np.abs(x) < thresh
     out[small] = k
     xs = x[~small]
-    out[~small] = xs / (1.0 - np.exp(-xs / k))
+    den = 1.0 - np.exp(-xs / k)
+    den = np.where((den == 0.0) | ~np.isfinite(den), 1.0, den)
+    out[~small] = np.where(np.isfinite(xs), xs / den, k)
     return out
 
 
@@ -143,11 +145,13 @@ def _vtrap_expm1(x: np.ndarray, k: float) -> np.ndarray:
     """``x / (exp(x/k) - 1)``; limit ``k`` as ``x -> 0``."""
     x = np.asarray(x, dtype=np.float64)
     out = np.empty_like(x, dtype=np.float64)
-    thresh = 1e-6 * abs(k)
+    thresh = 1e-4 * abs(k)
     small = np.abs(x) < thresh
     out[small] = k
     xs = x[~small]
-    out[~small] = xs / (np.exp(xs / k) - 1.0)
+    den = np.exp(xs / k) - 1.0
+    den = np.where((den == 0.0) | ~np.isfinite(den), 1.0, den)
+    out[~small] = np.where(np.isfinite(xs), xs / den, k)
     return out
 
 
@@ -155,11 +159,13 @@ def _vtrap_1mexp_pos(x: np.ndarray, k: float) -> np.ndarray:
     """``x / (1 - exp(x/k))``; limit ``-k`` as ``x -> 0``."""
     x = np.asarray(x, dtype=np.float64)
     out = np.empty_like(x, dtype=np.float64)
-    thresh = 1e-6 * abs(k)
+    thresh = 1e-4 * abs(k)
     small = np.abs(x) < thresh
     out[small] = -k
     xs = x[~small]
-    out[~small] = xs / (1.0 - np.exp(xs / k))
+    den = 1.0 - np.exp(xs / k)
+    den = np.where((den == 0.0) | ~np.isfinite(den), 1.0, den)
+    out[~small] = np.where(np.isfinite(xs), xs / den, -k)
     return out
 
 
