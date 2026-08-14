@@ -126,6 +126,8 @@ SNN_MATERIAL_FIELDS: tuple[str, ...] = (
     "epsilon_end",
     "epsilon_decay_steps",
     "epsilon_decay_delay_steps",
+    "epsilon_accelerate_after_steps",
+    "epsilon_accelerate_decay_steps",
 )
 
 DDPG_MATERIAL_FIELDS: tuple[str, ...] = (

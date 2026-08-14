@@ -148,13 +148,23 @@ class DSQNTrainer:
     def current_epsilon(self) -> float:
         cfg = self.config
         delay = max(0, int(getattr(cfg, "epsilon_decay_delay_steps", 0) or 0))
+        accel_after = max(0, int(getattr(cfg, "epsilon_accelerate_after_steps", 0) or 0))
+        accel_decay = max(0, int(getattr(cfg, "epsilon_accelerate_decay_steps", 0) or 0))
         if self._total_steps < delay:
             return cfg.epsilon_start
         if cfg.epsilon_decay_steps <= 0:
             return cfg.epsilon_end
+        start, end = cfg.epsilon_start, cfg.epsilon_end
+        if accel_after > 0 and self._total_steps >= accel_after:
+            slow_elapsed = max(0, accel_after - delay)
+            slow_p = min(1.0, slow_elapsed / cfg.epsilon_decay_steps)
+            eps_switch = start + slow_p * (end - start)
+            dump = accel_decay if accel_decay > 0 else cfg.epsilon_decay_steps
+            fast_p = min(1.0, (self._total_steps - accel_after) / dump)
+            return eps_switch + fast_p * (end - eps_switch)
         elapsed = self._total_steps - delay
         progress = min(1.0, elapsed / cfg.epsilon_decay_steps)
-        return cfg.epsilon_start + progress * (cfg.epsilon_end - cfg.epsilon_start)
+        return start + progress * (end - start)
 
     def note_step(self) -> None:
         self._total_steps += 1
