@@ -176,6 +176,10 @@ def fig4_nguyen_config(
     80–100 stayed ~17. v52 FAIL: after=1000 + freq_sens=15 hit ε floor by
     ep 70 and greedy timed out (80–100 ≈19.4, lost glide). v53: freq=20
     again; dump after ~60 ep (1200) over 350 steps so floor by ~ep 80.
+    v53 FAIL: ε floor by ep 80 as intended; 80–100 still ~17 (greedy ~16–17
+    steps, α–β ~220). Shape not ready for 500ep. v54: keep v53 ε schedule;
+    raise alpha_beta_progress_coef 2500→4000 so greedy drives α–β down
+    faster and stops earlier in the episode.
     """
     return SNNConfig(
         seed=seed,
@@ -193,7 +197,7 @@ def fig4_nguyen_config(
         pulse_width_sensitivity=0.1,
         threshold_reward=300.0,
         energy_penalty=0.0,
-        alpha_beta_progress_coef=2500.0,
+        alpha_beta_progress_coef=4000.0,
         alpha_beta_progress_cap_per_step=10_000.0,
         warm_zone_upper=220.0,
         warm_zone_bonus_coef=150.0,
