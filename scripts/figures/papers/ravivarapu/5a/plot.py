@@ -5,9 +5,10 @@ Eval-only panel. Train or resume SEA-DBS weights via Fig 4a ``plot.py``
 (``--resume``) or Fig 7 ``plot.py`` (``--retrain``).
 
 Paper panel: steps 0–10 (untreated + 10 stim); SEA-DBS below Baseline;
-stronger than 30 Hz. Env knobs (burst, scale) come from the Fig 4a checkpoint;
-carrier 50 Hz is the eval override. Actions are hard Gumbel-max
-(``action_mode="gumbel"``) so Baseline and SEA can split.
+stronger than 30 Hz. Observation scale comes from the Fig 4a checkpoint;
+carrier 50 Hz and burst 100 ms (five 50 Hz pulses) are Fig 5a eval
+overrides. Fig 4a train stays 62 ms @ 130 Hz. Actions are hard Gumbel-max
+so Baseline and SEA can split.
 """
 from __future__ import annotations
 
@@ -26,6 +27,7 @@ import numpy as np
 
 from controllers.sea_dbs.config import (
     ABLATION_EVAL_STEPS,
+    FIG5A_INFERENCE_BURST_MS,
     INFERENCE_CARRIER_50HZ,
     INFERENCE_PSD_SAMPLES,
     SEADBSConfig,
@@ -145,6 +147,7 @@ def main() -> None:
                 max_steps=steps,
                 carrier_hz=INFERENCE_CARRIER_50HZ,
                 action_mode="gumbel",
+                dbs_burst_ms=FIG5A_INFERENCE_BURST_MS,
             )
             traces[variant] = payload["p_beta_trajectories"][0]
             actions[variant] = payload["action_trajectories"][0]
