@@ -253,15 +253,15 @@ QAT is **out of scope** for SEA-DBS (not reported).
 
 ### Replication
 
-![Replication Fig 6](images/6/ptq_fp16_50hz_v7.png)
+![Replication Fig 6](images/6/ptq_fp16_50hz_v10.png)
 
 <!-- caption-6:start -->
-**Caption:** FP16 PTQ inference GPi beta PSD vs step @ 50 Hz (seed 0, Gumbel-max); pass=True; four-series Baseline/SEA fp32+PTQ; actor checkpoint ~0.6 MB → ~0.3 MB (FP16 weights). (v7)
+**Caption:** FP16 PTQ inference GPi beta PSD vs step @ 50 Hz (seed 0, Gumbel-max); pass=True; four-series Baseline/SEA fp32+PTQ (PTQ matches fp32 on this checkpoint; PTQ x-dodged 0.28 step, dash-dot); actor checkpoint ~0.6 MB → ~0.3 MB (FP16 weights). (v10)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/6/manifest.json`
 <!-- caption-6:end -->
 
-**Status:** **Pass** (rep v7) — FP16 PTQ @ 50 Hz; checkpoint ~0.6 MB → ~0.3 MB; Manifest `artifacts/figures/papers/ravivarapu/6/manifest.json`.
+**Status:** **Pass** (rep v10) — FP16 PTQ @ 50 Hz; checkpoint ~0.6 MB → ~0.3 MB; Manifest `artifacts/figures/papers/ravivarapu/6/manifest.json`.
 
 <!-- gates-6:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/6/manifest.json`; overall **`pass`**: yes, 2026-08-14). Every row is required for exit.
