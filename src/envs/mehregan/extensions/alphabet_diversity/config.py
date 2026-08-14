@@ -55,7 +55,7 @@ class WithinStepEnvConfig:
     skip_regular: bool = False  # True → exclude pattern 0 (regular periodic) from agent action space
     plant_dt_ms: float | None = None  # biomarker dt; None → plant integrate result dt_ms
     # disconnected: each RL step is a cold integrate from episode IC (legacy default).
-    # continuous: Fig 5a-style stitched idbs across steps (PythonPlant + idbs only).
+    # continuous: sequential 2 s PythonPlant carry (Alg. 1).
     plant_integration_mode: str = "disconnected"
     # No-DBS segment at episode start before first action (defaults to step_duration_s).
     pre_stim_duration_s: float | None = None
