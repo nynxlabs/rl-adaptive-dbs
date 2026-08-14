@@ -162,8 +162,9 @@ def fig4_nguyen_config(
 
     v10c: subthreshold_steps_required=2 for easier early-stop.
     v46 FAIL: t_u=3 + 500ep; first-100 length rose (80–100 ≈24.6 vs paper ~10).
-    v47: 100-ep trains (gates only need first 100), restore t_u=2 (v41 mid-glide),
-    keep decay=3200 / freq_sens=20 / prog=2500 / trunc=1e6 / scale=1e-4.
+    v47 FAIL (100ep): mid-glide true (smoothed 50–100 ≈17.9) but ε still
+    ≈0.44 at ep 100, so 80–100 length cannot reach paper ~10 (mixture floor
+    ε·25). v48: decay=1900 so ε≈0.12 by ep 80 on a 100-ep train.
     """
     return SNNConfig(
         seed=seed,
@@ -171,7 +172,7 @@ def fig4_nguyen_config(
         max_episode_steps=EVAL_MAX_STEPS,
         alpha_beta_threshold=BIOMARKER_THRESHOLD,
         subthreshold_steps_required=2,
-        epsilon_decay_steps=3_200,
+        epsilon_decay_steps=1_900,
         epsilon_end=0.05,
         learning_rate=5e-4,
         frequency_sensitivity=20.0,
