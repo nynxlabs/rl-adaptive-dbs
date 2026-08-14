@@ -59,6 +59,8 @@ class SNNConfig:
     epsilon_start: float = 1.0
     epsilon_end: float = 0.05
     epsilon_decay_steps: int = 2_500
+    # Hold ε at start for this many env steps, then linear decay (0 = no delay).
+    epsilon_decay_delay_steps: int = 0
 
     # Logging
     log_episodes: bool = False
@@ -162,9 +164,11 @@ def fig4_nguyen_config(
 
     v10c: subthreshold_steps_required=2 for easier early-stop.
     v46 FAIL: t_u=3 + 500ep; first-100 length rose (80–100 ≈24.6 vs paper ~10).
-    v47 FAIL (100ep): mid-glide true (smoothed 50–100 ≈17.9) but ε still
-    ≈0.44 at ep 100, so 80–100 length cannot reach paper ~10 (mixture floor
-    ε·25). v48: decay=1900 so ε≈0.12 by ep 80 on a 100-ep train.
+    v48 FAIL: decay=1900 hit ε=0.05 by ~ep 85 but greedy still timed out
+    (80–100 median 25, smoothed ~22; lost v47 mid-glide). Faster linear
+    anneal locks a weak policy. v49: paper-silent delayed ε — hold ε=1 for
+    ~50 ep (1100 steps) then decay over 800 steps so ε≈0.05 by ep 85,
+    matching v47's learn-then-drop without annealing during the first half.
     """
     return SNNConfig(
         seed=seed,
@@ -172,7 +176,8 @@ def fig4_nguyen_config(
         max_episode_steps=EVAL_MAX_STEPS,
         alpha_beta_threshold=BIOMARKER_THRESHOLD,
         subthreshold_steps_required=2,
-        epsilon_decay_steps=1_900,
+        epsilon_decay_steps=800,
+        epsilon_decay_delay_steps=1_100,
         epsilon_end=0.05,
         learning_rate=5e-4,
         frequency_sensitivity=20.0,

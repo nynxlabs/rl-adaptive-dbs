@@ -209,6 +209,7 @@ def train_series(
             "smoke": smoke,
             "config": {
                 "epsilon_decay_steps": cfg.epsilon_decay_steps,
+                "epsilon_decay_delay_steps": cfg.epsilon_decay_delay_steps,
                 "subthreshold_steps_required": cfg.subthreshold_steps_required,
                 "alpha_beta_threshold": cfg.alpha_beta_threshold,
             },
