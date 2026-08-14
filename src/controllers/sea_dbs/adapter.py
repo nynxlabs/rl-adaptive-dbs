@@ -102,17 +102,26 @@ class SEA_DBSEnvAdapter(gym.Env):
         cfg = self.config
         integration_ms = self.config.integration_duration_s * 1000.0
         burst_ms = float(cfg.dbs_burst_ms)
-        if burst_ms < integration_ms:
+        delay_ms = float(cfg.dbs_pulse_delay_ms)
+        if burst_ms < integration_ms or delay_ms > 0.0:
             # Short-burst convention (paper Eq. (6)): apply the carrier train for
             # only ``burst_ms`` of the biomarker window, then leave the rest of the
-            # window unstimulated. Intermediate beta floor vs continuous drive.
+            # window unstimulated. Optional ``dbs_pulse_delay_ms`` shifts the
+            # train later in the window (Fig 5b: 5 ms, one 30 Hz pulse).
             full = create_dbs_current(
                 self._carrier_hz,
                 tmax_ms=integration_ms,
                 dt_ms=cfg.plant_dt_ms,
             )
+            if delay_ms > 0.0:
+                shift = int(round(delay_ms / cfg.plant_dt_ms))
+                delayed = np.zeros_like(full)
+                if 0 < shift < full.size:
+                    delayed[shift:] = full[: full.size - shift]
+                    full = delayed
             burst = full.copy()
-            burst[int(round(burst_ms / cfg.plant_dt_ms)) :] = 0.0
+            if burst_ms < integration_ms:
+                burst[int(round(burst_ms / cfg.plant_dt_ms)) :] = 0.0
             return DbsSpec(pick_dbs_freq=2, idbs=burst)
         return DbsSpec.from_frequency_hz(self._carrier_hz)
 

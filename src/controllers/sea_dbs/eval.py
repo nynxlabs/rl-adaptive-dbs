@@ -38,6 +38,7 @@ def evaluate(
     biomarker_window_s: float | None = None,
     n_obs: int | None = None,
     gumbel_seed_offset: int | None = None,
+    dbs_pulse_delay_ms: float | None = None,
 ) -> dict[str, Any]:
     """Roll out a trained actor; returns summary metrics and per-step traces.
 
@@ -48,10 +49,10 @@ def evaluate(
     100 ms floors at ~0.39 and 140 ms at ~0.339. Fig 5a also sets
     ``n_obs=6`` so onset ages out at step 6 and SEA sits on that floor for
     steps 6–10 (``n_obs=10`` holds SEA ~0.35 through step 9; ``n_obs=5`` is
-    all-floor by step 5). Fig 5b uses a 20 ms burst at 30 Hz (one pulse
-    per 100 ms window) so last-window Pβ ~0.424 is *below* untreated
-    ~0.461; two 30 Hz pulses (62 ms) raise last-window and the mean
-    climbs. ``carrier_hz`` is the
+    all-floor by step 5). Fig 5b uses a 20 ms burst at 30 Hz with a 5 ms
+    pulse delay (one pulse per 100 ms window) so last-window Pβ ~0.393
+    (delay 0 is ~0.424). Two 30 Hz pulses (62 ms) raise last-window above
+    untreated and the mean climbs. ``carrier_hz`` is the
     Fig 5 inference override and is written into the config so ``reset()``
     cannot restore the training carrier.
 
@@ -82,6 +83,8 @@ def evaluate(
         cfg = replace(cfg, biomarker_window_s=float(biomarker_window_s))
     if n_obs is not None:
         cfg = replace(cfg, n_obs=int(n_obs))
+    if dbs_pulse_delay_ms is not None:
+        cfg = replace(cfg, dbs_pulse_delay_ms=float(dbs_pulse_delay_ms))
 
     policy: Actor | FP16ActorWrapper = actor
     if use_fp16_ptq or is_ptq_variant(cfg.variant):
@@ -157,6 +160,7 @@ def evaluate(
         "dbs_burst_ms": cfg.dbs_burst_ms,
         "biomarker_window_s": cfg.biomarker_window_s,
         "n_obs": cfg.n_obs,
+        "dbs_pulse_delay_ms": cfg.dbs_pulse_delay_ms,
         "fp16_ptq": bool(use_fp16_ptq or is_ptq_variant(cfg.variant)),
         "action_mode": mode,
     }
