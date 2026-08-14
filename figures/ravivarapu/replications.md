@@ -9,7 +9,7 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 |-------|-------------|--------|
 | Fig 4a | Training PSD vs episode | Pass (v62) |
 | Fig 4b | Training reward vs episode | Pass |
-| Fig 5a | Inference @ 50 Hz | Fail (`paper_declines`) |
+| Fig 5a | Inference @ 50 Hz | Pass |
 | Fig 5b | Inference @ 30 Hz | Fail (`baseline_declines`) |
 | Fig 6 | FP16 PTQ @ 50 Hz | Open |
 | Fig 7 | Ablation (Baseline / +PM / +GS / SEA-DBS) | Open |
@@ -146,28 +146,33 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 
 ### Replication
 
-![Replication Fig 5a](images/5a/inference_50hz_v6.png)
+![Replication Fig 5a](images/5a/inference_50hz_v10.png)
 
 <!-- caption-5a:start -->
-**Caption:** Inference GPi beta PSD vs step @ 50 Hz (seed 0); pass=False; Baseline vs SEA-DBS. (v6)
+**Caption:** Inference GPi beta PSD vs step @ 50 Hz (seed 0, Gumbel-max); pass=True; Baseline vs SEA-DBS. (v10)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/5a/manifest.json`
 <!-- caption-5a:end -->
 
-**Status:** Fail (rep v6) (`paper_declines, paper_end_below_baseline, paper_steeper_drop`). Manifest `artifacts/figures/papers/ravivarapu/5a/manifest.json`.
+**Status:** **Pass** (rep v10) — inference @ 50 Hz; Manifest `artifacts/figures/papers/ravivarapu/5a/manifest.json`.
 
 <!-- gates-5a:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/5a/manifest.json`; overall **`pass`**: no, 2026-08-13). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/5a/manifest.json`; overall **`pass`**: yes, 2026-08-13). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
 | `n_steps_ok` | 11 PSD samples (t=0 + 10 stim steps) | yes |
 | `shared_start` | baseline and SEA-DBS agree at step 0 | yes |
-| `baseline_declines` | baseline PSD declines | yes |
-| `paper_declines` | SEA-DBS PSD declines | no |
-| `paper_end_below_baseline` | SEA-DBS end PSD below baseline | no |
-| `paper_steeper_drop` | SEA-DBS drop steeper than baseline | no |
+| `baseline_declines` | baseline PSD net drop step 0→10 | yes |
+| `paper_declines` | SEA-DBS PSD net drop step 0→10 | yes |
+| `paper_end_below_baseline` | SEA-DBS end PSD below baseline | yes |
+| `paper_steeper_drop` | SEA-DBS drop steeper than baseline | yes |
 | `carrier_hz_ok` | carrier frequency 50 Hz | yes |
+| `early_mae_baseline` | steps 0–5 MAE vs digitized Baseline ≤ 0.03 | yes |
+| `early_mae_sea` | steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03 | yes |
+| `early_sea_declines` | SEA-DBS drop steps 0→5 > 0.05 | yes |
+| `early_baseline_declines` | Baseline drop steps 0→5 | yes |
+| `early_sea_below_baseline` | SEA-DBS below Baseline at step 5 | yes |
 <!-- gates-5a:end -->
 
 **Run:**
@@ -193,15 +198,15 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 
 ### Replication
 
-![Replication Fig 5b](images/5b/inference_30hz_v4.png)
+![Replication Fig 5b](images/5b/inference_30hz_v7.png)
 
 <!-- caption-5b:start -->
-**Caption:** Inference GPi beta PSD vs step @ 30 Hz (seed 0); pass=False; Baseline vs SEA-DBS. (v4)
+**Caption:** Inference GPi beta PSD vs step @ 30 Hz (seed 0, Gumbel-max); pass=False; Baseline vs SEA-DBS. (v7)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/5b/manifest.json`
 <!-- caption-5b:end -->
 
-**Status:** Fail (rep v4) (`baseline_declines, paper_declines, paper_end_below_baseline, paper_steeper_drop`). Manifest `artifacts/figures/papers/ravivarapu/5b/manifest.json`.
+**Status:** Fail (rep v7) (`baseline_declines, paper_declines, paper_end_below_baseline, paper_steeper_drop`). Manifest `artifacts/figures/papers/ravivarapu/5b/manifest.json`.
 
 <!-- gates-5b:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/5b/manifest.json`; overall **`pass`**: no, 2026-08-13). Every row is required for exit.
@@ -210,8 +215,8 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 |-----|-------------|------|
 | `n_steps_ok` | 11 PSD samples (t=0 + 10 stim steps) | yes |
 | `shared_start` | baseline and SEA-DBS agree at step 0 | yes |
-| `baseline_declines` | baseline PSD declines | no |
-| `paper_declines` | SEA-DBS PSD declines | no |
+| `baseline_declines` | baseline PSD net drop step 0→10 | no |
+| `paper_declines` | SEA-DBS PSD net drop step 0→10 | no |
 | `paper_end_below_baseline` | SEA-DBS end PSD below baseline | no |
 | `paper_steeper_drop` | SEA-DBS drop steeper than baseline | no |
 | `carrier_hz_ok` | carrier frequency 30 Hz | yes |
