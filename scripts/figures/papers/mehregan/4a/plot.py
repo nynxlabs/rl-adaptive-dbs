@@ -103,6 +103,9 @@ WINDOW = 30
 # is a *suppressor* on this plant (~0.29), so biasing toward it cannot raise ep0.
 FIG4A_JITTER_FRACTION = 0.5
 FIG4A_INIT_BIAS_SCALE = 0.0
+# Sequential 2 s segments (Alg. 1). Disconnected cold-starts make repeated
+# pattern 0 bit-identical (ruler-flat late traces). Fresh train — material.
+FIG4A_PLANT_INTEGRATION = "continuous"
 
 STYLE = {
     "figure.facecolor": "white",
@@ -139,6 +142,7 @@ def _make_env(
     seed: int,
     state_length: int = STATE_LENGTH,
     jitter_fraction: float = FIG4A_JITTER_FRACTION,
+    plant_integration_mode: str = FIG4A_PLANT_INTEGRATION,
 ) -> tuple[MehreganEnv, Any]:
     resolved = resolve_config()
     plant_cfg = replace(resolved.plant, dt_ms=PAPER_DT_MS)
@@ -147,6 +151,7 @@ def _make_env(
         action_space_mode="fixed_mean_pattern",
         pattern_mean_hz=MEAN_HZ,
         max_episode_steps=STEPS_PER_EPISODE,
+        plant_integration_mode=plant_integration_mode,
     )
     alphabet = FixedMeanPatternAlphabet(
         mean_hz=MEAN_HZ,
@@ -278,6 +283,9 @@ def _train_trace(
         "logit_noise_std": config.logit_noise_std,
         "entropy_coeff": config.entropy_coeff,
         "critic_action_input": config.critic_action_input,
+        "plant_integration_mode": getattr(
+            env.config, "plant_integration_mode", "disconnected"
+        ),
         "unique_actions": len(counts),
         "dominant_action": int(dominant),
         "dominant_fraction": dom_n / len(actions) if actions else 0.0,
@@ -570,6 +578,15 @@ def main() -> int:
         help="Critic action encoding (default one_hot — required for learning under exploration)",
     )
     parser.add_argument(
+        "--plant-integration",
+        choices=("disconnected", "continuous"),
+        default=FIG4A_PLANT_INTEGRATION,
+        help=(
+            "disconnected = cold 2 s from episode ICs (bit-identical repeats); "
+            "continuous = sequential stitched idbs (Alg. 1; default)"
+        ),
+    )
+    parser.add_argument(
         "--state-length",
         type=int,
         default=STATE_LENGTH,
@@ -611,7 +628,8 @@ def main() -> int:
             f"Fig 4a train — {args.episodes} ep × {STEPS_PER_EPISODE} "
             f"({expected} steps), 45 Hz, L={args.state_length}, "
             f"exploration={args.exploration}, init_bias={args.init_bias_scale}, "
-            f"jitter={args.jitter_fraction}, critic={args.critic_action_input}",
+            f"jitter={args.jitter_fraction}, plant={args.plant_integration}, "
+            f"critic={args.critic_action_input}",
             flush=True,
         )
         prior_beta: list[float] | None = None
@@ -625,6 +643,7 @@ def main() -> int:
             seed=args.seed,
             state_length=args.state_length,
             jitter_fraction=args.jitter_fraction,
+            plant_integration_mode=args.plant_integration,
         )
         t0 = time.time()
         trainer: DDPGTrainer | None = None
@@ -698,6 +717,7 @@ def main() -> int:
             "logit_noise_std": args.logit_noise_std,
             "entropy_coeff": args.entropy_coeff,
             "critic_action_input": args.critic_action_input,
+            "plant_integration_mode": args.plant_integration,
             "elapsed_s": elapsed,
             "beta_norm_trace": beta_trace,
             "actions": actions,
@@ -747,6 +767,9 @@ def main() -> int:
         "logit_noise_std": cache.get("logit_noise_std"),
         "entropy_coeff": cache.get("entropy_coeff", 0.01),
         "critic_action_input": cache.get("critic_action_input", "logits"),
+        "plant_integration_mode": cache.get(
+            "plant_integration_mode", FIG4A_PLANT_INTEGRATION
+        ),
         "elapsed_s": cache.get("elapsed_s"),
         "png_version": png_version,
         "summary": summary,
