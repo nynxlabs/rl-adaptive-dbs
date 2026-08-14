@@ -309,7 +309,7 @@ def fig4_timing_shape_gates(
     lengths = np.asarray(episode_lengths, dtype=float)
     rewards = np.asarray(episode_rewards, dtype=float)
     n = int(lengths.size)
-    if n < 120:
+    if n < 100:
         return {
             "length_gates": {
                 "length_early_smoothed_near_horizon": False,

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Nguyen et al.  Figure 4 — training episode rewards and lengths.
 
-Paper §IV / Fig. 4: **500** DSQN training episodes with init DBS **40 Hz / 0.3 ms /
-300 nA/cm²**. Panel (a) episode return; (b) episode length (early max **25** steps,
-shorter once α–β sub-threshold termination kicks in).
+Paper §IV / Fig. 4: **500** DSQN training episodes in the paper; this panel
+currently iterates on the **first 100** (length already ~10 and reward near 0
+by then). Default train horizon is 100 episodes.
 
 Run:
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/4/plot.py
@@ -14,7 +14,7 @@ Each run writes ``figures/nguyen/images/4/training_reward_length_vN.png`` (N
 auto-increments), caches training series + checkpoint under
 ``artifacts/figures/papers/nguyen/4/``, and updates ``figures/nguyen/replications.md``.
 
-Long run (~hours). Prefer tmux:
+First-100 trains are ~15–20 min. Prefer tmux:
 
   tmux new-session -d -s fig2-4-train \\
     "setsid nohup uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
@@ -93,7 +93,7 @@ DEFAULT_MANIFEST = CACHE_DIR / "manifest.json"
 OUT_STEM = "training_reward_length"
 
 DEFAULT_SEED = 0
-DEFAULT_EPISODES = 500
+DEFAULT_EPISODES = 100  # first-100 gates; paper figure is 500
 SMOOTH_WINDOW = 20
 EARLY_END = 100
 LATE_START = 150
