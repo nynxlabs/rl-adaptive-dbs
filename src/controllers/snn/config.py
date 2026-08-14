@@ -161,18 +161,16 @@ def fig4_nguyen_config(
     collapse (v13); keep v9 shaping for learnable early-stop.
 
     v10c: subthreshold_steps_required=2 for easier early-stop.
-    v45: decay=4200 / ε_end=0.05 recovered late_len≈14.5 but first-100
-    length stayed ~22 (paper 0–50≈25, 80–100≈10). v46: first-100 focus —
-    paper t_u=3 (fewer lucky early-stops in ep 0–50) + v41 mid-glide
-    schedule (decay=3200, freq_sens=20, prog=2500, trunc=1e6), keep
-    scale=1e-4.
+    v46 FAIL: t_u=3 + 500ep; first-100 length rose (80–100 ≈24.6 vs paper ~10).
+    v47: 100-ep trains (gates only need first 100), restore t_u=2 (v41 mid-glide),
+    keep decay=3200 / freq_sens=20 / prog=2500 / trunc=1e6 / scale=1e-4.
     """
     return SNNConfig(
         seed=seed,
         num_episodes=num_episodes,
         max_episode_steps=EVAL_MAX_STEPS,
         alpha_beta_threshold=BIOMARKER_THRESHOLD,
-        subthreshold_steps_required=3,
+        subthreshold_steps_required=2,
         epsilon_decay_steps=3_200,
         epsilon_end=0.05,
         learning_rate=5e-4,
