@@ -180,6 +180,10 @@ def fig4_nguyen_config(
     steps, α–β ~220). Shape not ready for 500ep. v54: keep v53 ε schedule;
     raise alpha_beta_progress_coef 2500→4000 so greedy drives α–β down
     faster and stops earlier in the episode.
+    v54 FAIL: identical first-100 to v53 (0–50 ≈20). Raw median is already
+    25; 16/50 lucky tu=2 stops pull the smooth start down. v55: keep v53 ε
+    dump; revert prog=2500; frequency_sensitivity=10 so random +freq is
+    less likely to hit 80 Hz in the first 50 episodes.
     """
     return SNNConfig(
         seed=seed,
@@ -193,11 +197,11 @@ def fig4_nguyen_config(
         epsilon_accelerate_decay_steps=350,
         epsilon_end=0.05,
         learning_rate=5e-4,
-        frequency_sensitivity=20.0,
+        frequency_sensitivity=10.0,
         pulse_width_sensitivity=0.1,
         threshold_reward=300.0,
         energy_penalty=0.0,
-        alpha_beta_progress_coef=4000.0,
+        alpha_beta_progress_coef=2500.0,
         alpha_beta_progress_cap_per_step=10_000.0,
         warm_zone_upper=220.0,
         warm_zone_bonus_coef=150.0,
