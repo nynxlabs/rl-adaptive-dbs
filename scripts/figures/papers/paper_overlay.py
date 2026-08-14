@@ -1002,7 +1002,11 @@ def overlay_ravivarapu_fig5b(
     )
 
 
-def overlay_ravivarapu_fig6(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+def overlay_ravivarapu_fig6(
+    ax, *, y_scale: float = 1.0
+) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """Paper Fig 6 overlay in crop PSD units (~300–480). Pass ``y_scale``
+    only if the replication axis is normalized instead."""
     mapping = (
         ("Baseline", "Baseline"),
         ("Baseline + PTQ(fp16)", "Baseline + PTQ(fp16)"),
@@ -1017,11 +1021,15 @@ def overlay_ravivarapu_fig6(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
         mapping,
         label_prefix="Paper ",
         outline_colors=outlines,
-        y_scale=1.0 / RAVI_INFERENCE_PAPER_Y_TO_NORM,
+        y_scale=y_scale,
     )
 
 
-def overlay_ravivarapu_fig7(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+def overlay_ravivarapu_fig7(
+    ax, *, y_scale: float = 1.0
+) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """Paper Fig 7 overlay in crop PSD units (~300–480). Pass ``y_scale``
+    only if the replication axis is normalized instead."""
     mapping = (
         ("Baseline", "Baseline"),
         ("Baseline + GS", "Baseline + GS"),
@@ -1036,7 +1044,7 @@ def overlay_ravivarapu_fig7(ax) -> dict[str, tuple[np.ndarray, np.ndarray]]:
         mapping,
         label_prefix="Paper ",
         outline_colors=outlines,
-        y_scale=1.0 / RAVI_INFERENCE_PAPER_Y_TO_NORM,
+        y_scale=y_scale,
     )
 
 
