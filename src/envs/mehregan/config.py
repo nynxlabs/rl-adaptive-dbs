@@ -25,6 +25,10 @@ class MehreganEnvConfig:
     action_space_mode: str = "scalar_frequency"  # scalar_frequency | fixed_mean_pattern
     pattern_mean_hz: float = 45.0  # mean stimulation rate for fixed_mean_pattern mode
     skip_regular: bool = False  # True → exclude pattern 0 (regular periodic) from agent action space
+    # disconnected: each RL step is a cold 2 s integrate from the episode ICs
+    # (bit-identical Pβ if the same action repeats). continuous: stitch idbs
+    # across the episode (Alg. 1 sequential segments; PythonPlant only).
+    plant_integration_mode: str = "disconnected"
 
 
 def make_alphabet(
