@@ -202,15 +202,15 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 
 ### Replication
 
-![Replication Fig 5b](images/5b/inference_30hz_v10.png)
+![Replication Fig 5b](images/5b/inference_30hz_v11.png)
 
 <!-- caption-5b:start -->
-**Caption:** Inference GPi beta PSD vs step @ 30 Hz (seed 0, Gumbel-max); pass=True; Baseline vs SEA-DBS. (v10)
+**Caption:** Inference GPi beta PSD vs step @ 30 Hz (seed 0, Gumbel-max); pass=True; Baseline vs SEA-DBS. (v11)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/5b/manifest.json`
 <!-- caption-5b:end -->
 
-**Status:** **Pass** (rep v10) — inference @ 30 Hz; Manifest `artifacts/figures/papers/ravivarapu/5b/manifest.json`.
+**Status:** **Pass** (rep v11) — inference @ 30 Hz; Manifest `artifacts/figures/papers/ravivarapu/5b/manifest.json`.
 
 <!-- gates-5b:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/5b/manifest.json`; overall **`pass`**: yes, 2026-08-14). Every row is required for exit.

@@ -5,11 +5,11 @@ Eval-only panel. Train or resume SEA-DBS weights via Fig 4a ``plot.py``
 (``--resume``) or Fig 7 ``plot.py`` (``--retrain``).
 
 Paper panel: steps 0–10; SEA-DBS below Baseline; weaker than 50 Hz.
-Same checkpoints as Fig 5a. Carrier 30 Hz, 20 ms burst (one pulse per
-100 ms window), and n_obs=8 are Fig 5b eval overrides: 2+ 30 Hz pulses
-raise last-window Pβ above untreated; n_obs=6 equalizes end levels.
-Fig 4a train stays 100 ms / 62 ms @ 130 Hz. Actions are hard
-Gumbel-max (offset 34: skip-first).
+Same checkpoints as Fig 5a. Carrier 30 Hz, 20 ms burst (one pulse at
+t=5 ms of the 100 ms window), and n_obs=8 are Fig 5b eval overrides:
+2+ 30 Hz pulses raise last-window Pβ; delay 0 last ~0.424; delay 5 ms
+last ~0.393 (paper SEA end ~0.390). Fig 4a train stays 100 ms / 62 ms
+@ 130 Hz. Actions are hard Gumbel-max (offset 34: skip-first).
 """
 from __future__ import annotations
 
@@ -31,6 +31,7 @@ from controllers.sea_dbs.config import (
     FIG5B_GUMBEL_SEED_OFFSET,
     FIG5B_INFERENCE_BURST_MS,
     FIG5B_INFERENCE_N_OBS,
+    FIG5B_INFERENCE_PULSE_DELAY_MS,
     FIG5B_INFERENCE_WINDOW_S,
     INFERENCE_CARRIER_30HZ,
     INFERENCE_CARRIER_50HZ,
@@ -166,6 +167,7 @@ def main() -> None:
                 biomarker_window_s=FIG5B_INFERENCE_WINDOW_S,
                 n_obs=FIG5B_INFERENCE_N_OBS,
                 gumbel_seed_offset=FIG5B_GUMBEL_SEED_OFFSET,
+                dbs_pulse_delay_ms=FIG5B_INFERENCE_PULSE_DELAY_MS,
             )
             traces[variant] = payload["p_beta_trajectories"][0]
             actions[variant] = payload["action_trajectories"][0]
@@ -174,6 +176,7 @@ def main() -> None:
                 "dbs_burst_ms": payload["dbs_burst_ms"],
                 "biomarker_window_s": payload.get("biomarker_window_s"),
                 "n_obs": payload.get("n_obs"),
+                "dbs_pulse_delay_ms": payload.get("dbs_pulse_delay_ms"),
                 "gumbel_seed_offset": FIG5B_GUMBEL_SEED_OFFSET,
                 "n_psd_samples": payload["n_psd_samples"],
                 "action_mode": payload["action_mode"],
