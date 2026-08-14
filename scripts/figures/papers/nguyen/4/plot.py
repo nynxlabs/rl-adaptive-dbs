@@ -210,6 +210,8 @@ def train_series(
             "config": {
                 "epsilon_decay_steps": cfg.epsilon_decay_steps,
                 "epsilon_decay_delay_steps": cfg.epsilon_decay_delay_steps,
+                "epsilon_accelerate_after_steps": cfg.epsilon_accelerate_after_steps,
+                "epsilon_accelerate_decay_steps": cfg.epsilon_accelerate_decay_steps,
                 "subthreshold_steps_required": cfg.subthreshold_steps_required,
                 "alpha_beta_threshold": cfg.alpha_beta_threshold,
             },
