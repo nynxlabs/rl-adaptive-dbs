@@ -85,7 +85,7 @@ Values from **§IV.A.1 (computational setup)** unless noted.
 | **`disconnected`** (library default) | Cold integrate from the **episode initial voltages** | Bit-identical $P_\beta$ (ruler-flat traces) |
 | **`continuous`** (Fig 4a default) | Stitch the episode's STN drive and integrate from those ICs through the current step (Alg. 1 sequential segments; Python plant only) | $P_\beta$ keeps moving — membrane state has advanced |
 
-Disconnected repeats are a plant-wrapper artifact, not paper Fig 4a. Do **not** add plot-time wiggles. `continuous` re-simulates the growing stitched timeline each step, so wall-clock is longer than disconnected.
+Disconnected repeats are a plant-wrapper artifact, not paper Fig 4a. Do **not** add plot-time wiggles. `continuous` re-simulates the growing stitched timeline each step, so wall-clock is longer than disconnected. Long stitches need the plant Ca floor and duration-scaled GPi spike buffer ([plant.md](plant.md) § Python plant) — without them, Numba hits `ZeroDivisionError` around ~20 s and silently drops spikes after ~12 s.
 
 ---
 

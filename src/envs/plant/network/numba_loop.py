@@ -412,6 +412,7 @@ def run_cbgt_loop(
     _ALP = 1.0 / (2.0 * 96485.0)
     _CON = (8314.0 * 298.0) / (2.0 * 96485.0)
     _CAO = 2000.0
+    _CA_MIN = 1e-8
     _ESYN0 = -85.0
     _ESYN1 = 0.0
     _ESYN2 = -85.0
@@ -562,7 +563,10 @@ def run_cbgt_loop(
             td1_i = 400.0 + 500.0 / (np.exp(-(V2 + 40.0) / -15.0) + np.exp(-(V2 + 20.0) / 20.0))
             tp2_i = 5.0 + 0.33 / (np.exp(-(V2 + 27.0) / -10.0) + np.exp(-(V2 + 102.0) / 15.0))
             tq2_i = 400.0 / (np.exp(-(V2 + 50.0) / -15.0) + np.exp(-(V2 + 50.0) / 16.0))
-            ecasn_i = _CON * np.log(_CAO / CAsn2[i])
+            casn_i = CAsn2[i]
+            if casn_i < _CA_MIN:
+                casn_i = _CA_MIN
+            ecasn_i = _CON * np.log(_CAO / casn_i)
             ina2 = _GNA1 * (M2[i] ** 3) * H2[i] * (V2 - _ENA1)
             ik2 = _GK1 * (N2[i] ** 4) * (V2 - _EK1)
             ia2 = _GA * (A2[i] ** 2) * B2[i] * (V2 - _EK1)
@@ -586,6 +590,8 @@ def run_cbgt_loop(
             Q2[i] = Q2[i] + dt * ((q2_i - Q2[i]) / tq2_i)
             R2[i] = R2[i] + dt * ((r2_i - R2[i]) / _STN_TR2)
             CAsn2[i] = CAsn2[i] + dt * ((-_ALP * (il2_stn + it2)) - (_KCA_STN * CAsn2[i]))
+            if CAsn2[i] < _CA_MIN:
+                CAsn2[i] = _CA_MIN
         _conv_record_crossings(CONV_STN, spike_idx, spike_n, v2_prev, vsn, SPIKE_SYN_THRESHOLD)
         _conv_eval_all(spike_idx, spike_n, CONV_STN, syn_stn_gpea, S2a)
         _conv_eval_all(spike_idx, spike_n, CONV_STN, syn_stn_gpen, S2an)
@@ -608,7 +614,10 @@ def run_cbgt_loop(
             ina3 = _GNA2 * (m3_i**3) * H3[i] * (V3 - _ENA2)
             it3 = _GT2 * (a3_i**3) * R3[i] * (V3 - _ECA2)
             ica3 = _GCA2 * (s3_i**2) * (V3 - _ECA2)
-            iahp3 = _GAHP2 * (V3 - _EK2) * (CA3[i] / (CA3[i] + _K1_GPE))
+            ca3_i = CA3[i]
+            if ca3_i < _CA_MIN:
+                ca3_i = _CA_MIN
+            iahp3 = _GAHP2 * (V3 - _EK2) * (ca3_i / (ca3_i + _K1_GPE))
             isngeampa = gsngea[i] * ((V3 - _ESYN1) * (S2a_old[i] + S21a_w[i]))
             isngenmda = gsngen[i] * ((V3 - _ESYN1) * (S2an_old[i] + S21an_w[i]))
             igege = (0.25 * (pd * 3 + 1)) * ggege[i] * ((V3 - _ESYN2) * (S31c_w[i] + S32c_w[i]))
@@ -618,6 +627,8 @@ def run_cbgt_loop(
             H3[i] = H3[i] + dt * (0.05 * (h3_i - H3[i]) / th3_i)
             R3[i] = R3[i] + dt * (1.0 * (r3_i - R3[i]) / _GPE_TR)
             CA3[i] = CA3[i] + dt * (1e-4 * (-ica3 - it3 - _KCA2 * CA3[i]))
+            if CA3[i] < _CA_MIN:
+                CA3[i] = _CA_MIN
         _conv_record_crossings(CONV_GPE, spike_idx, spike_n, v3_prev, vge, SPIKE_SYN_THRESHOLD)
         _conv_eval_all(spike_idx, spike_n, CONV_GPE, syn_gpe_stn, S3a)
         _conv_eval_all(spike_idx, spike_n, CONV_GPE, syn_gpe_gpi, S3b)
@@ -640,7 +651,10 @@ def run_cbgt_loop(
             ina4 = _GNA2 * (m4_i**3) * H4[i] * (V4 - _ENA2)
             it4 = _GT2 * (a4_i**3) * R4[i] * (V4 - _ECA2)
             ica4 = _GCA2 * (s4_i**2) * (V4 - _ECA2)
-            iahp4 = _GAHP2 * (V4 - _EK2) * (CA4[i] / (CA4[i] + _K1_GPE))
+            ca4_i = CA4[i]
+            if ca4_i < _CA_MIN:
+                ca4_i = _CA_MIN
+            iahp4 = _GAHP2 * (V4 - _EK2) * (ca4_i / (ca4_i + _K1_GPE))
             isngi = gsngi[i] * ((V4 - _ESYN3) * (S2b_old[i] + S21b_w[i]))
             igigi = _GGIGI * ((V4 - _ESYN4) * (S31b_w[i] + S32b_w[i]))
             istrgpi = _GSTRGPI * (V4 - _ESYN5) * (S9[i] + S91_w[i] + S92_w[i] + S93_w[i] + S94_w[i] + S95_w[i] + S96_w[i] + S97_w[i] + S98_w[i] + S99_w[i])
@@ -654,6 +668,8 @@ def run_cbgt_loop(
             H4[i] = H4[i] + dt * (0.05 * (h4_i - H4[i]) / th4_i)
             R4[i] = R4[i] + dt * (1.0 * (r4_i - R4[i]) / _GPE_TR)
             CA4[i] = CA4[i] + dt * (1e-4 * (-ica4 - it4 - _KCA2 * CA4[i]))
+            if CA4[i] < _CA_MIN:
+                CA4[i] = _CA_MIN
         _conv_record_crossings(CONV_GPI, spike_idx, spike_n, v4_prev, vgi_curr, SPIKE_SYN_THRESHOLD)
         _conv_eval_all(spike_idx, spike_n, CONV_GPI, syn_gpi_th, S4)
         _conv_step_one(spike_idx, spike_n, max_index, CONV_GPI, n)
