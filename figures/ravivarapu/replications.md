@@ -154,7 +154,7 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 **Manifest:** `artifacts/figures/papers/ravivarapu/5a/manifest.json`
 <!-- caption-5a:end -->
 
-**Status:** **Pass** (rep v15) — inference @ 50 Hz; Manifest `artifacts/figures/papers/ravivarapu/5a/manifest.json`.
+**Status:** **Pass** (rep v15) — inference @ 50 Hz. Late SEA 6–10 is the 150 ms independent-shot floor (~0.328); Kumaravelu 50 Hz does not keep falling to digitized ~0.310. Manifest `artifacts/figures/papers/ravivarapu/5a/manifest.json`.
 
 <!-- gates-5a:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/5a/manifest.json`; overall **`pass`**: yes, 2026-08-14). Every row is required for exit.
