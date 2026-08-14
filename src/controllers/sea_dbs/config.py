@@ -31,11 +31,12 @@ INFERENCE_CARRIER_50HZ: float = 50.0
 # 100 ms / 62 ms burst @ 130 Hz.
 FIG5A_INFERENCE_WINDOW_S: float = 0.15
 FIG5A_INFERENCE_BURST_MS: float = 150.0
-# Fig 5a plots 11 samples. n_obs=10 lets onset age out at step 10 so SEA
-# can reach the last-window floor (~0.328) while steps 5–9 still decline.
-# n_obs=11 keeps onset in the mean and holds SEA ~0.02 above that floor.
+# Fig 5a plots 11 samples. n_obs=6 lets onset age out at step 6 so SEA
+# sits on the 150 ms floor (~0.328) for steps 6–10 (paper ~0.332→0.310).
+# n_obs=10 holds SEA ~0.35 through step 9 (leftover untreated in the mean).
+# n_obs<=5 equalizes Baseline and SEA at the end unless Baseline skips late.
 # Table I leaves n_obs open; Fig 4a train stays n_obs=5.
-FIG5A_INFERENCE_N_OBS: int = 10
+FIG5A_INFERENCE_N_OBS: int = 6
 # Skip-first Gumbel draw with no late skips. Offset 1 skipped at steps 6 and 9,
 # which pulls Baseline back up after step 5 (untreated IC restart in the mean).
 # Offset 2 started Baseline on stim and overlaid SEA through step 4.

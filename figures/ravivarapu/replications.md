@@ -44,7 +44,7 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 **Status:** **Pass** (rep v62) — `shape_pass` and full `pass`; `fixed_episode_seed_until=2`; `fig4_ravivarapu_config_v93`; display roll10 (gates on raw); paper overlay (black baseline, grey SEA-DBS). Manifest `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`.
 
 <!-- gates-4a:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4a.json`; **`shape_pass`**: yes, **`pass`**: yes, 2026-08-13). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
+**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4a.json`; **`shape_pass`**: yes, **`pass`**: yes, 2026-08-14). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
 
 | Key | Description | Shape | Full |
 |-----|-------------|-------|------|
@@ -112,7 +112,7 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4a/plot.p
 **Status:** Pass — see manifest gates.
 
 <!-- gates-4b:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4b.json`; overall **`pass`**: yes, 2026-08-13). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4b.json`; overall **`pass`**: yes, 2026-08-14). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -146,18 +146,18 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 
 ### Replication
 
-![Replication Fig 5a](images/5a/inference_50hz_v14.png)
+![Replication Fig 5a](images/5a/inference_50hz_v15.png)
 
 <!-- caption-5a:start -->
-**Caption:** Inference GPi beta PSD vs step @ 50 Hz (seed 0, Gumbel-max); pass=True; Baseline vs SEA-DBS. (v14)
+**Caption:** Inference GPi beta PSD vs step @ 50 Hz (seed 0, Gumbel-max); pass=True; Baseline vs SEA-DBS. (v15)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/5a/manifest.json`
 <!-- caption-5a:end -->
 
-**Status:** **Pass** (rep v14) — inference @ 50 Hz; Manifest `artifacts/figures/papers/ravivarapu/5a/manifest.json`.
+**Status:** **Pass** (rep v15) — inference @ 50 Hz; Manifest `artifacts/figures/papers/ravivarapu/5a/manifest.json`.
 
 <!-- gates-5a:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/5a/manifest.json`; overall **`pass`**: yes, 2026-08-13). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/5a/manifest.json`; overall **`pass`**: yes, 2026-08-14). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -176,6 +176,7 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 | `early_sea_below_baseline` | SEA-DBS below Baseline at every step 1–5 | yes |
 | `late_baseline_declines` | Baseline keeps declining steps 5→10 | yes |
 | `late_sea_declines` | SEA-DBS keeps declining steps 5→10 | yes |
+| `mid_mae_sea` | steps 4–10 MAE vs digitized SEA-DBS ≤ 0.012 | yes |
 <!-- gates-5a:end -->
 
 **Run:**
@@ -212,7 +213,7 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 **Status:** Fail (rep v8) (`baseline_declines, paper_declines, paper_end_below_baseline, paper_steeper_drop`). Manifest `artifacts/figures/papers/ravivarapu/5b/manifest.json`.
 
 <!-- gates-5b:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/5b/manifest.json`; overall **`pass`**: no, 2026-08-13). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/5b/manifest.json`; overall **`pass`**: no, 2026-08-14). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -263,7 +264,7 @@ QAT is **out of scope** for SEA-DBS (not reported).
 **Status:** Open — needs FP16 PTQ path on SEA-DBS actor after full-precision train.
 
 <!-- gates-6:start -->
-**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/6/manifest.json``; overall **`pass`**: —, 2026-08-13). Every row is required for exit.
+**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/6/manifest.json``; overall **`pass`**: —, 2026-08-14). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -311,7 +312,7 @@ Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper` ([se
 **Status:** Open — needs all four variants trainable and a shared 10-step eval harness.
 
 <!-- gates-7:start -->
-**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/7/manifest.json``; overall **`pass`**: —, 2026-08-13). Every row is required for exit.
+**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/7/manifest.json``; overall **`pass`**: —, 2026-08-14). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|

@@ -46,9 +46,9 @@ def evaluate(
     ``dbs_burst_ms`` / ``biomarker_window_s`` / ``n_obs`` are set. Fig 5a uses
     a 150 ms window so last-window Pβ ~0.328 (paper SEA end ~0.310);
     100 ms floors at ~0.39 and 140 ms at ~0.339. Fig 5a also sets
-    ``n_obs=10`` so onset ages out at step 10 and SEA can reach that floor
-    (``n_obs=11`` holds SEA ~0.02 above it; ``n_obs=5`` is all-floor by
-    step 5). ``carrier_hz`` is the
+    ``n_obs=6`` so onset ages out at step 6 and SEA sits on that floor for
+    steps 6–10 (``n_obs=10`` holds SEA ~0.35 through step 9; ``n_obs=5`` is
+    all-floor by step 5). ``carrier_hz`` is the
     Fig 5 inference override and is written into the config so ``reset()``
     cannot restore the training carrier.
 

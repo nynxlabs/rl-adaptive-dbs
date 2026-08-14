@@ -568,6 +568,10 @@ INFERENCE_EARLY_SEA_DROP_MIN = 0.050
 # ~0.404→0.356). n_obs=5 independent shots are already all-floor by step 5.
 INFERENCE_LATE_LO = 5
 INFERENCE_LATE_DROP_MIN = 0.005
+# Fig 5a steps 4–10 vs digitized SEA. n_obs=10 leftover-onset filling sits
+# ~0.02 above paper here; n_obs=6 reaches the 150 ms floor at step 6.
+INFERENCE_MID_LO = 4
+INFERENCE_MID_SEA_MAE_MAX = 0.012
 INFERENCE_PAPER_Y_TO_NORM = 1000.0
 INFERENCE_EARLY_SERIES_50HZ = ("Baseline 50Hz", "SEA-DBS 50Hz")
 
@@ -604,8 +608,9 @@ def ravivarapu_inference_gates(
     Ordering: 11 samples, shared start, both decline, SEA below Baseline at
     the end, SEA steeper drop, correct carrier. 30 Hz also needs a weaker
     end than the 50 Hz panel. Fig 5a (50 Hz) also checks steps 0–5 against
-    digitized paper with generous MAE / drop tols, and steps 5–10 still
-    declining (not a horizontal n_obs floor).
+    digitized paper with generous MAE / drop tols, steps 4–10 SEA MAE vs
+    digitized paper, and steps 5–10 still declining (not a leftover-onset
+    fill that sits above the 50 Hz floor).
 
     Paper crops label the same biomarker as raw ~300–480 (×1000 vs Fig 4a).
     Traces here are ``p_beta_norm``. ``n_expected`` is PSD samples: t=0
@@ -641,9 +646,11 @@ def ravivarapu_inference_gates(
     early_mae_p = float("nan")
     early_mae_p_35 = float("nan")
     early_drop_p = float("nan")
+    mid_mae_p = float("nan")
     if carrier_hz == 50.0 and b.size >= INFERENCE_EARLY_N and p.size >= INFERENCE_EARLY_N:
         paper_b = _paper_early_norm("fig5a", INFERENCE_EARLY_SERIES_50HZ[0])
         paper_s = _paper_early_norm("fig5a", INFERENCE_EARLY_SERIES_50HZ[1])
+        paper_s_full = _paper_early_norm("fig5a", INFERENCE_EARLY_SERIES_50HZ[1], n=11)
         b_early = b[:INFERENCE_EARLY_N]
         p_early = p[:INFERENCE_EARLY_N]
         if paper_b is not None and paper_s is not None:
@@ -661,6 +668,9 @@ def ravivarapu_inference_gates(
             gates["early_sea_below_baseline"] = bool(
                 np.all(p_early[1:] < b_early[1:])
             )
+        if paper_s_full is not None and p.size >= 11:
+            mid_mae_p = float(np.mean(np.abs(p[INFERENCE_MID_LO:] - paper_s_full[INFERENCE_MID_LO:])))
+            gates["mid_mae_sea"] = mid_mae_p <= INFERENCE_MID_SEA_MAE_MAX
         # Paper keeps falling after step 5; independent n_obs=5 floors there.
         late_drop_b = float(b[INFERENCE_LATE_LO] - b_end)
         late_drop_p = float(p[INFERENCE_LATE_LO] - p_end)
@@ -684,6 +694,7 @@ def ravivarapu_inference_gates(
         "early_mae_sea": early_mae_p,
         "early_mae_sea_3_5": early_mae_p_35,
         "early_drop_sea_0_5": early_drop_p,
+        "mid_mae_sea": mid_mae_p,
         "late_drop_baseline_5_10": (
             float(b[INFERENCE_LATE_LO] - b_end) if b.size > INFERENCE_LATE_LO else float("nan")
         ),
