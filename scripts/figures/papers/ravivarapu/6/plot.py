@@ -72,6 +72,47 @@ SERIES = (
     ("paper", "SEA-DBS", False),
     ("paper", "SEA-DBS + PTQ(fp16)", True),
 )
+# FP16 PTQ matches fp32 Gumbel actions on this checkpoint, so the pairs share
+# y. Draw fp32 first (thicker, open markers) and PTQ on top (thinner, filled
+# markers), and dodge PTQ by a fraction of a step so the four strokes do not
+# paint over each other. Display-only; gates still use the raw traces.
+PTQ_X_DODGE = 0.28
+PLOT_STYLE = {
+    "Baseline": {
+        "color": "#1f77b4",
+        "linewidth": 2.6,
+        "marker": "o",
+        "markersize": 7.5,
+        "markerfacecolor": "none",
+        "markeredgewidth": 1.4,
+        "zorder": 3,
+    },
+    "SEA-DBS": {
+        "color": "#2ca02c",
+        "linewidth": 2.6,
+        "marker": "^",
+        "markersize": 7.5,
+        "markerfacecolor": "none",
+        "markeredgewidth": 1.4,
+        "zorder": 3,
+    },
+    "Baseline + PTQ(fp16)": {
+        "color": "#ff7f0e",
+        "linewidth": 1.8,
+        "linestyle": (0, (4.0, 1.4, 1.0, 1.4)),
+        "marker": "s",
+        "markersize": 5.5,
+        "zorder": 4,
+    },
+    "SEA-DBS + PTQ(fp16)": {
+        "color": "#d62728",
+        "linewidth": 1.8,
+        "linestyle": (0, (4.0, 1.4, 1.0, 1.4)),
+        "marker": "D",
+        "markersize": 5.5,
+        "zorder": 4,
+    },
+}
 
 
 def _vault_backed_png(path: Path) -> Path:
@@ -187,9 +228,17 @@ def main() -> None:
     fig, ax = plt.subplots(figsize=(6, 4))
     scale = float(_paper_overlay.RAVI_INFERENCE_PAPER_Y_TO_NORM)
     ys: list[np.ndarray] = []
-    for _, label, _ in SERIES:
+    for _, label, use_ptq in sorted(SERIES, key=lambda row: row[2]):
         y = np.asarray(traces[label], dtype=float) * scale
-        ax.plot(np.arange(y.size, dtype=float), y, label=label, linewidth=1.5)
+        x = np.arange(y.size, dtype=float)
+        if use_ptq:
+            x = x + PTQ_X_DODGE
+        ax.plot(
+            x,
+            y,
+            label=label,
+            **PLOT_STYLE[label],
+        )
         ys.append(y)
     paper = _paper_overlay.overlay_ravivarapu_fig6(ax)
     ys.extend(py for _px, py in paper.values())
@@ -236,7 +285,8 @@ def main() -> None:
     ptq_mb = round(ptq_bytes / (1024 * 1024), 1)
     caption = (
         f"FP16 PTQ inference GPi beta PSD vs step @ 50 Hz (seed {args.seed}, Gumbel-max); "
-        f"pass={gates.get('pass')}; four-series Baseline/SEA fp32+PTQ; "
+        f"pass={gates.get('pass')}; four-series Baseline/SEA fp32+PTQ "
+        f"(PTQ matches fp32 on this checkpoint; PTQ x-dodged 0.28 step, dash-dot); "
         f"actor checkpoint ~{fp32_mb} MB → ~{ptq_mb} MB (FP16 weights)."
     )
     manifest = {
