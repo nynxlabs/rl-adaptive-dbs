@@ -20,6 +20,7 @@ class PythonPlant:
         self._seed: int | None = None
         self._init_draws: NetworkInitDraws | None = None
         self._iteration = 0
+        self._dyn: dict[str, np.ndarray] | None = None
 
     @property
     def config(self) -> PlantConfig:
@@ -41,6 +42,7 @@ class PythonPlant:
     def reset(self, seed: int | None = None) -> PythonPlant:
         self._seed = seed
         self._iteration = 0
+        self._dyn = None
         self._init_draws = load_cached_init_draws(seed) if seed is not None else None
         if seed is None:
             self._rng = np.random.default_rng()
@@ -59,6 +61,7 @@ class PythonPlant:
         th_spike_buffer_size: int | None = None,
         record_cor_spikes: bool = False,
         cor_spike_buffer_size: int | None = None,
+        carry: bool = False,
     ) -> IntegrateResult:
         if duration_s <= 0:
             msg = "duration_s must be positive"
@@ -74,7 +77,7 @@ class PythonPlant:
         if self.config.smc_pulse_source == "cor_spikes":
             record_cor_spikes = True
 
-        return integrate_network(
+        result = integrate_network(
             config=self.config,
             duration_s=duration_s,
             dbs_spec=spec,
@@ -88,4 +91,13 @@ class PythonPlant:
             th_spike_buffer_size=th_spike_buffer_size,
             record_cor_spikes=record_cor_spikes,
             cor_spike_buffer_size=cor_spike_buffer_size,
+            dyn_state=self._dyn if carry else None,
+            save_dyn=carry,
         )
+        if carry:
+            packed = result.info.pop("_dyn_state", None)
+            if packed is None:
+                msg = "carry=True but integrate_network did not return _dyn_state"
+                raise RuntimeError(msg)
+            self._dyn = packed
+        return result

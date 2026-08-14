@@ -1,4 +1,4 @@
-"""Fig 5a-style stitched plant integration for MehreganEnv continuous mode."""
+"""Stitched idbs helper (unit tests). Env continuous mode uses 2 s plant carry."""
 
 from __future__ import annotations
 
@@ -83,7 +83,11 @@ def integrate_stitched_step(
     dt_ms: float,
     mean_hz: float,
 ) -> IntegrateResult:
-    """One continuous integrate from episode IC; return view of the latest RL step."""
+    """One continuous integrate from episode IC; return view of the latest RL step.
+
+    Kept for unit tests of ``stitch_idbs`` placement. Env ``continuous`` mode
+    uses sequential 2 s ``PythonPlant.integrate(..., carry=True)`` instead.
+    """
     if not actions:
         msg = "integrate_stitched_step requires at least one action"
         raise ValueError(msg)

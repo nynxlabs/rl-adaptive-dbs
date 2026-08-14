@@ -380,14 +380,124 @@ def initialize_network_state(
 
 DEFAULT_GPI_SPIKE_BUFFER = 512
 # Duration-scaled Numba GPi/TH/cor spike cap. 2 s stays at 512; longer single-shot
-# integrates (Fig 2a 14 s, Fig 4a continuous stitch) overflow 512 and silently drop
-# spikes. Headroom is PD GPi-ish; Fig 2a still passes its own 60 Hz helper.
+# integrates (Fig 2a 14 s) overflow 512 and silently drop spikes. Sequential 2 s
+# carry does not need this. Headroom is PD GPi-ish; Fig 2a still passes its own
+# 60 Hz helper.
 GPI_SPIKE_BUFFER_HEADROOM_HZ = 80.0
 GPI_SPIKE_BUFFER_MARGIN = 64
 # Intracellular Ca floor (mM). STN Nernst uses log(Cao/Ca); GPe/GPi IAHP uses
 # Ca/(Ca+k1). MATLAB has no floor; 2 s segments stay positive. Sequential
-# episode stitches (~20 s+) can hit 0 and ZeroDivisionError in Numba.
+# 2 s carry across an episode (~20 s+ of Ca accumulation) can hit 0 and
+# ZeroDivisionError in Numba.
 INTRACELL_CA_MIN = 1e-8
+
+# Membrane / gate / synapse / conv-delay arrays mutated in-place by the Numba
+# loop. Carried across sequential 2 s segments in plant_integration_mode=continuous.
+# GPi/TH/cor *recording* buffers are not carried — P_β is per RL step.
+_DYN_KEYS = (
+    "vth",
+    "vsn",
+    "vge",
+    "vgi_curr",
+    "vstr_indr",
+    "vstr_dr",
+    "ve",
+    "vi",
+    "ue",
+    "ui",
+    "H1",
+    "R1",
+    "N2",
+    "H2",
+    "M2",
+    "A2",
+    "B2",
+    "C2",
+    "D2",
+    "D1",
+    "P2",
+    "Q2",
+    "R2",
+    "CAsn2",
+    "N3",
+    "H3",
+    "R3",
+    "ca3_state",
+    "N4",
+    "H4",
+    "R4",
+    "ca4_state",
+    "m5",
+    "h5",
+    "n5",
+    "p5",
+    "m6",
+    "h6",
+    "n6",
+    "p6",
+    "S2a",
+    "S21a",
+    "S2b",
+    "S2an",
+    "S21an",
+    "S3a",
+    "S31a",
+    "S3b",
+    "S31b",
+    "S32b",
+    "S3c",
+    "S31c",
+    "S32c",
+    "S4",
+    "S5",
+    "S51",
+    "S52",
+    "S53",
+    "S54",
+    "S55",
+    "S56",
+    "S57",
+    "S58",
+    "S59",
+    "S9",
+    "S6a",
+    "S6b",
+    "S6bn",
+    "S61b",
+    "S61bn",
+    "S91",
+    "S92",
+    "S93",
+    "S94",
+    "S95",
+    "S96",
+    "S97",
+    "S98",
+    "S99",
+    "S7",
+    "S8",
+    "S1a",
+    "S1b",
+    "S1c",
+    "Z1a",
+    "Z1b",
+    "spike_idx",
+    "spike_n",
+)
+
+
+def _apply_dyn_state(
+    dyn_state: Mapping[str, np.ndarray], arrays: Mapping[str, np.ndarray]
+) -> None:
+    for key in _DYN_KEYS:
+        if key not in dyn_state:
+            msg = f"plant dyn carry missing {key!r}"
+            raise KeyError(msg)
+        np.copyto(arrays[key], dyn_state[key])
+
+
+def _pack_dyn_state(arrays: Mapping[str, np.ndarray]) -> dict[str, np.ndarray]:
+    return {key: arrays[key].copy() for key in _DYN_KEYS}
 
 
 def default_gpi_spike_buffer_size(duration_s: float) -> int:
@@ -413,6 +523,8 @@ def integrate_network(
     th_spike_buffer_size: int | None = None,
     record_cor_spikes: bool = False,
     cor_spike_buffer_size: int | None = None,
+    dyn_state: Mapping[str, np.ndarray] | None = None,
+    save_dyn: bool = False,
 ) -> IntegrateResult:
     """Advance the CBGT network for one segment (``CTX_BG_TH_network`` port)."""
 
@@ -699,6 +811,10 @@ def integrate_network(
         and not return_traces
         and trace_vgi is None
     )
+    if (dyn_state is not None or save_dyn) and not use_numba:
+        msg = "plant dyn carry requires the Numba loop"
+        raise RuntimeError(msg)
+    dyn_out: dict[str, np.ndarray] | None = None
     numba_gpi_buf: np.ndarray | None = None
     numba_gpi_counts: np.ndarray | None = None
     numba_th_buf: np.ndarray | None = None
@@ -742,6 +858,10 @@ def integrate_network(
             numba_cor_counts = np.zeros(1, dtype=np.int32)
         ca3_state = np.full(n, float(CA3), dtype=np.float64)
         ca4_state = np.full(n, float(CA4), dtype=np.float64)
+        loc = locals()
+        dyn_arrays = {k: loc[k] for k in _DYN_KEYS}
+        if dyn_state is not None:
+            _apply_dyn_state(dyn_state, dyn_arrays)
         run_cbgt_loop(
             n_steps,
             dt,
@@ -899,6 +1019,8 @@ def integrate_network(
             iappgpe,
             uce_scale,
         )
+        if save_dyn:
+            dyn_out = _pack_dyn_state(dyn_arrays)
 
     # --- Main Euler loop: Python step=1..n_steps-1 ↔ MATLAB i=2:length(t) ---
     if not use_numba:
@@ -1390,6 +1512,11 @@ def integrate_network(
         info["cor_spikes"] = cor_spikes
     if p_beta_val is not None:
         info["p_beta"] = p_beta_val
+    if save_dyn:
+        if dyn_out is None:
+            msg = "save_dyn=True but Numba loop did not pack dyn state"
+            raise RuntimeError(msg)
+        info["_dyn_state"] = dyn_out
     if debug_snapshots:
         info["debug_snapshots"] = debug_snapshots
 

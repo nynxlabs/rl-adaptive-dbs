@@ -26,8 +26,8 @@ class MehreganEnvConfig:
     pattern_mean_hz: float = 45.0  # mean stimulation rate for fixed_mean_pattern mode
     skip_regular: bool = False  # True → exclude pattern 0 (regular periodic) from agent action space
     # disconnected: each RL step is a cold 2 s integrate from the episode ICs
-    # (bit-identical Pβ if the same action repeats). continuous: stitch idbs
-    # across the episode (Alg. 1 sequential segments; PythonPlant only).
+    # (bit-identical Pβ if the same action repeats). continuous: sequential 2 s
+    # segments that carry voltages/gates/Ca/synapses (Alg. 1; PythonPlant only).
     plant_integration_mode: str = "disconnected"
 
 
