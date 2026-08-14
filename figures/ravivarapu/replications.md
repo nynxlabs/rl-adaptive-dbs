@@ -146,15 +146,15 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 
 ### Replication
 
-![Replication Fig 5a](images/5a/inference_50hz_v13.png)
+![Replication Fig 5a](images/5a/inference_50hz_v14.png)
 
 <!-- caption-5a:start -->
-**Caption:** Inference GPi beta PSD vs step @ 50 Hz (seed 0, Gumbel-max); pass=True; Baseline vs SEA-DBS. (v13)
+**Caption:** Inference GPi beta PSD vs step @ 50 Hz (seed 0, Gumbel-max); pass=True; Baseline vs SEA-DBS. (v14)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/5a/manifest.json`
 <!-- caption-5a:end -->
 
-**Status:** **Pass** (rep v13) — inference @ 50 Hz; Manifest `artifacts/figures/papers/ravivarapu/5a/manifest.json`.
+**Status:** **Pass** (rep v14) — inference @ 50 Hz; Manifest `artifacts/figures/papers/ravivarapu/5a/manifest.json`.
 
 <!-- gates-5a:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/5a/manifest.json`; overall **`pass`**: yes, 2026-08-13). Every row is required for exit.
