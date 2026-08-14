@@ -648,7 +648,10 @@ def ravivarapu_inference_gates(
             gates["early_mae_sea"] = early_mae_p <= INFERENCE_EARLY_MAE_MAX
             gates["early_sea_declines"] = early_drop_p > INFERENCE_EARLY_SEA_DROP_MIN
             gates["early_baseline_declines"] = early_drop_b > INFERENCE_DECLINE_MIN
-            gates["early_sea_below_baseline"] = float(p_early[-1]) < float(b_early[-1])
+            # Paper: Baseline above SEA from step 1 through 5, not overlaid.
+            gates["early_sea_below_baseline"] = bool(
+                np.all(p_early[1:] < b_early[1:])
+            )
     metrics = {
         "carrier_hz": carrier_hz,
         "b_start": b0,
