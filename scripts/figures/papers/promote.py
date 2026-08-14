@@ -1981,6 +1981,7 @@ def promote_ravivarapu_4b(*, manifest: dict[str, Any], png_path: Path, update_do
 
 PAPER_RAVIVARAPU_5A_PNG = "figures/ravivarapu/images/5a/inference_50hz.png"
 PAPER_RAVIVARAPU_5B_PNG = "figures/ravivarapu/images/5b/inference_30hz.png"
+PAPER_RAVIVARAPU_6_PNG = "figures/ravivarapu/images/6/ptq_fp16_50hz.png"
 
 
 def _ravivarapu_inference_status_line(manifest: dict[str, Any], *, panel: str) -> str:
@@ -2076,4 +2077,63 @@ def promote_ravivarapu_5b(*, manifest: dict[str, Any], png_path: Path, update_do
         ship_alias=PAPER_RAVIVARAPU_5B_PNG,
         update_docs=update_docs,
     )
+
+
+def _ravivarapu_fig6_status_line(manifest: dict[str, Any]) -> str:
+    gates = manifest.get("gates") or {}
+    ver = manifest.get("png_version")
+    rep = f" (rep v{ver})" if ver is not None else ""
+    manifest_rel = "artifacts/figures/papers/ravivarapu/6/manifest.json"
+    if gates.get("smoke_override"):
+        return (
+            f"**Status:** Open{rep} — smoke override; not a ship pass. "
+            f"Manifest `{manifest_rel}`."
+        )
+    if gates.get("pass"):
+        fp32_mb = round((manifest.get("model_bytes_fp32") or 0) / (1024 * 1024), 1)
+        ptq_mb = round((manifest.get("model_bytes_fp16_ptq") or 0) / (1024 * 1024), 1)
+        return (
+            f"**Status:** **Pass**{rep} — FP16 PTQ @ 50 Hz; "
+            f"checkpoint ~{fp32_mb} MB → ~{ptq_mb} MB; Manifest `{manifest_rel}`."
+        )
+    failed = [k for k, v in gates.items() if v is False and k not in {"pass", "smoke_override"}]
+    fail_note = ", ".join(failed[:4]) if failed else "see gates"
+    return f"**Status:** Fail{rep} (`{fail_note}`). Manifest `{manifest_rel}`."
+
+
+def promote_ravivarapu_6(*, manifest: dict[str, Any], png_path: Path, update_docs: bool = True) -> dict[str, str]:
+    caption = manifest.get("caption") or "see manifest"
+    if manifest.get("png_version") is not None:
+        caption = f"{caption} (v{manifest['png_version']})"
+    if PAPER_RAVIVARAPU_DOC.exists() and update_docs:
+        text = PAPER_RAVIVARAPU_DOC.read_text()
+        if "<!-- caption-6:start -->" in text:
+            text = _replace_marker(
+                text,
+                "caption-6",
+                _caption_block(
+                    caption,
+                    "artifacts/figures/papers/ravivarapu/6/manifest.json",
+                ),
+            )
+        text = re.sub(
+            r"!\[Replication Fig 6\]\(images/6/\w+_v\d+\.png\)",
+            f"![Replication Fig 6](images/6/{png_path.name})",
+            text,
+        )
+        parts = text.split("<!-- caption-6:end -->", 1)
+        if len(parts) == 2:
+            head, tail = parts
+            tail = re.sub(
+                r"(?m)^\*\*Status:\*\*.*$",
+                _ravivarapu_fig6_status_line(manifest),
+                tail,
+                count=1,
+            )
+            text = "<!-- caption-6:end -->".join((head, tail))
+        PAPER_RAVIVARAPU_DOC.write_text(text)
+    refresh_ravivarapu_gate_tables(update_docs=update_docs)
+    materialize_ship_png(png_path, PAPER_RAVIVARAPU_6_PNG)
+    _after_promote_publish(png_path, update_docs=update_docs)
+    return {"png": str(png_path), "caption": caption, "doc": str(PAPER_RAVIVARAPU_DOC)}
 
