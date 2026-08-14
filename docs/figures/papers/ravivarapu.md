@@ -162,8 +162,9 @@ Post-train **inference** at **50 Hz** over **10 steps** (Fig. 5(a)).
 | 4 | **SEA steeper / lower end** | SEA end ≪ Baseline end; drop ~1.7–2× | SEA ≥ Baseline end or similar drop |
 | 5 | **vs Fig 5b** | 50 Hz stronger than 30 Hz | 30 Hz beats 50 Hz |
 | 6 | **Checkpoints** | From Fig 4 train | Untrained / mismatched |
+| 7 | **Steps 0–5** | Early window near digitized paper (MAE ≤ 0.03) | 4-pulse 50 Hz floor stuck ~0.43 |
 
-**Automated shape gates** (normalized `p_beta_norm`; overlay ÷1000 from paper crop ~300–480): `n_steps_ok` = **11 PSD samples** (t=0 untreated + 10 stim actions); `shared_start`; any net drop on both traces (`baseline_declines` / `paper_declines`); `paper_end_below_baseline`; `paper_steeper_drop`; `carrier_hz_ok`. No paper-magnitude polish (digitized 50 Hz drops are ~0.10 Baseline / ~0.15 SEA).
+**Automated shape gates** (normalized `p_beta_norm`; overlay ÷1000 from paper crop ~300–480): `n_steps_ok` = **11 PSD samples** (t=0 untreated + 10 stim actions); `shared_start`; any net drop on both traces (`baseline_declines` / `paper_declines`); `paper_end_below_baseline`; `paper_steeper_drop`; `carrier_hz_ok`; generous steps 0–5 vs digitization (`early_mae_*` ≤ 0.03, SEA drop 0→5 > 0.05). Digitized 50 Hz 10-step drops (~0.10 Baseline / ~0.15 SEA) are not 10-step polish thresholds. Fig 5a eval burst is 100 ms (five 50 Hz pulses); Fig 4a train stays 62 ms @ 130 Hz.
 
 ---
 

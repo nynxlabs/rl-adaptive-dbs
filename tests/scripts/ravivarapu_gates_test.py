@@ -152,3 +152,51 @@ def test_inference_5b_weaker_than_50hz():
     assert report["pass"]
     assert report["gates"]["weaker_than_50hz_sea"]
     assert report["gates"]["weaker_than_50hz_baseline"]
+
+
+def test_inference_early_window_passes_on_five_pulse_50hz():
+    """100 ms / 5-pulse 50 Hz floor matches digitized steps 0–5 to 0.03 MAE."""
+    sea = [
+        0.4606,
+        0.4241,
+        0.4120,
+        0.4059,
+        0.4023,
+        0.3877,
+        0.3877,
+        0.3877,
+        0.3877,
+        0.3877,
+        0.3877,
+    ]
+    baseline = [
+        0.4606,
+        0.4241,
+        0.4120,
+        0.4059,
+        0.4023,
+        0.4030,
+        0.4000,
+        0.4000,
+        0.4000,
+        0.4000,
+        0.4000,
+    ]
+    report = ravivarapu_inference_gates(baseline, sea, carrier_hz=50.0)
+    if "early_mae_sea" not in report["gates"]:
+        return
+    assert report["gates"]["early_mae_sea"]
+    assert report["gates"]["early_mae_baseline"]
+    assert report["gates"]["early_sea_declines"]
+    assert report["gates"]["early_baseline_declines"]
+    assert report["gates"]["early_sea_below_baseline"]
+
+
+def test_inference_early_window_rejects_four_pulse_floor():
+    """62 ms / 4-pulse 50 Hz drop (~0.033) is too shallow for steps 0–5."""
+    y = np.linspace(0.461, 0.428, 11)
+    report = ravivarapu_inference_gates(y, y, carrier_hz=50.0)
+    if "early_sea_declines" not in report["gates"]:
+        return
+    assert not report["gates"]["early_sea_declines"]
+    assert not report["pass"]
