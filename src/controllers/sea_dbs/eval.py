@@ -33,13 +33,17 @@ def evaluate(
     carrier_hz: float | None = None,
     use_fp16_ptq: bool = False,
     action_mode: str = "argmax",
+    dbs_burst_ms: float | None = None,
 ) -> dict[str, Any]:
     """Roll out a trained actor; returns summary metrics and per-step traces.
 
     Environment knobs (burst length, observation scale, …) come from the
-    checkpoint so Fig 5 eval matches the Fig 4a train plant. ``carrier_hz``
-    is the Fig 5 inference override and is written into the config so
-    ``reset()`` cannot restore the training carrier.
+    checkpoint so Fig 5 eval matches the Fig 4a train plant unless
+    ``dbs_burst_ms`` is set (Fig 5a 50 Hz eval uses 100 ms so the window
+    holds five pulses; 62 ms is four pulses and floors above digitized
+    steps 0–5). ``carrier_hz`` is the Fig 5 inference override and is
+    written into the config so ``reset()`` cannot restore the training
+    carrier.
 
     ``action_mode``: ``argmax`` (greedy) or ``gumbel`` (hard Gumbel-max on
     actor logits). Hard Gumbel-max is temperature-invariant; P(stim) equals
@@ -59,6 +63,8 @@ def evaluate(
         cfg = replace(cfg, max_episode_steps=int(max_steps))
     hz = float(carrier_hz if carrier_hz is not None else cfg.carrier_hz)
     cfg = replace(cfg, carrier_hz=hz)
+    if dbs_burst_ms is not None:
+        cfg = replace(cfg, dbs_burst_ms=float(dbs_burst_ms))
 
     policy: Actor | FP16ActorWrapper = actor
     if use_fp16_ptq or is_ptq_variant(cfg.variant):

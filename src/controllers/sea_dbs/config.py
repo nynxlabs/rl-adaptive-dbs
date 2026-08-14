@@ -25,6 +25,11 @@ CRITIC_LR: float = 1e-3
 DEFAULT_CARRIER_HZ: float = 50.0
 INFERENCE_CARRIER_30HZ: float = 30.0
 INFERENCE_CARRIER_50HZ: float = 50.0
+# Fig 5a eval-only: 50 Hz pulse count in the 100 ms biomarker window.
+# Fig 4a train burst 62 ms and 80 ms are the same 4-pulse 50 Hz train; 90–100 ms
+# includes the 5th pulse and is the smallest eval change that deepens the 50 Hz
+# floor toward digitized steps 0–5. Fig 4a checkpoints stay 62 ms @ 130 Hz.
+FIG5A_INFERENCE_BURST_MS: float = 100.0
 ABLATION_EVAL_STEPS: int = 10
 # Paper Figs 5–7 x-axis is steps 0–10: untreated PSD at t=0 plus 10 stim actions.
 INFERENCE_PSD_SAMPLES: int = ABLATION_EVAL_STEPS + 1

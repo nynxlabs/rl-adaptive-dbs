@@ -558,6 +558,31 @@ def ravivarapu_fig4b_gates(
 # 50 Hz, ~0.06/0.07 at 30 Hz) are reference, not gate thresholds.
 INFERENCE_DECLINE_MIN = 0.0
 INFERENCE_SHARED_START_MAX = 0.05
+# Fig 5a steps 0–5 vs digitized paper (norm = crop PSD / 1000). Generous:
+# match the early window "to an extent", not Fig 4a-style magnitude polish.
+INFERENCE_EARLY_N = 6
+INFERENCE_EARLY_MAE_MAX = 0.030
+INFERENCE_EARLY_SEA_DROP_MIN = 0.050
+INFERENCE_PAPER_Y_TO_NORM = 1000.0
+INFERENCE_EARLY_SERIES_50HZ = ("Baseline 50Hz", "SEA-DBS 50Hz")
+
+
+def _paper_early_norm(stem: str, series: str, n: int = INFERENCE_EARLY_N) -> np.ndarray | None:
+    path = curves_path(stem)
+    if not path.is_file():
+        return None
+    curves = load_refined(path)
+    if series not in curves:
+        return None
+    x, y = curves[series]
+    yn = np.asarray(y, dtype=float) / INFERENCE_PAPER_Y_TO_NORM
+    out: list[float] = []
+    for step in range(n):
+        val = window_mean(x, yn, lo=step - 0.35, hi=step + 0.35)
+        if val is None or not np.isfinite(val):
+            return None
+        out.append(float(val))
+    return np.asarray(out, dtype=float)
 
 
 def ravivarapu_inference_gates(
@@ -571,9 +596,10 @@ def ravivarapu_inference_gates(
 ) -> dict[str, Any]:
     """Shape gates for Fig 5a/5b on **normalized** PSD (~0.3–0.5).
 
-    Ordering only: 11 samples, shared start, both decline, SEA below Baseline
-    at the end, SEA steeper drop, correct carrier. 30 Hz also needs a weaker
-    end than the 50 Hz panel. No paper-magnitude polish.
+    Ordering: 11 samples, shared start, both decline, SEA below Baseline at
+    the end, SEA steeper drop, correct carrier. 30 Hz also needs a weaker
+    end than the 50 Hz panel. Fig 5a (50 Hz) also checks steps 0–5 against
+    digitized paper with generous MAE / drop tols (not 10-step polish).
 
     Paper crops label the same biomarker as raw ~300–480 (×1000 vs Fig 4a).
     Traces here are ``p_beta_norm``. ``n_expected`` is PSD samples: t=0
@@ -605,6 +631,24 @@ def ravivarapu_inference_gates(
         base_50 = float(_as_fy(baseline_trace_50hz)[-1])
         gates["weaker_than_50hz_sea"] = sea_30 > sea_50
         gates["weaker_than_50hz_baseline"] = base_30 > base_50
+    early_mae_b = float("nan")
+    early_mae_p = float("nan")
+    early_drop_p = float("nan")
+    if carrier_hz == 50.0 and b.size >= INFERENCE_EARLY_N and p.size >= INFERENCE_EARLY_N:
+        paper_b = _paper_early_norm("fig5a", INFERENCE_EARLY_SERIES_50HZ[0])
+        paper_s = _paper_early_norm("fig5a", INFERENCE_EARLY_SERIES_50HZ[1])
+        b_early = b[:INFERENCE_EARLY_N]
+        p_early = p[:INFERENCE_EARLY_N]
+        if paper_b is not None and paper_s is not None:
+            early_mae_b = float(np.mean(np.abs(b_early - paper_b)))
+            early_mae_p = float(np.mean(np.abs(p_early - paper_s)))
+            early_drop_p = float(p_early[0] - p_early[-1])
+            early_drop_b = float(b_early[0] - b_early[-1])
+            gates["early_mae_baseline"] = early_mae_b <= INFERENCE_EARLY_MAE_MAX
+            gates["early_mae_sea"] = early_mae_p <= INFERENCE_EARLY_MAE_MAX
+            gates["early_sea_declines"] = early_drop_p > INFERENCE_EARLY_SEA_DROP_MIN
+            gates["early_baseline_declines"] = early_drop_b > INFERENCE_DECLINE_MIN
+            gates["early_sea_below_baseline"] = float(p_early[-1]) < float(b_early[-1])
     metrics = {
         "carrier_hz": carrier_hz,
         "b_start": b0,
@@ -619,6 +663,9 @@ def ravivarapu_inference_gates(
         "p_step2": p2,
         "b_drop_0_2": b0 - b2,
         "p_drop_0_2": p0 - p2,
+        "early_mae_baseline": early_mae_b,
+        "early_mae_sea": early_mae_p,
+        "early_drop_sea_0_5": early_drop_p,
     }
     return _gate_pack(gates, metrics)
 
