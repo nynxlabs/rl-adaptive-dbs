@@ -66,7 +66,7 @@ RAVIVARAPU_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
         ("early_mae_sea", "steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03"),
         ("early_sea_declines", "SEA-DBS drop steps 0→5 > 0.05"),
         ("early_baseline_declines", "Baseline drop steps 0→5"),
-        ("early_sea_below_baseline", "SEA-DBS below Baseline at step 5"),
+        ("early_sea_below_baseline", "SEA-DBS below Baseline at every step 1–5"),
     ],
     "5b": [
         ("n_steps_ok", "11 PSD samples (t=0 + 10 stim steps)"),

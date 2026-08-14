@@ -146,15 +146,15 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 
 ### Replication
 
-![Replication Fig 5a](images/5a/inference_50hz_v10.png)
+![Replication Fig 5a](images/5a/inference_50hz_v11.png)
 
 <!-- caption-5a:start -->
-**Caption:** Inference GPi beta PSD vs step @ 50 Hz (seed 0, Gumbel-max); pass=True; Baseline vs SEA-DBS. (v10)
+**Caption:** Inference GPi beta PSD vs step @ 50 Hz (seed 0, Gumbel-max); pass=True; Baseline vs SEA-DBS. (v11)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/5a/manifest.json`
 <!-- caption-5a:end -->
 
-**Status:** **Pass** (rep v10) — inference @ 50 Hz; Manifest `artifacts/figures/papers/ravivarapu/5a/manifest.json`.
+**Status:** **Pass** (rep v11) — inference @ 50 Hz; Manifest `artifacts/figures/papers/ravivarapu/5a/manifest.json`.
 
 <!-- gates-5a:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/5a/manifest.json`; overall **`pass`**: yes, 2026-08-13). Every row is required for exit.
@@ -172,7 +172,7 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 | `early_mae_sea` | steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03 | yes |
 | `early_sea_declines` | SEA-DBS drop steps 0→5 > 0.05 | yes |
 | `early_baseline_declines` | Baseline drop steps 0→5 | yes |
-| `early_sea_below_baseline` | SEA-DBS below Baseline at step 5 | yes |
+| `early_sea_below_baseline` | SEA-DBS below Baseline at every step 1–5 | yes |
 <!-- gates-5a:end -->
 
 **Run:**
@@ -198,15 +198,15 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 
 ### Replication
 
-![Replication Fig 5b](images/5b/inference_30hz_v7.png)
+![Replication Fig 5b](images/5b/inference_30hz_v8.png)
 
 <!-- caption-5b:start -->
-**Caption:** Inference GPi beta PSD vs step @ 30 Hz (seed 0, Gumbel-max); pass=False; Baseline vs SEA-DBS. (v7)
+**Caption:** Inference GPi beta PSD vs step @ 30 Hz (seed 0, Gumbel-max); pass=False; Baseline vs SEA-DBS. (v8)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/5b/manifest.json`
 <!-- caption-5b:end -->
 
-**Status:** Fail (rep v7) (`baseline_declines, paper_declines, paper_end_below_baseline, paper_steeper_drop`). Manifest `artifacts/figures/papers/ravivarapu/5b/manifest.json`.
+**Status:** Fail (rep v8) (`baseline_declines, paper_declines, paper_end_below_baseline, paper_steeper_drop`). Manifest `artifacts/figures/papers/ravivarapu/5b/manifest.json`.
 
 <!-- gates-5b:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/5b/manifest.json`; overall **`pass`**: no, 2026-08-13). Every row is required for exit.
