@@ -6,10 +6,11 @@ Eval-only panel. Train or resume SEA-DBS weights via Fig 4a ``plot.py``
 
 Paper panel: steps 0–10 (untreated + 10 stim); SEA-DBS below Baseline;
 stronger than 30 Hz. Observation scale comes from the Fig 4a checkpoint;
-carrier 50 Hz, 140 ms window (eight 50 Hz pulses), and n_obs=11 are Fig 5a eval
-overrides so steps 3–5 can reach digitized paper and steps 5–10 keep declining.
-Fig 4a train stays 100 ms / 62 ms @ 130 Hz, n_obs=5. Actions are hard Gumbel-max
-(offset 34: skip-first, no late skips) so Baseline and SEA can split.
+carrier 50 Hz, 150 ms window, and n_obs=10 are Fig 5a eval
+overrides so last-window Pβ ~0.328 (paper SEA end ~0.310) and steps 5–10
+keep declining. Fig 4a train stays 100 ms / 62 ms @ 130 Hz, n_obs=5.
+Actions are hard Gumbel-max (offset 34: skip-first, no late skips) so
+Baseline and SEA can split.
 """
 from __future__ import annotations
 

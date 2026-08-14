@@ -44,10 +44,11 @@ def evaluate(
     Environment knobs (burst length, observation scale, …) come from the
     checkpoint so Fig 5 eval matches the Fig 4a train plant unless
     ``dbs_burst_ms`` / ``biomarker_window_s`` / ``n_obs`` are set. Fig 5a uses
-    a 140 ms window (eight 50 Hz pulses) so steps 3–5 can fall toward
-    digitized paper (~0.34); a 100 ms window floors at ~0.39. Fig 5a also
-    sets ``n_obs=11`` so the Eq. 4–5 mean still includes onset through step
-    10 (``n_obs=5`` is already all-floor by step 5). ``carrier_hz`` is the
+    a 150 ms window so last-window Pβ ~0.328 (paper SEA end ~0.310);
+    100 ms floors at ~0.39 and 140 ms at ~0.339. Fig 5a also sets
+    ``n_obs=10`` so onset ages out at step 10 and SEA can reach that floor
+    (``n_obs=11`` holds SEA ~0.02 above it; ``n_obs=5`` is all-floor by
+    step 5). ``carrier_hz`` is the
     Fig 5 inference override and is written into the config so ``reset()``
     cannot restore the training carrier.
 
