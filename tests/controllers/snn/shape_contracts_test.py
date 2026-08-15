@@ -83,17 +83,22 @@ def test_frequency_sensitivity_schedules_with_epsilon() -> None:
         frequency_sensitivity_explore=20.0,
         epsilon_start=1.0,
         epsilon_end=0.2,
+        frequency_sensitivity_explore_epsilon_max=0.7,
     )
-    assert cfg.frequency_sensitivity_at_epsilon(1.0) == 20.0
+    assert cfg.frequency_sensitivity_at_epsilon(1.0) == 10.0
+    assert cfg.frequency_sensitivity_at_epsilon(0.75) == 10.0
     assert cfg.frequency_sensitivity_at_epsilon(0.2) == 10.0
-    mid = cfg.frequency_sensitivity_at_epsilon(0.6)
+    mid = cfg.frequency_sensitivity_at_epsilon(0.5)
     assert 10.0 < mid < 20.0
 
     state_hi = DBSParameterState()
+    state_mid = DBSParameterState()
     state_lo = DBSParameterState()
     state_hi.apply_delta([0, 1, 0], cfg, epsilon=1.0)
+    state_mid.apply_delta([0, 1, 0], cfg, epsilon=0.5)
     state_lo.apply_delta([0, 1, 0], cfg, epsilon=0.2)
-    assert state_hi.frequency_hz == 40.0 + 20.0
+    assert state_hi.frequency_hz == 40.0 + 10.0
+    assert state_mid.frequency_hz == 40.0 + mid
     assert state_lo.frequency_hz == 40.0 + 10.0
 
 

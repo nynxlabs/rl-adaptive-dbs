@@ -77,6 +77,9 @@ class SNNConfig:
     # When > 0, linearly schedule frequency_sensitivity from this value at
     # epsilon_start down to frequency_sensitivity at epsilon_end (Fig 4 v66).
     frequency_sensitivity_explore: float = 0.0
+    # When explore scheduling is on, hold exploit Hz/step while ε is above this
+    # (protects ep1–~30 from lucky 80 Hz random walks; v66 FAIL at ε≈1).
+    frequency_sensitivity_explore_epsilon_max: float = 0.7
     pulse_width_sensitivity: float = 0.05  # ms per +1
 
     # Reward Eq. (7) coefficients (open)
@@ -135,12 +138,22 @@ class SNNConfig:
         exploit = float(self.frequency_sensitivity)
         if explore <= 0.0 or abs(explore - exploit) < 1e-9:
             return exploit
-        start = float(self.epsilon_start)
+        eps = float(epsilon)
         end = float(self.epsilon_end)
+        if eps <= end:
+            return exploit
+        eps_hi = float(self.frequency_sensitivity_explore_epsilon_max)
+        if eps_hi > end and eps > eps_hi:
+            return exploit
+        start = float(self.epsilon_start)
         if start <= end:
             return exploit
-        span = start - end
-        t = (float(epsilon) - end) / span
+        # Linear ramp within [epsilon_end, epsilon_hi] (mid-anneal band only).
+        hi = min(start, eps_hi) if eps_hi > end else start
+        span = hi - end
+        if span <= 0.0:
+            return exploit
+        t = (eps - end) / span
         t = max(0.0, min(1.0, t))
         return exploit + t * (explore - exploit)
 
@@ -225,6 +238,9 @@ def fig4_nguyen_config(
     v65 FAIL: pw family exhausted; constant freq=10 starves 80 Hz replay.
     v66: frequency_sensitivity_explore=20 (schedule vs ε) so high-ε random
     walks reach ~80 Hz early-stops while ε-floor greedy keeps exploit=10.
+    v66 FAIL: linear schedule at ε≈1 used explore=20 → ep1 len=15 and
+    20/50 lucky stops (smooth 0–50 ≈19). v67: explore only in mid-anneal
+    band (ε≤0.7 and >ε_end); hold exploit=10 at ε>0.7 and at floor.
     """
     return SNNConfig(
         seed=seed,
@@ -240,6 +256,7 @@ def fig4_nguyen_config(
         learning_rate=5e-4,
         frequency_sensitivity=10.0,
         frequency_sensitivity_explore=20.0,
+        frequency_sensitivity_explore_epsilon_max=0.7,
         pulse_width_sensitivity=0.3,
         threshold_reward=300.0,
         energy_penalty=0.0,
