@@ -47,6 +47,8 @@ class DBSParameterState:
         self,
         ternary_actions: np.ndarray | list[int],
         config: SNNConfig | None = None,
+        *,
+        epsilon: float | None = None,
     ) -> DBSParameterState:
         """Apply three ternary actions in ``{-1, 0, 1}`` for (A, f, w)."""
         cfg = (config or SNNConfig()).with_variant_defaults()
@@ -58,6 +60,12 @@ class DBSParameterState:
             msg = f"ternary actions must be in {TERNARY_CHOICES}, got {actions.tolist()}"
             raise ValueError(msg)
 
+        freq_sens = (
+            cfg.frequency_sensitivity_at_epsilon(epsilon)
+            if epsilon is not None
+            else cfg.frequency_sensitivity
+        )
+
         self.amplitude = float(
             np.clip(
                 self.amplitude + actions[0] * cfg.amplitude_sensitivity,
@@ -67,7 +75,7 @@ class DBSParameterState:
         )
         self.frequency_hz = float(
             np.clip(
-                self.frequency_hz + actions[1] * cfg.frequency_sensitivity,
+                self.frequency_hz + actions[1] * freq_sens,
                 cfg.frequency_min,
                 cfg.frequency_max,
             )
