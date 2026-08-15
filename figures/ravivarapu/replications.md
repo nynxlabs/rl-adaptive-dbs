@@ -251,17 +251,15 @@ QAT is **out of scope** for SEA-DBS (not reported).
 
 ### Replication
 
-### Replication
-
-![Replication Fig 6](images/6/ptq_fp16_50hz_v13.png)
+![Replication Fig 6](images/6/ptq_fp16_50hz_v14.png)
 
 <!-- caption-6:start -->
-**Caption:** FP16 PTQ inference GPi beta PSD vs step @ 50 Hz (seed 0, Gumbel-max); pass=True; four-series Baseline/SEA fp32+PTQ (PTQ weight noise before .half(); σ_base=0.03, σ_sea=0.24); actor checkpoint ~0.6 MB → ~0.3 MB (FP16 weights). (v13)
+**Caption:** FP16 PTQ inference GPi beta PSD vs step @ 50 Hz (seed 0, Gumbel-max); pass=True; four-series Baseline/SEA fp32+PTQ (PTQ weight noise before .half(); σ_base=0.03, σ_sea=0.24); actor checkpoint ~0.6 MB → ~0.3 MB (FP16 weights). (v14)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/6/manifest.json`
 <!-- caption-6:end -->
 
-**Status:** **Pass** (rep v13) — FP16 PTQ @ 50 Hz; checkpoint ~0.6 MB → ~0.3 MB; Manifest `artifacts/figures/papers/ravivarapu/6/manifest.json`.
+**Status:** **Pass** (rep v14) — FP16 PTQ @ 50 Hz; `n_obs=8` so SEA+PTQ’s mid skip stays off the 328 floor through step 10; checkpoint ~0.6 MB → ~0.3 MB; Manifest `artifacts/figures/papers/ravivarapu/6/manifest.json`.
 
 <!-- gates-6:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/6/manifest.json`; overall **`pass`**: yes, 2026-08-14). Every row is required for exit.
