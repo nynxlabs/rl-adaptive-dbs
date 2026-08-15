@@ -232,3 +232,27 @@ def test_episode_late_no_stim_logit_boost() -> None:
         assert float(late[1]) == pytest.approx(-0.3)
     finally:
         env.close()
+
+
+def test_ptq_weight_noise_is_deterministic_and_changes_params() -> None:
+    from controllers.sea_dbs.networks import Actor
+    from controllers.sea_dbs.quantization import apply_fp16_ptq, perturb_float_parameters
+
+    actor = Actor(state_dim=1, n_actions=2, hidden_size=8)
+    torch.manual_seed(0)
+    with torch.no_grad():
+        for param in actor.parameters():
+            param.normal_(0.0, 0.1)
+    a = perturb_float_parameters(actor, scale=0.03, seed=11)
+    b = perturb_float_parameters(actor, scale=0.03, seed=11)
+    c = perturb_float_parameters(actor, scale=0.03, seed=22)
+    for pa, pb in zip(a.parameters(), b.parameters(), strict=True):
+        assert torch.allclose(pa, pb)
+    changed = False
+    for pa, pc in zip(a.parameters(), c.parameters(), strict=True):
+        if not torch.allclose(pa, pc):
+            changed = True
+            break
+    assert changed
+    fp16 = apply_fp16_ptq(actor, weight_noise=0.03, noise_seed=11)
+    assert next(fp16.parameters()).dtype == torch.float16
