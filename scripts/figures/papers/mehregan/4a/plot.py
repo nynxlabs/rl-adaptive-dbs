@@ -177,6 +177,7 @@ def _train_trace(
     logit_noise_std: float = 0.1,
     entropy_coeff: float = 0.01,
     critic_action_input: str = "one_hot",
+    critic_warmup_steps: int = 100,
     resume_path: Path | None = None,
     start_episode: int | None = None,
     checkpoint_path: Path | None = None,
@@ -196,6 +197,7 @@ def _train_trace(
         logit_noise_std=logit_noise_std,
         entropy_coeff=entropy_coeff,
         critic_action_input=critic_action_input,
+        critic_warmup_steps=critic_warmup_steps,
     )
     trainer = DDPGTrainer(env, config)
     beta_trace: list[float] = list(prior_beta_trace or [])
@@ -282,6 +284,7 @@ def _train_trace(
         "temperature_end": config.exploration_temperature_end,
         "logit_noise_std": config.logit_noise_std,
         "entropy_coeff": config.entropy_coeff,
+        "critic_warmup_steps": config.critic_warmup_steps,
         "critic_action_input": config.critic_action_input,
         "plant_integration_mode": getattr(
             env.config, "plant_integration_mode", "disconnected"
@@ -572,6 +575,15 @@ def main() -> int:
         help="Policy entropy bonus (v4 default 0.01; paper-silent anti-collapse knob)",
     )
     parser.add_argument(
+        "--critic-warmup-steps",
+        type=int,
+        default=100,
+        help=(
+            "Gradient steps that update the critic only (Fig 4a default 100). "
+            "Lower values let the actor start learning before episode 4."
+        ),
+    )
+    parser.add_argument(
         "--critic-action-input",
         choices=("one_hot", "logits"),
         default="one_hot",
@@ -661,6 +673,7 @@ def main() -> int:
                 logit_noise_std=args.logit_noise_std,
                 entropy_coeff=args.entropy_coeff,
                 critic_action_input=args.critic_action_input,
+                critic_warmup_steps=args.critic_warmup_steps,
                 resume_path=args.resume,
                 start_episode=args.start_episode,
                 checkpoint_path=args.checkpoint,
@@ -716,6 +729,7 @@ def main() -> int:
             "temperature_end": args.temperature_end,
             "logit_noise_std": args.logit_noise_std,
             "entropy_coeff": args.entropy_coeff,
+            "critic_warmup_steps": args.critic_warmup_steps,
             "critic_action_input": args.critic_action_input,
             "plant_integration_mode": args.plant_integration,
             "elapsed_s": elapsed,
@@ -766,6 +780,7 @@ def main() -> int:
         "temperature_end": cache.get("temperature_end"),
         "logit_noise_std": cache.get("logit_noise_std"),
         "entropy_coeff": cache.get("entropy_coeff", 0.01),
+        "critic_warmup_steps": cache.get("critic_warmup_steps", 100),
         "critic_action_input": cache.get("critic_action_input", "logits"),
         "plant_integration_mode": cache.get(
             "plant_integration_mode", FIG4A_PLANT_INTEGRATION
