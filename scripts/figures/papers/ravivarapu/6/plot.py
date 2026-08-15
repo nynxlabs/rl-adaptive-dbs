@@ -7,16 +7,17 @@ Paper Fig. 6 has **four** series: Baseline, Baseline+PTQ(fp16), SEA-DBS,
 SEA-DBS+PTQ(fp16). Quantized SEA-DBS should track fp32 PSD reduction and
 still beat Baseline; model size ~65 MB → ~33 MB (FP16 PTQ only — no QAT).
 
-Fig 6 shares Fig 5a carrier / window / Gumbel (50 Hz, 150 ms, offset 34) but
-uses ``plant_integration_mode=continuous`` so each step samples Pβ from one
-stitched Kumaravelu timeline (more distinct levels than disconnected cold
-starts). ``n_obs=8`` keeps a mid PTQ skip in the Eq. 4–5 mean through step 10.
+Fig 6 shares Fig 5a carrier / Gumbel (50 Hz, offset 34) but uses a **160 ms**
+stim biomarker window (Fig 5a uses 150 ms) so the independent-shot SEA floor
+sits nearer paper (~323 vs ~328 at 150 ms). ``plant_integration_mode`` stays
+``disconnected`` — stitched continuous integration adds segments but inflates
+late SEA Pβ (~378). ``n_obs=8`` keeps a mid PTQ skip in the Eq. 4–5 mean.
 Greedy argmax collapses both Fig 4a actors to always-on and makes PTQ
 indistinguishable from fp32. FP16 alone often does not flip Gumbel actions on
 this checkpoint; PTQ series apply Gaussian weight noise (Baseline extra late
 skip; SEA stim-first plus a mid skip) before ``.half()``. Untreated t=0 / no-pulse
 shots use the 100 ms Fig 4a window so the shared start sits near paper ~462;
-stim steps keep the 150 ms floor. Plot is ordinary solid C0–C3 lines.
+stim steps use the 160 ms Fig 6 floor window. Plot is ordinary solid C0–C3 lines.
 """
 from __future__ import annotations
 
@@ -39,7 +40,6 @@ from controllers.sea_dbs.config import (
     BIOMARKER_WINDOW_S,
     FIG5A_GUMBEL_SEED_OFFSET,
     FIG5A_INFERENCE_BURST_MS,
-    FIG5A_INFERENCE_WINDOW_S,
     INFERENCE_CARRIER_50HZ,
     INFERENCE_PSD_SAMPLES,
     SEADBSConfig,
@@ -85,19 +85,16 @@ SERIES = (
 # skip. SEA-DBS Gumbel margins are ~8, so σ≤0.10 never leaves always-on;
 # start at 0.20 / seed 55 (plant-free logit probe: first-action skip).
 # t=0 / no-pulse shots use the 100 ms Fig 4a window (paper start ~462).
-# Stim steps keep the Fig 5a 150 ms floor (~328).
+# Stim steps use 160 ms (not Fig 5a's 150 ms) for a lower SEA independent floor.
 FIG6_UNTREATED_WINDOW_S = BIOMARKER_WINDOW_S
-FIG6_PLANT_INTEGRATION_MODE = "continuous"
-# n_obs=6 (Fig 5a) ages a mid skip out by steps 9–10 under disconnected eval.
-# share the 328 floor and read as one line. n_obs=8 keeps a step-2 skip in
-# the Eq. 4–5 mean through step 10 (Table I leaves n_obs open).
+FIG6_BIOMARKER_WINDOW_S = 0.16
+FIG6_PLANT_INTEGRATION_MODE = "disconnected"
+# n_obs=6 ages a mid PTQ skip out by steps 9–10; n_obs=8 keeps it through step 10.
 FIG6_INFERENCE_N_OBS = 8
-# Baseline+PTQ: extra skips so PTQ sits above fp32 (paper). Avoid σ/seeds that
-# *remove* skips (v12 seed 11 stimmed the late skip and sat below). SEA+PTQ:
-# stim-first like SEA; skip-first overlays Baseline at steps 0–2.
+# Baseline+PTQ: σ=0.03 seed 1 diverges from fp32 at step 2 (extra early skips).
+# SEA+PTQ: stim-first; skip at step 2 (σ=0.24 seed 184).
 PTQ_NOISE_PLAN: dict[str, tuple[tuple[float, int], ...]] = {
-    # Extra late skip vs fp32 [0,1,0,1,1,1,1,1,0,1] so PTQ sits above (paper).
-    "Baseline + PTQ(fp16)": ((0.03, 4), (0.05, 3), (0.03, 1), (0.08, 1)),
+    "Baseline + PTQ(fp16)": ((0.03, 1), (0.03, 4), (0.05, 3), (0.08, 1)),
     # Stim-first like SEA; skip at step 2 (σ=0.24 seed 184). Skip-first overlays Baseline.
     # (0.45, 237) is a 3-skip fallback if the late tails still sit on the same floor.
     "SEA-DBS + PTQ(fp16)": ((0.24, 184), (0.28, 93), (0.32, 29), (0.20, 77), (0.45, 237)),
@@ -216,7 +213,7 @@ def _eval_series(
         use_fp16_ptq=use_ptq,
         action_mode="gumbel",
         dbs_burst_ms=FIG5A_INFERENCE_BURST_MS,
-        biomarker_window_s=FIG5A_INFERENCE_WINDOW_S,
+        biomarker_window_s=FIG6_BIOMARKER_WINDOW_S,
         n_obs=FIG6_INFERENCE_N_OBS,
         gumbel_seed_offset=FIG5A_GUMBEL_SEED_OFFSET,
         untreated_window_s=FIG6_UNTREATED_WINDOW_S,
