@@ -190,8 +190,10 @@ def fig4_nguyen_config(
     v56 ep1: length 25, reward −3.98e5 (too high vs paper −6.6e5). v57:
     truncation_penalty=250k so ep1 ≈ −0.65e6 with length still 25.
     v57 FAIL: ep1 matched; greedy timed out after ε floor (80–100 len ≈24).
-    v58: dump at ~ep 59 (after=1400, dump=400) and replay_update_cadence=16
-    so the moving-average length/reward can turn there.
+    v58 FAIL: cadence=16 made 0–50 length 22.6 (horizon false) and still no
+    glide (80–100 ≈22.6). One ES at ep 59 did not stick.
+    v59: revert cadence to 128 (restore v57 start); frequency_sensitivity=12
+    so greedy can reach ~80 Hz; keep dump@1400 / trunc=250k.
     """
     return SNNConfig(
         seed=seed,
@@ -205,7 +207,7 @@ def fig4_nguyen_config(
         epsilon_accelerate_decay_steps=400,
         epsilon_end=0.05,
         learning_rate=5e-4,
-        frequency_sensitivity=10.0,
+        frequency_sensitivity=12.0,
         pulse_width_sensitivity=0.1,
         threshold_reward=300.0,
         energy_penalty=0.0,
@@ -214,7 +216,7 @@ def fig4_nguyen_config(
         warm_zone_upper=220.0,
         warm_zone_bonus_coef=150.0,
         truncation_penalty=250_000.0,
-        replay_update_cadence=16,
+        replay_update_cadence=128,
         reward_learning_scale=1e-4,
         stimulated_neurons=1,
         log_episodes=True,
