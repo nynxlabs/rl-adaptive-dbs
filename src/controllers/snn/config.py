@@ -74,6 +74,9 @@ class SNNConfig:
     # Per-parameter ternary delta sensitivities (open — keep params in plausible ranges)
     amplitude_sensitivity: float = 10.0  # nA/cm² per +1
     frequency_sensitivity: float = 5.0  # Hz per +1
+    # When > 0, linearly schedule frequency_sensitivity from this value at
+    # epsilon_start down to frequency_sensitivity at epsilon_end (Fig 4 v66).
+    frequency_sensitivity_explore: float = 0.0
     pulse_width_sensitivity: float = 0.05  # ms per +1
 
     # Reward Eq. (7) coefficients (open)
@@ -125,6 +128,21 @@ class SNNConfig:
         if self.variant == "paper":
             return self
         return replace(self)
+
+    def frequency_sensitivity_at_epsilon(self, epsilon: float) -> float:
+        """Effective Hz/step for ternary +freq; schedules explore→exploit vs ε."""
+        explore = float(self.frequency_sensitivity_explore)
+        exploit = float(self.frequency_sensitivity)
+        if explore <= 0.0 or abs(explore - exploit) < 1e-9:
+            return exploit
+        start = float(self.epsilon_start)
+        end = float(self.epsilon_end)
+        if start <= end:
+            return exploit
+        span = start - end
+        t = (float(epsilon) - end) / span
+        t = max(0.0, min(1.0, t))
+        return exploit + t * (explore - exploit)
 
     def for_smoke(
         self,
@@ -204,6 +222,9 @@ def fig4_nguyen_config(
     so greedy can reach paper ~1 ms without raising freq.
     v64 FAIL: start held (~22.3) but 80–100 len=25 (all timeouts). v65:
     pulse_width_sensitivity=0.3 (still no freq raise).
+    v65 FAIL: pw family exhausted; constant freq=10 starves 80 Hz replay.
+    v66: frequency_sensitivity_explore=20 (schedule vs ε) so high-ε random
+    walks reach ~80 Hz early-stops while ε-floor greedy keeps exploit=10.
     """
     return SNNConfig(
         seed=seed,
@@ -218,6 +239,7 @@ def fig4_nguyen_config(
         epsilon_end=0.20,
         learning_rate=5e-4,
         frequency_sensitivity=10.0,
+        frequency_sensitivity_explore=20.0,
         pulse_width_sensitivity=0.3,
         threshold_reward=300.0,
         energy_penalty=0.0,
