@@ -200,6 +200,8 @@ def fig4_nguyen_config(
     v61 FAIL: 80–100 len ≈23.2 (rose). v62: slower dump (decay=800) so ε
     stays higher through 80–100; keep freq=10 / ε_end=0.15 / trunc=250k.
     v62 FAIL: 80–100 len=25 (all timeouts). Revert dump=400. v63: ε_end=0.20.
+    v63 FAIL: 80–100 ≈24.1. ε-floor family exhausted. v64: pulse_width_sensitivity=0.2
+    so greedy can reach paper ~1 ms without raising freq.
     """
     return SNNConfig(
         seed=seed,
@@ -214,7 +216,7 @@ def fig4_nguyen_config(
         epsilon_end=0.20,
         learning_rate=5e-4,
         frequency_sensitivity=10.0,
-        pulse_width_sensitivity=0.1,
+        pulse_width_sensitivity=0.2,
         threshold_reward=300.0,
         energy_penalty=0.0,
         alpha_beta_progress_coef=2500.0,
