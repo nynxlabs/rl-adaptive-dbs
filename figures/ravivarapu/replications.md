@@ -9,10 +9,10 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 |-------|-------------|--------|
 | Fig 4a | Training PSD vs episode | Pass (v62) |
 | Fig 4b | Training reward vs episode | Pass |
-| Fig 5a | Inference @ 50 Hz | Fail (`n_steps_ok`) |
+| Fig 5a | Inference @ 50 Hz | Open |
 | Fig 5b | Inference @ 30 Hz | Open |
 | Fig 6 | FP16 PTQ @ 50 Hz | Pass |
-| Fig 7 | Ablation (Baseline / +PM / +GS / SEA-DBS) | Fail (`n_steps_ok`) |
+| Fig 7 | Ablation (Baseline / +PM / +GS / SEA-DBS) | Open |
 <!-- summary:end -->
 
 Replication PNGs: `figures/ravivarapu/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/ravivarapu/images/<panel>/paper.png` (from KB paper-note embeds; Fig 4/5 split from combined panels). Full composites also under `figures/ravivarapu/images/_full/`. Controller spec: [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md). Schematics (paper Figs 1, 3) are **out of scope**. Fig 2 (reward curve) is optional polish, not a gate.
@@ -44,7 +44,7 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 **Status:** **Pass** (rep v62) — `shape_pass` and full `pass`; `fixed_episode_seed_until=2`; `fig4_ravivarapu_config_v93`; display roll10 (gates on raw); paper overlay (black baseline, grey SEA-DBS). Manifest `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`.
 
 <!-- gates-4a:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4a.json`; **`shape_pass`**: yes, **`pass`**: yes, 2026-08-14). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
+**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4a.json`; **`shape_pass`**: yes, **`pass`**: yes, 2026-08-15). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
 
 | Key | Description | Shape | Full |
 |-----|-------------|-------|------|
@@ -112,7 +112,7 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4a/plot.p
 **Status:** Pass — see manifest gates.
 
 <!-- gates-4b:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4b.json`; overall **`pass`**: yes, 2026-08-14). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4b.json`; overall **`pass`**: yes, 2026-08-15). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -157,17 +157,17 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 **Status:** **Pass** (rep v15) — inference @ 50 Hz. Late SEA 6–10 is the 150 ms independent-shot floor (~0.328); Kumaravelu 50 Hz does not keep falling to digitized ~0.310. Manifest `artifacts/figures/papers/ravivarapu/5a/manifest.json`.
 
 <!-- gates-5a:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/5a/manifest.json`; overall **`pass`**: no, 2026-08-14). Every row is required for exit.
+**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/5a/manifest.json``; overall **`pass`**: —, 2026-08-15). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
-| `n_steps_ok` | 11 PSD samples (t=0 + 10 stim steps) | no |
-| `shared_start` | baseline and SEA-DBS agree at step 0 | yes |
-| `baseline_declines` | baseline PSD net drop step 0→10 | no |
-| `paper_declines` | SEA-DBS PSD net drop step 0→10 | no |
-| `paper_end_below_baseline` | SEA-DBS end PSD below baseline | no |
-| `paper_steeper_drop` | SEA-DBS drop steeper than baseline | no |
-| `carrier_hz_ok` | carrier frequency 50 Hz | yes |
+| `n_steps_ok` | 11 PSD samples (t=0 + 10 stim steps) | — |
+| `shared_start` | baseline and SEA-DBS agree at step 0 | — |
+| `baseline_declines` | baseline PSD net drop step 0→10 | — |
+| `paper_declines` | SEA-DBS PSD net drop step 0→10 | — |
+| `paper_end_below_baseline` | SEA-DBS end PSD below baseline | — |
+| `paper_steeper_drop` | SEA-DBS drop steeper than baseline | — |
+| `carrier_hz_ok` | carrier frequency 50 Hz | — |
 | `early_mae_baseline` | steps 0–5 MAE vs digitized Baseline ≤ 0.03 | — |
 | `early_mae_sea` | steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03 | — |
 | `early_mae_sea_3_5` | steps 3–5 MAE vs digitized SEA-DBS ≤ 0.020 | — |
@@ -213,7 +213,7 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 **Status:** **Pass** (rep v11) — inference @ 30 Hz; Manifest `artifacts/figures/papers/ravivarapu/5b/manifest.json`.
 
 <!-- gates-5b:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/5b/manifest.json`; overall **`pass`**: —, 2026-08-14). Every row is required for exit.
+**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/5b/manifest.json``; overall **`pass`**: —, 2026-08-15). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -253,18 +253,18 @@ QAT is **out of scope** for SEA-DBS (not reported).
 
 ### Replication
 
-![Replication Fig 6](images/6/ptq_fp16_50hz_v6.png)
+![Replication Fig 6](images/6/ptq_fp16_50hz_v15.png)
 
 <!-- caption-6:start -->
-**Caption:** FP16 PTQ inference GPi beta PSD vs step @ 50 Hz (seed 0, Gumbel-max); pass=True; four-series Baseline/SEA fp32+PTQ; actor checkpoint ~0.6 MB → ~0.3 MB (FP16 weights). (v6)
+**Caption:** FP16 PTQ inference GPi beta PSD vs step @ 50 Hz (seed 0, Gumbel-max); pass=True; four-series Baseline/SEA fp32+PTQ (PTQ weight noise before .half(); σ_base=0.03, σ_sea=0.24); actor checkpoint ~0.6 MB → ~0.3 MB (FP16 weights). (v15)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/6/manifest.json`
 <!-- caption-6:end -->
 
-**Status:** **Pass** (rep v6) — FP16 PTQ @ 50 Hz; checkpoint ~0.6 MB → ~0.3 MB; Manifest `artifacts/figures/papers/ravivarapu/6/manifest.json`.
+**Status:** **Pass** (rep v15) — FP16 PTQ @ 50 Hz; checkpoint ~0.6 MB → ~0.3 MB; Manifest `artifacts/figures/papers/ravivarapu/6/manifest.json`.
 
 <!-- gates-6:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/6/manifest.json`; overall **`pass`**: yes, 2026-08-14). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/6/manifest.json`; overall **`pass`**: yes, 2026-08-15). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -274,6 +274,7 @@ QAT is **out of scope** for SEA-DBS (not reported).
 | `sea_ptq_below_baseline` | SEA-DBS PTQ below baseline fp32 late | yes |
 | `sea_ptq_tracks_fp32` | SEA-DBS PTQ tracks fp32 | yes |
 | `baseline_ptq_near_or_above_baseline` | baseline PTQ near/above baseline fp32 | yes |
+| `ptq_traces_distinct` | PTQ traces not identical to paired fp32 | yes |
 <!-- gates-6:end -->
 
 **Run:**
@@ -312,16 +313,16 @@ Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper` ([se
 **Status:** Open — needs all four variants trainable and a shared 10-step eval harness.
 
 <!-- gates-7:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/7/manifest.json`; overall **`pass`**: no, 2026-08-14). Every row is required for exit.
+**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/7/manifest.json``; overall **`pass`**: —, 2026-08-15). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
-| `four_variants_present` | baseline / +PM / +GS / SEA-DBS | yes |
-| `sea_dbs_lowest_tail` | SEA-DBS lowest tail mean PSD | yes |
-| `gs_highest_or_near_highest_tail` | GS highest or near-highest tail | yes |
-| `pm_not_sea` | PM closer to baseline than to SEA-DBS | yes |
-| `shared_start` | baseline and SEA-DBS agree at step 0 | yes |
-| `n_steps_ok` | 10 inference steps | no |
+| `four_variants_present` | baseline / +PM / +GS / SEA-DBS | — |
+| `sea_dbs_lowest_tail` | SEA-DBS lowest tail mean PSD | — |
+| `gs_highest_or_near_highest_tail` | GS highest or near-highest tail | — |
+| `pm_not_sea` | PM closer to baseline than to SEA-DBS | — |
+| `shared_start` | baseline and SEA-DBS agree at step 0 | — |
+| `n_steps_ok` | 10 inference steps | — |
 <!-- gates-7:end -->
 
 **Run:**
