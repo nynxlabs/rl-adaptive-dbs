@@ -742,6 +742,10 @@ def ravivarapu_fig6_gates(traces: dict[str, Sequence[float]]) -> dict[str, Any]:
         "sea_ptq_below_baseline": sea_ptq_late < b_late,
         "sea_ptq_tracks_fp32": rel_close(sea_ptq_late, sea_fp_late, tol=DEFAULT_REL_TOL + 0.15),
         "baseline_ptq_near_or_above_baseline": b_ptq_late >= b_late * 0.95,
+        "ptq_traces_distinct": (
+            not np.allclose(b, b_ptq, rtol=0.0, atol=1e-9)
+            and not np.allclose(sea, sea_ptq, rtol=0.0, atol=1e-9)
+        ),
     }
     metrics = {
         "b_late": b_late,
