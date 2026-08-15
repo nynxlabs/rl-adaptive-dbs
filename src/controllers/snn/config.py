@@ -189,6 +189,9 @@ def fig4_nguyen_config(
     a 25-step first episode is Eq. (7) only (~−0.4e6, near paper −0.65e6).
     v56 ep1: length 25, reward −3.98e5 (too high vs paper −6.6e5). v57:
     truncation_penalty=250k so ep1 ≈ −0.65e6 with length still 25.
+    v57 FAIL: ep1 matched; greedy timed out after ε floor (80–100 len ≈24).
+    v58: dump at ~ep 59 (after=1400, dump=400) and replay_update_cadence=16
+    so the moving-average length/reward can turn there.
     """
     return SNNConfig(
         seed=seed,
@@ -198,8 +201,8 @@ def fig4_nguyen_config(
         subthreshold_steps_required=2,
         epsilon_decay_steps=3_200,
         epsilon_decay_delay_steps=0,
-        epsilon_accelerate_after_steps=1_200,
-        epsilon_accelerate_decay_steps=350,
+        epsilon_accelerate_after_steps=1_400,
+        epsilon_accelerate_decay_steps=400,
         epsilon_end=0.05,
         learning_rate=5e-4,
         frequency_sensitivity=10.0,
@@ -211,6 +214,7 @@ def fig4_nguyen_config(
         warm_zone_upper=220.0,
         warm_zone_bonus_coef=150.0,
         truncation_penalty=250_000.0,
+        replay_update_cadence=16,
         reward_learning_scale=1e-4,
         stimulated_neurons=1,
         log_episodes=True,
