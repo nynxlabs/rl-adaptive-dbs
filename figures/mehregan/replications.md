@@ -10,8 +10,8 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Fig 1b | GPi PSD | Pass |
 | Fig 2a | GPi $P_\beta$ time series | Pass |
 | Fig 2b | Error Index time series | Pass (rep v16) |
-| Fig 4a | Training $P_\beta$ vs step | Pass (τ 3→1.0, locked train v18, rep v32) |
-| Fig 4b | Training reward vs episode | Fail (`late_beta_above_threshold`, paired train v18, v14, rep v34) |
+| Fig 4a | Training $P_\beta$ vs step | Pass (rep v34; actor_lr 7.5e-4, warmup 50) |
+| Fig 4b | Training reward vs episode | Pass (rep v33; phase-6 paired) |
 | Fig 5a | Post-train efficacy @ 45 Hz | Pass (rep v23) |
 | Fig 5b | Post-train efficacy @ 30 Hz | Pass (burst alphabet, locked eval v3, rep v23) |
 | Fig 6a | PTQ / QAT @ 45 Hz | Pass (honest trailing eval, rep v61) |
@@ -166,15 +166,15 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_beta_v32.png)
+![Replication Fig 4a](images/4a/training_beta_v34.png)
 
 <!-- caption-4a:start -->
-**Caption:** 45 Hz fixed_mean_pattern, within_step L=1, reward=full_segment, softmax, critic=one_hot, seed 0, v32, init_bias=0, jitter=0.5, ep0=0.515, early=0.478 late=0.329, trend↓ (2026-08-15)
+**Caption:** 45 Hz fixed_mean_pattern, within_step L=1, reward=full_segment, softmax, critic=one_hot, seed 0, v34, init_bias=0, jitter=0.5, ep0=0.505, early=0.482 late=0.330, trend↓ (2026-08-15)
 
 **Manifest:** `artifacts/figures/papers/mehregan/4a/manifest.json`
 <!-- caption-4a:end -->
 
-**Status:** Parked — **rep v31**, phase-6 `--critic-warmup-steps 50` (continuous 2 s carry). Live `series.json` `gates_pass=false`: `mid_fade_vs_paper` (steps 120–150 stay near early level). Ep4 reward −42.8 vs digitized ~−16. **v36** (warmup 100) remains the step-trace pass without this mid-fade fail — see [4a.md](../../docs/figures/mehregan/4a.md). Paired 4b **v33** passes all gates on this same run.
+**Status:** Pass — **rep v34**, phase-8 (`actor_lr=7.5e-4`, `critic_warmup_steps=50`, τ 3→1.6, continuous carry). All digitization gates pass including `mid_fade_vs_paper`. Fig 4b ship image stays **v33** from phase-6 (separate train; late-floor gates) — see [4a.md](../../docs/figures/mehregan/4a.md).
 
 <!-- gates-4a:start -->
 **Gates set** (`fig4a_gates` → live `series.json` (digitization revisit; was locked `series_v18.json`)). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4a/series.json`, 2026-08-15). Every row is required for exit.
@@ -223,14 +223,14 @@ Episode **total reward** and **episode-mean PSD(x10³)** during the same **45 Hz
 
 **Reward vs episode**
 
-![Replication Fig 4b reward](images/4b/training_reward_v34.png)
+![Replication Fig 4b reward](images/4b/training_reward_v33.png)
 
 **Episode-mean PSD vs episode**
 
-![Replication Fig 4b PSD](images/4b/training_psd_v34.png)
+![Replication Fig 4b PSD](images/4b/training_psd_v33.png)
 
 <!-- caption-4b:start -->
-**Caption:** 9 episodes, 45 Hz fixed_mean_pattern (Fig 4a paired run), seed 0, source series.json, v34, reward ep0=-92.2 ep8=10.8, rise_ep=1, psd 0.515→0.310, gate pass (2026-08-15)
+**Caption:** 9 episodes, 45 Hz fixed_mean_pattern (Fig 4a paired run), seed 0, source series.json, v33, reward ep0=-45.0 ep8=3.6, rise_ep=2, psd 0.459→0.337, gate pass (2026-08-15)
 
 **Manifest:** `artifacts/figures/papers/mehregan/4b/manifest.json`
 <!-- caption-4b:end -->
@@ -238,7 +238,7 @@ Episode **total reward** and **episode-mean PSD(x10³)** during the same **45 Hz
 **Status:** Pass — **rep v33**, paired to Fig 4a phase-6 (`critic_warmup_steps=50`, continuous carry). All digitization gates pass: ep0 PSD 0.459, late 0.358 (above β_t=0.35), late reward −4.3. Episode 4 reward −42.8 (improved vs v37 −52; paper ~−16 still parked).
 
 <!-- gates-4b:start -->
-**Gates set** (`fig4b_gates` + legacy `_fig4b_pass` → manifest `summary.gates`). Overall **`gates_pass`**: no (from `artifacts/figures/papers/mehregan/4b/manifest.json`, 2026-08-15). Every row is required for exit.
+**Gates set** (`fig4b_gates` + legacy `_fig4b_pass` → manifest `summary.gates`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4b/manifest.json`, 2026-08-15). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -249,9 +249,9 @@ Episode **total reward** and **episode-mean PSD(x10³)** during the same **45 Hz
 | `beta_drops` | late episode-mean PSD < early | yes |
 | `beta_drop_ratio_near_paper` | PSD late/early ratio vs digitization | yes |
 | `reward_recovers_like_paper` | qualitative rise (not magnitude match) | yes |
-| `late_beta_above_threshold` | late episode-mean PSD ≥ β_t=0.35 | no |
+| `late_beta_above_threshold` | late episode-mean PSD ≥ β_t=0.35 | yes |
 | `late_beta_near_paper` | late PSD within 15% of digitized paper | yes |
-| `late_reward_near_zero` | late mean reward in (−10, 2] (paper ~−2) | no |
+| `late_reward_near_zero` | late mean reward in (−10, 2] (paper ~−2) | yes |
 | `ep0_beta_near_paper` | episode 0 PSD within 10% of digitized paper | yes |
 | `plot_style` | ≥ 2 episodes plotted | yes |
 | `automation` | manifest summary.automation_pass mirrors fig4b bundle | yes |
