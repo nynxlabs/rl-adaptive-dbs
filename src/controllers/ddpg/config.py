@@ -150,6 +150,7 @@ def fig4a_ddpg_config(
     logit_noise_std: float = 0.1,
     entropy_coeff: float = 0.01,
     critic_action_input: str = "one_hot",
+    critic_warmup_steps: int = 100,
 ) -> DDPGConfig:
     """Mehregan Fig 4a — 45 Hz pattern DDPG.
 
@@ -187,7 +188,7 @@ def fig4a_ddpg_config(
         exploration_temperature_end=exploration_temperature_end,
         init_bias_scale=init_bias_scale,
         critic_action_input=critic_action_input,
-        critic_warmup_steps=100,
+        critic_warmup_steps=critic_warmup_steps,
         logit_noise_std=logit_noise_std,
         entropy_coeff=entropy_coeff,
         random_warmup_steps=100,
