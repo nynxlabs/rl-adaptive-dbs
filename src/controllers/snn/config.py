@@ -74,6 +74,9 @@ class SNNConfig:
     # Per-parameter ternary delta sensitivities (open — keep params in plausible ranges)
     amplitude_sensitivity: float = 10.0  # nA/cm² per +1
     frequency_sensitivity: float = 5.0  # Hz per +1
+    # Episodes [0, N) use early Hz/step; episode N+ uses frequency_sensitivity.
+    frequency_sensitivity_early: float = 0.0
+    frequency_sensitivity_early_episodes: int = 0
     # When > 0, linearly schedule frequency_sensitivity from this value at
     # epsilon_start down to frequency_sensitivity at epsilon_end (Fig 4 v66).
     frequency_sensitivity_explore: float = 0.0
@@ -132,8 +135,18 @@ class SNNConfig:
             return self
         return replace(self)
 
-    def frequency_sensitivity_at_epsilon(self, epsilon: float) -> float:
-        """Effective Hz/step for ternary +freq; schedules explore→exploit vs ε."""
+    def frequency_sensitivity_at_epsilon(
+        self,
+        epsilon: float,
+        *,
+        episode: int | None = None,
+    ) -> float:
+        """Effective Hz/step for ternary +freq (episode curriculum, then ε schedule)."""
+        early_eps = int(self.frequency_sensitivity_early_episodes)
+        early_hz = float(self.frequency_sensitivity_early)
+        if early_eps > 0 and early_hz > 0.0 and episode is not None and episode < early_eps:
+            return early_hz
+
         explore = float(self.frequency_sensitivity_explore)
         exploit = float(self.frequency_sensitivity)
         if explore <= 0.0 or abs(explore - exploit) < 1e-9:
@@ -241,6 +254,10 @@ def fig4_nguyen_config(
     v66 FAIL: linear schedule at ε≈1 used explore=20 → ep1 len=15 and
     20/50 lucky stops (smooth 0–50 ≈19). v67: explore only in mid-anneal
     band (ε≤0.7 and >ε_end); hold exploit=10 at ε>0.7 and at floor.
+    v67 FAIL: ep1 OK but greedy still 30 Hz / α–β 309 at ep 99; exploit=10
+    cannot reach ~80 Hz in one episode. v68: episode curriculum — freq=10 for
+    ep 0–34 (paper start), then freq=20 so greedy can suppress; v53 ε dump
+    (1200/350, ε_end=0.05); replay cadence 32 for ~75 SGD steps / 100 ep.
     """
     return SNNConfig(
         seed=seed,
@@ -250,13 +267,14 @@ def fig4_nguyen_config(
         subthreshold_steps_required=2,
         epsilon_decay_steps=3_200,
         epsilon_decay_delay_steps=0,
-        epsilon_accelerate_after_steps=1_400,
-        epsilon_accelerate_decay_steps=400,
-        epsilon_end=0.20,
+        epsilon_accelerate_after_steps=1_200,
+        epsilon_accelerate_decay_steps=350,
+        epsilon_end=0.05,
         learning_rate=5e-4,
-        frequency_sensitivity=10.0,
-        frequency_sensitivity_explore=20.0,
-        frequency_sensitivity_explore_epsilon_max=0.7,
+        frequency_sensitivity=20.0,
+        frequency_sensitivity_early=10.0,
+        frequency_sensitivity_early_episodes=35,
+        frequency_sensitivity_explore=0.0,
         pulse_width_sensitivity=0.3,
         threshold_reward=300.0,
         energy_penalty=0.0,
@@ -265,7 +283,7 @@ def fig4_nguyen_config(
         warm_zone_upper=220.0,
         warm_zone_bonus_coef=150.0,
         truncation_penalty=250_000.0,
-        replay_update_cadence=128,
+        replay_update_cadence=32,
         reward_learning_scale=1e-4,
         stimulated_neurons=1,
         log_episodes=True,

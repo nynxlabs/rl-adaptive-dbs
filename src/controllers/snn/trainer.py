@@ -279,7 +279,7 @@ class DSQNTrainer:
             for _ in range(cfg.max_episode_steps):
                 flat = np.asarray(obs, dtype=np.float32).reshape(-1)
                 explore_eps = self.current_epsilon()
-                env.set_explore_epsilon(explore_eps)
+                env.set_training_context(epsilon=explore_eps, episode=episode)
                 action_index, indices = self.act(obs, explore=True)
                 next_obs, reward, terminated, truncated, step_info = env.step(indices)
                 done = bool(terminated or truncated)
