@@ -187,6 +187,8 @@ def fig4_nguyen_config(
     v55: ep1 length=25 but reward ≈−1.40e6 (paper start ≈−0.66e6). The
     extra million is truncation_penalty on timeout. v56: truncation=0 so
     a 25-step first episode is Eq. (7) only (~−0.4e6, near paper −0.65e6).
+    v56 ep1: length 25, reward −3.98e5 (too high vs paper −6.6e5). v57:
+    truncation_penalty=250k so ep1 ≈ −0.65e6 with length still 25.
     """
     return SNNConfig(
         seed=seed,
@@ -208,7 +210,7 @@ def fig4_nguyen_config(
         alpha_beta_progress_cap_per_step=10_000.0,
         warm_zone_upper=220.0,
         warm_zone_bonus_coef=150.0,
-        truncation_penalty=0.0,
+        truncation_penalty=250_000.0,
         reward_learning_scale=1e-4,
         stimulated_neurons=1,
         log_episodes=True,
