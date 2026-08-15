@@ -112,6 +112,7 @@ SNN_MATERIAL_FIELDS: tuple[str, ...] = (
     "amplitude_sensitivity",
     "frequency_sensitivity",
     "frequency_sensitivity_explore",
+    "frequency_sensitivity_explore_epsilon_max",
     "pulse_width_sensitivity",
     "action_scheme",
     "hidden_size",
