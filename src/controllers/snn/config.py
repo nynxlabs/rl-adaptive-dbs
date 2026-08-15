@@ -195,6 +195,8 @@ def fig4_nguyen_config(
     v59 FAIL: ep1 OK; 0–50 len 22.75 (horizon false); 80–100 ≈22.4;
     greedy still timeouts. v60: frequency_sensitivity=15, same dump@1400 /
     replay=128 / trunc=250k.
+    v60 FAIL: start collapsed (0–50 len ≈21.4). Do not raise freq. v61:
+    freq_sens=10 (v57 start) + epsilon_end=0.15 (v10 late exploration).
     """
     return SNNConfig(
         seed=seed,
@@ -206,9 +208,9 @@ def fig4_nguyen_config(
         epsilon_decay_delay_steps=0,
         epsilon_accelerate_after_steps=1_400,
         epsilon_accelerate_decay_steps=400,
-        epsilon_end=0.05,
+        epsilon_end=0.15,
         learning_rate=5e-4,
-        frequency_sensitivity=15.0,
+        frequency_sensitivity=10.0,
         pulse_width_sensitivity=0.1,
         threshold_reward=300.0,
         energy_penalty=0.0,
