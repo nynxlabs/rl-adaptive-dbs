@@ -77,6 +77,26 @@ def test_dbs_parameter_state_apply_delta_clamps() -> None:
     assert spec.idbs.shape[0] == int(round(100.0 / 0.01)) + 1
 
 
+def test_frequency_sensitivity_schedules_with_epsilon() -> None:
+    cfg = SNNConfig(
+        frequency_sensitivity=10.0,
+        frequency_sensitivity_explore=20.0,
+        epsilon_start=1.0,
+        epsilon_end=0.2,
+    )
+    assert cfg.frequency_sensitivity_at_epsilon(1.0) == 20.0
+    assert cfg.frequency_sensitivity_at_epsilon(0.2) == 10.0
+    mid = cfg.frequency_sensitivity_at_epsilon(0.6)
+    assert 10.0 < mid < 20.0
+
+    state_hi = DBSParameterState()
+    state_lo = DBSParameterState()
+    state_hi.apply_delta([0, 1, 0], cfg, epsilon=1.0)
+    state_lo.apply_delta([0, 1, 0], cfg, epsilon=0.2)
+    assert state_hi.frequency_hz == 40.0 + 20.0
+    assert state_lo.frequency_hz == 40.0 + 10.0
+
+
 def test_dsqn_forward_shapes() -> None:
     cfg = SNNConfig(sequence_steps=5, neurons_per_region=4, n_regions=1)
     model = DSQN(cfg)
