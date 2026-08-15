@@ -11,7 +11,7 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Fig 2a | GPi $P_\beta$ time series | Pass |
 | Fig 2b | Error Index time series | Pass (rep v16) |
 | Fig 4a | Training $P_\beta$ vs step | Parked (rep v31; `mid_fade_vs_paper`; phase-6 warmup 50) |
-| Fig 4b | Training reward vs episode | Pass (rep v33; paired phase-6) |
+| Fig 4b | Training reward vs episode | Parked (v34 fail; **v33** last pass) |
 | Fig 5a | Post-train efficacy @ 45 Hz | Pass (rep v23) |
 | Fig 5b | Post-train efficacy @ 30 Hz | Pass (burst alphabet, locked eval v3, rep v23) |
 | Fig 6a | PTQ / QAT @ 45 Hz | Pass (honest trailing eval, rep v61) |
@@ -235,7 +235,7 @@ Episode **total reward** and **episode-mean PSD(x10³)** during the same **45 Hz
 **Manifest:** `artifacts/figures/papers/mehregan/4b/manifest.json`
 <!-- caption-4b:end -->
 
-**Status:** Pass — **rep v33**, paired to Fig 4a phase-6 (`critic_warmup_steps=50`, continuous carry). All digitization gates pass: ep0 PSD 0.459, late 0.358 (above β_t=0.35), late reward −4.3. Episode 4 reward −42.8 (improved vs v37 −52; paper ~−16 still parked).
+**Status:** Parked — **rep v34** (phase-7 warmup 25) failed `late_beta_above_threshold` and `late_reward_near_zero` (late β=0.316, reward +9.0). Ep4 **−25.8** / ep6 **−18.3** beat phase-6 but suppressor won early. **v33** (warmup 50) remains last **Pass** — ep4 **−42.8**, ep5 **−29.1**, ep6 **−20.6** vs digitized **−55.3 / −26.4 / −5.9**. Phase 8: warmup 50 + `actor_lr=7.5e-4`.
 
 <!-- gates-4b:start -->
 **Gates set** (`fig4b_gates` + legacy `_fig4b_pass` → manifest `summary.gates`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4b/manifest.json`, 2026-08-15). Every row is required for exit.
