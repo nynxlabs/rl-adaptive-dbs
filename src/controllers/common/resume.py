@@ -150,6 +150,7 @@ DDPG_MATERIAL_FIELDS: tuple[str, ...] = (
     "obs_normalize",
     "random_warmup_steps",
     "critic_warmup_steps",
+    "actor_lr",
     "gamma",
     "tau",
     "batch_size",
