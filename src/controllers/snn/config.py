@@ -197,6 +197,8 @@ def fig4_nguyen_config(
     replay=128 / trunc=250k.
     v60 FAIL: start collapsed (0–50 len ≈21.4). Do not raise freq. v61:
     freq_sens=10 (v57 start) + epsilon_end=0.15 (v10 late exploration).
+    v61 FAIL: 80–100 len ≈23.2 (rose). v62: slower dump (decay=800) so ε
+    stays higher through 80–100; keep freq=10 / ε_end=0.15 / trunc=250k.
     """
     return SNNConfig(
         seed=seed,
@@ -207,7 +209,7 @@ def fig4_nguyen_config(
         epsilon_decay_steps=3_200,
         epsilon_decay_delay_steps=0,
         epsilon_accelerate_after_steps=1_400,
-        epsilon_accelerate_decay_steps=400,
+        epsilon_accelerate_decay_steps=800,
         epsilon_end=0.15,
         learning_rate=5e-4,
         frequency_sensitivity=10.0,
