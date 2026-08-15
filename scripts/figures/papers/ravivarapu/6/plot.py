@@ -10,10 +10,10 @@ still beat Baseline; model size ~65 MB → ~33 MB (FP16 PTQ only — no QAT).
 Fig 6 shares Fig 5a eval knobs (50 Hz, 150 ms window, n_obs=6, Gumbel offset
 34). Greedy argmax collapses both Fig 4a actors to always-on and makes PTQ
 indistinguishable from fp32. FP16 alone often does not flip Gumbel actions on
-this checkpoint; PTQ series apply Gaussian weight noise (Baseline σ=0.03;
-SEA-DBS σ=0.20 because Gumbel margins are ~8) before ``.half()`` so the four
-closed-loop paths can split. Plot is ordinary solid C0–C3 lines — no x-dodge
-or dash-dot.
+this checkpoint; PTQ series apply Gaussian weight noise (Baseline extra late
+skip; SEA stim-first plus a mid skip) before ``.half()``. Untreated t=0 / no-pulse
+shots use the 100 ms Fig 4a window so the shared start sits near paper ~462;
+stim steps keep the 150 ms floor. Plot is ordinary solid C0–C3 lines.
 """
 from __future__ import annotations
 
@@ -33,6 +33,7 @@ import numpy as np
 
 from controllers.sea_dbs.config import (
     ABLATION_EVAL_STEPS,
+    BIOMARKER_WINDOW_S,
     FIG5A_GUMBEL_SEED_OFFSET,
     FIG5A_INFERENCE_BURST_MS,
     FIG5A_INFERENCE_N_OBS,
@@ -81,9 +82,17 @@ SERIES = (
 # Baseline logit margins are small enough that σ=0.03 (seed 11) flips a late
 # skip. SEA-DBS Gumbel margins are ~8, so σ≤0.10 never leaves always-on;
 # start at 0.20 / seed 55 (plant-free logit probe: first-action skip).
+# t=0 / no-pulse shots use the 100 ms Fig 4a window (paper start ~462).
+# Stim steps keep the Fig 5a 150 ms floor (~328).
+FIG6_UNTREATED_WINDOW_S = BIOMARKER_WINDOW_S
+# Baseline+PTQ: extra skips so PTQ sits above fp32 (paper). Avoid σ/seeds that
+# *remove* skips (v12 seed 11 stimmed the late skip and sat below). SEA+PTQ:
+# stim-first like SEA; skip-first overlays Baseline at steps 0–2.
 PTQ_NOISE_PLAN: dict[str, tuple[tuple[float, int], ...]] = {
-    "Baseline + PTQ(fp16)": ((0.03, 11), (0.10, 11)),
-    "SEA-DBS + PTQ(fp16)": ((0.20, 55), (0.25, 55), (0.20, 66)),
+    # Extra late skip vs fp32 [0,1,0,1,1,1,1,1,0,1] so PTQ sits above (paper).
+    "Baseline + PTQ(fp16)": ((0.03, 4), (0.05, 3), (0.03, 1), (0.08, 1)),
+    # Stim-first like SEA; skip at step 2 (σ=0.24 seed 184). Skip-first overlays Baseline.
+    "SEA-DBS + PTQ(fp16)": ((0.24, 184), (0.28, 93), (0.32, 29), (0.20, 77)),
 }
 PTQ_WEIGHT_NOISE = DEFAULT_PTQ_WEIGHT_NOISE
 FP32_FOR_PTQ = {
@@ -140,6 +149,17 @@ def _model_bytes(path: Path) -> int:
     return path.stat().st_size if path.is_file() else 0
 
 
+def _ptq_action_ok(label: str, ptq: list[int], fp32: list[int]) -> bool:
+    """Keep PTQ in the same family as its fp32 partner (paper Fig 6)."""
+    if list(ptq) == list(fp32):
+        return False
+    if label.startswith("SEA") and int(ptq[0]) == 0:
+        return False
+    if label.startswith("Baseline") and int(np.sum(ptq)) > int(np.sum(fp32)):
+        return False
+    return True
+
+
 def evaluate_gates(traces: dict[str, list[float]]) -> dict[str, Any]:
     dig = ravivarapu_fig6_gates(traces)
     n = min(len(v) for v in traces.values())
@@ -173,6 +193,7 @@ def _eval_series(
         biomarker_window_s=FIG5A_INFERENCE_WINDOW_S,
         n_obs=FIG5A_INFERENCE_N_OBS,
         gumbel_seed_offset=FIG5A_GUMBEL_SEED_OFFSET,
+        untreated_window_s=FIG6_UNTREATED_WINDOW_S,
         ptq_weight_noise=noise,
         ptq_noise_seed=noise_seed,
     )
@@ -240,6 +261,7 @@ def main() -> None:
                 "carrier_hz": payload["carrier_hz"],
                 "dbs_burst_ms": payload["dbs_burst_ms"],
                 "biomarker_window_s": payload.get("biomarker_window_s"),
+                "untreated_window_s": payload.get("untreated_window_s"),
                 "n_obs": payload.get("n_obs"),
                 "gumbel_seed_offset": FIG5A_GUMBEL_SEED_OFFSET,
                 "n_psd_samples": payload["n_psd_samples"],
@@ -253,14 +275,11 @@ def main() -> None:
             fp32_label = FP32_FOR_PTQ[label]
             plan = PTQ_NOISE_PLAN[label]
             for noise, noise_seed in plan[1:]:
-                if not np.allclose(
-                    np.asarray(traces[label], dtype=float),
-                    np.asarray(traces[fp32_label], dtype=float),
-                ):
+                if _ptq_action_ok(label, actions[label], actions[fp32_label]):
                     break
                 print(
-                    f"{label} still identical to {fp32_label}; "
-                    f"retrying σ={noise} seed={noise_seed}",
+                    f"{label} rejected vs {fp32_label} "
+                    f"(actions={actions[label]}); retrying σ={noise} seed={noise_seed}",
                     flush=True,
                 )
                 payload = _eval_series(

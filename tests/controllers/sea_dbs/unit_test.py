@@ -56,6 +56,38 @@ def test_set_carrier_hz_survives_reset() -> None:
         env.close()
 
 
+def test_untreated_window_used_for_reset_and_skip() -> None:
+    from types import SimpleNamespace
+
+    durations: list[float] = []
+
+    class _FakePlant:
+        def reset(self, seed: int | None = None) -> None:
+            return None
+
+        def integrate(self, duration_s, dbs_spec=None, *, record_spikes: bool = True):
+            durations.append(float(duration_s))
+            return SimpleNamespace(p_beta=196.0)
+
+        def close(self) -> None:
+            return None
+
+    cfg = replace(
+        SEADBSConfig(seed=0, biomarker_window_s=0.15),
+        untreated_window_s=0.10,
+    )
+    env = SEA_DBSEnvAdapter(plant=_FakePlant(), config=cfg)
+    try:
+        env.reset(seed=0)
+        env.step(1)
+        env.step(0)
+    finally:
+        env.close()
+    assert durations[0] == pytest.approx(0.10)
+    assert durations[1] == pytest.approx(0.15)
+    assert durations[2] == pytest.approx(0.10)
+
+
 def test_reward_eq7_below_threshold_positive() -> None:
     r = sea_dbs_reward(0.2, beta_threshold=0.35, reward_scale=10.0)
     assert r > 0

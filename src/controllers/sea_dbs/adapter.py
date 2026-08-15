@@ -66,6 +66,12 @@ class SEA_DBSEnvAdapter(gym.Env):
         # Eval may override via set_carrier_hz; reset must not clobber that.
         self._carrier_hz = float(self.config.carrier_hz)
 
+    def _window_s_for_action(self, action: int) -> float:
+        untreated = self.config.untreated_window_s
+        if untreated is not None and int(action) == 0:
+            return float(untreated)
+        return float(self.config.integration_duration_s)
+
     def close(self) -> None:
         if self._owns_plant:
             self._plant.close()
@@ -96,11 +102,13 @@ class SEA_DBSEnvAdapter(gym.Env):
         msg = "plant integrate did not return p_beta"
         raise RuntimeError(msg)
 
-    def _dbs_spec_for_action(self, action: int) -> DbsSpec:
+    def _dbs_spec_for_action(self, action: int, *, duration_s: float | None = None) -> DbsSpec:
         if int(action) == 0:
             return DbsSpec.none()
         cfg = self.config
-        integration_ms = self.config.integration_duration_s * 1000.0
+        integration_ms = (
+            self._window_s_for_action(action) if duration_s is None else float(duration_s)
+        ) * 1000.0
         burst_ms = float(cfg.dbs_burst_ms)
         delay_ms = float(cfg.dbs_pulse_delay_ms)
         if burst_ms < integration_ms or delay_ms > 0.0:
@@ -138,9 +146,10 @@ class SEA_DBSEnvAdapter(gym.Env):
         self._step_count = 0
         self._obs_window.clear()
 
+        duration_s = self._window_s_for_action(0)
         result = self._plant.integrate(
-            self.config.integration_duration_s,
-            self._dbs_spec_for_action(0),
+            duration_s,
+            self._dbs_spec_for_action(0, duration_s=duration_s),
             record_spikes=True,
         )
         raw = self._raw_p_beta(result)
@@ -153,7 +162,7 @@ class SEA_DBSEnvAdapter(gym.Env):
             "mean_p_beta": mean_norm,
             "adapter": True,
             "step_duration_ms": self.config.step_duration_ms,
-            "integration_duration_ms": self.config.integration_duration_s * 1000.0,
+            "integration_duration_ms": duration_s * 1000.0,
             "carrier_hz": self._carrier_hz,
         }
         return obs, info
@@ -162,9 +171,10 @@ class SEA_DBSEnvAdapter(gym.Env):
         self,
         action: int,
     ) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
+        duration_s = self._window_s_for_action(int(action))
         result = self._plant.integrate(
-            self.config.integration_duration_s,
-            self._dbs_spec_for_action(int(action)),
+            duration_s,
+            self._dbs_spec_for_action(int(action), duration_s=duration_s),
             record_spikes=True,
         )
         raw = self._raw_p_beta(result)
@@ -188,7 +198,7 @@ class SEA_DBSEnvAdapter(gym.Env):
             "action": int(action),
             "adapter": True,
             "step_duration_ms": self.config.step_duration_ms,
-            "integration_duration_ms": self.config.integration_duration_s * 1000.0,
+            "integration_duration_ms": duration_s * 1000.0,
             "carrier_hz": self._carrier_hz,
             "dw": dw,
         }
