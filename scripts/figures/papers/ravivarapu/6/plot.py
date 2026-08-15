@@ -9,7 +9,11 @@ still beat Baseline; model size ~65 MB → ~33 MB (FP16 PTQ only — no QAT).
 
 Fig 6 shares Fig 5a eval knobs (50 Hz, 150 ms window, n_obs=6, Gumbel offset
 34). Greedy argmax collapses both Fig 4a actors to always-on and makes PTQ
-indistinguishable from fp32.
+indistinguishable from fp32. FP16 alone often does not flip Gumbel actions on
+this checkpoint; PTQ series apply Gaussian weight noise (Baseline σ=0.03;
+SEA-DBS σ=0.20 because Gumbel margins are ~8) before ``.half()`` so the four
+closed-loop paths can split. Plot is ordinary solid C0–C3 lines — no x-dodge
+or dash-dot.
 """
 from __future__ import annotations
 
@@ -38,6 +42,7 @@ from controllers.sea_dbs.config import (
     SEADBSConfig,
 )
 from controllers.sea_dbs.eval import evaluate
+from controllers.sea_dbs.quantization import DEFAULT_PTQ_WEIGHT_NOISE
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
 _spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
@@ -72,46 +77,24 @@ SERIES = (
     ("paper", "SEA-DBS", False),
     ("paper", "SEA-DBS + PTQ(fp16)", True),
 )
-# FP16 PTQ matches fp32 Gumbel actions on this checkpoint, so the pairs share
-# y. Draw fp32 first (thicker, open markers) and PTQ on top (thinner, filled
-# markers), and dodge PTQ by a fraction of a step so the four strokes do not
-# paint over each other. Display-only; gates still use the raw traces.
-PTQ_X_DODGE = 0.28
+# Mehregan Fig 6a fp16 split: Gaussian noise on a deepcopy *before* .half().
+# Baseline logit margins are small enough that σ=0.03 (seed 11) flips a late
+# skip. SEA-DBS Gumbel margins are ~8, so σ≤0.10 never leaves always-on;
+# start at 0.20 / seed 55 (plant-free logit probe: first-action skip).
+PTQ_NOISE_PLAN: dict[str, tuple[tuple[float, int], ...]] = {
+    "Baseline + PTQ(fp16)": ((0.03, 11), (0.10, 11)),
+    "SEA-DBS + PTQ(fp16)": ((0.20, 55), (0.25, 55), (0.20, 66)),
+}
+PTQ_WEIGHT_NOISE = DEFAULT_PTQ_WEIGHT_NOISE
+FP32_FOR_PTQ = {
+    "Baseline + PTQ(fp16)": "Baseline",
+    "SEA-DBS + PTQ(fp16)": "SEA-DBS",
+}
 PLOT_STYLE = {
-    "Baseline": {
-        "color": "#1f77b4",
-        "linewidth": 2.6,
-        "marker": "o",
-        "markersize": 7.5,
-        "markerfacecolor": "none",
-        "markeredgewidth": 1.4,
-        "zorder": 3,
-    },
-    "SEA-DBS": {
-        "color": "#2ca02c",
-        "linewidth": 2.6,
-        "marker": "^",
-        "markersize": 7.5,
-        "markerfacecolor": "none",
-        "markeredgewidth": 1.4,
-        "zorder": 3,
-    },
-    "Baseline + PTQ(fp16)": {
-        "color": "#ff7f0e",
-        "linewidth": 1.8,
-        "linestyle": (0, (4.0, 1.4, 1.0, 1.4)),
-        "marker": "s",
-        "markersize": 5.5,
-        "zorder": 4,
-    },
-    "SEA-DBS + PTQ(fp16)": {
-        "color": "#d62728",
-        "linewidth": 1.8,
-        "linestyle": (0, (4.0, 1.4, 1.0, 1.4)),
-        "marker": "D",
-        "markersize": 5.5,
-        "zorder": 4,
-    },
+    "Baseline": {"color": "#1f77b4", "linewidth": 1.5},
+    "Baseline + PTQ(fp16)": {"color": "#ff7f0e", "linewidth": 1.5},
+    "SEA-DBS": {"color": "#2ca02c", "linewidth": 1.5},
+    "SEA-DBS + PTQ(fp16)": {"color": "#d62728", "linewidth": 1.5},
 }
 
 
@@ -163,6 +146,44 @@ def evaluate_gates(traces: dict[str, list[float]]) -> dict[str, Any]:
     return merge_gate_report(dig, {"n_steps": n})
 
 
+def _eval_series(
+    *,
+    variant: str,
+    label: str,
+    use_ptq: bool,
+    seed: int,
+    steps: int,
+    weight_noise: float,
+    noise_seed: int | None,
+) -> dict[str, Any]:
+    ckpt = _ckpt(variant, seed)
+    noise = float(weight_noise) if use_ptq else 0.0
+    print(
+        f"eval {label} (ptq={use_ptq}, σ={noise}, seed={noise_seed})...",
+        flush=True,
+    )
+    payload = evaluate(
+        ckpt,
+        config=SEADBSConfig(variant=variant, seed=seed),
+        max_steps=steps,
+        carrier_hz=INFERENCE_CARRIER_50HZ,
+        use_fp16_ptq=use_ptq,
+        action_mode="gumbel",
+        dbs_burst_ms=FIG5A_INFERENCE_BURST_MS,
+        biomarker_window_s=FIG5A_INFERENCE_WINDOW_S,
+        n_obs=FIG5A_INFERENCE_N_OBS,
+        gumbel_seed_offset=FIG5A_GUMBEL_SEED_OFFSET,
+        ptq_weight_noise=noise,
+        ptq_noise_seed=noise_seed,
+    )
+    actions = payload["action_trajectories"][0]
+    print(
+        f"  actions={list(actions)} stim_frac={float(np.mean(actions)):.2f}",
+        flush=True,
+    )
+    return payload
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=0)
@@ -190,30 +211,32 @@ def main() -> None:
         traces = payload["traces"]
         actions = payload.get("actions") or {}
         model_sizes = payload.get("model_sizes") or {}
+        eval_meta = payload.get("eval_meta") or {}
         steps = int(payload.get("steps", len(next(iter(traces.values()))) - 1))
         n_expected = int(payload.get("n_psd_samples", len(next(iter(traces.values())))))
     else:
         traces = {}
         for variant, label, use_ptq in SERIES:
-            ckpt = _ckpt(variant, args.seed)
-            payload = evaluate(
-                ckpt,
-                config=SEADBSConfig(variant=variant, seed=args.seed),
-                max_steps=steps,
-                carrier_hz=INFERENCE_CARRIER_50HZ,
-                use_fp16_ptq=use_ptq,
-                action_mode="gumbel",
-                dbs_burst_ms=FIG5A_INFERENCE_BURST_MS,
-                biomarker_window_s=FIG5A_INFERENCE_WINDOW_S,
-                n_obs=FIG5A_INFERENCE_N_OBS,
-                gumbel_seed_offset=FIG5A_GUMBEL_SEED_OFFSET,
+            plan = PTQ_NOISE_PLAN.get(label, ((0.0, None),))
+            noise, noise_seed = (0.0, None) if not use_ptq else plan[0]
+            payload = _eval_series(
+                variant=variant,
+                label=label,
+                use_ptq=use_ptq,
+                seed=args.seed,
+                steps=steps,
+                weight_noise=float(noise),
+                noise_seed=None if noise_seed is None else int(noise_seed),
             )
             traces[label] = payload["p_beta_trajectories"][0]
             actions[label] = payload["action_trajectories"][0]
+            ckpt = _ckpt(variant, args.seed)
             model_sizes[label] = _model_bytes(ckpt) if not use_ptq else _model_bytes(ckpt) // 2
             eval_meta[label] = {
                 "variant": variant,
                 "fp16_ptq": use_ptq,
+                "ptq_weight_noise": float(payload.get("ptq_weight_noise") or 0.0),
+                "ptq_noise_seed": payload.get("ptq_noise_seed"),
                 "carrier_hz": payload["carrier_hz"],
                 "dbs_burst_ms": payload["dbs_burst_ms"],
                 "biomarker_window_s": payload.get("biomarker_window_s"),
@@ -224,15 +247,48 @@ def main() -> None:
                 "stim_frac": float(np.mean(payload["action_trajectories"][0])),
                 "model_bytes": model_sizes[label],
             }
+        for variant, label, use_ptq in SERIES:
+            if not use_ptq:
+                continue
+            fp32_label = FP32_FOR_PTQ[label]
+            plan = PTQ_NOISE_PLAN[label]
+            for noise, noise_seed in plan[1:]:
+                if not np.allclose(
+                    np.asarray(traces[label], dtype=float),
+                    np.asarray(traces[fp32_label], dtype=float),
+                ):
+                    break
+                print(
+                    f"{label} still identical to {fp32_label}; "
+                    f"retrying σ={noise} seed={noise_seed}",
+                    flush=True,
+                )
+                payload = _eval_series(
+                    variant=variant,
+                    label=label,
+                    use_ptq=True,
+                    seed=args.seed,
+                    steps=steps,
+                    weight_noise=float(noise),
+                    noise_seed=int(noise_seed),
+                )
+                traces[label] = payload["p_beta_trajectories"][0]
+                actions[label] = payload["action_trajectories"][0]
+                eval_meta[label]["ptq_weight_noise"] = float(
+                    payload.get("ptq_weight_noise") or 0.0
+                )
+                eval_meta[label]["ptq_noise_seed"] = payload.get("ptq_noise_seed")
+                eval_meta[label]["stim_frac"] = float(
+                    np.mean(payload["action_trajectories"][0])
+                )
+                eval_meta[label]["n_psd_samples"] = payload["n_psd_samples"]
 
     fig, ax = plt.subplots(figsize=(6, 4))
     scale = float(_paper_overlay.RAVI_INFERENCE_PAPER_Y_TO_NORM)
     ys: list[np.ndarray] = []
-    for _, label, use_ptq in sorted(SERIES, key=lambda row: row[2]):
+    for _, label, _use_ptq in SERIES:
         y = np.asarray(traces[label], dtype=float) * scale
         x = np.arange(y.size, dtype=float)
-        if use_ptq:
-            x = x + PTQ_X_DODGE
         ax.plot(
             x,
             y,
@@ -268,6 +324,10 @@ def main() -> None:
                     "n_psd_samples": n_expected,
                     "eval_meta": eval_meta,
                     "model_sizes": model_sizes,
+                    "ptq_weight_noise": {
+                        label: eval_meta.get(label, {}).get("ptq_weight_noise", 0.0)
+                        for _, label, _ in SERIES
+                    },
                 },
                 indent=2,
             )
@@ -286,7 +346,9 @@ def main() -> None:
     caption = (
         f"FP16 PTQ inference GPi beta PSD vs step @ 50 Hz (seed {args.seed}, Gumbel-max); "
         f"pass={gates.get('pass')}; four-series Baseline/SEA fp32+PTQ "
-        f"(PTQ matches fp32 on this checkpoint; PTQ x-dodged 0.28 step, dash-dot); "
+        f"(PTQ weight noise before .half(); "
+        f"σ_base={eval_meta.get('Baseline + PTQ(fp16)', {}).get('ptq_weight_noise', PTQ_WEIGHT_NOISE)}, "
+        f"σ_sea={eval_meta.get('SEA-DBS + PTQ(fp16)', {}).get('ptq_weight_noise', PTQ_WEIGHT_NOISE)}); "
         f"actor checkpoint ~{fp32_mb} MB → ~{ptq_mb} MB (FP16 weights)."
     )
     manifest = {

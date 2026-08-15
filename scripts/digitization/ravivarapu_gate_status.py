@@ -90,6 +90,7 @@ RAVIVARAPU_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
         ("sea_ptq_below_baseline", "SEA-DBS PTQ below baseline fp32 late"),
         ("sea_ptq_tracks_fp32", "SEA-DBS PTQ tracks fp32"),
         ("baseline_ptq_near_or_above_baseline", "baseline PTQ near/above baseline fp32"),
+        ("ptq_traces_distinct", "PTQ traces not identical to paired fp32"),
     ],
     "7": [
         ("four_variants_present", "baseline / +PM / +GS / SEA-DBS"),

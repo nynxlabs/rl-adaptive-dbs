@@ -13,7 +13,12 @@ from controllers.sea_dbs.adapter import SEA_DBSEnvAdapter
 from controllers.sea_dbs.checkpoint import load_actor_from_payload, load_checkpoint
 from controllers.sea_dbs.config import ABLATION_EVAL_STEPS, SEADBSConfig
 from controllers.sea_dbs.networks import Actor, gumbel_softmax_sample
-from controllers.sea_dbs.quantization import FP16ActorWrapper, apply_fp16_ptq, is_ptq_variant
+from controllers.sea_dbs.quantization import (
+    DEFAULT_PTQ_NOISE_SEED,
+    FP16ActorWrapper,
+    apply_fp16_ptq,
+    is_ptq_variant,
+)
 
 # Plant reset stays ``cfg.seed`` (untreated PD onset ~0.46). Offset 2 started
 # Baseline ``[1, 1, 1, 1, 0, …]``, so steps 0–4 overlaid SEA (both stim) and
@@ -39,6 +44,8 @@ def evaluate(
     n_obs: int | None = None,
     gumbel_seed_offset: int | None = None,
     dbs_pulse_delay_ms: float | None = None,
+    ptq_weight_noise: float = 0.0,
+    ptq_noise_seed: int | None = None,
 ) -> dict[str, Any]:
     """Roll out a trained actor; returns summary metrics and per-step traces.
 
@@ -87,8 +94,12 @@ def evaluate(
         cfg = replace(cfg, dbs_pulse_delay_ms=float(dbs_pulse_delay_ms))
 
     policy: Actor | FP16ActorWrapper = actor
+    noise = float(ptq_weight_noise)
+    noise_seed = DEFAULT_PTQ_NOISE_SEED if ptq_noise_seed is None else int(ptq_noise_seed)
     if use_fp16_ptq or is_ptq_variant(cfg.variant):
-        policy = FP16ActorWrapper(apply_fp16_ptq(actor))
+        policy = FP16ActorWrapper(
+            apply_fp16_ptq(actor, weight_noise=noise, noise_seed=noise_seed)
+        )
 
     mode = str(action_mode).strip().lower()
     if mode not in {"argmax", "gumbel"}:
@@ -162,6 +173,10 @@ def evaluate(
         "n_obs": cfg.n_obs,
         "dbs_pulse_delay_ms": cfg.dbs_pulse_delay_ms,
         "fp16_ptq": bool(use_fp16_ptq or is_ptq_variant(cfg.variant)),
+        "ptq_weight_noise": noise if (use_fp16_ptq or is_ptq_variant(cfg.variant)) else 0.0,
+        "ptq_noise_seed": (
+            noise_seed if (use_fp16_ptq or is_ptq_variant(cfg.variant)) else None
+        ),
         "action_mode": mode,
     }
 
