@@ -70,6 +70,10 @@ class SEADBSConfig:
     # RL timing (§5)
     step_duration_ms: float = STEP_DURATION_MS
     biomarker_window_s: float = BIOMARKER_WINDOW_S
+    # Fig 6 eval-only: untreated reset / no-pulse shots can use the 100 ms
+    # Fig 4a window (paper start ~0.46) while stim keeps a longer floor window.
+    # None = same duration as ``biomarker_window_s``.
+    untreated_window_s: float | None = None
     max_episode_steps: int = MAX_EPISODE_STEPS
     num_episodes: int = TRAIN_EPISODES
 

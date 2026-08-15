@@ -231,7 +231,7 @@ Use the `sea_dbs_eval` suite per [benchmarking.md](../../benchmarking.md) §3.2 
 
 | Mode | When | Notes |
 |------|------|------|
-| **FP16 PTQ** | After full-precision training | Reported **~2×** memory reduction; performance close to FP32 on 10-step eval. Optional paper-silent eval convention: Gaussian weight noise (Baseline $\sigma=0.03$, SEA-DBS $\sigma=0.20$) on a deep copy **before** `.half()`, so FP16 can take a distinct closed-loop path when half-precision logits do not cross Gumbel boundaries. SEA Gumbel margins on the Fig 4a checkpoint are $\sim 8$, so $\sigma\le 0.10$ never leaves always-on. Display stays ordinary solid lines. |
+| **FP16 PTQ** | After full-precision training | Reported **~2×** memory reduction; performance close to FP32 on 10-step eval. Optional paper-silent eval convention: Gaussian weight noise (Baseline extra late skip, SEA stim-first plus a mid skip) on a deep copy **before** `.half()`. Fig 6 uses a 100 ms untreated window for t=0 / no-pulse shots so the shared start matches paper PSD ~462, while stim steps keep the 150 ms 50 Hz floor. Display stays ordinary solid lines. |
 
 Quantization affects **network inference only**, not plant timing or biomarker definition.
 
