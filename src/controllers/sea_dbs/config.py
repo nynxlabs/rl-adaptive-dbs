@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from typing import Literal
 
 # Paper §V.A / Table I (fixed RL cadence metadata).
 STEP_DURATION_MS: float = 2.0
@@ -62,6 +63,8 @@ ABLATION_EVAL_STEPS: int = 10
 # Paper Figs 5–7 x-axis is steps 0–10: untreated PSD at t=0 plus 10 stim actions.
 INFERENCE_PSD_SAMPLES: int = ABLATION_EVAL_STEPS + 1
 
+PlantIntegrationMode = Literal["disconnected", "continuous"]
+
 
 @dataclass(frozen=True)
 class SEADBSConfig:
@@ -74,6 +77,9 @@ class SEADBSConfig:
     # Fig 4a window (paper start ~0.46) while stim keeps a longer floor window.
     # None = same duration as ``biomarker_window_s``.
     untreated_window_s: float | None = None
+    # Fig 6 eval: ``continuous`` stitches one Kumaravelu trajectory across steps
+    # (PythonPlant only). Training / Fig 4a default ``disconnected``.
+    plant_integration_mode: PlantIntegrationMode = "disconnected"
     max_episode_steps: int = MAX_EPISODE_STEPS
     num_episodes: int = TRAIN_EPISODES
 

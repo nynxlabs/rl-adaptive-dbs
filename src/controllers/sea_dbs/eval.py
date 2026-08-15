@@ -47,6 +47,7 @@ def evaluate(
     ptq_weight_noise: float = 0.0,
     ptq_noise_seed: int | None = None,
     untreated_window_s: float | None = None,
+    plant_integration_mode: str | None = None,
 ) -> dict[str, Any]:
     """Roll out a trained actor; returns summary metrics and per-step traces.
 
@@ -74,6 +75,9 @@ def evaluate(
     ``untreated_window_s`` (Fig 6): optional shorter plant shot for reset and
     no-pulse actions so t=0 matches the paper untreated band (~0.46 / PSD 462)
     while stim steps can keep a longer 50 Hz floor window.
+    ``plant_integration_mode``: ``disconnected`` (default) cold-starts each
+    step from the episode IC; ``continuous`` stitches one Kumaravelu trajectory
+    across steps (PythonPlant only; Fig 6 eval).
     """
     device = (config or SEADBSConfig()).device
     payload = load_checkpoint(checkpoint, device=device)
@@ -95,6 +99,8 @@ def evaluate(
         cfg = replace(cfg, dbs_pulse_delay_ms=float(dbs_pulse_delay_ms))
     if untreated_window_s is not None:
         cfg = replace(cfg, untreated_window_s=float(untreated_window_s))
+    if plant_integration_mode is not None:
+        cfg = replace(cfg, plant_integration_mode=plant_integration_mode)  # type: ignore[arg-type]
 
     policy: Actor | FP16ActorWrapper = actor
     noise = float(ptq_weight_noise)
@@ -176,6 +182,7 @@ def evaluate(
         "n_obs": cfg.n_obs,
         "dbs_pulse_delay_ms": cfg.dbs_pulse_delay_ms,
         "untreated_window_s": cfg.untreated_window_s,
+        "plant_integration_mode": cfg.plant_integration_mode,
         "fp16_ptq": bool(use_fp16_ptq or is_ptq_variant(cfg.variant)),
         "ptq_weight_noise": noise if (use_fp16_ptq or is_ptq_variant(cfg.variant)) else 0.0,
         "ptq_noise_seed": (

@@ -10,9 +10,10 @@ import numpy as np
 from gymnasium import spaces
 
 from controllers.sea_dbs.config import SEADBSConfig
+from controllers.sea_dbs.plant_integration import integrate_stitched_binary_step
 from controllers.sea_dbs.reward import sea_dbs_reward
 from envs.plant.dbs import DbsSpec, create_dbs_current
-from envs.plant.matlab_backend import IntegrateResult
+from envs.plant.matlab_backend import IntegrateResult, MatlabPlant
 
 
 class PlantBackend(Protocol):
@@ -50,6 +51,14 @@ class SEA_DBSEnvAdapter(gym.Env):
             self._plant: PlantBackend = PythonPlant()
         else:
             self._plant = plant
+        if self.config.plant_integration_mode == "continuous" and isinstance(
+            self._plant, MatlabPlant
+        ):
+            msg = (
+                "plant_integration_mode='continuous' requires PythonPlant "
+                "(stitched idbs waveforms)"
+            )
+            raise ValueError(msg)
         self.render_mode = render_mode
 
         self.observation_space = spaces.Box(
@@ -61,6 +70,8 @@ class SEA_DBSEnvAdapter(gym.Env):
         self.action_space = spaces.Discrete(self.config.n_actions)
 
         self._rng: np.random.Generator | None = None
+        self._episode_seed: int | None = None
+        self._episode_actions: list[int] = []
         self._step_count = 0
         self._obs_window: deque[float] = deque(maxlen=self.config.n_obs)
         # Eval may override via set_carrier_hz; reset must not clobber that.
@@ -133,6 +144,19 @@ class SEA_DBSEnvAdapter(gym.Env):
             return DbsSpec(pick_dbs_freq=2, idbs=burst)
         return DbsSpec.from_frequency_hz(self._carrier_hz)
 
+    def _is_continuous(self) -> bool:
+        return self.config.plant_integration_mode == "continuous"
+
+    def _integrate_continuous_step(self, action: int) -> IntegrateResult:
+        self._episode_actions.append(int(action))
+        return integrate_stitched_binary_step(
+            self._plant,
+            seed=self._episode_seed,
+            config=self.config,
+            carrier_hz=self._carrier_hz,
+            actions=self._episode_actions,
+        )
+
     def reset(
         self,
         *,
@@ -142,8 +166,14 @@ class SEA_DBSEnvAdapter(gym.Env):
         super().reset(seed=seed)
         if seed is not None:
             self._rng = np.random.default_rng(seed)
+            self._episode_seed = seed
+        elif self._rng is not None:
+            self._episode_seed = int(self._rng.integers(0, 2**31 - 1))
+        else:
+            self._episode_seed = None
         self._plant.reset(seed=seed)
         self._step_count = 0
+        self._episode_actions.clear()
         self._obs_window.clear()
 
         duration_s = self._window_s_for_action(0)
@@ -164,6 +194,7 @@ class SEA_DBSEnvAdapter(gym.Env):
             "step_duration_ms": self.config.step_duration_ms,
             "integration_duration_ms": duration_s * 1000.0,
             "carrier_hz": self._carrier_hz,
+            "plant_integration_mode": self.config.plant_integration_mode,
         }
         return obs, info
 
@@ -171,12 +202,16 @@ class SEA_DBSEnvAdapter(gym.Env):
         self,
         action: int,
     ) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
-        duration_s = self._window_s_for_action(int(action))
-        result = self._plant.integrate(
-            duration_s,
-            self._dbs_spec_for_action(int(action), duration_s=duration_s),
-            record_spikes=True,
-        )
+        if self._is_continuous():
+            result = self._integrate_continuous_step(int(action))
+            duration_s = self._window_s_for_action(int(action))
+        else:
+            duration_s = self._window_s_for_action(int(action))
+            result = self._plant.integrate(
+                duration_s,
+                self._dbs_spec_for_action(int(action), duration_s=duration_s),
+                record_spikes=True,
+            )
         raw = self._raw_p_beta(result)
         self._obs_window.append(self._normalize_p_beta(raw))
         obs = self._observation_from_window()
@@ -200,6 +235,7 @@ class SEA_DBSEnvAdapter(gym.Env):
             "step_duration_ms": self.config.step_duration_ms,
             "integration_duration_ms": duration_s * 1000.0,
             "carrier_hz": self._carrier_hz,
+            "plant_integration_mode": self.config.plant_integration_mode,
             "dw": dw,
         }
         return obs, reward, terminated, truncated, info

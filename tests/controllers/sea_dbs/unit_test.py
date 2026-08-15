@@ -288,3 +288,30 @@ def test_ptq_weight_noise_is_deterministic_and_changes_params() -> None:
     assert changed
     fp16 = apply_fp16_ptq(actor, weight_noise=0.03, noise_seed=11)
     assert next(fp16.parameters()).dtype == torch.float16
+
+
+def test_continuous_plant_integration_differs_from_disconnected() -> None:
+    """Stitched timeline should move Pβ across repeated stim actions."""
+    cfg = replace(
+        SEADBSConfig(seed=0, biomarker_window_s=0.15),
+        untreated_window_s=0.10,
+        n_obs=1,
+        max_episode_steps=3,
+    )
+    disc = SEA_DBSEnvAdapter(config=replace(cfg, plant_integration_mode="disconnected"))
+    cont = SEA_DBSEnvAdapter(config=replace(cfg, plant_integration_mode="continuous"))
+    try:
+        disc.reset(seed=0)
+        cont.reset(seed=0)
+        disc_vals: list[float] = []
+        cont_vals: list[float] = []
+        for _ in range(3):
+            _obs, _r, _t, _tr, info_d = disc.step(1)
+            _obs, _r, _t, _tr, info_c = cont.step(1)
+            disc_vals.append(float(info_d["p_beta_raw"]))
+            cont_vals.append(float(info_c["p_beta_raw"]))
+        assert len(set(round(v, 4) for v in disc_vals)) == 1
+        assert len(set(round(v, 4) for v in cont_vals)) >= 2
+    finally:
+        disc.close()
+        cont.close()

@@ -8,9 +8,10 @@ SEA-DBS+PTQ(fp16). Quantized SEA-DBS should track fp32 PSD reduction and
 still beat Baseline; model size ~65 MB → ~33 MB (FP16 PTQ only — no QAT).
 
 Fig 6 shares Fig 5a carrier / window / Gumbel (50 Hz, 150 ms, offset 34) but
-uses ``n_obs=8`` so a mid PTQ skip stays in the Eq. 4–5 mean through step 10
-(``n_obs=6`` ages that skip out and SEA/SEA+PTQ share the 328 floor). Greedy
-argmax collapses both Fig 4a actors to always-on and makes PTQ
+uses ``plant_integration_mode=continuous`` so each step samples Pβ from one
+stitched Kumaravelu timeline (more distinct levels than disconnected cold
+starts). ``n_obs=8`` keeps a mid PTQ skip in the Eq. 4–5 mean through step 10.
+Greedy argmax collapses both Fig 4a actors to always-on and makes PTQ
 indistinguishable from fp32. FP16 alone often does not flip Gumbel actions on
 this checkpoint; PTQ series apply Gaussian weight noise (Baseline extra late
 skip; SEA stim-first plus a mid skip) before ``.half()``. Untreated t=0 / no-pulse
@@ -86,7 +87,8 @@ SERIES = (
 # t=0 / no-pulse shots use the 100 ms Fig 4a window (paper start ~462).
 # Stim steps keep the Fig 5a 150 ms floor (~328).
 FIG6_UNTREATED_WINDOW_S = BIOMARKER_WINDOW_S
-# n_obs=6 (Fig 5a) ages a mid skip out by steps 9–10, so SEA and SEA+PTQ
+FIG6_PLANT_INTEGRATION_MODE = "continuous"
+# n_obs=6 (Fig 5a) ages a mid skip out by steps 9–10 under disconnected eval.
 # share the 328 floor and read as one line. n_obs=8 keeps a step-2 skip in
 # the Eq. 4–5 mean through step 10 (Table I leaves n_obs open).
 FIG6_INFERENCE_N_OBS = 8
@@ -218,6 +220,7 @@ def _eval_series(
         n_obs=FIG6_INFERENCE_N_OBS,
         gumbel_seed_offset=FIG5A_GUMBEL_SEED_OFFSET,
         untreated_window_s=FIG6_UNTREATED_WINDOW_S,
+        plant_integration_mode=FIG6_PLANT_INTEGRATION_MODE,
         ptq_weight_noise=noise,
         ptq_noise_seed=noise_seed,
     )
@@ -286,6 +289,7 @@ def main() -> None:
                 "dbs_burst_ms": payload["dbs_burst_ms"],
                 "biomarker_window_s": payload.get("biomarker_window_s"),
                 "untreated_window_s": payload.get("untreated_window_s"),
+                "plant_integration_mode": payload.get("plant_integration_mode"),
                 "n_obs": payload.get("n_obs"),
                 "gumbel_seed_offset": FIG5A_GUMBEL_SEED_OFFSET,
                 "n_psd_samples": payload["n_psd_samples"],
