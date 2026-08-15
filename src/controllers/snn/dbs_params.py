@@ -49,6 +49,7 @@ class DBSParameterState:
         config: SNNConfig | None = None,
         *,
         epsilon: float | None = None,
+        episode: int | None = None,
     ) -> DBSParameterState:
         """Apply three ternary actions in ``{-1, 0, 1}`` for (A, f, w)."""
         cfg = (config or SNNConfig()).with_variant_defaults()
@@ -60,11 +61,13 @@ class DBSParameterState:
             msg = f"ternary actions must be in {TERNARY_CHOICES}, got {actions.tolist()}"
             raise ValueError(msg)
 
-        freq_sens = (
-            cfg.frequency_sensitivity_at_epsilon(epsilon)
-            if epsilon is not None
-            else cfg.frequency_sensitivity
-        )
+        if epsilon is not None or episode is not None:
+            freq_sens = cfg.frequency_sensitivity_at_epsilon(
+                0.0 if epsilon is None else epsilon,
+                episode=episode,
+            )
+        else:
+            freq_sens = cfg.frequency_sensitivity
 
         self.amplitude = float(
             np.clip(

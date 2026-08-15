@@ -111,6 +111,8 @@ SNN_MATERIAL_FIELDS: tuple[str, ...] = (
     "reward_learning_scale",
     "amplitude_sensitivity",
     "frequency_sensitivity",
+    "frequency_sensitivity_early",
+    "frequency_sensitivity_early_episodes",
     "frequency_sensitivity_explore",
     "frequency_sensitivity_explore_epsilon_max",
     "pulse_width_sensitivity",
