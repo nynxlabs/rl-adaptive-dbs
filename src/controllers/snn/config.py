@@ -258,6 +258,9 @@ def fig4_nguyen_config(
     cannot reach ~80 Hz in one episode. v68: episode curriculum — freq=10 for
     ep 0–34 (paper start), then freq=20 so greedy can suppress; v53 ε dump
     (1200/350, ε_end=0.05); replay cadence 32 for ~75 SGD steps / 100 ep.
+    v68 FAIL: bimodal — good eps at 100–120 Hz (len 4–14) vs F=0 collapse
+    timeouts; smoothed 80–100 still 24. v69: frequency_min=10, amplitude_min=50;
+    early curriculum through ep 39.
     """
     return SNNConfig(
         seed=seed,
@@ -273,8 +276,10 @@ def fig4_nguyen_config(
         learning_rate=5e-4,
         frequency_sensitivity=20.0,
         frequency_sensitivity_early=10.0,
-        frequency_sensitivity_early_episodes=35,
+        frequency_sensitivity_early_episodes=40,
         frequency_sensitivity_explore=0.0,
+        frequency_min=10.0,
+        amplitude_min=50.0,
         pulse_width_sensitivity=0.3,
         threshold_reward=300.0,
         energy_penalty=0.0,
