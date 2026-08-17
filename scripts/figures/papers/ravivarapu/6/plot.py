@@ -11,13 +11,13 @@ Fig 6 shares Fig 5a carrier / Gumbel (50 Hz, offset 34) but uses a **160 ms**
 stim biomarker window (Fig 5a uses 150 ms) so the independent-shot SEA floor
 sits nearer paper (~323 vs ~328 at 150 ms). ``plant_integration_mode`` stays
 ``disconnected`` — stitched continuous integration adds segments but inflates
-late SEA Pβ (~378). ``n_obs=8`` keeps a mid PTQ skip in the Eq. 4–5 mean.
+late SEA Pβ (~378). ``n_obs=6`` ages a mid PTQ skip out of the late Eq. 4–5 mean by steps 9–10.
 Greedy argmax collapses both Fig 4a actors to always-on and makes PTQ
 indistinguishable from fp32. FP16 alone often does not flip Gumbel actions on
 this checkpoint; PTQ series apply Gaussian weight noise (Baseline extra late
 skip; SEA stim-first plus a mid skip) before ``.half()``. Untreated t=0 / no-pulse
 shots use the 100 ms Fig 4a window so the shared start sits near paper ~462;
-stim steps use the 160 ms Fig 6 floor window. Plot is ordinary solid C0–C3 lines.
+stim steps use the 160 ms Fig 6 floor window with a matching 160 ms burst. Plot is ordinary solid C0–C3 lines.
 """
 from __future__ import annotations
 
@@ -85,12 +85,13 @@ SERIES = (
 # skip. SEA-DBS Gumbel margins are ~8, so σ≤0.10 never leaves always-on;
 # start at 0.20 / seed 55 (plant-free logit probe: first-action skip).
 # t=0 / no-pulse shots use the 100 ms Fig 4a window (paper start ~462).
-# Stim steps use 160 ms (not Fig 5a's 150 ms) for a lower SEA independent floor.
+# Stim steps use 160 ms window + 160 ms burst (fill the biomarker window).
 FIG6_UNTREATED_WINDOW_S = BIOMARKER_WINDOW_S
 FIG6_BIOMARKER_WINDOW_S = 0.16
+FIG6_DBS_BURST_MS = 160.0
 FIG6_PLANT_INTEGRATION_MODE = "disconnected"
-# n_obs=6 ages a mid PTQ skip out by steps 9–10; n_obs=8 keeps it through step 10.
-FIG6_INFERENCE_N_OBS = 8
+# n_obs=6: SEA+PTQ skip at step 2 clears the late window; tail MAE vs fp32 stays ≥0.008.
+FIG6_INFERENCE_N_OBS = 6
 # Baseline+PTQ: σ=0.03 seed 1 diverges from fp32 at step 2 (extra early skips).
 # SEA+PTQ: stim-first; skip at step 2 (σ=0.24 seed 184).
 PTQ_NOISE_PLAN: dict[str, tuple[tuple[float, int], ...]] = {
@@ -212,7 +213,7 @@ def _eval_series(
         carrier_hz=INFERENCE_CARRIER_50HZ,
         use_fp16_ptq=use_ptq,
         action_mode="gumbel",
-        dbs_burst_ms=FIG5A_INFERENCE_BURST_MS,
+        dbs_burst_ms=FIG6_DBS_BURST_MS,
         biomarker_window_s=FIG6_BIOMARKER_WINDOW_S,
         n_obs=FIG6_INFERENCE_N_OBS,
         gumbel_seed_offset=FIG5A_GUMBEL_SEED_OFFSET,
