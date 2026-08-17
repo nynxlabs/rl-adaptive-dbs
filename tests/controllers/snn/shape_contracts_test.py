@@ -120,6 +120,17 @@ def test_frequency_sensitivity_episode_curriculum() -> None:
     assert late.frequency_hz == 60.0
 
 
+def test_fig4_init_floors_block_frequency_collapse() -> None:
+    from controllers.snn.config import fig4_nguyen_config
+
+    cfg = fig4_nguyen_config()
+    state = DBSParameterState()
+    for _ in range(8):
+        state.apply_delta([0, -1, 0], cfg, epsilon=0.05, episode=60)
+    assert state.frequency_hz == cfg.frequency_min == 40.0
+    assert state.amplitude >= cfg.amplitude_min
+
+
 def test_dsqn_forward_shapes() -> None:
     cfg = SNNConfig(sequence_steps=5, neurons_per_region=4, n_regions=1)
     model = DSQN(cfg)
