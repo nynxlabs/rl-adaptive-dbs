@@ -131,6 +131,18 @@ def test_fig4_init_floors_block_frequency_collapse() -> None:
     assert state.amplitude >= cfg.amplitude_min
 
 
+def test_fig4_v72_early_slow_freq_near_init() -> None:
+    from controllers.snn.config import fig4_nguyen_config
+
+    cfg = fig4_nguyen_config()
+    assert cfg.frequency_sensitivity_at_epsilon(1.0, episode=0) == 1.0
+    assert cfg.frequency_sensitivity_at_epsilon(1.0, episode=49) == 1.0
+    assert cfg.frequency_sensitivity_at_epsilon(1.0, episode=50) == 20.0
+    state = DBSParameterState()
+    state.apply_delta([0, 1, 0], cfg, epsilon=1.0, episode=10)
+    assert state.frequency_hz == 41.0
+
+
 def test_dsqn_forward_shapes() -> None:
     cfg = SNNConfig(sequence_steps=5, neurons_per_region=4, n_regions=1)
     model = DSQN(cfg)
