@@ -262,9 +262,13 @@ def fig4_nguyen_config(
     timeouts; smoothed 80–100 still 24.     v69: frequency_min=10, amplitude_min=50;
     early curriculum through ep 39.
     v69 FAIL (100ep + 500ep): F=10 collapse timeouts drive spikes; 500ep
-    late_len≈13.9, 80–100≈23. v71 (same knobs as v70 branch): frequency_min
+    late_len≈13.9, 80–100≈23.     v71 (same knobs as v70 branch): frequency_min
     at paper init (40 Hz), amplitude_min=200; early curriculum through ep 49
     so 0–50 keeps freq=10/step but greedy cannot dive below init frequency.
+    v71 FAIL: reward gates pass but ep0 lucky stop (len 8); 0–50 smooth ≈21.2
+    (need ≥23). v72: keep v71 floors; frequency_sensitivity_early=1 so ε≈1
+    random walks stay near paper init 40 Hz (v55 spirit) while exploit=20 after
+    ep 49 for late suppression.
     """
     return SNNConfig(
         seed=seed,
@@ -279,7 +283,7 @@ def fig4_nguyen_config(
         epsilon_end=0.05,
         learning_rate=5e-4,
         frequency_sensitivity=20.0,
-        frequency_sensitivity_early=10.0,
+        frequency_sensitivity_early=1.0,
         frequency_sensitivity_early_episodes=50,
         frequency_sensitivity_explore=0.0,
         frequency_min=INIT_FREQUENCY_HZ,
