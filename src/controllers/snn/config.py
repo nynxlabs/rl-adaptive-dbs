@@ -268,7 +268,10 @@ def fig4_nguyen_config(
     v71 FAIL: reward gates pass but ep0 lucky stop (len 8); 0–50 smooth ≈21.2
     (need ≥23). v72: keep v71 floors; frequency_sensitivity_early=1 so ε≈1
     random walks stay near paper init 40 Hz (v55 spirit) while exploit=20 after
-    ep 49 for late suppression.
+    ep 49 for late suppression. v72 FAIL: early gates pass (0–50 len=25) but
+    80–100 len≈20.7 and reward_by_100 fail — 50 eps at early=1 starved mid
+    freq ramp. v73: early=1 for ep 0–24 only, then exploit=20; slower ε
+    (decay=4200, accelerate@2000, prog=2000) for paper mid-glide by ep 80.
     """
     return SNNConfig(
         seed=seed,
@@ -276,22 +279,22 @@ def fig4_nguyen_config(
         max_episode_steps=EVAL_MAX_STEPS,
         alpha_beta_threshold=BIOMARKER_THRESHOLD,
         subthreshold_steps_required=2,
-        epsilon_decay_steps=3_200,
+        epsilon_decay_steps=4_200,
         epsilon_decay_delay_steps=0,
-        epsilon_accelerate_after_steps=1_200,
+        epsilon_accelerate_after_steps=2_000,
         epsilon_accelerate_decay_steps=350,
         epsilon_end=0.05,
         learning_rate=5e-4,
         frequency_sensitivity=20.0,
         frequency_sensitivity_early=1.0,
-        frequency_sensitivity_early_episodes=50,
+        frequency_sensitivity_early_episodes=25,
         frequency_sensitivity_explore=0.0,
         frequency_min=INIT_FREQUENCY_HZ,
         amplitude_min=200.0,
         pulse_width_sensitivity=0.3,
         threshold_reward=300.0,
         energy_penalty=0.0,
-        alpha_beta_progress_coef=2500.0,
+        alpha_beta_progress_coef=2000.0,
         alpha_beta_progress_cap_per_step=10_000.0,
         warm_zone_upper=220.0,
         warm_zone_bonus_coef=150.0,
