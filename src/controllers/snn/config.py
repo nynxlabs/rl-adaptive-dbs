@@ -277,7 +277,10 @@ def fig4_nguyen_config(
     only — isolate epsilon from v73's shortened curriculum mistake. v74 FAIL:
     early OK (0–50=25) but 80–100≈21.3 (worse than v72); slower ε alone no help.
     v75: early=3 for 50 ep (v71=10 vs v72=1 compromise) + v72 fast ε
-    (decay=3200, accelerate@1200, prog=2500).
+    (decay=3200, accelerate@1200, prog=2500). v75 FAIL length only: reward
+    shape+full PASS; 0–50=25, mid-glide true, but 80–100≈16.0, late_len≈14.9,
+    post100 ptp=8.7 (need ≤4.5). v76: early=5 (toward v71 mid-curve) keeping
+    v75 ε schedule; lock floors and exploit=20 after ep 49.
     """
     return SNNConfig(
         seed=seed,
@@ -292,7 +295,7 @@ def fig4_nguyen_config(
         epsilon_end=0.05,
         learning_rate=5e-4,
         frequency_sensitivity=20.0,
-        frequency_sensitivity_early=3.0,
+        frequency_sensitivity_early=5.0,
         frequency_sensitivity_early_episodes=50,
         frequency_sensitivity_explore=0.0,
         frequency_min=INIT_FREQUENCY_HZ,
