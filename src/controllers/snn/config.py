@@ -273,8 +273,11 @@ def fig4_nguyen_config(
     freq ramp. v73: early=1 for ep 0–24 only, then exploit=20; slower ε
     (decay=4200, accelerate@2000, prog=2000) for paper mid-glide by ep 80.
     v73 FAIL: shortening early broke 0–50 smooth (22.0) without fixing 80–100
-    (20.75); ep500 timeout. v74: v72 early lock (1 Hz, 50 ep) + v22 slower ε
-    only — isolate epsilon from v73's shortened curriculum mistake.
+    (20.75); ep500 timeout.     v74: v72 early lock (1 Hz, 50 ep) + v22 slower ε
+    only — isolate epsilon from v73's shortened curriculum mistake. v74 FAIL:
+    early OK (0–50=25) but 80–100≈21.3 (worse than v72); slower ε alone no help.
+    v75: early=3 for 50 ep (v71=10 vs v72=1 compromise) + v72 fast ε
+    (decay=3200, accelerate@1200, prog=2500).
     """
     return SNNConfig(
         seed=seed,
@@ -282,14 +285,14 @@ def fig4_nguyen_config(
         max_episode_steps=EVAL_MAX_STEPS,
         alpha_beta_threshold=BIOMARKER_THRESHOLD,
         subthreshold_steps_required=2,
-        epsilon_decay_steps=4_200,
+        epsilon_decay_steps=3_200,
         epsilon_decay_delay_steps=0,
-        epsilon_accelerate_after_steps=2_000,
+        epsilon_accelerate_after_steps=1_200,
         epsilon_accelerate_decay_steps=350,
         epsilon_end=0.05,
         learning_rate=5e-4,
         frequency_sensitivity=20.0,
-        frequency_sensitivity_early=1.0,
+        frequency_sensitivity_early=3.0,
         frequency_sensitivity_early_episodes=50,
         frequency_sensitivity_explore=0.0,
         frequency_min=INIT_FREQUENCY_HZ,
@@ -297,7 +300,7 @@ def fig4_nguyen_config(
         pulse_width_sensitivity=0.3,
         threshold_reward=300.0,
         energy_penalty=0.0,
-        alpha_beta_progress_coef=2000.0,
+        alpha_beta_progress_coef=2500.0,
         alpha_beta_progress_cap_per_step=10_000.0,
         warm_zone_upper=220.0,
         warm_zone_bonus_coef=150.0,
