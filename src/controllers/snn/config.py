@@ -261,9 +261,10 @@ def fig4_nguyen_config(
     v68 FAIL: bimodal — good eps at 100–120 Hz (len 4–14) vs F=0 collapse
     timeouts; smoothed 80–100 still 24.     v69: frequency_min=10, amplitude_min=50;
     early curriculum through ep 39.
-    v69 FAIL: overlapping runs; floors still allowed F=10 collapse (below paper
-    init 40 Hz). v70: frequency_min=INIT (40 Hz), amplitude_min=200; early
-    curriculum through ep 49 so the full 0–50 gate window keeps freq=10/step.
+    v69 FAIL (100ep + 500ep): F=10 collapse timeouts drive spikes; 500ep
+    late_len≈13.9, 80–100≈23. v71 (same knobs as v70 branch): frequency_min
+    at paper init (40 Hz), amplitude_min=200; early curriculum through ep 49
+    so 0–50 keeps freq=10/step but greedy cannot dive below init frequency.
     """
     return SNNConfig(
         seed=seed,
