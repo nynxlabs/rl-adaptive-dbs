@@ -10,8 +10,8 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Fig 1b | GPi PSD | Pass |
 | Fig 2a | GPi $P_\beta$ time series | Pass |
 | Fig 2b | Error Index time series | Pass (rep v16) |
-| Fig 4a | Training $P_\beta$ vs step | Pass (τ 3→1.0, locked train v18, rep v29) |
-| Fig 4b | Training reward vs episode | Pass (paired train v18, v14, rep v31) |
+| Fig 4a | Training $P_\beta$ vs step | Pass (rep v34; actor_lr 7.5e-4, warmup 50) |
+| Fig 4b | Training reward vs episode | Pass (rep v33; phase-6 paired) |
 | Fig 5a | Post-train efficacy @ 45 Hz | Pass (rep v23) |
 | Fig 5b | Post-train efficacy @ 30 Hz | Pass (burst alphabet, locked eval v3, rep v23) |
 | Fig 6a | PTQ / QAT @ 45 Hz | Pass (honest trailing eval, rep v61) |
@@ -43,7 +43,7 @@ Mean GPi multitaper power spectral density (1–50 Hz) for three conditions: **h
 **Status:** Pass — condition ordering and beta-peak shape match the paper panel (seeds `0–9` mean).
 
 <!-- gates-1b:start -->
-**Gates set** (`fig1b_gates` → manifest `gates` / `gates_pass`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/1b/curves.json`, 2026-08-10). Every row is required for exit.
+**Gates set** (`fig1b_gates` → manifest `gates` / `gates_pass`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/1b/curves.json`, 2026-08-15). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -78,15 +78,15 @@ GPi beta-band power ($P_\beta$, Eq. 1, 13–35 Hz) over **12 s**: **PD no treatm
 ![Replication Fig 2a](images/2a/beta_power.png)
 
 <!-- caption-2a:start -->
-**Caption:** 14 s sim (2 s pre-roll), plot = sim − 2 s, 0.2 s trailing / 2 s window (end sim 14 s), seed 0 (2026-08-10)
+**Caption:** 14 s sim (2 s pre-roll), plot = sim − 2 s, 0.2 s trailing / 2 s window (end sim 14 s), seed 0 (2026-08-12)
 
 **Manifest:** `artifacts/figures/papers/mehregan/2a/manifest.json`
 <!-- caption-2a:end -->
 
-**Status:** Pass — blue-below-red after $t=2$, shared 0–2 s baseline, dense trailing protocol. Protocol: trailing windows end at sim **14 s** (display $t=12$ → `[12, 14]`); enlarged Numba GPI spike buffer (904) so recording is not truncated. Remaining polish: blue floor slightly below paper at $t=12$; single seed (0). **Ship image:** unversioned `beta_power.png` locked to Report 3 gallery (pre–legend-replot); do not replace with overlay `--plot-only` output unless intentionally re-promoting.
+**Status:** Pass — blue-below-red after $t=2$, shared 0–2 s baseline, dense trailing protocol. Protocol: trailing windows end at sim **14 s** (display $t=12$ → `[12, 14]`); enlarged Numba GPI spike buffer (904) so recording is not truncated. Remaining polish: blue floor slightly below paper at $t=12$; single seed (0). Legend lower left with condensed paper overlay. **Ship image:** unversioned `beta_power.png` (Report 3 gallery).
 
 <!-- gates-2a:start -->
-**Gates set** (`fig2_time_gates`, panel `2a`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/2a/series.json`, 2026-08-10). Every row is required for exit.
+**Gates set** (`fig2_time_gates`, panel `2a`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/2a/series.json`, 2026-08-15). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -104,7 +104,7 @@ uv run python scripts/figures/papers/mehregan/2a/plot.py --plot-only
 uv run python scripts/figures/papers/mehregan/2a/plot.py --sampling segment
 ```
 
-**Defaults:** seed `0`, 0.2 s trailing samples, 2 s overlapping window, 14 s integrate with 2 s pre-roll. Locked replication PNG: **`beta_power.png`** (Report 3; not versioned).
+**Defaults:** seed `0`, 0.2 s trailing samples, 2 s overlapping window, 14 s integrate with 2 s pre-roll. Ship PNG: **`beta_power.png`** (Report 3; not versioned).
 
 ---
 
@@ -129,7 +129,7 @@ Windowed Error Index (EI, Eq. 2) over **12 s** with **So-style SMC pulses into T
 **Status:** Pass — blue-below-red after $t=2$, shared baseline, blue floor ~0.12 near paper. Remaining polish: red $t=12$ slightly low (~0.24 vs ~0.30); single seed.
 
 <!-- gates-2b:start -->
-**Gates set** (`fig2_time_gates`, panel `2b`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/2b/series.json`, 2026-08-10). Every row is required for exit.
+**Gates set** (`fig2_time_gates`, panel `2b`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/2b/series.json`, 2026-08-15). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -166,18 +166,18 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_beta_v25.png)
+![Replication Fig 4a](images/4a/training_beta_v34.png)
 
 <!-- caption-4a:start -->
-**Caption:** 45 Hz fixed_mean_pattern, within_step L=1, reward=full_segment, softmax, critic=one_hot, seed 0, v25, init_bias=0.5, early=0.405 late=0.302, trend↓ (2026-08-09)
+**Caption:** 45 Hz fixed_mean_pattern, within_step L=1, reward=full_segment, softmax, critic=one_hot, seed 0, v34, init_bias=0, jitter=0.5, ep0=0.505, early=0.482 late=0.330, trend↓ (2026-08-15)
 
 **Manifest:** `artifacts/figures/papers/mehregan/4a/manifest.json`
 <!-- caption-4a:end -->
 
-**Status:** Pass — locked **v18** (`training_beta_v18.png`, `series_v18.json`): linear softmax τ **3→1.0**, late fixture-seed skip, `gates_pass=true` (mid_drop≈0.024 vs paper≈0.047). Piecewise τ (**v19**) softened the mid cliff but failed `mid_fade_vs_paper`; not promoted.
+**Status:** Pass — **rep v34**, phase-8 (`actor_lr=7.5e-4`, `critic_warmup_steps=50`, τ 3→1.6, continuous carry). All digitization gates pass including `mid_fade_vs_paper`. Fig 4b ship image stays **v33** from phase-6 (separate train; late-floor gates) — see [4a.md](../../docs/figures/mehregan/4a.md).
 
 <!-- gates-4a:start -->
-**Gates set** (`fig4a_gates` → locked `series_v18.json`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4a/series_v18.json`, 2026-08-10). Every row is required for exit.
+**Gates set** (`fig4a_gates` → live `series.json` (digitization revisit; was locked `series_v18.json`)). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4a/series.json`, 2026-08-15). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -186,6 +186,7 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 | `drop_vs_paper` | drop ≥ 70% of digitized paper drop | yes |
 | `late_early_ratio_near_paper` | late/early ratio vs digitization | yes |
 | `mid_fade_vs_paper` | mid [120,150] fade ≥ 50% of paper mid-drop | yes |
+| `ep0_near_paper` | steps 0–29 mean within 10% of digitized paper ep0 | yes |
 <!-- gates-4a:end -->
 
 **Panel notes:** extended tuning history (skip_regular workflow, entropy experiments) — [docs/figures/mehregan/4a.md](../../docs/figures/mehregan/4a.md).
@@ -206,7 +207,7 @@ tmux new-session -d -s fig4a-train \
  "setsid nohup uv run python scripts/figures/papers/mehregan/4a/plot.py >> logs/fig4a-train.log 2>&1 < /dev/null"
 ```
 
-**Defaults:** seed `0`, **45 Hz** mean init, `state_length=1`, `fixed_mean_pattern`, **softmax** exploration (τ **3→1.0** linear), **`critic_action_input=one_hot`**, `init_bias_scale=0.5`, `entropy_coeff=0.01`, `plant.dt_ms=0.02`. Locked cache: `series_v18.json`.
+**Defaults:** seed `0`, **45 Hz** mean init, `state_length=1`, `fixed_mean_pattern`, **softmax** exploration (τ **3→1.4** linear), **`critic_action_input=one_hot`**, `init_bias_scale=0`, `jitter_fraction=0.5`, `entropy_coeff=0.01`, `plant.dt_ms=0.02`. Live cache: `series.json` (previous lock `series_v18.json`). Phase 1: match ep0 (~0.50) before the late floor.
 
 ---
 
@@ -222,26 +223,22 @@ Episode **total reward** and **episode-mean PSD(x10³)** during the same **45 Hz
 
 **Reward vs episode**
 
-![Replication Fig 4b reward](images/4b/training_reward_v28.png)
+![Replication Fig 4b reward](images/4b/training_reward_v33.png)
 
 **Episode-mean PSD vs episode**
 
-![Replication Fig 4b PSD](images/4b/training_psd_v28.png)
-
-**Stacked panel (Report 3 gallery)**
-
-![Replication Fig 4b combined](images/4b/training_fig4b_v28.png)
+![Replication Fig 4b PSD](images/4b/training_psd_v33.png)
 
 <!-- caption-4b:start -->
-**Caption:** 9 episodes, 45 Hz fixed_mean_pattern (Fig 4a paired run), seed 0, source series_v4.json, v28, reward ep0=-29.1 ep8=16.1, rise_ep=4, psd 0.437→0.292, gate pass (2026-08-10)
+**Caption:** 9 episodes, 45 Hz fixed_mean_pattern (Fig 4a paired run), seed 0, source series.json, v33, reward ep0=-45.0 ep8=3.6, rise_ep=2, psd 0.459→0.337, gate pass (2026-08-15)
 
 **Manifest:** `artifacts/figures/papers/mehregan/4b/manifest.json`
 <!-- caption-4b:end -->
 
-**Status:** Pass — two panels × 9 episodes (indices 0–8), paired with Fig 4a v4 (seed 0; paper seed unspecified). Qualitative: reward↑, PSD↓. **v28** fixes overlay y-limit snapping (paper digitization y, not x). Y-limits snap to data extrema. Numeric bands differ — compare trends, not pointwise values.
+**Status:** Pass — **rep v33**, paired to Fig 4a phase-6 (`critic_warmup_steps=50`, continuous carry). All digitization gates pass: ep0 PSD 0.459, late 0.358 (above β_t=0.35), late reward −4.3. Episode 4 reward −42.8 (improved vs v37 −52; paper ~−16 still parked).
 
 <!-- gates-4b:start -->
-**Gates set** (`fig4b_gates` + legacy `_fig4b_pass` → manifest `summary.gates`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4b/manifest.json`, 2026-08-10). Every row is required for exit.
+**Gates set** (`fig4b_gates` + legacy `_fig4b_pass` → manifest `summary.gates`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4b/manifest.json`, 2026-08-15). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -252,6 +249,10 @@ Episode **total reward** and **episode-mean PSD(x10³)** during the same **45 Hz
 | `beta_drops` | late episode-mean PSD < early | yes |
 | `beta_drop_ratio_near_paper` | PSD late/early ratio vs digitization | yes |
 | `reward_recovers_like_paper` | qualitative rise (not magnitude match) | yes |
+| `late_beta_above_threshold` | late episode-mean PSD ≥ β_t=0.35 | yes |
+| `late_beta_near_paper` | late PSD within 15% of digitized paper | yes |
+| `late_reward_near_zero` | late mean reward in (−10, 2] (paper ~−2) | yes |
+| `ep0_beta_near_paper` | episode 0 PSD within 10% of digitized paper | yes |
 | `plot_style` | ≥ 2 episodes plotted | yes |
 | `automation` | manifest summary.automation_pass mirrors fig4b bundle | yes |
 <!-- gates-4b:end -->
@@ -265,7 +266,7 @@ uv run python scripts/figures/papers/mehregan/4b/plot.py --plot-only
 
 Each run writes new ``training_reward_vN.png`` and ``training_psd_vN.png`` (same N) and updates the replication links above.
 
-**Defaults:** **9 episodes** from Fig 4a paired series. Locked replication images: **v28** (overlay y-limit fix).
+**Defaults:** **9 episodes** from Fig 4a live `series.json`. Previous lock: **v28** from `series_v4.json`.
 
 ---
 
@@ -297,7 +298,7 @@ Dashed vertical at **2 s** (stimulation onset). Paper claims: trained stimulatio
 **Status:** Pass — four-series panel with **skip_regular** action space (40 irregular patterns; pattern 0 excluded from training). **0.2 s trailing / 2 s window** biomarker sampling (same protocol as Fig 2a). Seed 0; greedy action 7 → pattern 8. Fig 4a training curves still use the 41-pattern space; Fig 5a eval uses a separate skip_regular checkpoint (`checkpoint_skip_regular_02s.pt`).
 
 <!-- gates-5a:start -->
-**Gates set** (`fig5a_pass` / `fig5_efficacy_gates` → manifest `gates`). Overall **`pass`**: yes (from `artifacts/figures/papers/mehregan/5a/manifest.json`, 2026-08-10). Every row is required for exit.
+**Gates set** (`fig5a_pass` / `fig5_efficacy_gates` → manifest `gates`). Overall **`pass`**: yes (from `artifacts/figures/papers/mehregan/5a/manifest.json`, 2026-08-15). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -359,7 +360,7 @@ Key paper claim: **periodic 30 Hz elevates** beta (stimulation rate inside the b
 **Status:** Pass — burst-alphabet retrain (seed 0) + trailing eval **v3** (trained≈367, no-stim≈488, periodic≈639). Policy collapses to constant action **5** (a strong open-loop beater); acceptable for Fig 5b efficacy panel. Y-limits auto-fit from traces (override with `--y-min` / `--y-max`).
 
 <!-- gates-5b:start -->
-**Gates set** (`fig5b_pass` / `fig5_efficacy_gates` → manifest `gates`). Overall **`pass`**: yes (from `artifacts/figures/papers/mehregan/5b/manifest.json`, 2026-08-10). Every row is required for exit.
+**Gates set** (`fig5b_pass` / `fig5_efficacy_gates` → manifest `gates`). Overall **`pass`**: yes (from `artifacts/figures/papers/mehregan/5b/manifest.json`, 2026-08-15). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -417,7 +418,7 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 **Convention (burst + weak QAT lock, 2026-08-03):** `QAT_NUM_EPISODES=0`, `QAT_OPEN_LOOP_LOCK=True`, `QAT_WEAK_ACTION=31` at 45 Hz. fp32 `checkpoint_burst_skip_regular_02s.pt`. PTQ tier open-loop when quant locks on non-fp32 actions (fp16 **19**, int8 **28**). Prior **v36** retired int8 closed-loop action 9 (slow transient).
 
 <!-- gates-6a:start -->
-**Gates set** (`_gate_summary` → manifest `gates`). Overall **`all_pass`**: yes (from `artifacts/figures/papers/mehregan/6a/manifest.json`, 2026-08-10). Every row is required for exit.
+**Gates set** (`_gate_summary` → manifest `gates`). Overall **`all_pass`**: yes (from `artifacts/figures/papers/mehregan/6a/manifest.json`, 2026-08-15). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -491,7 +492,7 @@ Same quantization panel layout as Fig 6a for the **30 Hz** trained model (§IV.A
 **Convention (tier PTQ + overlap fix, 2026-08-03):** Burst trailing sweep (`artifacts/ddpg/fig6b_burst_trailing_sweep_30hz.json`) picks tier actions; int8 tier **15** replaces **20** for faster post-onset suppression while staying distinct from fp16 **10**. Prior **v18** used int8 tier 20 (~420). int8 σ=0.10 weight noise during closed-loop rollout.
 
 <!-- gates-6b:start -->
-**Gates set** (`_gate_summary` → manifest `gates`). Overall **`all_pass`**: yes (from `artifacts/figures/papers/mehregan/6b/manifest.json`, 2026-08-10). Every row is required for exit.
+**Gates set** (`_gate_summary` → manifest `gates`). Overall **`all_pass`**: yes (from `artifacts/figures/papers/mehregan/6b/manifest.json`, 2026-08-15). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|

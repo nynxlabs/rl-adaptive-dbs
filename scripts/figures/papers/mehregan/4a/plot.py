@@ -7,7 +7,8 @@ raw $P_\\beta$ / 1000.
 
 Defaults (see ``figures/mehregan/replications.md``):
   seed 0, state_length=1, fixed_mean_pattern, softmax + one_hot critic,
-  init_bias=0.5, plant.dt_ms=0.02.
+  init_bias=0.0 (phase-1 ep0; library fig4a profile is still 0.5),
+  jitter_fraction=0.5 (library alphabet default 1/3), plant.dt_ms=0.02.
 
 Run:
   uv run python scripts/figures/papers/mehregan/4a/plot.py
@@ -97,6 +98,14 @@ DEFAULT_SEED = 0
 EARLY_END = 130
 LATE_START = 150
 WINDOW = 30
+# Paper-silent Fig 4a knobs for the ep0-first revisit. Library alphabet jitter
+# is 1/3; init_bias in fig4a_ddpg_config remains 0.5. Regular 45 Hz (pattern 0)
+# is a *suppressor* on this plant (~0.29), so biasing toward it cannot raise ep0.
+FIG4A_JITTER_FRACTION = 0.5
+FIG4A_INIT_BIAS_SCALE = 0.0
+# Sequential 2 s segments (Alg. 1). Disconnected cold-starts make repeated
+# pattern 0 bit-identical (ruler-flat late traces). Fresh train — material.
+FIG4A_PLANT_INTEGRATION = "continuous"
 
 STYLE = {
     "figure.facecolor": "white",
@@ -132,6 +141,8 @@ def _make_env(
     *,
     seed: int,
     state_length: int = STATE_LENGTH,
+    jitter_fraction: float = FIG4A_JITTER_FRACTION,
+    plant_integration_mode: str = FIG4A_PLANT_INTEGRATION,
 ) -> tuple[MehreganEnv, Any]:
     resolved = resolve_config()
     plant_cfg = replace(resolved.plant, dt_ms=PAPER_DT_MS)
@@ -140,11 +151,13 @@ def _make_env(
         action_space_mode="fixed_mean_pattern",
         pattern_mean_hz=MEAN_HZ,
         max_episode_steps=STEPS_PER_EPISODE,
+        plant_integration_mode=plant_integration_mode,
     )
     alphabet = FixedMeanPatternAlphabet(
         mean_hz=MEAN_HZ,
         step_duration_s=env_cfg.step_duration_s,
         dt_ms=plant_cfg.dt_ms,
+        jitter_fraction=jitter_fraction,
     )
     plant = PythonPlant(config=plant_cfg)
     env = MehreganEnv(plant=plant, config=env_cfg, alphabet=alphabet)
@@ -158,12 +171,14 @@ def _train_trace(
     seed: int,
     num_episodes: int,
     exploration_mode: str = "softmax",
-    init_bias_scale: float = 0.5,
+    init_bias_scale: float = FIG4A_INIT_BIAS_SCALE,
     temperature_start: float = 3.0,
     temperature_end: float = 1.4,
     logit_noise_std: float = 0.1,
     entropy_coeff: float = 0.01,
     critic_action_input: str = "one_hot",
+    critic_warmup_steps: int = 100,
+    actor_lr: float = 5e-4,
     resume_path: Path | None = None,
     start_episode: int | None = None,
     checkpoint_path: Path | None = None,
@@ -183,6 +198,8 @@ def _train_trace(
         logit_noise_std=logit_noise_std,
         entropy_coeff=entropy_coeff,
         critic_action_input=critic_action_input,
+        critic_warmup_steps=critic_warmup_steps,
+        actor_lr=actor_lr,
     )
     trainer = DDPGTrainer(env, config)
     beta_trace: list[float] = list(prior_beta_trace or [])
@@ -264,11 +281,17 @@ def _train_trace(
     meta = {
         "exploration_mode": config.exploration_mode,
         "init_bias_scale": config.init_bias_scale,
+        "jitter_fraction": getattr(env.alphabet, "jitter_fraction", None),
         "temperature_start": config.exploration_temperature_start,
         "temperature_end": config.exploration_temperature_end,
         "logit_noise_std": config.logit_noise_std,
         "entropy_coeff": config.entropy_coeff,
+        "critic_warmup_steps": config.critic_warmup_steps,
+        "actor_lr": config.actor_lr,
         "critic_action_input": config.critic_action_input,
+        "plant_integration_mode": getattr(
+            env.config, "plant_integration_mode", "disconnected"
+        ),
         "unique_actions": len(counts),
         "dominant_action": int(dominant),
         "dominant_fraction": dom_n / len(actions) if actions else 0.0,
@@ -417,6 +440,13 @@ def _checklist_rows(gates: dict[str, Any], summary: dict[str, Any]) -> list[tupl
             "✓",
         ),
         (
+            "**Episode 0**",
+            "First 30 steps near digitized paper ~0.50 (untreated-like)",
+            f"ep0 mean {_fmt(summary.get('paper_gate_metrics', {}).get('ep0_mean'))}; "
+            f"paper {_fmt(summary.get('paper_gate_metrics', {}).get('paper_ep0'))}",
+            "✓" if gates.get("ep0_near_paper") else "✗",
+        ),
+        (
             "**Drop vs paper**",
             "Digitized early→late drop (seed-robust)",
             f"early {_fmt(early)} → late {_fmt(late)}; "
@@ -507,8 +537,21 @@ def main() -> int:
     parser.add_argument(
         "--init-bias-scale",
         type=float,
-        default=0.5,
-        help="Actor head bias toward pattern 0 (default 0.5 for Fig 4a)",
+        default=FIG4A_INIT_BIAS_SCALE,
+        help=(
+            "Actor head bias toward pattern 0 (Fig 4a phase-1 default 0.0; "
+            "library fig4a profile is 0.5). Pattern 0 suppresses on this plant."
+        ),
+    )
+    parser.add_argument(
+        "--jitter-fraction",
+        type=float,
+        default=FIG4A_JITTER_FRACTION,
+        help=(
+            "Interior-onset jitter as a fraction of the regular ISI "
+            f"(default {FIG4A_JITTER_FRACTION}; library alphabet is 1/3). "
+            "Paper-silent; larger jitter weakens the irregular mix vs untreated."
+        ),
     )
     parser.add_argument(
         "--temperature-start",
@@ -535,10 +578,34 @@ def main() -> int:
         help="Policy entropy bonus (v4 default 0.01; paper-silent anti-collapse knob)",
     )
     parser.add_argument(
+        "--critic-warmup-steps",
+        type=int,
+        default=100,
+        help=(
+            "Gradient steps that update the critic only (Fig 4a default 100). "
+            "Lower values let the actor start learning before episode 4."
+        ),
+    )
+    parser.add_argument(
+        "--actor-lr",
+        type=float,
+        default=5e-4,
+        help="Adam learning rate for the actor (paper-silent; default 5e-4).",
+    )
+    parser.add_argument(
         "--critic-action-input",
         choices=("one_hot", "logits"),
         default="one_hot",
         help="Critic action encoding (default one_hot — required for learning under exploration)",
+    )
+    parser.add_argument(
+        "--plant-integration",
+        choices=("disconnected", "continuous"),
+        default=FIG4A_PLANT_INTEGRATION,
+        help=(
+            "disconnected = cold 2 s from episode ICs (bit-identical repeats); "
+            "continuous = sequential stitched idbs (Alg. 1; default)"
+        ),
     )
     parser.add_argument(
         "--state-length",
@@ -582,6 +649,7 @@ def main() -> int:
             f"Fig 4a train — {args.episodes} ep × {STEPS_PER_EPISODE} "
             f"({expected} steps), 45 Hz, L={args.state_length}, "
             f"exploration={args.exploration}, init_bias={args.init_bias_scale}, "
+            f"jitter={args.jitter_fraction}, plant={args.plant_integration}, "
             f"critic={args.critic_action_input}",
             flush=True,
         )
@@ -595,6 +663,8 @@ def main() -> int:
         env, plant_cfg = _make_env(
             seed=args.seed,
             state_length=args.state_length,
+            jitter_fraction=args.jitter_fraction,
+            plant_integration_mode=args.plant_integration,
         )
         t0 = time.time()
         trainer: DDPGTrainer | None = None
@@ -612,6 +682,8 @@ def main() -> int:
                 logit_noise_std=args.logit_noise_std,
                 entropy_coeff=args.entropy_coeff,
                 critic_action_input=args.critic_action_input,
+                critic_warmup_steps=args.critic_warmup_steps,
+                actor_lr=args.actor_lr,
                 resume_path=args.resume,
                 start_episode=args.start_episode,
                 checkpoint_path=args.checkpoint,
@@ -662,11 +734,15 @@ def main() -> int:
             "plant_dt_ms": plant_cfg.dt_ms,
             "exploration_mode": args.exploration,
             "init_bias_scale": args.init_bias_scale,
+            "jitter_fraction": args.jitter_fraction,
             "temperature_start": args.temperature_start,
             "temperature_end": args.temperature_end,
             "logit_noise_std": args.logit_noise_std,
             "entropy_coeff": args.entropy_coeff,
+            "critic_warmup_steps": args.critic_warmup_steps,
+            "actor_lr": args.actor_lr,
             "critic_action_input": args.critic_action_input,
+            "plant_integration_mode": args.plant_integration,
             "elapsed_s": elapsed,
             "beta_norm_trace": beta_trace,
             "actions": actions,
@@ -683,10 +759,12 @@ def main() -> int:
         print(f"wrote {versioned_series}", flush=True)
         print(
             f"gates: trend_down={summary['trend_down']} "
+            f"ep0={summary['paper_gate_metrics'].get('ep0_mean', float('nan')):.3f} "
             f"early={summary['early_mean_0_130']:.3f} "
             f"late={summary['late_mean_150_end']:.3f} "
             f"unique_actions={train_meta['unique_actions']} "
             f"dominant={train_meta['dominant_action']} "
+            f"gates_pass={summary['gates_pass']} "
             f"({elapsed:.0f}s)",
             flush=True,
         )
@@ -708,11 +786,17 @@ def main() -> int:
         "plant_dt_ms": cache.get("plant_dt_ms", PAPER_DT_MS),
         "exploration_mode": cache.get("exploration_mode", "greedy"),
         "init_bias_scale": cache.get("init_bias_scale"),
+        "jitter_fraction": cache.get("jitter_fraction"),
         "temperature_start": cache.get("temperature_start"),
         "temperature_end": cache.get("temperature_end"),
         "logit_noise_std": cache.get("logit_noise_std"),
         "entropy_coeff": cache.get("entropy_coeff", 0.01),
+        "critic_warmup_steps": cache.get("critic_warmup_steps", 100),
+        "actor_lr": cache.get("actor_lr", 5e-4),
         "critic_action_input": cache.get("critic_action_input", "logits"),
+        "plant_integration_mode": cache.get(
+            "plant_integration_mode", FIG4A_PLANT_INTEGRATION
+        ),
         "elapsed_s": cache.get("elapsed_s"),
         "png_version": png_version,
         "summary": summary,
