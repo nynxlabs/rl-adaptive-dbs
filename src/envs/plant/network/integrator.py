@@ -379,6 +379,131 @@ def initialize_network_state(
 
 
 DEFAULT_GPI_SPIKE_BUFFER = 512
+# Duration-scaled Numba GPi/TH/cor spike cap. 2 s stays at 512; longer single-shot
+# integrates (Fig 2a 14 s) overflow 512 and silently drop spikes. Sequential 2 s
+# carry does not need this. Headroom is PD GPi-ish; Fig 2a still passes its own
+# 60 Hz helper.
+GPI_SPIKE_BUFFER_HEADROOM_HZ = 80.0
+GPI_SPIKE_BUFFER_MARGIN = 64
+# Intracellular Ca floor (mM). STN Nernst uses log(Cao/Ca); GPe/GPi IAHP uses
+# Ca/(Ca+k1). MATLAB has no floor; 2 s segments stay positive. Sequential
+# 2 s carry across an episode (~20 s+ of Ca accumulation) can hit 0 and
+# ZeroDivisionError in Numba.
+INTRACELL_CA_MIN = 1e-8
+
+# Membrane / gate / synapse / conv-delay arrays mutated in-place by the Numba
+# loop. Carried across sequential 2 s segments in plant_integration_mode=continuous.
+# GPi/TH/cor *recording* buffers are not carried — P_β is per RL step.
+_DYN_KEYS = (
+    "vth",
+    "vsn",
+    "vge",
+    "vgi_curr",
+    "vstr_indr",
+    "vstr_dr",
+    "ve",
+    "vi",
+    "ue",
+    "ui",
+    "H1",
+    "R1",
+    "N2",
+    "H2",
+    "M2",
+    "A2",
+    "B2",
+    "C2",
+    "D2",
+    "D1",
+    "P2",
+    "Q2",
+    "R2",
+    "CAsn2",
+    "N3",
+    "H3",
+    "R3",
+    "ca3_state",
+    "N4",
+    "H4",
+    "R4",
+    "ca4_state",
+    "m5",
+    "h5",
+    "n5",
+    "p5",
+    "m6",
+    "h6",
+    "n6",
+    "p6",
+    "S2a",
+    "S21a",
+    "S2b",
+    "S2an",
+    "S21an",
+    "S3a",
+    "S31a",
+    "S3b",
+    "S31b",
+    "S32b",
+    "S3c",
+    "S31c",
+    "S32c",
+    "S4",
+    "S5",
+    "S51",
+    "S52",
+    "S53",
+    "S54",
+    "S55",
+    "S56",
+    "S57",
+    "S58",
+    "S59",
+    "S9",
+    "S6a",
+    "S6b",
+    "S6bn",
+    "S61b",
+    "S61bn",
+    "S91",
+    "S92",
+    "S93",
+    "S94",
+    "S95",
+    "S96",
+    "S97",
+    "S98",
+    "S99",
+    "S7",
+    "S8",
+    "S1a",
+    "S1b",
+    "S1c",
+    "Z1a",
+    "Z1b",
+    "spike_idx",
+    "spike_n",
+)
+
+
+def _apply_dyn_state(
+    dyn_state: Mapping[str, np.ndarray], arrays: Mapping[str, np.ndarray]
+) -> None:
+    for key in _DYN_KEYS:
+        if key not in dyn_state:
+            msg = f"plant dyn carry missing {key!r}"
+            raise KeyError(msg)
+        np.copyto(arrays[key], dyn_state[key])
+
+
+def _pack_dyn_state(arrays: Mapping[str, np.ndarray]) -> dict[str, np.ndarray]:
+    return {key: arrays[key].copy() for key in _DYN_KEYS}
+
+
+def default_gpi_spike_buffer_size(duration_s: float) -> int:
+    """Per-neuron spike buffer for a ``duration_s`` integrate (Numba path)."""
+    needed = int(np.ceil(float(duration_s) * GPI_SPIKE_BUFFER_HEADROOM_HZ))
+    return max(DEFAULT_GPI_SPIKE_BUFFER, needed + GPI_SPIKE_BUFFER_MARGIN)
 
 
 def integrate_network(
@@ -398,6 +523,8 @@ def integrate_network(
     th_spike_buffer_size: int | None = None,
     record_cor_spikes: bool = False,
     cor_spike_buffer_size: int | None = None,
+    dyn_state: Mapping[str, np.ndarray] | None = None,
+    save_dyn: bool = False,
 ) -> IntegrateResult:
     """Advance the CBGT network for one segment (``CTX_BG_TH_network`` port)."""
 
@@ -684,6 +811,10 @@ def integrate_network(
         and not return_traces
         and trace_vgi is None
     )
+    if (dyn_state is not None or save_dyn) and not use_numba:
+        msg = "plant dyn carry requires the Numba loop"
+        raise RuntimeError(msg)
+    dyn_out: dict[str, np.ndarray] | None = None
     numba_gpi_buf: np.ndarray | None = None
     numba_gpi_counts: np.ndarray | None = None
     numba_th_buf: np.ndarray | None = None
@@ -691,18 +822,19 @@ def integrate_network(
     numba_cor_buf: np.ndarray | None = None
     numba_cor_counts: np.ndarray | None = None
 
+    auto_buf = default_gpi_spike_buffer_size(duration_s)
     gpi_buf_len = (
-        DEFAULT_GPI_SPIKE_BUFFER
+        auto_buf
         if gpi_spike_buffer_size is None
         else max(DEFAULT_GPI_SPIKE_BUFFER, int(gpi_spike_buffer_size))
     )
     th_buf_len = (
-        DEFAULT_GPI_SPIKE_BUFFER
+        auto_buf
         if th_spike_buffer_size is None
         else max(DEFAULT_GPI_SPIKE_BUFFER, int(th_spike_buffer_size))
     )
     cor_buf_len = (
-        DEFAULT_GPI_SPIKE_BUFFER
+        auto_buf
         if cor_spike_buffer_size is None
         else max(DEFAULT_GPI_SPIKE_BUFFER, int(cor_spike_buffer_size))
     )
@@ -726,6 +858,10 @@ def integrate_network(
             numba_cor_counts = np.zeros(1, dtype=np.int32)
         ca3_state = np.full(n, float(CA3), dtype=np.float64)
         ca4_state = np.full(n, float(CA4), dtype=np.float64)
+        loc = locals()
+        dyn_arrays = {k: loc[k] for k in _DYN_KEYS}
+        if dyn_state is not None:
+            _apply_dyn_state(dyn_state, dyn_arrays)
         run_cbgt_loop(
             n_steps,
             dt,
@@ -883,6 +1019,8 @@ def integrate_network(
             iappgpe,
             uce_scale,
         )
+        if save_dyn:
+            dyn_out = _pack_dyn_state(dyn_arrays)
 
     # --- Main Euler loop: Python step=1..n_steps-1 ↔ MATLAB i=2:length(t) ---
     if not use_numba:
@@ -999,7 +1137,7 @@ def integrate_network(
             tp2 = g.stn_taup(V2)
             tq2 = g.stn_tauq(V2)
 
-            ecasn = _CON * np.log(_CAO / CAsn2)
+            ecasn = _CON * np.log(_CAO / np.maximum(CAsn2, INTRACELL_CA_MIN))
 
             # --- Thalamic currents ---
             il1 = _GL[0] * (V1 - _EL[0])
@@ -1026,7 +1164,8 @@ def integrate_network(
             ina3 = _GNA[2] * (m3**3) * H3 * (V3 - _ENA[2])
             it3 = _GT[2] * (a3**3) * R3 * (V3 - _ECA[2])
             ica3 = _GCA[2] * (s3**2) * (V3 - _ECA[2])
-            iahp3 = _GAHP[2] * (V3 - _EK[2]) * (CA3 / (CA3 + _K1[2]))
+            ca3 = np.maximum(CA3, INTRACELL_CA_MIN)
+            iahp3 = _GAHP[2] * (V3 - _EK[2]) * (ca3 / (ca3 + _K1[2]))
             isngeampa = gsngea * ((V3 - _ESYN[1]) * (S2a + S21a))
             isngenmda = gsngen * ((V3 - _ESYN[1]) * (S2an + S21an))
             igege = (0.25 * (pd * 3 + 1)) * ggege * ((V3 - _ESYN[2]) * (S31c + S32c))
@@ -1069,7 +1208,8 @@ def integrate_network(
             ina4 = _GNA[2] * (m4**3) * H4 * (V4 - _ENA[2])
             it4 = _GT[2] * (a4**3) * R4 * (V4 - _ECA[2])
             ica4 = _GCA[2] * (s4**2) * (V4 - _ECA[2])
-            iahp4 = _GAHP[2] * (V4 - _EK[2]) * (CA4 / (CA4 + _K1[2]))
+            ca4 = np.maximum(CA4, INTRACELL_CA_MIN)
+            iahp4 = _GAHP[2] * (V4 - _EK[2]) * (ca4 / (ca4 + _K1[2]))
             isngi = gsngi * ((V4 - _ESYN[3]) * (S2b + S21b))
             igigi = _GGIGI * ((V4 - _ESYN[4]) * (S31b + S32b))
             istrgpi = _GSTRGPI * (V4 - _ESYN[5]) * (
@@ -1145,7 +1285,10 @@ def integrate_network(
             P2 = P2 + dt * ((p2 - P2) / tp2)
             Q2 = Q2 + dt * ((q2 - Q2) / tq2)
             R2 = R2 + dt * ((r2 - R2) / _STN_TR2)
-            CAsn2 = CAsn2 + dt * ((-_ALP * (il2_stn + it2)) - (_KCA_STN * CAsn2))
+            CAsn2 = np.maximum(
+                CAsn2 + dt * ((-_ALP * (il2_stn + it2)) - (_KCA_STN * CAsn2)),
+                INTRACELL_CA_MIN,
+            )
 
             S2a, S2an, S2b = _spike_convolver_step(
                 conv_stn,
@@ -1166,7 +1309,10 @@ def integrate_network(
             N3 = N3 + dt * (0.1 * (n3 - N3) / tn3)
             H3 = H3 + dt * (0.05 * (h3 - H3) / th3)
             R3 = R3 + dt * (1.0 * (r3 - R3) / _GPE_TR)
-            CA3 = CA3 + dt * (1e-4 * (-ica3 - it3 - _KCA[2] * CA3))
+            CA3 = np.maximum(
+                CA3 + dt * (1e-4 * (-ica3 - it3 - _KCA[2] * CA3)),
+                INTRACELL_CA_MIN,
+            )
 
             S3a, S3b, S3c = _spike_convolver_step(
                 conv_gpe,
@@ -1196,7 +1342,10 @@ def integrate_network(
             N4 = N4 + dt * (0.1 * (n4 - N4) / tn4)
             H4 = H4 + dt * (0.05 * (h4 - H4) / th4)
             R4 = R4 + dt * (1.0 * (r4 - R4) / _GPE_TR)
-            CA4 = CA4 + dt * (1e-4 * (-ica4 - it4 - _KCA[2] * CA4))
+            CA4 = np.maximum(
+                CA4 + dt * (1e-4 * (-ica4 - it4 - _KCA[2] * CA4)),
+                INTRACELL_CA_MIN,
+            )
 
             (S4,) = _spike_convolver_step(
                 conv_gpi,
@@ -1363,6 +1512,11 @@ def integrate_network(
         info["cor_spikes"] = cor_spikes
     if p_beta_val is not None:
         info["p_beta"] = p_beta_val
+    if save_dyn:
+        if dyn_out is None:
+            msg = "save_dyn=True but Numba loop did not pack dyn state"
+            raise RuntimeError(msg)
+        info["_dyn_state"] = dyn_out
     if debug_snapshots:
         info["debug_snapshots"] = debug_snapshots
 

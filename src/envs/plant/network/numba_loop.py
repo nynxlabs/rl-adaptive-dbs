@@ -22,6 +22,47 @@ except ImportError:  # pragma: no cover
         return decorator if not args else decorator(args[0])
 
 
+@njit(cache=True)
+def _vtrap_1mexp(x: float, k: float) -> float:
+    """x / (1 - exp(-x/k)); limit k as x -> 0."""
+    if (not np.isfinite(x)) or abs(x) < 1e-4 * abs(k):
+        return k
+    den = 1.0 - np.exp(-x / k)
+    if den == 0.0 or (not np.isfinite(den)):
+        return k
+    return x / den
+
+
+@njit(cache=True)
+def _vtrap_expm1(x: float, k: float) -> float:
+    """x / (exp(x/k) - 1); limit k as x -> 0."""
+    if (not np.isfinite(x)) or abs(x) < 1e-4 * abs(k):
+        return k
+    den = np.exp(x / k) - 1.0
+    if den == 0.0 or (not np.isfinite(den)):
+        return k
+    return x / den
+
+
+@njit(cache=True)
+def _vtrap_1mexp_pos(x: float, k: float) -> float:
+    """x / (1 - exp(x/k)); limit -k as x -> 0."""
+    if (not np.isfinite(x)) or abs(x) < 1e-4 * abs(k):
+        return -k
+    den = 1.0 - np.exp(x / k)
+    if den == 0.0 or (not np.isfinite(den)):
+        return -k
+    return x / den
+
+
+@njit(cache=True)
+def _tau_floor(tau: float) -> float:
+    """Keep HH time constants off 0/inf so gate updates cannot 0/0."""
+    if (not np.isfinite(tau)) or tau < 1e-12:
+        return 1e-12
+    return tau
+
+
 MAX_SPIKE_SLOTS = 512
 N_CONV = 7
 CONV_TH = 0
@@ -113,7 +154,9 @@ def _conv_eval_all(
         total = 0.0
         cnt = spike_n[conv_idx, j]
         for k in range(cnt):
-            total += syn_func[spike_idx[conv_idx, j, k] - 1]
+            idx = spike_idx[conv_idx, j, k]
+            if 1 <= idx <= syn_func.size:
+                total += syn_func[idx - 1]
         out[j] = total
 
 
@@ -412,6 +455,7 @@ def run_cbgt_loop(
     _ALP = 1.0 / (2.0 * 96485.0)
     _CON = (8314.0 * 298.0) / (2.0 * 96485.0)
     _CAO = 2000.0
+    _CA_MIN = 1e-8
     _ESYN0 = -85.0
     _ESYN1 = 0.0
     _ESYN2 = -85.0
@@ -511,8 +555,11 @@ def run_cbgt_loop(
             r1_i = 1.0 / (1.0 + np.exp((V1 + 84.0) / 4.0))
             ah_i = 0.128 * np.exp(-(V1 + 46.0) / 18.0)
             bh_i = 4.0 / (1.0 + np.exp(-(V1 + 23.0) / 5.0))
-            th1_i = 1.0 / (ah_i + bh_i)
-            tr1_i = 0.15 * (28.0 + np.exp(-(V1 + 25.0) / 10.5))
+            den_th1 = ah_i + bh_i
+            if den_th1 < 1e-12:
+                den_th1 = 1e-12
+            th1_i = _tau_floor(1.0 / den_th1)
+            tr1_i = _tau_floor(0.15 * (28.0 + np.exp(-(V1 + 25.0) / 10.5)))
             il1 = _GL0 * (V1 - _EL0)
             ina1 = _GNA0 * (m1_i**3) * H1[i] * (V1 - _ENA0)
             ik1 = _GK0 * ((0.75 * (1.0 - H1[i])) ** 4) * (V1 - _EK0)
@@ -553,16 +600,40 @@ def run_cbgt_loop(
                 r2_i = 1.0 / (1.0 + np.exp(-x_r2))
             else:
                 r2_i = np.exp(x_r2) / (1.0 + np.exp(x_r2))
-            tn2_i = 11.0 / (np.exp(-(V2 + 40.0) / -40.0) + np.exp(-(V2 + 40.0) / 50.0))
-            tm2_i = 0.2 + 3.0 / (1.0 + np.exp(-(V2 + 53.0) / -0.7))
-            th2_i = 24.5 / (np.exp(-(V2 + 50.0) / -15.0) + np.exp(-(V2 + 50.0) / 16.0))
-            ta2_i = 1.0 + 1.0 / (1.0 + np.exp(-(V2 + 40.0) / -0.5))
-            tb2_i = 200.0 / (np.exp(-(V2 + 60.0) / -30.0) + np.exp(-(V2 + 40.0) / 10.0))
-            tc2_i = 45.0 + 10.0 / (np.exp(-(V2 + 27.0) / -20.0) + np.exp(-(V2 + 50.0) / 15.0))
-            td1_i = 400.0 + 500.0 / (np.exp(-(V2 + 40.0) / -15.0) + np.exp(-(V2 + 20.0) / 20.0))
-            tp2_i = 5.0 + 0.33 / (np.exp(-(V2 + 27.0) / -10.0) + np.exp(-(V2 + 102.0) / 15.0))
-            tq2_i = 400.0 / (np.exp(-(V2 + 50.0) / -15.0) + np.exp(-(V2 + 50.0) / 16.0))
-            ecasn_i = _CON * np.log(_CAO / CAsn2[i])
+            tn2_den = np.exp(-(V2 + 40.0) / -40.0) + np.exp(-(V2 + 40.0) / 50.0)
+            if tn2_den < 1e-12:
+                tn2_den = 1e-12
+            tn2_i = _tau_floor(11.0 / tn2_den)
+            tm2_i = _tau_floor(0.2 + 3.0 / (1.0 + np.exp(-(V2 + 53.0) / -0.7)))
+            th2_den = np.exp(-(V2 + 50.0) / -15.0) + np.exp(-(V2 + 50.0) / 16.0)
+            if th2_den < 1e-12:
+                th2_den = 1e-12
+            th2_i = _tau_floor(24.5 / th2_den)
+            ta2_i = _tau_floor(1.0 + 1.0 / (1.0 + np.exp(-(V2 + 40.0) / -0.5)))
+            tb2_den = np.exp(-(V2 + 60.0) / -30.0) + np.exp(-(V2 + 40.0) / 10.0)
+            if tb2_den < 1e-12:
+                tb2_den = 1e-12
+            tb2_i = _tau_floor(200.0 / tb2_den)
+            tc2_den = np.exp(-(V2 + 27.0) / -20.0) + np.exp(-(V2 + 50.0) / 15.0)
+            if tc2_den < 1e-12:
+                tc2_den = 1e-12
+            tc2_i = _tau_floor(45.0 + 10.0 / tc2_den)
+            td1_den = np.exp(-(V2 + 40.0) / -15.0) + np.exp(-(V2 + 20.0) / 20.0)
+            if td1_den < 1e-12:
+                td1_den = 1e-12
+            td1_i = _tau_floor(400.0 + 500.0 / td1_den)
+            tp2_den = np.exp(-(V2 + 27.0) / -10.0) + np.exp(-(V2 + 102.0) / 15.0)
+            if tp2_den < 1e-12:
+                tp2_den = 1e-12
+            tp2_i = _tau_floor(5.0 + 0.33 / tp2_den)
+            tq2_den = np.exp(-(V2 + 50.0) / -15.0) + np.exp(-(V2 + 50.0) / 16.0)
+            if tq2_den < 1e-12:
+                tq2_den = 1e-12
+            tq2_i = _tau_floor(400.0 / tq2_den)
+            casn_i = CAsn2[i]
+            if casn_i < _CA_MIN:
+                casn_i = _CA_MIN
+            ecasn_i = _CON * np.log(_CAO / casn_i)
             ina2 = _GNA1 * (M2[i] ** 3) * H2[i] * (V2 - _ENA1)
             ik2 = _GK1 * (N2[i] ** 4) * (V2 - _EK1)
             ia2 = _GA * (A2[i] ** 2) * B2[i] * (V2 - _EK1)
@@ -586,6 +657,8 @@ def run_cbgt_loop(
             Q2[i] = Q2[i] + dt * ((q2_i - Q2[i]) / tq2_i)
             R2[i] = R2[i] + dt * ((r2_i - R2[i]) / _STN_TR2)
             CAsn2[i] = CAsn2[i] + dt * ((-_ALP * (il2_stn + it2)) - (_KCA_STN * CAsn2[i]))
+            if CAsn2[i] < _CA_MIN:
+                CAsn2[i] = _CA_MIN
         _conv_record_crossings(CONV_STN, spike_idx, spike_n, v2_prev, vsn, SPIKE_SYN_THRESHOLD)
         _conv_eval_all(spike_idx, spike_n, CONV_STN, syn_stn_gpea, S2a)
         _conv_eval_all(spike_idx, spike_n, CONV_STN, syn_stn_gpen, S2an)
@@ -601,14 +674,17 @@ def run_cbgt_loop(
             a3_i = 1.0 / (1.0 + np.exp(-(V3 + 57.0) / 2.0))
             s3_i = 1.0 / (1.0 + np.exp(-(V3 + 35.0) / 2.0))
             r3_i = 1.0 / (1.0 + np.exp((V3 + 70.0) / 2.0))
-            tn3_i = 0.05 + 0.27 / (1.0 + np.exp(-(V3 + 40.0) / -12.0))
-            th3_i = 0.05 + 0.27 / (1.0 + np.exp(-(V3 + 40.0) / -12.0))
+            tn3_i = _tau_floor(0.05 + 0.27 / (1.0 + np.exp(-(V3 + 40.0) / -12.0)))
+            th3_i = _tau_floor(0.05 + 0.27 / (1.0 + np.exp(-(V3 + 40.0) / -12.0)))
             il3 = _GL2 * (V3 - _EL2)
             ik3 = _GK2 * (N3[i] ** 4) * (V3 - _EK2)
             ina3 = _GNA2 * (m3_i**3) * H3[i] * (V3 - _ENA2)
             it3 = _GT2 * (a3_i**3) * R3[i] * (V3 - _ECA2)
             ica3 = _GCA2 * (s3_i**2) * (V3 - _ECA2)
-            iahp3 = _GAHP2 * (V3 - _EK2) * (CA3[i] / (CA3[i] + _K1_GPE))
+            ca3_i = CA3[i]
+            if ca3_i < _CA_MIN:
+                ca3_i = _CA_MIN
+            iahp3 = _GAHP2 * (V3 - _EK2) * (ca3_i / (ca3_i + _K1_GPE))
             isngeampa = gsngea[i] * ((V3 - _ESYN1) * (S2a_old[i] + S21a_w[i]))
             isngenmda = gsngen[i] * ((V3 - _ESYN1) * (S2an_old[i] + S21an_w[i]))
             igege = (0.25 * (pd * 3 + 1)) * ggege[i] * ((V3 - _ESYN2) * (S31c_w[i] + S32c_w[i]))
@@ -618,6 +694,8 @@ def run_cbgt_loop(
             H3[i] = H3[i] + dt * (0.05 * (h3_i - H3[i]) / th3_i)
             R3[i] = R3[i] + dt * (1.0 * (r3_i - R3[i]) / _GPE_TR)
             CA3[i] = CA3[i] + dt * (1e-4 * (-ica3 - it3 - _KCA2 * CA3[i]))
+            if CA3[i] < _CA_MIN:
+                CA3[i] = _CA_MIN
         _conv_record_crossings(CONV_GPE, spike_idx, spike_n, v3_prev, vge, SPIKE_SYN_THRESHOLD)
         _conv_eval_all(spike_idx, spike_n, CONV_GPE, syn_gpe_stn, S3a)
         _conv_eval_all(spike_idx, spike_n, CONV_GPE, syn_gpe_gpi, S3b)
@@ -633,14 +711,17 @@ def run_cbgt_loop(
             a4_i = 1.0 / (1.0 + np.exp(-(V4 + 57.0) / 2.0))
             s4_i = 1.0 / (1.0 + np.exp(-(V4 + 35.0) / 2.0))
             r4_i = 1.0 / (1.0 + np.exp((V4 + 70.0) / 2.0))
-            tn4_i = 0.05 + 0.27 / (1.0 + np.exp(-(V4 + 40.0) / -12.0))
-            th4_i = 0.05 + 0.27 / (1.0 + np.exp(-(V4 + 40.0) / -12.0))
+            tn4_i = _tau_floor(0.05 + 0.27 / (1.0 + np.exp(-(V4 + 40.0) / -12.0)))
+            th4_i = _tau_floor(0.05 + 0.27 / (1.0 + np.exp(-(V4 + 40.0) / -12.0)))
             il4 = _GL2 * (V4 - _EL2)
             ik4 = _GK2 * (N4[i] ** 4) * (V4 - _EK2)
             ina4 = _GNA2 * (m4_i**3) * H4[i] * (V4 - _ENA2)
             it4 = _GT2 * (a4_i**3) * R4[i] * (V4 - _ECA2)
             ica4 = _GCA2 * (s4_i**2) * (V4 - _ECA2)
-            iahp4 = _GAHP2 * (V4 - _EK2) * (CA4[i] / (CA4[i] + _K1_GPE))
+            ca4_i = CA4[i]
+            if ca4_i < _CA_MIN:
+                ca4_i = _CA_MIN
+            iahp4 = _GAHP2 * (V4 - _EK2) * (ca4_i / (ca4_i + _K1_GPE))
             isngi = gsngi[i] * ((V4 - _ESYN3) * (S2b_old[i] + S21b_w[i]))
             igigi = _GGIGI * ((V4 - _ESYN4) * (S31b_w[i] + S32b_w[i]))
             istrgpi = _GSTRGPI * (V4 - _ESYN5) * (S9[i] + S91_w[i] + S92_w[i] + S93_w[i] + S94_w[i] + S95_w[i] + S96_w[i] + S97_w[i] + S98_w[i] + S99_w[i])
@@ -654,6 +735,8 @@ def run_cbgt_loop(
             H4[i] = H4[i] + dt * (0.05 * (h4_i - H4[i]) / th4_i)
             R4[i] = R4[i] + dt * (1.0 * (r4_i - R4[i]) / _GPE_TR)
             CA4[i] = CA4[i] + dt * (1e-4 * (-ica4 - it4 - _KCA2 * CA4[i]))
+            if CA4[i] < _CA_MIN:
+                CA4[i] = _CA_MIN
         _conv_record_crossings(CONV_GPI, spike_idx, spike_n, v4_prev, vgi_curr, SPIKE_SYN_THRESHOLD)
         _conv_eval_all(spike_idx, spike_n, CONV_GPI, syn_gpi_th, S4)
         _conv_step_one(spike_idx, spike_n, max_index, CONV_GPI, n)
@@ -668,12 +751,12 @@ def run_cbgt_loop(
             igaba5 = (_GGABA / 4.0) * (V5 - _ESYN6) * (S11cr_w[i] + S12cr_w[i] + S13cr_w[i] + S14cr_w[i])
             icorstr5 = _GCORINDRSTR * (V5 - _ESYN1) * S6a[i]
             vstr_indr[i] = V5 + (dt / _CM) * (-ina5 - ik5 - il5 - im5 - igaba5 - icorstr5)
-            am5 = (0.32 * (54.0 + V5)) / (1.0 - np.exp((-54.0 - V5) / 4.0))
-            bm5 = 0.28 * (V5 + 27.0) / (np.exp((27.0 + V5) / 5.0) - 1.0)
-            an5 = (0.032 * (52.0 + V5)) / (1.0 - np.exp((-52.0 - V5) / 5.0))
+            am5 = 0.32 * _vtrap_1mexp(54.0 + V5, 4.0)
+            bm5 = 0.28 * _vtrap_expm1(V5 + 27.0, 5.0)
+            an5 = 0.032 * _vtrap_1mexp(52.0 + V5, 5.0)
             bn5 = 0.5 * np.exp((-57.0 - V5) / 40.0)
-            ap5 = (3.209e-4 * (30.0 + V5)) / (1.0 - np.exp((-30.0 - V5) / 9.0))
-            bp5 = (-3.209e-4 * (30.0 + V5)) / (1.0 - np.exp((30.0 + V5) / 9.0))
+            ap5 = 3.209e-4 * _vtrap_1mexp(30.0 + V5, 9.0)
+            bp5 = -3.209e-4 * _vtrap_1mexp_pos(30.0 + V5, 9.0)
             ah5 = 0.128 * np.exp((-50.0 - V5) / 18.0)
             bh5 = 4.0 / (1.0 + np.exp((-27.0 - V5) / 5.0))
             m5[i] = m5[i] + dt * (am5 * (1.0 - m5[i]) - bm5 * m5[i])
@@ -696,12 +779,12 @@ def run_cbgt_loop(
             igaba6 = (_GGABA / 3.0) * (V6 - _ESYN6) * (S81r_w[i] + S82r_w[i] + S83r_w[i])
             icorstr6 = gcordrstr[i] * (V6 - _ESYN1) * S6a[i]
             vstr_dr[i] = V6 + (dt / _CM) * (-ina6 - ik6 - il6 - im6 - igaba6 - icorstr6)
-            am6 = (0.32 * (54.0 + V6)) / (1.0 - np.exp((-54.0 - V6) / 4.0))
-            bm6 = 0.28 * (V6 + 27.0) / (np.exp((27.0 + V6) / 5.0) - 1.0)
-            an6 = (0.032 * (52.0 + V6)) / (1.0 - np.exp((-52.0 - V6) / 5.0))
+            am6 = 0.32 * _vtrap_1mexp(54.0 + V6, 4.0)
+            bm6 = 0.28 * _vtrap_expm1(V6 + 27.0, 5.0)
+            an6 = 0.032 * _vtrap_1mexp(52.0 + V6, 5.0)
             bn6 = 0.5 * np.exp((-57.0 - V6) / 40.0)
-            ap6 = (3.209e-4 * (30.0 + V6)) / (1.0 - np.exp((-30.0 - V6) / 9.0))
-            bp6 = (-3.209e-4 * (30.0 + V6)) / (1.0 - np.exp((30.0 + V6) / 9.0))
+            ap6 = 3.209e-4 * _vtrap_1mexp(30.0 + V6, 9.0)
+            bp6 = -3.209e-4 * _vtrap_1mexp_pos(30.0 + V6, 9.0)
             ah6 = 0.128 * np.exp((-50.0 - V6) / 18.0)
             bh6 = 4.0 / (1.0 + np.exp((-27.0 - V6) / 5.0))
             m6[i] = m6[i] + dt * (am6 * (1.0 - m6[i]) - bm6 * m6[i])

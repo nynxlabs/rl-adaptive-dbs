@@ -194,7 +194,7 @@ def evaluate_2b() -> PanelGateStatus:
 
 
 def evaluate_4a() -> PanelGateStatus:
-    series_path = ARTIFACT_ROOT / "4a" / "series_v18.json"
+    series_path = ARTIFACT_ROOT / "4a" / "series.json"
     trace = _load_json(series_path)["beta_norm_trace"]
     dig = fig4a_gates(trace)
     rows = (
@@ -203,6 +203,7 @@ def evaluate_4a() -> PanelGateStatus:
         GateRow("drop_vs_paper", "drop ≥ 70% of digitized paper drop"),
         GateRow("late_early_ratio_near_paper", "late/early ratio vs digitization"),
         GateRow("mid_fade_vs_paper", "mid [120,150] fade ≥ 50% of paper mid-drop"),
+        GateRow("ep0_near_paper", "steps 0–29 mean within 10% of digitized paper ep0"),
     )
     return PanelGateStatus(
         panel="4a",
@@ -210,7 +211,7 @@ def evaluate_4a() -> PanelGateStatus:
         overall=bool(dig["pass"]),
         gates=dict(dig["gates"]),
         source=str(series_path),
-        header="`fig4a_gates` → locked `series_v18.json`",
+        header="`fig4a_gates` → live `series.json` (digitization revisit; was locked `series_v18.json`)",
         rows=rows,
     )
 
@@ -234,6 +235,10 @@ def evaluate_4b() -> PanelGateStatus:
         GateRow("beta_drops", "late episode-mean PSD < early"),
         GateRow("beta_drop_ratio_near_paper", "PSD late/early ratio vs digitization"),
         GateRow("reward_recovers_like_paper", "qualitative rise (not magnitude match)"),
+        GateRow("late_beta_above_threshold", "late episode-mean PSD ≥ β_t=0.35"),
+        GateRow("late_beta_near_paper", "late PSD within 15% of digitized paper"),
+        GateRow("late_reward_near_zero", "late mean reward in (−10, 2] (paper ~−2)"),
+        GateRow("ep0_beta_near_paper", "episode 0 PSD within 10% of digitized paper"),
         GateRow("plot_style", "≥ 2 episodes plotted"),
         GateRow("automation", "manifest summary.automation_pass mirrors fig4b bundle"),
     )
