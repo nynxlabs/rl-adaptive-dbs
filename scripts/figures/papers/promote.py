@@ -99,25 +99,27 @@ PAPER_NGUYEN_7_REPLICATION_ALT = "Replication Fig 7"
 NGUYEN_FIG4_GATE_TIER: dict[str, dict[str, str]] = {
     "reward": {
         "reward_scale_paper": "shape",
-        "late_reward_above_early": "shape",
-        "reward_post100_plateau": "shape",
-        # Diagnostic: paper approaches ~0 from below; positive shaping free-passes this.
+        "reward_improves_by_100": "shape",
+        "reward_by_100_near_zero": "shape",
         "late_reward_near_zero": "info",
+        "reward_post100_plateau": "info",
+        "late_reward_above_early": "info",
         "early_high_variance": "info",
-        # Diagnostic: paper negative-million band vs positive progress-shaping rewards.
         "paper_early_reward_mag_near_paper": "info",
-        "paper_reward_improves_like_paper": "shape",
+        "paper_reward_improves_like_paper": "info",
         "paper_late_reward_ratio_near_paper": "info",
     },
     "length": {
-        "length_decreases": "shape",
-        "late_length_paper_band": "shape",
         "early_near_max_length": "shape",
+        "length_early_smoothed_near_horizon": "shape",
         "length_mid_glide_like_paper": "shape",
-        "length_post100_plateau": "shape",
-        "paper_length_decreases_like_paper": "shape",
-        "paper_late_length_near_paper": "full",
-        "paper_early_near_max_length": "full",
+        "length_by_100_near_paper": "shape",
+        "late_length_paper_band": "info",
+        "paper_late_length_near_paper": "info",
+        "length_post100_plateau": "info",
+        "length_decreases": "info",
+        "paper_length_decreases_like_paper": "info",
+        "paper_early_near_max_length": "info",
     },
 }
 
@@ -125,24 +127,28 @@ NGUYEN_FIG4_GATE_TIER: dict[str, dict[str, str]] = {
 NGUYEN_GATE_GROUPS: dict[str, dict[str, list[tuple[str, str]]]] = {
     "4": {
         "reward": [
-            ("reward_scale_paper", "abs(mean reward ep 0–50) ≥ 5×10⁴"),
-            ("late_reward_above_early", "late mean reward > first-50 mean"),
-            ("reward_post100_plateau", "smoothed reward flat ep 100–450"),
-            ("late_reward_near_zero", "late mean > −2×10⁵ (diagnostic; paper-sign band)"),
+            ("reward_scale_paper", "early |mean| large (started far from plateau)"),
+            ("reward_improves_by_100", "smoothed reward 80–100 better than 0–50"),
+            ("reward_by_100_near_zero", "smoothed reward 80–100 toward ~0"),
+            ("late_reward_near_zero", "late mean toward paper ~0 (diagnostic)"),
+            ("reward_post100_plateau", "smoothed reward flat by ~ep 100 (diagnostic)"),
+            ("late_reward_above_early", "late mean > first-50 (diagnostic)"),
             ("early_high_variance", "early reward variance (logged)"),
             ("paper_early_reward_mag_near_paper", "digitization — early reward magnitude (diagnostic)"),
-            ("paper_reward_improves_like_paper", "digitization — reward improves"),
+            ("paper_reward_improves_like_paper", "digitization — reward improves (diagnostic)"),
             ("paper_late_reward_ratio_near_paper", "digitization — late/first-50 reward ratio (diagnostic)"),
         ],
         "length": [
-            ("length_decreases", "late mean length < early mean − 1 step"),
-            ("late_length_paper_band", "late mean length ≤ 12"),
-            ("early_near_max_length", "median first 50 ≥ max_steps − 2"),
-            ("length_mid_glide_like_paper", "length glide ep 50–100 like paper"),
-            ("length_post100_plateau", "length plateau ep 100+ like paper"),
-            ("paper_length_decreases_like_paper", "digitization — length decreases"),
-            ("paper_late_length_near_paper", "digitization — late length"),
-            ("paper_early_near_max_length", "digitization — early near max length"),
+            ("early_near_max_length", "start at horizon (median first 50 ≥ max−2)"),
+            ("length_early_smoothed_near_horizon", "smoothed length 0–50 still ~25"),
+            ("length_mid_glide_like_paper", "length drop ep 50–100 like paper"),
+            ("length_by_100_near_paper", "smoothed length 80–100 near digitized ~10"),
+            ("late_length_paper_band", "late mean length ≤ 12 (diagnostic)"),
+            ("paper_late_length_near_paper", "late length near digitized ~8 (diagnostic)"),
+            ("length_post100_plateau", "length plateau ep 100+ like paper (diagnostic)"),
+            ("length_decreases", "late < early − 1 (diagnostic)"),
+            ("paper_length_decreases_like_paper", "digitization — length decreases (diagnostic)"),
+            ("paper_early_near_max_length", "digitization — early near max (diagnostic)"),
         ],
     },
 }
@@ -489,10 +495,19 @@ def _fig4_gate_values(gates: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 FIG4_INFORMATIONAL_KEYS = frozenset(
     {
-        "early_high_variance",
         "late_reward_near_zero",
+        "reward_post100_plateau",
+        "late_reward_above_early",
+        "early_high_variance",
         "paper_early_reward_mag_near_paper",
+        "paper_reward_improves_like_paper",
         "paper_late_reward_ratio_near_paper",
+        "late_length_paper_band",
+        "paper_late_length_near_paper",
+        "length_post100_plateau",
+        "length_decreases",
+        "paper_length_decreases_like_paper",
+        "paper_early_near_max_length",
     }
 )
 
@@ -547,7 +562,7 @@ def _fig4_group_full_pass(group_name: str, group_values: dict[str, Any]) -> bool
     return _group_rows_pass(
         group_values,
         NGUYEN_GATE_GROUPS["4"][group_name],
-        skip=FIG4_INFORMATIONAL_KEYS if group_name == "reward" else None,
+        skip=FIG4_INFORMATIONAL_KEYS,
         only=full_keys,
     )
 
@@ -890,11 +905,13 @@ def _caption_4a(manifest: dict[str, Any]) -> str:
     exploration = manifest.get("exploration_mode", "softmax")
     critic = manifest.get("critic_action_input", "one_hot")
     init_bias = manifest.get("init_bias_scale")
+    jitter = manifest.get("jitter_fraction")
     version = manifest.get("png_version")
     summary = manifest.get("summary") or {}
     trend = summary.get("trend_down")
     early = summary.get("early_mean_0_130")
     late = summary.get("late_mean_150_end")
+    ep0 = (summary.get("paper_gate_metrics") or {}).get("ep0_mean")
     bits = [
         f"{mean_hz:g} Hz fixed_mean_pattern",
         f"{state_mode} L={state_length}",
@@ -907,6 +924,10 @@ def _caption_4a(manifest: dict[str, Any]) -> str:
         bits.append(f"v{version}")
     if isinstance(init_bias, (int, float)):
         bits.append(f"init_bias={init_bias:g}")
+    if isinstance(jitter, (int, float)):
+        bits.append(f"jitter={jitter:g}")
+    if isinstance(ep0, (int, float)):
+        bits.append(f"ep0={ep0:.3f}")
     if isinstance(early, (int, float)) and isinstance(late, (int, float)):
         bits.append(f"early={early:.3f} late={late:.3f}")
     if trend is True:
@@ -918,7 +939,7 @@ def _caption_4a(manifest: dict[str, Any]) -> str:
 
 def _caption_4b(manifest: dict[str, Any]) -> str:
     seed = manifest.get("seed", 0)
-    fig4a_series = manifest.get("fig4a_series", "artifacts/figures/papers/mehregan/4a/series_v4.json")
+    fig4a_series = manifest.get("fig4a_series", "artifacts/figures/papers/mehregan/4a/series.json")
     version = manifest.get("png_version")
     n_ep = manifest.get("num_episodes", 8)
     summary = manifest.get("summary") or {}

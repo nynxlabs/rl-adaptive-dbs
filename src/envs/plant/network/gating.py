@@ -127,8 +127,50 @@ def bh(V: np.ndarray) -> np.ndarray:
     return 4.0 / (1.0 + np.exp(-(V + 23.0) / 5.0))
 
 
+def _vtrap_1mexp(x: np.ndarray, k: float) -> np.ndarray:
+    """``x / (1 - exp(-x/k))``; limit ``k`` as ``x -> 0`` (HH singularity)."""
+    x = np.asarray(x, dtype=np.float64)
+    out = np.empty_like(x, dtype=np.float64)
+    thresh = 1e-4 * abs(k)
+    small = np.abs(x) < thresh
+    out[small] = k
+    xs = x[~small]
+    den = 1.0 - np.exp(-xs / k)
+    den = np.where((den == 0.0) | ~np.isfinite(den), 1.0, den)
+    out[~small] = np.where(np.isfinite(xs), xs / den, k)
+    return out
+
+
+def _vtrap_expm1(x: np.ndarray, k: float) -> np.ndarray:
+    """``x / (exp(x/k) - 1)``; limit ``k`` as ``x -> 0``."""
+    x = np.asarray(x, dtype=np.float64)
+    out = np.empty_like(x, dtype=np.float64)
+    thresh = 1e-4 * abs(k)
+    small = np.abs(x) < thresh
+    out[small] = k
+    xs = x[~small]
+    den = np.exp(xs / k) - 1.0
+    den = np.where((den == 0.0) | ~np.isfinite(den), 1.0, den)
+    out[~small] = np.where(np.isfinite(xs), xs / den, k)
+    return out
+
+
+def _vtrap_1mexp_pos(x: np.ndarray, k: float) -> np.ndarray:
+    """``x / (1 - exp(x/k))``; limit ``-k`` as ``x -> 0``."""
+    x = np.asarray(x, dtype=np.float64)
+    out = np.empty_like(x, dtype=np.float64)
+    thresh = 1e-4 * abs(k)
+    small = np.abs(x) < thresh
+    out[small] = -k
+    xs = x[~small]
+    den = 1.0 - np.exp(xs / k)
+    den = np.where((den == 0.0) | ~np.isfinite(den), 1.0, den)
+    out[~small] = np.where(np.isfinite(xs), xs / den, -k)
+    return out
+
+
 def th_tauh(V: np.ndarray) -> np.ndarray:
-    return 1.0 / (ah(V) + bh(V))
+    return 1.0 / np.maximum(ah(V) + bh(V), 1e-12)
 
 
 def th_taur(V: np.ndarray) -> np.ndarray:
@@ -140,15 +182,15 @@ def alphah(V: np.ndarray) -> np.ndarray:
 
 
 def alpham(V: np.ndarray) -> np.ndarray:
-    return (0.32 * (54.0 + V)) / (1.0 - np.exp((-54.0 - V) / 4.0))
+    return 0.32 * _vtrap_1mexp(54.0 + np.asarray(V, dtype=np.float64), 4.0)
 
 
 def alphan(V: np.ndarray) -> np.ndarray:
-    return (0.032 * (52.0 + V)) / (1.0 - np.exp((-52.0 - V) / 5.0))
+    return 0.032 * _vtrap_1mexp(52.0 + np.asarray(V, dtype=np.float64), 5.0)
 
 
 def alphap(V: np.ndarray) -> np.ndarray:
-    return (3.209e-4 * (30.0 + V)) / (1.0 - np.exp((-30.0 - V) / 9.0))
+    return 3.209e-4 * _vtrap_1mexp(30.0 + np.asarray(V, dtype=np.float64), 9.0)
 
 
 def betah(V: np.ndarray) -> np.ndarray:
@@ -160,11 +202,13 @@ def betan(V: np.ndarray) -> np.ndarray:
 
 
 def betam(V: np.ndarray) -> np.ndarray:
-    return 0.28 * (V + 27.0) / (np.exp((27.0 + V) / 5.0) - 1.0)
+    return 0.28 * _vtrap_expm1(np.asarray(V, dtype=np.float64) + 27.0, 5.0)
 
 
 def betap(V: np.ndarray) -> np.ndarray:
-    return (-3.209e-4 * (30.0 + V)) / (1.0 - np.exp((30.0 + V) / 9.0))
+    return -3.209e-4 * _vtrap_1mexp_pos(
+        30.0 + np.asarray(V, dtype=np.float64), 9.0
+    )
 
 
 def Ggaba(V: np.ndarray) -> np.ndarray:

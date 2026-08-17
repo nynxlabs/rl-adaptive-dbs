@@ -12,8 +12,8 @@ Mehregan DDPG work is validated **panel-by-panel**, not by “Phase 3 complete.�
 
 | Panel | This spec covers | Script | Status |
 |-------|------------------|--------|--------|
-| Fig 4a | Training $P_\beta$ vs step; Algorithm 1 + exploration defaults | `scripts/figures/papers/mehregan/4a/plot.py` | Pass |
-| Fig 4b | Episode reward + PSD trends | `scripts/figures/papers/mehregan/4b/plot.py` | Pass |
+| Fig 4a | Training $P_\beta$ vs step; Algorithm 1 + exploration defaults | `scripts/figures/papers/mehregan/4a/plot.py` | Digitization revisit (ep0 first; τ 3→1.4) |
+| Fig 4b | Episode reward + PSD trends | `scripts/figures/papers/mehregan/4b/plot.py` | Digitization revisit (paired live 4a series; ep0 first) |
 | Fig 5a | Post-train efficacy @ 45 Hz init | `scripts/figures/papers/mehregan/5a/plot.py` | Pass |
 | Fig 5b | Post-train efficacy @ 30 Hz init | `scripts/figures/papers/mehregan/5b/plot.py` | **Pass** (burst alphabet) |
 | Fig 6a | PTQ / QAT @ 45 Hz | `scripts/figures/papers/mehregan/6a/plot.py` | **Pass** (rep v61) |

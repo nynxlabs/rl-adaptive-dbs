@@ -59,6 +59,11 @@ class SNNConfig:
     epsilon_start: float = 1.0
     epsilon_end: float = 0.05
     epsilon_decay_steps: int = 2_500
+    # Hold ε at start for this many env steps, then linear decay (0 = no delay).
+    epsilon_decay_delay_steps: int = 0
+    # After this many env steps, dump remaining ε to epsilon_end faster (0 = off).
+    epsilon_accelerate_after_steps: int = 0
+    epsilon_accelerate_decay_steps: int = 0
 
     # Logging
     log_episodes: bool = False
@@ -69,6 +74,15 @@ class SNNConfig:
     # Per-parameter ternary delta sensitivities (open — keep params in plausible ranges)
     amplitude_sensitivity: float = 10.0  # nA/cm² per +1
     frequency_sensitivity: float = 5.0  # Hz per +1
+    # Episodes [0, N) use early Hz/step; episode N+ uses frequency_sensitivity.
+    frequency_sensitivity_early: float = 0.0
+    frequency_sensitivity_early_episodes: int = 0
+    # When > 0, linearly schedule frequency_sensitivity from this value at
+    # epsilon_start down to frequency_sensitivity at epsilon_end (Fig 4 v66).
+    frequency_sensitivity_explore: float = 0.0
+    # When explore scheduling is on, hold exploit Hz/step while ε is above this
+    # (protects ep1–~30 from lucky 80 Hz random walks; v66 FAIL at ε≈1).
+    frequency_sensitivity_explore_epsilon_max: float = 0.7
     pulse_width_sensitivity: float = 0.05  # ms per +1
 
     # Reward Eq. (7) coefficients (open)
@@ -121,6 +135,41 @@ class SNNConfig:
             return self
         return replace(self)
 
+    def frequency_sensitivity_at_epsilon(
+        self,
+        epsilon: float,
+        *,
+        episode: int | None = None,
+    ) -> float:
+        """Effective Hz/step for ternary +freq (episode curriculum, then ε schedule)."""
+        early_eps = int(self.frequency_sensitivity_early_episodes)
+        early_hz = float(self.frequency_sensitivity_early)
+        if early_eps > 0 and early_hz > 0.0 and episode is not None and episode < early_eps:
+            return early_hz
+
+        explore = float(self.frequency_sensitivity_explore)
+        exploit = float(self.frequency_sensitivity)
+        if explore <= 0.0 or abs(explore - exploit) < 1e-9:
+            return exploit
+        eps = float(epsilon)
+        end = float(self.epsilon_end)
+        if eps <= end:
+            return exploit
+        eps_hi = float(self.frequency_sensitivity_explore_epsilon_max)
+        if eps_hi > end and eps > eps_hi:
+            return exploit
+        start = float(self.epsilon_start)
+        if start <= end:
+            return exploit
+        # Linear ramp within [epsilon_end, epsilon_hi] (mid-anneal band only).
+        hi = min(start, eps_hi) if eps_hi > end else start
+        span = hi - end
+        if span <= 0.0:
+            return exploit
+        t = (eps - end) / span
+        t = max(0.0, min(1.0, t))
+        return exploit + t * (explore - exploit)
+
     def for_smoke(
         self,
         *,
@@ -161,10 +210,57 @@ def fig4_nguyen_config(
     collapse (v13); keep v9 shaping for learnable early-stop.
 
     v10c: subthreshold_steps_required=2 for easier early-stop.
-    v23 base (2026-08-08): eps_ep100_2200 probe winner — decay_steps=2200,
-    epsilon_end=0.05 for exploit-by-~ep100 timing shape.
-    v15 anti-farming: cap progress bonus per step, scale Bellman targets only,
-    stronger truncation penalty — raw episode logs unchanged for gates.
+    v46 FAIL: t_u=3 + 500ep; first-100 length rose (80–100 ≈24.6 vs paper ~10).
+    v48 FAIL: decay=1900 from step 0 locked a weak greedy policy.
+    v49 FAIL: delay=1100 held ε=1 through ep 50. v50 FAIL: delay=500
+    flattened length ~18.5. v51: restore v47's slow slope (decay=3200,
+    no hold) then dump after ~70 ep (accelerate_after=1400, dump=500)
+    so 50–70 can still glide and 80–100 can show greedy length.
+    v51 FAIL: mid-glide true (~17.2) but dump too late (ε=0.46 at ep 80);
+    80–100 stayed ~17. v52 FAIL: after=1000 + freq_sens=15 hit ε floor by
+    ep 70 and greedy timed out (80–100 ≈19.4, lost glide). v53: freq=20
+    again; dump after ~60 ep (1200) over 350 steps so floor by ~ep 80.
+    v53 FAIL: ε floor by ep 80 as intended; 80–100 still ~17 (greedy ~16–17
+    steps, α–β ~220). Shape not ready for 500ep. v54: keep v53 ε schedule;
+    raise alpha_beta_progress_coef 2500→4000 so greedy drives α–β down
+    faster and stops earlier in the episode.
+    v54 FAIL: identical first-100 to v53 (0–50 ≈20). Raw median is already
+    25; 16/50 lucky tu=2 stops pull the smooth start down. v55: keep v53 ε
+    dump; revert prog=2500; frequency_sensitivity=10 so random +freq is
+    less likely to hit 80 Hz in the first 50 episodes.
+    v55: ep1 length=25 but reward ≈−1.40e6 (paper start ≈−0.66e6). The
+    extra million is truncation_penalty on timeout. v56: truncation=0 so
+    a 25-step first episode is Eq. (7) only (~−0.4e6, near paper −0.65e6).
+    v56 ep1: length 25, reward −3.98e5 (too high vs paper −6.6e5). v57:
+    truncation_penalty=250k so ep1 ≈ −0.65e6 with length still 25.
+    v57 FAIL: ep1 matched; greedy timed out after ε floor (80–100 len ≈24).
+    v58 FAIL: cadence=16 made 0–50 length 22.6 (horizon false) and still no
+    glide (80–100 ≈22.6). One ES at ep 59 did not stick.
+    v59 FAIL: ep1 OK; 0–50 len 22.75 (horizon false); 80–100 ≈22.4;
+    greedy still timeouts. v60: frequency_sensitivity=15, same dump@1400 /
+    replay=128 / trunc=250k.
+    v60 FAIL: start collapsed (0–50 len ≈21.4). Do not raise freq. v61:
+    freq_sens=10 (v57 start) + epsilon_end=0.15 (v10 late exploration).
+    v61 FAIL: 80–100 len ≈23.2 (rose). v62: slower dump (decay=800) so ε
+    stays higher through 80–100; keep freq=10 / ε_end=0.15 / trunc=250k.
+    v62 FAIL: 80–100 len=25 (all timeouts). Revert dump=400. v63: ε_end=0.20.
+    v63 FAIL: 80–100 ≈24.1. ε-floor family exhausted. v64: pulse_width_sensitivity=0.2
+    so greedy can reach paper ~1 ms without raising freq.
+    v64 FAIL: start held (~22.3) but 80–100 len=25 (all timeouts). v65:
+    pulse_width_sensitivity=0.3 (still no freq raise).
+    v65 FAIL: pw family exhausted; constant freq=10 starves 80 Hz replay.
+    v66: frequency_sensitivity_explore=20 (schedule vs ε) so high-ε random
+    walks reach ~80 Hz early-stops while ε-floor greedy keeps exploit=10.
+    v66 FAIL: linear schedule at ε≈1 used explore=20 → ep1 len=15 and
+    20/50 lucky stops (smooth 0–50 ≈19). v67: explore only in mid-anneal
+    band (ε≤0.7 and >ε_end); hold exploit=10 at ε>0.7 and at floor.
+    v67 FAIL: ep1 OK but greedy still 30 Hz / α–β 309 at ep 99; exploit=10
+    cannot reach ~80 Hz in one episode. v68: episode curriculum — freq=10 for
+    ep 0–34 (paper start), then freq=20 so greedy can suppress; v53 ε dump
+    (1200/350, ε_end=0.05); replay cadence 32 for ~75 SGD steps / 100 ep.
+    v68 FAIL: bimodal — good eps at 100–120 Hz (len 4–14) vs F=0 collapse
+    timeouts; smoothed 80–100 still 24. v69: frequency_min=10, amplitude_min=50;
+    early curriculum through ep 39.
     """
     return SNNConfig(
         seed=seed,
@@ -172,18 +268,27 @@ def fig4_nguyen_config(
         max_episode_steps=EVAL_MAX_STEPS,
         alpha_beta_threshold=BIOMARKER_THRESHOLD,
         subthreshold_steps_required=2,
-        epsilon_decay_steps=2_200,
+        epsilon_decay_steps=3_200,
+        epsilon_decay_delay_steps=0,
+        epsilon_accelerate_after_steps=1_200,
+        epsilon_accelerate_decay_steps=350,
         epsilon_end=0.05,
         learning_rate=5e-4,
-        frequency_sensitivity=15.0,
-        pulse_width_sensitivity=0.1,
+        frequency_sensitivity=20.0,
+        frequency_sensitivity_early=10.0,
+        frequency_sensitivity_early_episodes=40,
+        frequency_sensitivity_explore=0.0,
+        frequency_min=10.0,
+        amplitude_min=50.0,
+        pulse_width_sensitivity=0.3,
         threshold_reward=300.0,
         energy_penalty=0.0,
-        alpha_beta_progress_coef=2000.0,
+        alpha_beta_progress_coef=2500.0,
         alpha_beta_progress_cap_per_step=10_000.0,
         warm_zone_upper=220.0,
         warm_zone_bonus_coef=150.0,
-        truncation_penalty=1_000_000.0,
+        truncation_penalty=250_000.0,
+        replay_update_cadence=32,
         reward_learning_scale=1e-4,
         stimulated_neurons=1,
         log_episodes=True,

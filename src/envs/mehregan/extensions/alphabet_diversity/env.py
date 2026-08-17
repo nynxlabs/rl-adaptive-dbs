@@ -19,10 +19,6 @@ from envs.mehregan.extensions.alphabet_diversity.config import (
 from envs.mehregan.extensions.alphabet_diversity.observations import (
     within_step_p_beta_series,
 )
-from envs.mehregan.extensions.alphabet_diversity.plant_integration import (
-    integrate_stitched_step,
-    resolve_mean_hz,
-)
 from envs.mehregan.extensions.alphabet_diversity.reward import (
     mehregan_reward,
     mehregan_reward_from_s_sum,
@@ -95,7 +91,7 @@ class WithinStepMehreganEnv(gym.Env):
         ):
             msg = (
                 "plant_integration_mode='continuous' requires PythonPlant "
-                "(stitched idbs waveforms)"
+                "(sequential 2 s state carry)"
             )
             raise ValueError(msg)
 
@@ -181,38 +177,18 @@ class WithinStepMehreganEnv(gym.Env):
             reward_scale=self.config.reward_scale,
         )
 
-    def _pre_stim_duration_s(self) -> float:
-        if self.config.pre_stim_duration_s is not None:
-            return float(self.config.pre_stim_duration_s)
-        return float(self.config.step_duration_s)
-
     def _is_continuous(self) -> bool:
         return self.config.plant_integration_mode == "continuous"
 
     def _integrate_segment(self, dbs_spec: DbsSpec) -> IntegrateResult:
+        kwargs: dict[str, Any] = {}
+        if self._is_continuous():
+            kwargs["carry"] = True
         return self._plant.integrate(
             self.config.step_duration_s,
             dbs_spec,
             record_spikes=True,
-        )
-
-    def _integrate_continuous_step(self, action: int) -> IntegrateResult:
-        self._episode_actions.append(int(action))
-        dt_ms = self._plant_dt_ms()
-        if dt_ms is None:
-            msg = "continuous plant_integration_mode requires a known plant dt_ms"
-            raise RuntimeError(msg)
-        return integrate_stitched_step(
-            self._plant,
-            seed=self._episode_seed,
-            pre_stim_s=self._pre_stim_duration_s(),
-            step_duration_s=self.config.step_duration_s,
-            actions=self._episode_actions,
-            alphabet=self.alphabet,
-            dt_ms=dt_ms,
-            mean_hz=resolve_mean_hz(
-                self.alphabet, fallback_hz=self.config.pattern_mean_hz
-            ),
+            **kwargs,
         )
 
     def _segment_info(
@@ -278,9 +254,8 @@ class WithinStepMehreganEnv(gym.Env):
     ) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
         dbs_spec = self.alphabet.to_dbs_spec(int(action))
         if self._is_continuous():
-            result = self._integrate_continuous_step(int(action))
-        else:
-            result = self._integrate_segment(dbs_spec)
+            self._episode_actions.append(int(action))
+        result = self._integrate_segment(dbs_spec)
         observation = self._observation_from_result(result)
         reward = self._reward_from_result(observation, result)
         self._step_count += 1

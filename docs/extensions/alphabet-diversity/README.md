@@ -8,7 +8,7 @@
 
 | Path | Role |
 |------|------|
-| `src/envs/mehregan/extensions/alphabet_diversity/` | `WithinStepMehreganEnv`, `WithinStepEnvConfig`, continuous plant stitching, near-hub alphabet |
+| `src/envs/mehregan/extensions/alphabet_diversity/` | `WithinStepMehreganEnv`, `WithinStepEnvConfig`, continuous 2 s plant carry, near-hub alphabet |
 | `scripts/probes/alphabet_diversity/` | Open-loop sweeps, within-step train, plant continuity, near-hub pipeline |
 | `tests/envs/extensions/alphabet_diversity/` | Unit tests for extension env |
 | `artifacts/ddpg/` | Probe JSON outputs (e.g. `alphabet_diversity_sweep.json`, `within_step_L16_burst_train.json`) |

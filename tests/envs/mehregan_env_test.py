@@ -66,3 +66,21 @@ def test_baseline_rollout_mock(mock_env: MehreganEnv) -> None:
     assert result["baseline"] == "periodic-45hz"
     assert result["steps"] == 3
     assert len(result["p_beta"]) == 4  # reset + 3 steps
+
+
+def test_continuous_rejects_matlab_plant() -> None:
+    from envs.plant.matlab_backend import MatlabPlant
+
+    with pytest.raises(ValueError, match="PythonPlant"):
+        MehreganEnv(
+            plant=MatlabPlant(),
+            config=MehreganEnvConfig(plant_integration_mode="continuous"),
+        )
+
+
+def test_unknown_plant_integration_mode_rejected() -> None:
+    with pytest.raises(ValueError, match="plant_integration_mode"):
+        MehreganEnv(
+            plant=MockPlant(),
+            config=MehreganEnvConfig(plant_integration_mode="not-a-mode"),
+        )

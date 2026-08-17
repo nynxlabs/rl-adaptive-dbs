@@ -111,6 +111,10 @@ SNN_MATERIAL_FIELDS: tuple[str, ...] = (
     "reward_learning_scale",
     "amplitude_sensitivity",
     "frequency_sensitivity",
+    "frequency_sensitivity_early",
+    "frequency_sensitivity_early_episodes",
+    "frequency_sensitivity_explore",
+    "frequency_sensitivity_explore_epsilon_max",
     "pulse_width_sensitivity",
     "action_scheme",
     "hidden_size",
@@ -124,6 +128,11 @@ SNN_MATERIAL_FIELDS: tuple[str, ...] = (
     "replay_capacity",
     "epsilon_start",
     "epsilon_end",
+    "epsilon_decay_steps",
+    "epsilon_decay_delay_steps",
+    "epsilon_accelerate_after_steps",
+    "epsilon_accelerate_decay_steps",
+    "replay_update_cadence",
 )
 
 DDPG_MATERIAL_FIELDS: tuple[str, ...] = (
@@ -145,6 +154,7 @@ DDPG_MATERIAL_FIELDS: tuple[str, ...] = (
     "obs_normalize",
     "random_warmup_steps",
     "critic_warmup_steps",
+    "actor_lr",
     "gamma",
     "tau",
     "batch_size",

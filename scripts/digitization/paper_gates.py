@@ -354,6 +354,8 @@ def fig4a_gates(
     p_mid = window_mean(px, py, lo=120.0, hi=150.0)
     p_mid_drop = p_early_lo - p_mid
     mid_drop = early_lo - mid
+    ep0 = window_mean(x, y, hi=29.0)
+    p_ep0 = window_mean(px, py, hi=29.0)
     gates = {
         "plot_style": n_expected is None or y.size == n_expected,
         "overall_trend_down": end_w < start_w,
@@ -368,6 +370,9 @@ def fig4a_gates(
             and p_mid_drop > 0
             and mid_drop >= 0.50 * p_mid_drop
         ),
+        # Phase 1 (digitization revisit): first episode should sit near untreated /
+        # paper ep0 (~0.50), not already suppressed (~0.44 on τ→1.4).
+        "ep0_near_paper": rel_close(ep0, p_ep0, tol=0.10),
     }
     return _gate_pack(
         gates,
@@ -384,6 +389,8 @@ def fig4a_gates(
             "paper_early_0_100": p_early_lo,
             "paper_mid_120_150": p_mid,
             "paper_mid_drop": p_mid_drop,
+            "ep0_mean": ep0,
+            "paper_ep0": p_ep0,
             "late_early_ratio": late / early if abs(early) > 1e-12 else float("nan"),
             "paper_late_early_ratio": p_late / p_early if abs(p_early) > 1e-12 else float("nan"),
         },
@@ -391,6 +398,7 @@ def fig4a_gates(
         notes=[
             "Absolute early/late bands removed; seed changes level.",
             "mid_fade_vs_paper uses digitized paper mid fade (not a hard cliff).",
+            "ep0_near_paper is the phase-1 digitization target (untreated-like start).",
         ],
     )
 
@@ -406,8 +414,18 @@ def fig4b_gates(
     early_n: int = 3,
     late_start: int = 6,
     ratio_tol: float = DEFAULT_RATIO_TOL,
+    late_beta_rel_tol: float = 0.15,
+    reward_threshold: float = 0.35,
+    late_reward_hi: float = 2.0,
 ) -> dict[str, Any]:
-    """Reward rise + episode PSD drop vs paper digitizations."""
+    """Reward rise + episode PSD drop vs paper digitizations.
+
+    Digitization revisit (Report 3): paper late episode-mean PSD sits *above*
+    reward threshold ``β_t = 0.35`` (~0.37) so episode reward approaches 0
+    from below. A full collapse onto one suppressing pattern drives late PSD
+    ~0.30 and flips reward positive — reject that floor even when the
+    late/early *ratio* still looks paper-like.
+    """
     paper_reward = paper_reward or load_refined(
         reward_path or refined_path("4b", stem="curves_wpd_refined_reward")
     )
@@ -434,6 +452,7 @@ def fig4b_gates(
     p_late_r = window_mean(rx, ry, lo=float(late_start) - 0.5)
     p_early_b = window_mean(px, py, hi=float(early_n - 1) + 0.5)
     p_late_b = window_mean(px, py, lo=float(late_start) - 0.5)
+    p_ep0_b = window_mean(px, py, lo=-0.5, hi=0.5)
 
     rise_episode = None
     for i in range(1, n):
@@ -455,6 +474,16 @@ def fig4b_gates(
         "reward_recovers_like_paper": bool(
             late_r > early_r and p_late_r > p_early_r and late_r > -10.0
         ),
+        # Paper late PSD ~0.37 stays above β_t so Eq. (8) never enters the
+        # positive linear branch. Locked v4/v18 collapse to ~0.30 and go to +16.
+        "late_beta_above_threshold": bool(np.isfinite(late_b) and late_b >= reward_threshold),
+        "late_beta_near_paper": rel_close(late_b, p_late_b, tol=late_beta_rel_tol),
+        "late_reward_near_zero": bool(
+            np.isfinite(late_r) and late_r > -10.0 and late_r <= late_reward_hi
+        ),
+        # Phase 1: match episode 0 to digitized paper (~0.50 PSD) before chasing
+        # the late floor. v30 ep0≈0.44 already suppresses vs untreated ~0.47.
+        "ep0_beta_near_paper": rel_close(float(b[0]), p_ep0_b, tol=0.10),
     }
     return _gate_pack(
         gates,
@@ -468,6 +497,10 @@ def fig4b_gates(
             "paper_late_reward": p_late_r,
             "paper_early_beta": p_early_b,
             "paper_late_beta": p_late_b,
+            "ep0_beta": float(b[0]),
+            "paper_ep0_beta": p_ep0_b,
+            "reward_threshold": reward_threshold,
+            "late_beta_rel_tol": late_beta_rel_tol,
         },
         paper_ref={
             "reward": str(reward_path or refined_path("4b", stem="curves_wpd_refined_reward")),

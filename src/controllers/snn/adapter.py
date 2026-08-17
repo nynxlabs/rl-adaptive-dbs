@@ -76,6 +76,13 @@ class NguyenEnvAdapter(gym.Env):
         self._step_count = 0
         self._subthreshold_streak = 0
         self._prev_alpha_beta: float | None = None
+        self._explore_epsilon: float | None = None
+        self._episode_index: int | None = None
+
+    def set_training_context(self, *, epsilon: float, episode: int) -> None:
+        """Set ε and episode index for frequency_sensitivity curriculum."""
+        self._explore_epsilon = float(epsilon)
+        self._episode_index = int(episode)
 
     def close(self) -> None:
         if self._owns_plant:
@@ -115,7 +122,12 @@ class NguyenEnvAdapter(gym.Env):
             from controllers.snn.actions import decode_factored_action
 
             ternary = decode_factored_action(np.asarray(action, dtype=np.int64))
-        self._dbs.apply_delta(ternary, self.config)
+        self._dbs.apply_delta(
+            ternary,
+            self.config,
+            epsilon=self._explore_epsilon,
+            episode=self._episode_index,
+        )
         return ternary
 
     def reset(
@@ -132,6 +144,8 @@ class NguyenEnvAdapter(gym.Env):
         self._step_count = 0
         self._subthreshold_streak = 0
         self._prev_alpha_beta = None
+        self._explore_epsilon = None
+        self._episode_index = None
 
         result = self._plant.integrate(
             self.config.step_duration_s,

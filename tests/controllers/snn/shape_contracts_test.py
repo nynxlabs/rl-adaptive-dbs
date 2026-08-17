@@ -77,6 +77,49 @@ def test_dbs_parameter_state_apply_delta_clamps() -> None:
     assert spec.idbs.shape[0] == int(round(100.0 / 0.01)) + 1
 
 
+def test_frequency_sensitivity_schedules_with_epsilon() -> None:
+    cfg = SNNConfig(
+        frequency_sensitivity=10.0,
+        frequency_sensitivity_explore=20.0,
+        epsilon_start=1.0,
+        epsilon_end=0.2,
+        frequency_sensitivity_explore_epsilon_max=0.7,
+    )
+    assert cfg.frequency_sensitivity_at_epsilon(1.0) == 10.0
+    assert cfg.frequency_sensitivity_at_epsilon(0.75) == 10.0
+    assert cfg.frequency_sensitivity_at_epsilon(0.2) == 10.0
+    mid = cfg.frequency_sensitivity_at_epsilon(0.5)
+    assert 10.0 < mid < 20.0
+
+    state_hi = DBSParameterState()
+    state_mid = DBSParameterState()
+    state_lo = DBSParameterState()
+    state_hi.apply_delta([0, 1, 0], cfg, epsilon=1.0)
+    state_mid.apply_delta([0, 1, 0], cfg, epsilon=0.5)
+    state_lo.apply_delta([0, 1, 0], cfg, epsilon=0.2)
+    assert state_hi.frequency_hz == 40.0 + 10.0
+    assert state_mid.frequency_hz == 40.0 + mid
+    assert state_lo.frequency_hz == 40.0 + 10.0
+
+
+def test_frequency_sensitivity_episode_curriculum() -> None:
+    cfg = SNNConfig(
+        frequency_sensitivity=20.0,
+        frequency_sensitivity_early=10.0,
+        frequency_sensitivity_early_episodes=35,
+    )
+    assert cfg.frequency_sensitivity_at_epsilon(1.0, episode=0) == 10.0
+    assert cfg.frequency_sensitivity_at_epsilon(1.0, episode=34) == 10.0
+    assert cfg.frequency_sensitivity_at_epsilon(1.0, episode=35) == 20.0
+
+    early = DBSParameterState()
+    late = DBSParameterState()
+    early.apply_delta([0, 1, 0], cfg, epsilon=1.0, episode=10)
+    late.apply_delta([0, 1, 0], cfg, epsilon=0.05, episode=50)
+    assert early.frequency_hz == 50.0
+    assert late.frequency_hz == 60.0
+
+
 def test_dsqn_forward_shapes() -> None:
     cfg = SNNConfig(sequence_steps=5, neurons_per_region=4, n_regions=1)
     model = DSQN(cfg)

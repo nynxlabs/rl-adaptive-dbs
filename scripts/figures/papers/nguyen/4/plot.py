@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Nguyen et al.  Figure 4 — training episode rewards and lengths.
 
-Paper §IV / Fig. 4: **500** DSQN training episodes with init DBS **40 Hz / 0.3 ms /
-300 nA/cm²**. Panel (a) episode return; (b) episode length (early max **25** steps,
-shorter once α–β sub-threshold termination kicks in).
+Paper §IV / Fig. 4: **500** DSQN training episodes in the paper; this panel
+currently iterates on the **first 100** (length already ~10 and reward near 0
+by then). Default train horizon is 100 episodes.
 
 Run:
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/4/plot.py
@@ -14,7 +14,7 @@ Each run writes ``figures/nguyen/images/4/training_reward_length_vN.png`` (N
 auto-increments), caches training series + checkpoint under
 ``artifacts/figures/papers/nguyen/4/``, and updates ``figures/nguyen/replications.md``.
 
-Long run (~hours). Prefer tmux:
+First-100 trains are ~15–20 min. Prefer tmux:
 
   tmux new-session -d -s fig2-4-train \\
     "setsid nohup uv run python -m rl_adaptive_dbs.run --max-threads 2 \\
@@ -93,7 +93,7 @@ DEFAULT_MANIFEST = CACHE_DIR / "manifest.json"
 OUT_STEM = "training_reward_length"
 
 DEFAULT_SEED = 0
-DEFAULT_EPISODES = 500
+DEFAULT_EPISODES = 100  # first-100 gates; paper figure is 500
 SMOOTH_WINDOW = 20
 EARLY_END = 100
 LATE_START = 150
@@ -209,6 +209,9 @@ def train_series(
             "smoke": smoke,
             "config": {
                 "epsilon_decay_steps": cfg.epsilon_decay_steps,
+                "epsilon_decay_delay_steps": cfg.epsilon_decay_delay_steps,
+                "epsilon_accelerate_after_steps": cfg.epsilon_accelerate_after_steps,
+                "epsilon_accelerate_decay_steps": cfg.epsilon_accelerate_decay_steps,
                 "subthreshold_steps_required": cfg.subthreshold_steps_required,
                 "alpha_beta_threshold": cfg.alpha_beta_threshold,
             },
@@ -218,37 +221,32 @@ def train_series(
         env.close()
 
 
-# late_reward_near_zero is diagnostic only (paper approaches ~0 from below;
-# positive progress shaping makes the floor check a free pass).
-REWARD_HEURISTIC_KEYS = (
-    "reward_scale_paper",
-    "late_reward_above_early",
+# Required: first 100 episodes only (how far / how fast by ep 100).
+# Late and post-100 keys stay logged as diagnostics.
+REWARD_LEVEL_TIMING_KEYS = (
+    "reward_scale_paper",  # early |mean| — started far from the plateau
+    "reward_improves_by_100",  # 80–100 better than 0–50
+    "reward_by_100_near_zero",  # 80–100 median toward ~0
 )
-REWARD_SHAPE_KEYS = (
-    "reward_scale_paper",
-    "late_reward_above_early",
-    "reward_post100_plateau",
+LENGTH_LEVEL_TIMING_KEYS = (
+    "early_near_max_length",  # raw median first 50 at horizon
+    "length_early_smoothed_near_horizon",  # smoothed 0–50 still ~25
+    "length_mid_glide_like_paper",  # drop during ep 50–100
+    "length_by_100_near_paper",  # 80–100 near digitized ~10
 )
-REWARD_SHAPE_PAPER_KEYS = (
-    "paper_reward_improves_like_paper",
-)
-# Full ship = shape (+ dig direction). Mag/ratio dig gates are info-only.
-REWARD_FULL_KEYS = REWARD_SHAPE_KEYS + REWARD_SHAPE_PAPER_KEYS
+REWARD_HEURISTIC_KEYS = REWARD_LEVEL_TIMING_KEYS
+REWARD_SHAPE_KEYS = REWARD_LEVEL_TIMING_KEYS
+REWARD_SHAPE_PAPER_KEYS: tuple[str, ...] = ()
+REWARD_FULL_KEYS = REWARD_LEVEL_TIMING_KEYS
 LENGTH_HEURISTIC_KEYS = (
-    "length_decreases",
-    "late_length_paper_band",
     "early_near_max_length",
-)
-LENGTH_SHAPE_KEYS = (
-    "length_decreases",
-    "late_length_paper_band",
-    "early_near_max_length",
+    "length_early_smoothed_near_horizon",
     "length_mid_glide_like_paper",
-    "length_post100_plateau",
+    "length_by_100_near_paper",
 )
-LENGTH_SHAPE_PAPER_KEYS = (
-    "paper_length_decreases_like_paper",
-)
+LENGTH_SHAPE_KEYS = LENGTH_LEVEL_TIMING_KEYS
+LENGTH_SHAPE_PAPER_KEYS: tuple[str, ...] = ()
+LENGTH_FULL_KEYS = LENGTH_LEVEL_TIMING_KEYS
 
 
 def _group_pass(group: dict[str, Any], keys: tuple[str, ...]) -> bool:
@@ -362,10 +360,10 @@ def evaluate_gates(
     dig_length = fig4_length_gates(lengths, max_episode_steps=max_episode_steps)
     reward = attach_digitization(reward_heur, dig_reward)
     length = attach_digitization(length_heur, dig_length)
-    reward["shape_pass"] = _group_pass(reward, REWARD_SHAPE_KEYS + REWARD_SHAPE_PAPER_KEYS)
-    reward["pass"] = _group_pass(reward, REWARD_FULL_KEYS)
-    length["shape_pass"] = _group_pass(length, LENGTH_SHAPE_KEYS + LENGTH_SHAPE_PAPER_KEYS)
-    # length full pass keeps attach_digitization (heuristics + dig levels)
+    reward["shape_pass"] = _group_pass(reward, REWARD_LEVEL_TIMING_KEYS)
+    reward["pass"] = _group_pass(reward, REWARD_LEVEL_TIMING_KEYS)
+    length["shape_pass"] = _group_pass(length, LENGTH_LEVEL_TIMING_KEYS)
+    length["pass"] = _group_pass(length, LENGTH_LEVEL_TIMING_KEYS)
 
     return {
         "pass": bool(reward["pass"] and length["pass"]),

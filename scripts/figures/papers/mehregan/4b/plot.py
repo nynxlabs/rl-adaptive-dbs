@@ -7,14 +7,14 @@ Paper §IV.A.1 companion to Fig 4a: two panels over **9 episodes** indexed
   1. **Episode total reward** vs episode
   2. **Episode-mean PSD(x10³)** ($P_\\beta / 1000$) vs episode
 
-Loads traces from the Fig 4a series cache (default: locked ``series_v4.json``,
-first 8 episodes). Resume training via Fig 4a ``--resume`` (this panel replots cache only). (``training_fig4b_vN.png``)
+Loads traces from the Fig 4a series cache (default: latest ``series.json``,
+first 9 episodes). Resume training via Fig 4a ``--resume`` (this panel replots cache only). (``training_fig4b_vN.png``)
 for showcase side-by-side use, plus separate reward/PSD PNGs for debugging.
 
 Run:
   uv run python scripts/figures/papers/mehregan/4b/plot.py
   uv run python scripts/figures/papers/mehregan/4b/plot.py --plot-only
-  uv run python scripts/figures/papers/mehregan/4b/plot.py --episodes 8 --fig4a-series artifacts/figures/papers/mehregan/4a/series_v4.json
+  uv run python scripts/figures/papers/mehregan/4b/plot.py --episodes 9 --fig4a-series artifacts/figures/papers/mehregan/4a/series.json
 """
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ _paper_overlay = _overlay_import.load_paper_overlay()
 FIGURES_DIR = Path("figures/mehregan/images/4b")
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/4b")
 FIG4A_CACHE_DIR = Path("artifacts/figures/papers/mehregan/4a")
-DEFAULT_FIG4A_SERIES = FIG4A_CACHE_DIR / "series_v4.json"
+DEFAULT_FIG4A_SERIES = FIG4A_CACHE_DIR / "series.json"
 DEFAULT_MANIFEST = CACHE_DIR / "manifest.json"
 REWARD_STEM = "training_reward"
 PSD_STEM = "training_psd"
@@ -367,6 +367,7 @@ def _checklist_rows(gates: dict[str, Any], summary: dict[str, Any]) -> list[tupl
     g = summary.get("gates") or {}
     ep_pass = summary.get("fig4b_pass") or {}
     n = summary.get("n_episodes", "—")
+    metrics = summary.get("paper_gate_metrics") or {}
 
     def _fmt(v: Any) -> str:
         if isinstance(v, float):
@@ -434,15 +435,29 @@ def _checklist_rows(gates: dict[str, Any], summary: dict[str, Any]) -> list[tupl
         ),
         (
             "**Late episodes (6–8)**",
-            "Plateau near **0**",
-            f"mean {_fmt(summary.get('late_mean_ep6_end'))} (improved, not near 0)",
-            "~",
+            "Plateau near **0** from below",
+            f"mean {_fmt(summary.get('late_mean_ep6_end'))}",
+            "✓" if g.get("late_reward_near_zero") else "✗",
+        ),
+        (
+            "**Episode 0 PSD**",
+            "ep0 near digitized paper ~0.50",
+            (
+                f"ep0 {metrics.get('ep0_beta'):.3f} vs paper "
+                f"{metrics.get('paper_ep0_beta'):.3f}"
+                if isinstance(metrics.get("ep0_beta"), float)
+                and isinstance(metrics.get("paper_ep0_beta"), float)
+                else "see manifest"
+            ),
+            "✓" if g.get("ep0_beta_near_paper") else "✗",
         ),
         (
             "**Episode-mean PSD**",
-            "Gradual fall ~0.50→~0.37",
+            "Gradual fall ~0.50→~0.37 (late above β_t=0.35)",
             beta_txt if beta_txt != "—" else "see manifest",
-            "~" if g.get("beta_inverse_trend") else "✗",
+            "✓"
+            if g.get("late_beta_above_threshold") and g.get("late_beta_near_paper")
+            else "✗",
         ),
         (
             "**Automation gate**",
@@ -475,17 +490,25 @@ def update_checklist_in_doc(rows: list[tuple[str, str, str, str]]) -> None:
 
 
 def update_status_in_doc(*, passed: bool, note: str) -> None:
+    """Rewrite only the Fig 4b **Status:** line — never through the next heading.
+
+    A previous ``find("\\n\\n###")`` end-cut ate the 4b gates block and the
+    ``## Fig 5a`` heading (vault tracker, 2026-08-13).
+    """
     doc = _figure_promote.PAPER_1_DOC
     text = doc.read_text()
     new_status = f"**Status:** Pass — {note}" if passed else f"**Status:** Open — {note}"
     start = text.find("## Fig 4b — training reward vs episode")
     if start < 0:
         return
+    next_h2 = text.find("\n## ", start + 1)
     status_pos = text.find("**Status:**", start)
-    end = text.find("\n\n###", status_pos)
-    if status_pos < 0 or end < 0:
+    if status_pos < 0 or (next_h2 >= 0 and status_pos > next_h2):
         return
-    doc.write_text(text[:status_pos] + new_status + text[end:])
+    line_end = text.find("\n", status_pos)
+    if line_end < 0:
+        return
+    doc.write_text(text[:status_pos] + new_status + text[line_end:])
 
 
 def _load_fig4a_payload(series_path: Path, manifest_path: Path | None) -> dict[str, Any]:
@@ -515,7 +538,7 @@ def main() -> int:
         "--fig4a-series",
         type=Path,
         default=DEFAULT_FIG4A_SERIES,
-        help="Fig 4a series JSON (default: locked series_v4.json)",
+        help="Fig 4a series JSON (default: latest series.json)",
     )
     parser.add_argument(
         "--fig4a-manifest",
@@ -645,10 +668,12 @@ def main() -> int:
     print(f"wrote {psd_path}", flush=True)
     print(f"wrote {args.manifest}", flush=True)
     print(
-        f"gates: automation={gates.get('automation')} "
+        f"gates: gates_pass={summary.get('gates_pass')} "
+        f"automation={gates.get('automation')} "
         f"rise_ep={summary.get('rise_episode')} "
         f"ep1={fig4b_pass.get('ep1'):.1f} ep{args.episodes - 1}={fig4b_pass.get('ep_last'):.1f} "
-        f"psd {episode_mean_beta[0]:.3f}→{episode_mean_beta[-1]:.3f}",
+        f"psd {episode_mean_beta[0]:.3f}→{episode_mean_beta[-1]:.3f} "
+        f"ep0_beta_near_paper={gates.get('ep0_beta_near_paper')}",
         flush=True,
     )
 
@@ -664,13 +689,15 @@ def main() -> int:
         print(f"updated docs caption: {updated.get('caption')}", flush=True)
         print(f"updated reward image: {updated.get('reward_png_repo_rel')}", flush=True)
         print(f"updated psd image: {updated.get('psd_png_repo_rel')}", flush=True)
-        if gates.get("automation"):
+        if summary.get("gates_pass"):
             update_status_in_doc(
                 passed=True,
                 note=(
-                    "two panels × 9 episodes (indices 0–8), paired with Fig 4a v4 (seed 0; "
-                    "paper seed unspecified). Qualitative: reward↑, PSD↓. "
-                    "Y-limits snap to data extrema. Numeric bands differ — compare trends, not pointwise values."
+                    "two panels × 9 episodes (indices 0–8), paired with the latest "
+                    "Fig 4a series.json (seed 0; paper seed unspecified). "
+                    "Digitization revisit: ep0 PSD near paper, late episode-mean "
+                    "PSD above β_t=0.35 and near the digitized paper floor; "
+                    "reward approaches 0 from below."
                 ),
             )
             print("updated docs status → Pass", flush=True)
@@ -679,7 +706,7 @@ def main() -> int:
         update_checklist_in_doc(_checklist_rows(gates, summary))
         print("updated docs checklist", flush=True)
 
-    return 0 if gates.get("automation") else 1
+    return 0 if summary.get("gates_pass") else 1
 
 
 if __name__ == "__main__":

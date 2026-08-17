@@ -12,5 +12,17 @@ def test_fig4a_profile_uses_one_hot_critic_and_softmax() -> None:
     assert cfg.exploration_mode == "softmax"
     assert cfg.critic_action_input == "one_hot"
     assert cfg.init_bias_scale == 0.5
+    assert cfg.exploration_temperature_end == 1.4
     assert cfg.critic_warmup_steps == 100
     assert cfg.random_warmup_steps == 100
+
+
+def test_fig4a_profile_accepts_earlier_critic_warmup() -> None:
+    cfg = fig4a_ddpg_config(critic_warmup_steps=50)
+    assert cfg.critic_warmup_steps == 50
+    assert cfg.exploration_mode == "softmax"
+
+
+def test_fig4a_profile_accepts_actor_lr() -> None:
+    cfg = fig4a_ddpg_config(actor_lr=7.5e-4)
+    assert cfg.actor_lr == 7.5e-4

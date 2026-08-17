@@ -16,6 +16,8 @@ from envs.mehregan.reward import mehregan_reward
 from envs.plant.dbs import DbsSpec
 from envs.plant.matlab_backend import IntegrateResult, MatlabPlant
 
+_PLANT_INTEGRATION_MODES = ("disconnected", "continuous")
+
 
 class PlantBackend(Protocol):
     def reset(self, seed: int | None = None) -> Any: ...
@@ -46,9 +48,22 @@ class MehreganEnv(gym.Env):
     ) -> None:
         super().__init__()
         self.config = config or MehreganEnvConfig()
+        mode = self.config.plant_integration_mode
+        if mode not in _PLANT_INTEGRATION_MODES:
+            msg = (
+                f"unknown plant_integration_mode {mode!r}; "
+                f"expected one of {_PLANT_INTEGRATION_MODES}"
+            )
+            raise ValueError(msg)
         self.alphabet = alphabet if alphabet is not None else make_alphabet(self.config)
         self._owns_plant = plant is None
         self._plant: PlantBackend = plant if plant is not None else MatlabPlant()
+        if mode == "continuous" and isinstance(self._plant, MatlabPlant):
+            msg = (
+                "plant_integration_mode='continuous' requires PythonPlant "
+                "(sequential 2 s state carry)"
+            )
+            raise ValueError(msg)
         self.render_mode = render_mode
 
         high = np.finfo(np.float32).max
@@ -63,6 +78,7 @@ class MehreganEnv(gym.Env):
         self._rng: np.random.Generator | None = None
         self._episode_seed: int | None = None
         self._step_count = 0
+        self._episode_actions: list[int] = []
         self._obs_window: deque[float] = deque(maxlen=self.config.state_length)
 
     def close(self) -> None:
@@ -78,11 +94,25 @@ class MehreganEnv(gym.Env):
             self._obs_window.appendleft(self._obs_window[0])
         return np.asarray(self._obs_window, dtype=np.float32)
 
+    def _plant_dt_ms(self) -> float | None:
+        cfg = getattr(self._plant, "config", None)
+        if cfg is not None and hasattr(cfg, "dt_ms"):
+            return float(cfg.dt_ms)
+        dt = getattr(self.alphabet, "dt_ms", None)
+        return float(dt) if dt is not None else None
+
+    def _is_continuous(self) -> bool:
+        return self.config.plant_integration_mode == "continuous"
+
     def _integrate_segment(self, dbs_spec: DbsSpec) -> IntegrateResult:
+        kwargs: dict[str, Any] = {}
+        if self._is_continuous():
+            kwargs["carry"] = True
         result = self._plant.integrate(
             self.config.step_duration_s,
             dbs_spec,
             record_spikes=True,
+            **kwargs,
         )
         if result.p_beta is None:
             msg = "plant integrate did not return p_beta"
@@ -96,6 +126,7 @@ class MehreganEnv(gym.Env):
             "dbs_freq_hz": dbs_spec.frequency_hz,
             "pick_dbs_freq": dbs_spec.pick_dbs_freq,
             "episode_step": self._step_count,
+            "plant_integration_mode": self.config.plant_integration_mode,
         }
 
     def reset(
@@ -114,6 +145,7 @@ class MehreganEnv(gym.Env):
 
         self._plant.reset(self._episode_seed)
         self._step_count = 0
+        self._episode_actions.clear()
         self._obs_window.clear()
 
         reset_spec = DbsSpec.none()
@@ -138,6 +170,8 @@ class MehreganEnv(gym.Env):
         action: int,
     ) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
         dbs_spec = self.alphabet.to_dbs_spec(int(action))
+        if self._is_continuous():
+            self._episode_actions.append(int(action))
         result = self._integrate_segment(dbs_spec)
         observation = self._push_observation(result.p_beta)
         reward = mehregan_reward(
