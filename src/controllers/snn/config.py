@@ -272,6 +272,9 @@ def fig4_nguyen_config(
     80–100 len≈20.7 and reward_by_100 fail — 50 eps at early=1 starved mid
     freq ramp. v73: early=1 for ep 0–24 only, then exploit=20; slower ε
     (decay=4200, accelerate@2000, prog=2000) for paper mid-glide by ep 80.
+    v73 FAIL: shortening early broke 0–50 smooth (22.0) without fixing 80–100
+    (20.75); ep500 timeout. v74: v72 early lock (1 Hz, 50 ep) + v22 slower ε
+    only — isolate epsilon from v73's shortened curriculum mistake.
     """
     return SNNConfig(
         seed=seed,
@@ -287,7 +290,7 @@ def fig4_nguyen_config(
         learning_rate=5e-4,
         frequency_sensitivity=20.0,
         frequency_sensitivity_early=1.0,
-        frequency_sensitivity_early_episodes=25,
+        frequency_sensitivity_early_episodes=50,
         frequency_sensitivity_explore=0.0,
         frequency_min=INIT_FREQUENCY_HZ,
         amplitude_min=200.0,
