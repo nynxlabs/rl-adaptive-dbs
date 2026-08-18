@@ -283,9 +283,12 @@ def fig4_nguyen_config(
     v75 ε schedule; lock floors and exploit=20 after ep 49. v76 PASS (500ep):
     shape_pass+pass; early_hz=5, early_eps=50, freq_min=40, amp_min=200.
     Visual gap: bimodal timeout vs early-stop drives spikier raw/smoothed than
-    paper (length ptp 100–200 ≈7.9 vs paper ≈1.8). v77: ε_end=0.02 and
+    paper (length ptp 100–200 ≈7.9 vs paper ≈1.8).     v77: ε_end=0.02 and
     target_update_period=50 for stabler late greedy policy. v77 PASS gates
     but smoothness regressed (late timeout 55%); ship v76 not v77.
+    v78: v76 + replay_update_cadence=16 (2× SGD per env step for smoother
+    Q fit) and target_update_period=50 with ε_end=0.05 kept — isolate v77's
+    target-sync knob without starving late exploration.
     """
     return SNNConfig(
         seed=seed,
@@ -313,7 +316,8 @@ def fig4_nguyen_config(
         warm_zone_upper=220.0,
         warm_zone_bonus_coef=150.0,
         truncation_penalty=250_000.0,
-        replay_update_cadence=32,
+        replay_update_cadence=16,
+        target_update_period=50,
         reward_learning_scale=1e-4,
         stimulated_neurons=1,
         log_episodes=True,
