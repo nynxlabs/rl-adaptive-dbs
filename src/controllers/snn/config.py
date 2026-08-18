@@ -288,7 +288,9 @@ def fig4_nguyen_config(
     but smoothness regressed (late timeout 55%); ship v76 not v77.
     v78: v76 + replay_update_cadence=16 (2× SGD per env step for smoother
     Q fit) and target_update_period=50 with ε_end=0.05 kept — isolate v77's
-    target-sync knob without starving late exploration.
+    target-sync knob without starving late exploration. v78 FAIL: collapse
+    to 100% timeouts by ep ~200 (last ES ep 177); cadence=16 over-trains.
+    Ship v76.
     """
     return SNNConfig(
         seed=seed,
@@ -316,8 +318,7 @@ def fig4_nguyen_config(
         warm_zone_upper=220.0,
         warm_zone_bonus_coef=150.0,
         truncation_penalty=250_000.0,
-        replay_update_cadence=16,
-        target_update_period=50,
+        replay_update_cadence=32,
         reward_learning_scale=1e-4,
         stimulated_neurons=1,
         log_episodes=True,
