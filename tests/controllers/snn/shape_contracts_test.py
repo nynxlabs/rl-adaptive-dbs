@@ -131,13 +131,14 @@ def test_fig4_init_floors_block_frequency_collapse() -> None:
     assert state.amplitude >= cfg.amplitude_min
 
 
-def test_fig4_v76_ship_config() -> None:
+def test_fig4_v78_train_config() -> None:
     from controllers.snn.config import fig4_nguyen_config
 
     cfg = fig4_nguyen_config()
     assert cfg.epsilon_end == 0.05
     assert cfg.frequency_sensitivity_early == 5.0
-    assert cfg.target_update_period == 100
+    assert cfg.replay_update_cadence == 16
+    assert cfg.target_update_period == 50
 
 
 def test_dsqn_forward_shapes() -> None:
