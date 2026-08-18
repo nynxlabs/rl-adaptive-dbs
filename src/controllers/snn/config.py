@@ -280,7 +280,8 @@ def fig4_nguyen_config(
     (decay=3200, accelerate@1200, prog=2500). v75 FAIL length only: reward
     shape+full PASS; 0–50=25, mid-glide true, but 80–100≈16.0, late_len≈14.9,
     post100 ptp=8.7 (need ≤4.5). v76: early=5 (toward v71 mid-curve) keeping
-    v75 ε schedule; lock floors and exploit=20 after ep 49.
+    v75 ε schedule; lock floors and exploit=20 after ep 49. v76 PASS (500ep):
+    shape_pass+pass; early_hz=5, early_eps=50, freq_min=40, amp_min=200.
     """
     return SNNConfig(
         seed=seed,
