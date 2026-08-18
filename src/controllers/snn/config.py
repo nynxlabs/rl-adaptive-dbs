@@ -282,6 +282,9 @@ def fig4_nguyen_config(
     post100 ptp=8.7 (need ≤4.5). v76: early=5 (toward v71 mid-curve) keeping
     v75 ε schedule; lock floors and exploit=20 after ep 49. v76 PASS (500ep):
     shape_pass+pass; early_hz=5, early_eps=50, freq_min=40, amp_min=200.
+    Visual gap: bimodal timeout vs early-stop drives spikier raw/smoothed than
+    paper (length ptp 100–200 ≈7.9 vs paper ≈1.8). v77: ε_end=0.02 and
+    target_update_period=50 for stabler late greedy policy.
     """
     return SNNConfig(
         seed=seed,
@@ -293,7 +296,7 @@ def fig4_nguyen_config(
         epsilon_decay_delay_steps=0,
         epsilon_accelerate_after_steps=1_200,
         epsilon_accelerate_decay_steps=350,
-        epsilon_end=0.05,
+        epsilon_end=0.02,
         learning_rate=5e-4,
         frequency_sensitivity=20.0,
         frequency_sensitivity_early=5.0,
@@ -310,6 +313,7 @@ def fig4_nguyen_config(
         warm_zone_bonus_coef=150.0,
         truncation_penalty=250_000.0,
         replay_update_cadence=32,
+        target_update_period=50,
         reward_learning_scale=1e-4,
         stimulated_neurons=1,
         log_episodes=True,
