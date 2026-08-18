@@ -290,7 +290,8 @@ def fig4_nguyen_config(
     Q fit) and target_update_period=50 with ε_end=0.05 kept — isolate v77's
     target-sync knob without starving late exploration. v78 FAIL: collapse
     to 100% timeouts by ep ~200 (last ES ep 177); cadence=16 over-trains.
-    Ship v76.
+    Ship v76. v80: learning_rate=3e-4 (paper-silent) to cut late Q churn /
+    timeout flips; keep v76 replay cadence 32 and target_update 100.
     """
     return SNNConfig(
         seed=seed,
@@ -303,7 +304,7 @@ def fig4_nguyen_config(
         epsilon_accelerate_after_steps=1_200,
         epsilon_accelerate_decay_steps=350,
         epsilon_end=0.05,
-        learning_rate=5e-4,
+        learning_rate=3e-4,
         frequency_sensitivity=20.0,
         frequency_sensitivity_early=5.0,
         frequency_sensitivity_early_episodes=50,
