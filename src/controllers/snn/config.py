@@ -291,7 +291,8 @@ def fig4_nguyen_config(
     target-sync knob without starving late exploration. v78 FAIL: collapse
     to 100% timeouts by ep ~200 (last ES ep 177); cadence=16 over-trains.
     Ship v76. v80: learning_rate=3e-4 (paper-silent) to cut late Q churn /
-    timeout flips; keep v76 replay cadence 32 and target_update 100.
+    timeout flips; keep v76 replay cadence 32 and target_update 100. v81:
+    v80 + batch_size=64 for stabler minibatch Q targets (paper-silent).
     """
     return SNNConfig(
         seed=seed,
@@ -305,6 +306,7 @@ def fig4_nguyen_config(
         epsilon_accelerate_decay_steps=350,
         epsilon_end=0.05,
         learning_rate=3e-4,
+        batch_size=64,
         frequency_sensitivity=20.0,
         frequency_sensitivity_early=5.0,
         frequency_sensitivity_early_episodes=50,
