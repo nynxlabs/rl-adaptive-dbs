@@ -209,7 +209,10 @@ class DSQNTrainer:
             next_max = _max_q_from_membrane(next_out.membrane, action_scheme=cfg.action_scheme)
             target = rewards + cfg.gamma * (1.0 - done) * next_max
 
-        loss = F.mse_loss(q_sa, target)
+        if cfg.q_loss_fn == "huber":
+            loss = F.smooth_l1_loss(q_sa, target)
+        else:
+            loss = F.mse_loss(q_sa, target)
         self.optimizer.zero_grad(set_to_none=True)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.dsqn.parameters(), 10.0)

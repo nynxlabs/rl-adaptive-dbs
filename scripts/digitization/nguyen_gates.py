@@ -259,6 +259,11 @@ FIG4_REWARD_PLATEAU_LEVEL = (175.0, 325.0)
 FIG4_REWARD_PLATEAU_RANGE = (100.0, 250.0)
 FIG4_REWARD_PLATEAU_SLOPE = (100.0, 450.0)
 FIG4_TIMING_REL_TOL = 0.35
+FIG4_LATE_LEVEL = (350.0, 500.0)
+FIG4_LATE_SLOPE = (350.0, 490.0)
+FIG4_LATE_LENGTH_LEVEL_MAX = 14.0
+FIG4_LATE_LENGTH_SLOPE_MAX = 0.02
+FIG4_LATE_TIMEOUT_MAX = 0.25
 
 
 def _episode_smoothed(
@@ -304,6 +309,7 @@ def fig4_timing_shape_gates(
     *,
     smooth_window: int = FIG4_TIMING_SMOOTH,
     rel_tol: float = FIG4_TIMING_REL_TOL,
+    max_episode_steps: int = 25,
 ) -> dict[str, Any]:
     """Mid glide (ep 50–100) and post-100 plateau vs digitized paper smoothed curves."""
     lengths = np.asarray(episode_lengths, dtype=float)
@@ -316,6 +322,9 @@ def fig4_timing_shape_gates(
                 "length_mid_glide_like_paper": False,
                 "length_by_100_near_paper": False,
                 "length_post100_plateau": False,
+                "late_length_no_regression": False,
+                "late_timeout_fraction": False,
+                "late_length_level": False,
             },
             "reward_gates": {
                 "reward_improves_by_100": False,
@@ -379,12 +388,33 @@ def fig4_timing_shape_gates(
     reward_improves_by_100 = bool(rew_80_100 > rew_0_50)
     reward_by_100_near_zero = bool(rew_80_100 > FIG4_REWARD_BY_100_FLOOR)
 
+    late_lo, late_hi = FIG4_LATE_LEVEL
+    slope_lo, slope_hi = FIG4_LATE_SLOPE
+    late_len_mean = _median_in_window(lx, ls, late_lo, late_hi)
+    late_len_slope = _slope_in_window(lx, ls, slope_lo, slope_hi)
+    late_start = int(late_lo)
+    late_end = min(int(late_hi), n)
+    raw_late = lengths[late_start:late_end]
+    late_timeout_rate = (
+        float(np.mean(raw_late >= float(max_episode_steps) - 0.5)) if raw_late.size else 1.0
+    )
+    late_length_level = bool(
+        np.isfinite(late_len_mean) and late_len_mean <= FIG4_LATE_LENGTH_LEVEL_MAX
+    )
+    late_length_no_regression = bool(
+        np.isfinite(late_len_slope) and late_len_slope <= FIG4_LATE_LENGTH_SLOPE_MAX
+    )
+    late_timeout_fraction = bool(late_timeout_rate <= FIG4_LATE_TIMEOUT_MAX)
+
     return {
         "length_gates": {
             "length_early_smoothed_near_horizon": length_early_smoothed,
             "length_mid_glide_like_paper": length_mid_glide,
             "length_by_100_near_paper": length_by_100,
             "length_post100_plateau": length_post100,
+            "late_length_no_regression": late_length_no_regression,
+            "late_timeout_fraction": late_timeout_fraction,
+            "late_length_level": late_length_level,
         },
         "reward_gates": {
             "reward_improves_by_100": reward_improves_by_100,
@@ -407,6 +437,9 @@ def fig4_timing_shape_gates(
             "rew_med_175_325": rew_med_late,
             "rew_ptp_100_250": rew_ptp_100_250,
             "rew_slope_100_450": rew_slope_100_450,
+            "late_len_mean_350_500": late_len_mean,
+            "late_len_slope_350_490": late_len_slope,
+            "late_timeout_rate_350_500": late_timeout_rate,
         },
     }
 
