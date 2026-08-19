@@ -301,7 +301,8 @@ def fig4_nguyen_config(
     v83 shape_pass, best late (timeout 13% ep350–500); checkpoint_v83.pt.
     v84: v83 + replay_update_cadence=48 — FAIL late (timeout 40%, late_len≈15.5);
     do not retry cadence>32. v85: v83 + epsilon_end=0.06 (slightly more late ε vs
-    v77's 0.02 trap; keep tu=200, cadence=32).
+    v77's 0.02 trap; keep tu=200, cadence=32). v85 FAIL vs v83 (late_to 17%,
+    ptp 9.65); do not retry epsilon_end>0.05. v86: v83 + target_update_period=250.
     """
     return SNNConfig(
         seed=seed,
@@ -313,11 +314,11 @@ def fig4_nguyen_config(
         epsilon_decay_delay_steps=0,
         epsilon_accelerate_after_steps=1_200,
         epsilon_accelerate_decay_steps=350,
-        epsilon_end=0.06,
+        epsilon_end=0.05,
         learning_rate=3e-4,
         batch_size=32,
         q_loss_fn="mse",
-        target_update_period=200,
+        target_update_period=250,
         frequency_sensitivity=20.0,
         frequency_sensitivity_early=5.0,
         frequency_sensitivity_early_episodes=50,
