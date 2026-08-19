@@ -228,25 +228,40 @@ REWARD_LEVEL_TIMING_KEYS = (
     "reward_improves_by_100",  # 80–100 better than 0–50
     "reward_by_100_near_zero",  # 80–100 median toward ~0
 )
+REWARD_LEVEL_FULL_KEYS = (
+    *REWARD_LEVEL_TIMING_KEYS,
+    "reward_post100_plateau",
+)
 LENGTH_LEVEL_TIMING_KEYS = (
     "early_near_max_length",  # raw median first 50 at horizon
     "length_early_smoothed_near_horizon",  # smoothed 0–50 still ~25
     "length_mid_glide_like_paper",  # drop during ep 50–100
     "length_by_100_near_paper",  # 80–100 near digitized ~10
 )
-REWARD_HEURISTIC_KEYS = REWARD_LEVEL_TIMING_KEYS
+LENGTH_LEVEL_FULL_KEYS = (
+    *LENGTH_LEVEL_TIMING_KEYS,
+    "length_post100_plateau",
+    "late_length_no_regression",
+    "late_timeout_fraction",
+    "late_length_level",
+)
+REWARD_HEURISTIC_KEYS = REWARD_LEVEL_FULL_KEYS
 REWARD_SHAPE_KEYS = REWARD_LEVEL_TIMING_KEYS
 REWARD_SHAPE_PAPER_KEYS: tuple[str, ...] = ()
-REWARD_FULL_KEYS = REWARD_LEVEL_TIMING_KEYS
+REWARD_FULL_KEYS = REWARD_LEVEL_FULL_KEYS
 LENGTH_HEURISTIC_KEYS = (
     "early_near_max_length",
     "length_early_smoothed_near_horizon",
     "length_mid_glide_like_paper",
     "length_by_100_near_paper",
+    "length_post100_plateau",
+    "late_length_no_regression",
+    "late_timeout_fraction",
+    "late_length_level",
 )
 LENGTH_SHAPE_KEYS = LENGTH_LEVEL_TIMING_KEYS
 LENGTH_SHAPE_PAPER_KEYS: tuple[str, ...] = ()
-LENGTH_FULL_KEYS = LENGTH_LEVEL_TIMING_KEYS
+LENGTH_FULL_KEYS = LENGTH_LEVEL_FULL_KEYS
 
 
 def _group_pass(group: dict[str, Any], keys: tuple[str, ...]) -> bool:
@@ -330,7 +345,11 @@ def evaluate_gates(
         "shape_pass": False,
     }
 
-    timing = fig4_timing_shape_gates(lengths, rewards)
+    timing = fig4_timing_shape_gates(
+        lengths,
+        rewards,
+        max_episode_steps=max_episode_steps,
+    )
     for key, value in timing["length_gates"].items():
         length_heur[key] = bool(value)
     for key, value in timing["reward_gates"].items():
@@ -360,10 +379,10 @@ def evaluate_gates(
     dig_length = fig4_length_gates(lengths, max_episode_steps=max_episode_steps)
     reward = attach_digitization(reward_heur, dig_reward)
     length = attach_digitization(length_heur, dig_length)
-    reward["shape_pass"] = _group_pass(reward, REWARD_LEVEL_TIMING_KEYS)
-    reward["pass"] = _group_pass(reward, REWARD_LEVEL_TIMING_KEYS)
-    length["shape_pass"] = _group_pass(length, LENGTH_LEVEL_TIMING_KEYS)
-    length["pass"] = _group_pass(length, LENGTH_LEVEL_TIMING_KEYS)
+    reward["shape_pass"] = _group_pass(reward, REWARD_SHAPE_KEYS)
+    reward["pass"] = _group_pass(reward, REWARD_FULL_KEYS)
+    length["shape_pass"] = _group_pass(length, LENGTH_SHAPE_KEYS)
+    length["pass"] = _group_pass(length, LENGTH_FULL_KEYS)
 
     return {
         "pass": bool(reward["pass"] and length["pass"]),

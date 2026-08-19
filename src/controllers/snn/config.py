@@ -52,6 +52,8 @@ class SNNConfig:
     replay_capacity: int = 10_000
     replay_update_cadence: int = REPLAY_UPDATE_CADENCE
     batch_size: int = 32
+    # Bellman TD loss: ``mse`` or ``huber`` (smooth L1 — dampens timeout Q spikes).
+    q_loss_fn: str = "mse"
     # Hard-copy target network every N gradient updates (paper silent — convention).
     target_update_period: int = 100
 
@@ -292,7 +294,9 @@ def fig4_nguyen_config(
     to 100% timeouts by ep ~200 (last ES ep 177); cadence=16 over-trains.
     Ship v76. v80: learning_rate=3e-4 (paper-silent) to cut late Q churn /
     timeout flips; keep v76 replay cadence 32 and target_update 100. v81:
-    v80 + batch_size=64 for stabler minibatch Q targets (paper-silent).
+    v80 + batch_size=64 — worse late_len; do not ship. v82: v80 +
+    q_loss_fn=huber (smooth L1 on Bellman error) to cut timeout-driven Q
+    spikes without cadence=16 over-training.
     """
     return SNNConfig(
         seed=seed,
@@ -306,7 +310,8 @@ def fig4_nguyen_config(
         epsilon_accelerate_decay_steps=350,
         epsilon_end=0.05,
         learning_rate=3e-4,
-        batch_size=64,
+        batch_size=32,
+        q_loss_fn="huber",
         frequency_sensitivity=20.0,
         frequency_sensitivity_early=5.0,
         frequency_sensitivity_early_episodes=50,
