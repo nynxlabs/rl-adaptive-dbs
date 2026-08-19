@@ -299,7 +299,9 @@ def fig4_nguyen_config(
     vs paper 17.8); do not retry huber fresh train. v83: v80 mse +
     target_update_period=200 (slower hard targets; not v77's tu=50+ε_end=0.02).
     v83 shape_pass, best late (timeout 13% ep350–500); checkpoint_v83.pt.
-    v84: v83 + replay_update_cadence=48 for stabler Q / lower post-100 ptp.
+    v84: v83 + replay_update_cadence=48 — FAIL late (timeout 40%, late_len≈15.5);
+    do not retry cadence>32. v85: v83 + epsilon_end=0.06 (slightly more late ε vs
+    v77's 0.02 trap; keep tu=200, cadence=32).
     """
     return SNNConfig(
         seed=seed,
@@ -311,7 +313,7 @@ def fig4_nguyen_config(
         epsilon_decay_delay_steps=0,
         epsilon_accelerate_after_steps=1_200,
         epsilon_accelerate_decay_steps=350,
-        epsilon_end=0.05,
+        epsilon_end=0.06,
         learning_rate=3e-4,
         batch_size=32,
         q_loss_fn="mse",
@@ -330,7 +332,7 @@ def fig4_nguyen_config(
         warm_zone_upper=220.0,
         warm_zone_bonus_coef=150.0,
         truncation_penalty=250_000.0,
-        replay_update_cadence=48,
+        replay_update_cadence=32,
         reward_learning_scale=1e-4,
         stimulated_neurons=1,
         log_episodes=True,
