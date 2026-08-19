@@ -2,8 +2,8 @@
 """Nguyen et al.  Figure 4 — training episode rewards and lengths.
 
 Paper §IV / Fig. 4: **500** DSQN training episodes in the paper; this panel
-currently iterates on the **first 100** (length already ~10 and reward near 0
-by then). Default train horizon is 100 episodes.
+currently scores **shape_pass** on the first 100 and **pass** (ship) through ep 500.
+Default train horizon is **500** episodes (paper figure length).
 
 Run:
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/4/plot.py
@@ -93,7 +93,7 @@ DEFAULT_MANIFEST = CACHE_DIR / "manifest.json"
 OUT_STEM = "training_reward_length"
 
 DEFAULT_SEED = 0
-DEFAULT_EPISODES = 100  # first-100 gates; paper figure is 500
+DEFAULT_EPISODES = 500  # paper Fig 4 horizon; shape_pass uses first 100
 SMOOTH_WINDOW = 20
 EARLY_END = 100
 LATE_START = 150
