@@ -298,6 +298,8 @@ def fig4_nguyen_config(
     q_loss_fn=huber — FAIL shape (mid-glide too fast: smooth 50–100≈11.4
     vs paper 17.8); do not retry huber fresh train. v83: v80 mse +
     target_update_period=200 (slower hard targets; not v77's tu=50+ε_end=0.02).
+    v83 shape_pass, best late (timeout 13% ep350–500); checkpoint_v83.pt.
+    v84: v83 + replay_update_cadence=48 for stabler Q / lower post-100 ptp.
     """
     return SNNConfig(
         seed=seed,
@@ -328,7 +330,7 @@ def fig4_nguyen_config(
         warm_zone_upper=220.0,
         warm_zone_bonus_coef=150.0,
         truncation_penalty=250_000.0,
-        replay_update_cadence=32,
+        replay_update_cadence=48,
         reward_learning_scale=1e-4,
         stimulated_neurons=1,
         log_episodes=True,
