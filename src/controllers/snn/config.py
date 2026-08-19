@@ -295,8 +295,9 @@ def fig4_nguyen_config(
     Ship v76. v80: learning_rate=3e-4 (paper-silent) to cut late Q churn /
     timeout flips; keep v76 replay cadence 32 and target_update 100. v81:
     v80 + batch_size=64 — worse late_len; do not ship. v82: v80 +
-    q_loss_fn=huber (smooth L1 on Bellman error) to cut timeout-driven Q
-    spikes without cadence=16 over-training.
+    q_loss_fn=huber — FAIL shape (mid-glide too fast: smooth 50–100≈11.4
+    vs paper 17.8); do not retry huber fresh train. v83: v80 mse +
+    target_update_period=200 (slower hard targets; not v77's tu=50+ε_end=0.02).
     """
     return SNNConfig(
         seed=seed,
@@ -311,7 +312,8 @@ def fig4_nguyen_config(
         epsilon_end=0.05,
         learning_rate=3e-4,
         batch_size=32,
-        q_loss_fn="huber",
+        q_loss_fn="mse",
+        target_update_period=200,
         frequency_sensitivity=20.0,
         frequency_sensitivity_early=5.0,
         frequency_sensitivity_early_episodes=50,
