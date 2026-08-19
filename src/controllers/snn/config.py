@@ -302,7 +302,9 @@ def fig4_nguyen_config(
     v84: v83 + replay_update_cadence=48 — FAIL late (timeout 40%, late_len≈15.5);
     do not retry cadence>32. v85: v83 + epsilon_end=0.06 (slightly more late ε vs
     v77's 0.02 trap; keep tu=200, cadence=32). v85 FAIL vs v83 (late_to 17%,
-    ptp 9.65); do not retry epsilon_end>0.05. v86: v83 + target_update_period=250.
+    ptp 9.65);     do not retry epsilon_end>0.05. v86: v83 + target_update_period=250 — identical
+    tier-2 metrics to v83 (ptp 6.55); no gain. v87: v83 + truncation_penalty=300k
+    (stronger timeout dislike; address bimodal len flip).
     """
     return SNNConfig(
         seed=seed,
@@ -318,7 +320,7 @@ def fig4_nguyen_config(
         learning_rate=3e-4,
         batch_size=32,
         q_loss_fn="mse",
-        target_update_period=250,
+        target_update_period=200,
         frequency_sensitivity=20.0,
         frequency_sensitivity_early=5.0,
         frequency_sensitivity_early_episodes=50,
@@ -332,7 +334,7 @@ def fig4_nguyen_config(
         alpha_beta_progress_cap_per_step=10_000.0,
         warm_zone_upper=220.0,
         warm_zone_bonus_coef=150.0,
-        truncation_penalty=250_000.0,
+        truncation_penalty=300_000.0,
         replay_update_cadence=32,
         reward_learning_scale=1e-4,
         stimulated_neurons=1,
