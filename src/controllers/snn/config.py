@@ -54,6 +54,8 @@ class SNNConfig:
     batch_size: int = 32
     # Bellman TD loss: ``mse`` or ``huber`` (smooth L1 — dampens timeout Q spikes).
     q_loss_fn: str = "mse"
+    # Double DQN: online net picks argmax a' at s'; target net evaluates Q(s', a').
+    double_dqn: bool = False
     # Hard-copy target network every N gradient updates (paper silent — convention).
     target_update_period: int = 100
 
@@ -306,7 +308,8 @@ def fig4_nguyen_config(
     tier-2 metrics to v83 (ptp 6.55); no gain. v87: v83 + truncation_penalty=300k
     — FAIL vs v83 (ptp 7.85, late_to 15%, late_slope 0.04). **Ship v83**
     (checkpoint_v83.pt): shape_pass only; Tier-2 blocked by bimodal ptp (~6.5
-    vs paper ~1.6). Q-knob probe budget exhausted v80–v87.
+    vs paper ~1.6). Q-knob probe budget exhausted v80–v87. v88: v83 +
+    double_dqn=True (paper-silent stabilizer; targets lower timeout flip rate).
     """
     return SNNConfig(
         seed=seed,
