@@ -159,6 +159,7 @@ def train_series(
     smoke: bool = False,
     double_dqn: bool = False,
     replay_timeout_weight: float | None = None,
+    learning_rate: float | None = None,
     resume_path: Path | None = None,
     start_episode: int | None = None,
     checkpoint_path: Path | None = None,
@@ -172,6 +173,8 @@ def train_series(
             cfg = replace(cfg, double_dqn=True)
         if replay_timeout_weight is not None:
             cfg = replace(cfg, replay_timeout_weight=replay_timeout_weight)
+        if learning_rate is not None:
+            cfg = replace(cfg, learning_rate=learning_rate)
 
     env = NguyenEnvAdapter(config=cfg)
     try:
@@ -512,6 +515,13 @@ def main(argv: list[str] | None = None) -> int:
         metavar="W",
         help="TD loss weight for max-horizon timeout-episode transitions (v89: 0.25 with --double-dqn)",
     )
+    parser.add_argument(
+        "--learning-rate",
+        type=float,
+        default=None,
+        metavar="LR",
+        help="Adam learning rate override (v90: 2e-4 with --double-dqn for smoother post-100 ptp)",
+    )
     parser.add_argument("--plot-only", action="store_true")
     parser.add_argument("--series", type=Path, default=DEFAULT_SERIES)
     parser.add_argument("--checkpoint", type=Path, default=DEFAULT_CHECKPOINT)
@@ -545,7 +555,7 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"training DSQN seed={args.seed} episodes={args.episodes} smoke={args.smoke} "
             f"double_dqn={args.double_dqn} timeout_replay_weight={args.timeout_replay_weight} "
-            f"resume={args.resume}",
+            f"learning_rate={args.learning_rate} resume={args.resume}",
             flush=True,
         )
         series, cfg, trainer, train_result = train_series(
@@ -554,6 +564,7 @@ def main(argv: list[str] | None = None) -> int:
             smoke=args.smoke,
             double_dqn=args.double_dqn,
             replay_timeout_weight=args.timeout_replay_weight,
+            learning_rate=args.learning_rate,
             resume_path=args.resume,
             start_episode=args.start_episode,
             checkpoint_path=args.checkpoint,
