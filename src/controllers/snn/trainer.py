@@ -92,6 +92,20 @@ def _q_from_membrane(
     raise ValueError(msg)
 
 
+def _argmax_q_from_membrane(membrane: torch.Tensor, *, action_scheme: str) -> torch.Tensor:
+    """argmax_a Q(s', a) from membrane potentials (batch of action indices)."""
+    if action_scheme == "joint":
+        return membrane.argmax(dim=1)
+
+    if action_scheme == "factored":
+        grouped = membrane.view(-1, 3, 3)
+        parts = grouped.argmax(dim=-1)
+        return parts[:, 0] * 9 + parts[:, 1] * 3 + parts[:, 2]
+
+    msg = f"unknown action_scheme {action_scheme!r}"
+    raise ValueError(msg)
+
+
 def _max_q_from_membrane(membrane: torch.Tensor, *, action_scheme: str) -> torch.Tensor:
     """max_a Q(s', a) from membrane potentials."""
     if action_scheme == "joint":
@@ -205,9 +219,25 @@ class DSQNTrainer:
         q_sa = _q_from_membrane(q_out.membrane, actions, action_scheme=cfg.action_scheme)
 
         with torch.no_grad():
-            next_out = self.target_dsqn(next_states)
-            next_max = _max_q_from_membrane(next_out.membrane, action_scheme=cfg.action_scheme)
-            target = rewards + cfg.gamma * (1.0 - done) * next_max
+            if cfg.double_dqn:
+                online_next = self.dsqn(next_states)
+                next_actions = _argmax_q_from_membrane(
+                    online_next.membrane,
+                    action_scheme=cfg.action_scheme,
+                )
+                target_next = self.target_dsqn(next_states)
+                next_q = _q_from_membrane(
+                    target_next.membrane,
+                    next_actions,
+                    action_scheme=cfg.action_scheme,
+                )
+            else:
+                next_out = self.target_dsqn(next_states)
+                next_q = _max_q_from_membrane(
+                    next_out.membrane,
+                    action_scheme=cfg.action_scheme,
+                )
+            target = rewards + cfg.gamma * (1.0 - done) * next_q
 
         if cfg.q_loss_fn == "huber":
             loss = F.smooth_l1_loss(q_sa, target)

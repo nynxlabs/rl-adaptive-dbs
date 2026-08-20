@@ -133,6 +133,9 @@ SNN_MATERIAL_FIELDS: tuple[str, ...] = (
     "epsilon_accelerate_after_steps",
     "epsilon_accelerate_decay_steps",
     "replay_update_cadence",
+    "q_loss_fn",
+    "target_update_period",
+    "double_dqn",
 )
 
 DDPG_MATERIAL_FIELDS: tuple[str, ...] = (
