@@ -158,6 +158,7 @@ def train_series(
     num_episodes: int,
     smoke: bool = False,
     double_dqn: bool = False,
+    replay_timeout_weight: float | None = None,
     resume_path: Path | None = None,
     start_episode: int | None = None,
     checkpoint_path: Path | None = None,
@@ -169,6 +170,8 @@ def train_series(
         cfg = fig4_nguyen_config(seed=seed, num_episodes=num_episodes)
         if double_dqn:
             cfg = replace(cfg, double_dqn=True)
+        if replay_timeout_weight is not None:
+            cfg = replace(cfg, replay_timeout_weight=replay_timeout_weight)
 
     env = NguyenEnvAdapter(config=cfg)
     try:
@@ -502,6 +505,13 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Double DQN bootstrap (v83 recipe + online argmax / target eval)",
     )
+    parser.add_argument(
+        "--timeout-replay-weight",
+        type=float,
+        default=None,
+        metavar="W",
+        help="TD loss weight for max-horizon timeout-episode transitions (v89: 0.25 with --double-dqn)",
+    )
     parser.add_argument("--plot-only", action="store_true")
     parser.add_argument("--series", type=Path, default=DEFAULT_SERIES)
     parser.add_argument("--checkpoint", type=Path, default=DEFAULT_CHECKPOINT)
@@ -534,6 +544,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(
             f"training DSQN seed={args.seed} episodes={args.episodes} smoke={args.smoke} "
+            f"double_dqn={args.double_dqn} timeout_replay_weight={args.timeout_replay_weight} "
             f"resume={args.resume}",
             flush=True,
         )
@@ -542,6 +553,7 @@ def main(argv: list[str] | None = None) -> int:
             num_episodes=args.episodes,
             smoke=args.smoke,
             double_dqn=args.double_dqn,
+            replay_timeout_weight=args.timeout_replay_weight,
             resume_path=args.resume,
             start_episode=args.start_episode,
             checkpoint_path=args.checkpoint,

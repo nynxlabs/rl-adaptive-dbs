@@ -56,6 +56,8 @@ class SNNConfig:
     q_loss_fn: str = "mse"
     # Double DQN: online net picks argmax a' at s'; target net evaluates Q(s', a').
     double_dqn: bool = False
+    # Per-transition loss weight for max-horizon timeout episodes (1.0 = uniform sampling).
+    replay_timeout_weight: float = 1.0
     # Hard-copy target network every N gradient updates (paper silent — convention).
     target_update_period: int = 100
 
@@ -310,6 +312,8 @@ def fig4_nguyen_config(
     (checkpoint_v83.pt): shape_pass only; Tier-2 blocked by bimodal ptp (~6.5
     vs paper ~1.6). Q-knob probe budget exhausted v80–v87. v88: v83 +
     double_dqn=True (paper-silent stabilizer; targets lower timeout flip rate).
+    v89: v88 + replay_timeout_weight=0.25 (down-weight transitions from timeout
+    episodes in TD loss; paper-silent).
     """
     return SNNConfig(
         seed=seed,

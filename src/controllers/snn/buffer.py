@@ -26,6 +26,7 @@ class TransitionBatch:
     reward: np.ndarray
     next_state: np.ndarray
     done: np.ndarray
+    timeout_episode: np.ndarray
 
 
 class ReplayBuffer:
@@ -42,6 +43,7 @@ class ReplayBuffer:
         self._actions = np.zeros(self.capacity, dtype=np.int64)
         self._rewards = np.zeros(self.capacity, dtype=np.float32)
         self._done = np.zeros(self.capacity, dtype=np.bool_)
+        self._timeout_episode = np.zeros(self.capacity, dtype=np.bool_)
         self._pos = 0
         self._size = 0
         self._since_update = 0
@@ -53,7 +55,7 @@ class ReplayBuffer:
     def transitions_since_update(self) -> int:
         return self._since_update
 
-    def add(self, transition: Transition) -> None:
+    def add(self, transition: Transition) -> int:
         state = np.asarray(transition.state, dtype=np.float32).reshape(-1)
         next_state = np.asarray(transition.next_state, dtype=np.float32).reshape(-1)
         expected = self.config.flat_observation_dim
@@ -67,9 +69,17 @@ class ReplayBuffer:
         self._actions[idx] = transition.action
         self._rewards[idx] = transition.reward
         self._done[idx] = transition.done
+        self._timeout_episode[idx] = False
         self._pos = (self._pos + 1) % self.capacity
         self._size = min(self._size + 1, self.capacity)
         self._since_update += 1
+        return idx
+
+    def mark_timeout_episode(self, indices: list[int]) -> None:
+        """Flag every transition stored for a max-horizon timeout episode."""
+        for idx in indices:
+            if 0 <= idx < self.capacity:
+                self._timeout_episode[idx] = True
 
     def ready_for_update(self) -> bool:
         return self._since_update >= self.config.replay_update_cadence
@@ -88,6 +98,7 @@ class ReplayBuffer:
             reward=self._rewards[indices],
             next_state=self._next_states[indices],
             done=self._done[indices],
+            timeout_episode=self._timeout_episode[indices],
         )
 
     def state_dict(self) -> dict[str, Any]:
@@ -97,6 +108,7 @@ class ReplayBuffer:
             "actions": self._actions.copy(),
             "rewards": self._rewards.copy(),
             "done": self._done.copy(),
+            "timeout_episode": self._timeout_episode.copy(),
             "pos": int(self._pos),
             "size": int(self._size),
             "since_update": int(self._since_update),
@@ -109,6 +121,10 @@ class ReplayBuffer:
         self._actions[:] = np.asarray(state["actions"], dtype=np.int64)
         self._rewards[:] = np.asarray(state["rewards"], dtype=np.float32)
         self._done[:] = np.asarray(state["done"], dtype=np.bool_)
+        if "timeout_episode" in state:
+            self._timeout_episode[:] = np.asarray(state["timeout_episode"], dtype=np.bool_)
+        else:
+            self._timeout_episode.fill(False)
         self._pos = int(state["pos"])
         self._size = int(state["size"])
         self._since_update = int(state.get("since_update", 0))
