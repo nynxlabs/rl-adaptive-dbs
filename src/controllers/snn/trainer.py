@@ -240,9 +240,17 @@ class DSQNTrainer:
             target = rewards + cfg.gamma * (1.0 - done) * next_q
 
         if cfg.q_loss_fn == "huber":
-            loss = F.smooth_l1_loss(q_sa, target)
+            per_elem = F.smooth_l1_loss(q_sa, target, reduction="none")
         else:
-            loss = F.mse_loss(q_sa, target)
+            per_elem = F.mse_loss(q_sa, target, reduction="none")
+
+        timeout_w = float(cfg.replay_timeout_weight)
+        if timeout_w != 1.0:
+            sample_w = np.where(batch.timeout_episode, timeout_w, 1.0).astype(np.float32)
+            weights = torch.as_tensor(sample_w, dtype=torch.float32, device=self.device)
+            loss = (per_elem * weights).mean()
+        else:
+            loss = per_elem.mean()
         self.optimizer.zero_grad(set_to_none=True)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.dsqn.parameters(), 10.0)
@@ -309,6 +317,7 @@ class DSQNTrainer:
             step_info: dict[str, Any] | None = reset_info
             steps = 0
             terminated_early = False
+            episode_slots: list[int] = []
             for _ in range(cfg.max_episode_steps):
                 flat = np.asarray(obs, dtype=np.float32).reshape(-1)
                 explore_eps = self.current_epsilon()
@@ -319,7 +328,7 @@ class DSQNTrainer:
                 episode_spikes += int(step_info.get("cbgt_spike_count", 0))
                 episode_energy += float(step_info.get("step_energy", 0.0))
                 alpha_betas.append(float(step_info.get("alpha_beta", float("nan"))))
-                self.buffer.add(
+                slot = self.buffer.add(
                     Transition(
                         state=flat,
                         action=int(action_index),
@@ -328,6 +337,7 @@ class DSQNTrainer:
                         done=done,
                     )
                 )
+                episode_slots.append(slot)
                 self.note_step()
                 self.maybe_update()
                 episode_reward += float(reward)
@@ -337,6 +347,9 @@ class DSQNTrainer:
                     terminated_early = True
                 if done:
                     break
+
+            if not terminated_early and episode_slots:
+                self.buffer.mark_timeout_episode(episode_slots)
 
             if step_info is not None and step_info.get("dbs") is not None:
                 end_dbs = step_info["dbs"]
