@@ -28,6 +28,7 @@ import json
 import os
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -156,6 +157,7 @@ def train_series(
     seed: int,
     num_episodes: int,
     smoke: bool = False,
+    double_dqn: bool = False,
     resume_path: Path | None = None,
     start_episode: int | None = None,
     checkpoint_path: Path | None = None,
@@ -165,6 +167,8 @@ def train_series(
         cfg = SNNConfig(seed=seed).for_smoke(episodes=min(5, num_episodes), max_steps=8)
     else:
         cfg = fig4_nguyen_config(seed=seed, num_episodes=num_episodes)
+        if double_dqn:
+            cfg = replace(cfg, double_dqn=True)
 
     env = NguyenEnvAdapter(config=cfg)
     try:
@@ -493,6 +497,11 @@ def main(argv: list[str] | None = None) -> int:
         help=f"moving-average window for smoothed curves (default {SMOOTH_WINDOW})",
     )
     parser.add_argument("--smoke", action="store_true", help="5-episode smoke train for CI/dev")
+    parser.add_argument(
+        "--double-dqn",
+        action="store_true",
+        help="Double DQN bootstrap (v83 recipe + online argmax / target eval)",
+    )
     parser.add_argument("--plot-only", action="store_true")
     parser.add_argument("--series", type=Path, default=DEFAULT_SERIES)
     parser.add_argument("--checkpoint", type=Path, default=DEFAULT_CHECKPOINT)
@@ -532,6 +541,7 @@ def main(argv: list[str] | None = None) -> int:
             seed=args.seed,
             num_episodes=args.episodes,
             smoke=args.smoke,
+            double_dqn=args.double_dqn,
             resume_path=args.resume,
             start_episode=args.start_episode,
             checkpoint_path=args.checkpoint,
