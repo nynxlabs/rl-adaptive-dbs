@@ -245,8 +245,13 @@ class DSQNTrainer:
             per_elem = F.mse_loss(q_sa, target, reduction="none")
 
         timeout_w = float(cfg.replay_timeout_weight)
-        if timeout_w != 1.0:
-            sample_w = np.where(batch.timeout_episode, timeout_w, 1.0).astype(np.float32)
+        short_w = float(cfg.replay_short_stop_weight)
+        if timeout_w != 1.0 or short_w != 1.0:
+            sample_w = np.ones(batch.state.shape[0], dtype=np.float32)
+            if timeout_w != 1.0:
+                sample_w = np.where(batch.timeout_episode, sample_w * timeout_w, sample_w)
+            if short_w != 1.0:
+                sample_w = np.where(batch.short_stop_episode, sample_w * short_w, sample_w)
             weights = torch.as_tensor(sample_w, dtype=torch.float32, device=self.device)
             loss = (per_elem * weights).mean()
         else:
@@ -350,6 +355,13 @@ class DSQNTrainer:
 
             if not terminated_early and episode_slots:
                 self.buffer.mark_timeout_episode(episode_slots)
+            elif (
+                terminated_early
+                and episode_slots
+                and cfg.replay_short_stop_max_steps > 0
+                and steps <= cfg.replay_short_stop_max_steps
+            ):
+                self.buffer.mark_short_stop_episode(episode_slots)
 
             if step_info is not None and step_info.get("dbs") is not None:
                 end_dbs = step_info["dbs"]
