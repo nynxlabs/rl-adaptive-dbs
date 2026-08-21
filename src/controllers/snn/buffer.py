@@ -27,6 +27,7 @@ class TransitionBatch:
     next_state: np.ndarray
     done: np.ndarray
     timeout_episode: np.ndarray
+    short_stop_episode: np.ndarray
 
 
 class ReplayBuffer:
@@ -44,6 +45,7 @@ class ReplayBuffer:
         self._rewards = np.zeros(self.capacity, dtype=np.float32)
         self._done = np.zeros(self.capacity, dtype=np.bool_)
         self._timeout_episode = np.zeros(self.capacity, dtype=np.bool_)
+        self._short_stop_episode = np.zeros(self.capacity, dtype=np.bool_)
         self._pos = 0
         self._size = 0
         self._since_update = 0
@@ -70,6 +72,7 @@ class ReplayBuffer:
         self._rewards[idx] = transition.reward
         self._done[idx] = transition.done
         self._timeout_episode[idx] = False
+        self._short_stop_episode[idx] = False
         self._pos = (self._pos + 1) % self.capacity
         self._size = min(self._size + 1, self.capacity)
         self._since_update += 1
@@ -80,6 +83,12 @@ class ReplayBuffer:
         for idx in indices:
             if 0 <= idx < self.capacity:
                 self._timeout_episode[idx] = True
+
+    def mark_short_stop_episode(self, indices: list[int]) -> None:
+        """Flag every transition stored for a very short early-stop episode."""
+        for idx in indices:
+            if 0 <= idx < self.capacity:
+                self._short_stop_episode[idx] = True
 
     def ready_for_update(self) -> bool:
         return self._since_update >= self.config.replay_update_cadence
@@ -99,6 +108,7 @@ class ReplayBuffer:
             next_state=self._next_states[indices],
             done=self._done[indices],
             timeout_episode=self._timeout_episode[indices],
+            short_stop_episode=self._short_stop_episode[indices],
         )
 
     def state_dict(self) -> dict[str, Any]:
@@ -109,6 +119,7 @@ class ReplayBuffer:
             "rewards": self._rewards.copy(),
             "done": self._done.copy(),
             "timeout_episode": self._timeout_episode.copy(),
+            "short_stop_episode": self._short_stop_episode.copy(),
             "pos": int(self._pos),
             "size": int(self._size),
             "since_update": int(self._since_update),
@@ -125,6 +136,10 @@ class ReplayBuffer:
             self._timeout_episode[:] = np.asarray(state["timeout_episode"], dtype=np.bool_)
         else:
             self._timeout_episode.fill(False)
+        if "short_stop_episode" in state:
+            self._short_stop_episode[:] = np.asarray(state["short_stop_episode"], dtype=np.bool_)
+        else:
+            self._short_stop_episode.fill(False)
         self._pos = int(state["pos"])
         self._size = int(state["size"])
         self._since_update = int(state.get("since_update", 0))

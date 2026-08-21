@@ -58,6 +58,9 @@ class SNNConfig:
     double_dqn: bool = False
     # Per-transition loss weight for max-horizon timeout episodes (1.0 = uniform sampling).
     replay_timeout_weight: float = 1.0
+    # Down-weight early-stop episodes with length <= replay_short_stop_max_steps (0 = off).
+    replay_short_stop_max_steps: int = 0
+    replay_short_stop_weight: float = 1.0
     # Hard-copy target network every N gradient updates (paper silent — convention).
     target_update_period: int = 100
 

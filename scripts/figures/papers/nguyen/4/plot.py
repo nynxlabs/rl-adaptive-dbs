@@ -159,6 +159,8 @@ def train_series(
     smoke: bool = False,
     double_dqn: bool = False,
     replay_timeout_weight: float | None = None,
+    replay_short_stop_max_steps: int | None = None,
+    replay_short_stop_weight: float | None = None,
     learning_rate: float | None = None,
     epsilon_end: float | None = None,
     target_update_period: int | None = None,
@@ -175,6 +177,10 @@ def train_series(
             cfg = replace(cfg, double_dqn=True)
         if replay_timeout_weight is not None:
             cfg = replace(cfg, replay_timeout_weight=replay_timeout_weight)
+        if replay_short_stop_max_steps is not None:
+            cfg = replace(cfg, replay_short_stop_max_steps=replay_short_stop_max_steps)
+        if replay_short_stop_weight is not None:
+            cfg = replace(cfg, replay_short_stop_weight=replay_short_stop_weight)
         if learning_rate is not None:
             cfg = replace(cfg, learning_rate=learning_rate)
         if epsilon_end is not None:
@@ -522,6 +528,20 @@ def main(argv: list[str] | None = None) -> int:
         help="TD loss weight for max-horizon timeout-episode transitions (v89: 0.25 with --double-dqn)",
     )
     parser.add_argument(
+        "--short-stop-max-steps",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Mark early-stop episodes with length <= N for short-stop replay down-weight (v99: 6)",
+    )
+    parser.add_argument(
+        "--short-stop-replay-weight",
+        type=float,
+        default=None,
+        metavar="W",
+        help="TD loss weight for short early-stop episodes (v99: 0.25 with --short-stop-max-steps 6)",
+    )
+    parser.add_argument(
         "--learning-rate",
         type=float,
         default=None,
@@ -575,6 +595,8 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"training DSQN seed={args.seed} episodes={args.episodes} smoke={args.smoke} "
             f"double_dqn={args.double_dqn} timeout_replay_weight={args.timeout_replay_weight} "
+            f"short_stop_max_steps={args.short_stop_max_steps} "
+            f"short_stop_replay_weight={args.short_stop_replay_weight} "
             f"learning_rate={args.learning_rate} epsilon_end={args.epsilon_end} "
             f"target_update_period={args.target_update_period} resume={args.resume}",
             flush=True,
@@ -585,6 +607,8 @@ def main(argv: list[str] | None = None) -> int:
             smoke=args.smoke,
             double_dqn=args.double_dqn,
             replay_timeout_weight=args.timeout_replay_weight,
+            replay_short_stop_max_steps=args.short_stop_max_steps,
+            replay_short_stop_weight=args.short_stop_replay_weight,
             learning_rate=args.learning_rate,
             epsilon_end=args.epsilon_end,
             target_update_period=args.target_update_period,

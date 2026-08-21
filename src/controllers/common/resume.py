@@ -137,6 +137,8 @@ SNN_MATERIAL_FIELDS: tuple[str, ...] = (
     "target_update_period",
     "double_dqn",
     "replay_timeout_weight",
+    "replay_short_stop_max_steps",
+    "replay_short_stop_weight",
 )
 
 DDPG_MATERIAL_FIELDS: tuple[str, ...] = (
