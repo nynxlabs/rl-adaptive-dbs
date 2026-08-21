@@ -160,6 +160,7 @@ def train_series(
     double_dqn: bool = False,
     replay_timeout_weight: float | None = None,
     learning_rate: float | None = None,
+    epsilon_end: float | None = None,
     resume_path: Path | None = None,
     start_episode: int | None = None,
     checkpoint_path: Path | None = None,
@@ -175,6 +176,8 @@ def train_series(
             cfg = replace(cfg, replay_timeout_weight=replay_timeout_weight)
         if learning_rate is not None:
             cfg = replace(cfg, learning_rate=learning_rate)
+        if epsilon_end is not None:
+            cfg = replace(cfg, epsilon_end=epsilon_end)
 
     env = NguyenEnvAdapter(config=cfg)
     try:
@@ -522,6 +525,13 @@ def main(argv: list[str] | None = None) -> int:
         metavar="LR",
         help="Adam learning rate override (v90: 2e-4 with --double-dqn for smoother post-100 ptp)",
     )
+    parser.add_argument(
+        "--epsilon-end",
+        type=float,
+        default=None,
+        metavar="EPS",
+        help="Late ε floor override (v91: 0.04 with v90 recipe to trim late timeouts)",
+    )
     parser.add_argument("--plot-only", action="store_true")
     parser.add_argument("--series", type=Path, default=DEFAULT_SERIES)
     parser.add_argument("--checkpoint", type=Path, default=DEFAULT_CHECKPOINT)
@@ -555,7 +565,7 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"training DSQN seed={args.seed} episodes={args.episodes} smoke={args.smoke} "
             f"double_dqn={args.double_dqn} timeout_replay_weight={args.timeout_replay_weight} "
-            f"learning_rate={args.learning_rate} resume={args.resume}",
+            f"learning_rate={args.learning_rate} epsilon_end={args.epsilon_end} resume={args.resume}",
             flush=True,
         )
         series, cfg, trainer, train_result = train_series(
@@ -565,6 +575,7 @@ def main(argv: list[str] | None = None) -> int:
             double_dqn=args.double_dqn,
             replay_timeout_weight=args.timeout_replay_weight,
             learning_rate=args.learning_rate,
+            epsilon_end=args.epsilon_end,
             resume_path=args.resume,
             start_episode=args.start_episode,
             checkpoint_path=args.checkpoint,
