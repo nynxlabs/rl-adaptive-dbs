@@ -161,6 +161,7 @@ def train_series(
     replay_timeout_weight: float | None = None,
     learning_rate: float | None = None,
     epsilon_end: float | None = None,
+    target_update_period: int | None = None,
     resume_path: Path | None = None,
     start_episode: int | None = None,
     checkpoint_path: Path | None = None,
@@ -178,6 +179,8 @@ def train_series(
             cfg = replace(cfg, learning_rate=learning_rate)
         if epsilon_end is not None:
             cfg = replace(cfg, epsilon_end=epsilon_end)
+        if target_update_period is not None:
+            cfg = replace(cfg, target_update_period=target_update_period)
 
     env = NguyenEnvAdapter(config=cfg)
     try:
@@ -532,6 +535,13 @@ def main(argv: list[str] | None = None) -> int:
         metavar="EPS",
         help="Late ε floor override (v91: 0.04 with v90 recipe to trim late timeouts)",
     )
+    parser.add_argument(
+        "--target-update-period",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Hard target-network copy period (v92: 225 on v90 recipe for late timeout trim)",
+    )
     parser.add_argument("--plot-only", action="store_true")
     parser.add_argument("--series", type=Path, default=DEFAULT_SERIES)
     parser.add_argument("--checkpoint", type=Path, default=DEFAULT_CHECKPOINT)
@@ -565,7 +575,8 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"training DSQN seed={args.seed} episodes={args.episodes} smoke={args.smoke} "
             f"double_dqn={args.double_dqn} timeout_replay_weight={args.timeout_replay_weight} "
-            f"learning_rate={args.learning_rate} epsilon_end={args.epsilon_end} resume={args.resume}",
+            f"learning_rate={args.learning_rate} epsilon_end={args.epsilon_end} "
+            f"target_update_period={args.target_update_period} resume={args.resume}",
             flush=True,
         )
         series, cfg, trainer, train_result = train_series(
@@ -576,6 +587,7 @@ def main(argv: list[str] | None = None) -> int:
             replay_timeout_weight=args.timeout_replay_weight,
             learning_rate=args.learning_rate,
             epsilon_end=args.epsilon_end,
+            target_update_period=args.target_update_period,
             resume_path=args.resume,
             start_episode=args.start_episode,
             checkpoint_path=args.checkpoint,
