@@ -80,7 +80,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 ### Latest attempt (v22, v10f)
 
-![Replication Fig 4 — latest](images/4/training_reward_length_v95.png)
+![Replication Fig 4 — latest](images/4/training_reward_length_v96.png)
 
 <!-- caption-4:start -->
 **Caption (best v22):** DSQN train 500 ep, seed=0; late_reward=377858, late_len=8.9; shape_pass=False — best late length so far; timing gates still fail (v22)
@@ -89,12 +89,12 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 <!-- caption-4:end -->
 
 <!-- caption-4-latest:start -->
-**Caption:** DSQN train 500 ep, seed=0; late_reward=-59098, late_len=11.6; shape_pass=True pass=False (reward shape=True full=False, length shape=True full=False) (v95)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=-52422, late_len=11.3; shape_pass=True pass=False (reward shape=True full=False, length shape=True full=False) (v96)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4-latest:end -->
 
-**Status:** Timing shape open — latest **v95** (`late_len=11.6`, `shape_pass=True`); see manifest gates.
+**Status:** Timing shape open — latest **v96** (`late_len=11.3`, `shape_pass=True`); see manifest gates.
 
 <!-- gates-4:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: yes, **`pass`**: no, 2026-08-21). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
