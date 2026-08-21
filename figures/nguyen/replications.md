@@ -12,7 +12,7 @@ Figs **1–2** are schematics — **not** replication targets.
 | Panel | Description | Status |
 |-------|-------------|--------|
 | Fig 3 | GPi α–β distribution (PD Off vs PD On) | Pass (rep v22) |
-| Fig 4 | Training reward + episode length | Shape OK (full open) |
+| Fig 4 | Training reward + episode length | Alt pass+ rep v97 (reward full pass; len plateau 0.3 short) |
 | Fig 5 | CBGT spikes + DBS energy over training | Fail (`shared_train`) |
 | Fig 6 | α–β + DBS parameters over training | Fail (`shared_train`) |
 | Fig 7 | 50-episode eval (25 steps) | Fail (`checkpoint_lineage_ok`) |
@@ -74,13 +74,13 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 ![Paper Fig 4](images/4/paper.png)
 
-### Replication (best: v22, v10f)
+### Replication (best: v97, train v98)
 
-![Replication Fig 4 — best](images/4/training_reward_length_v22.png)
+![Replication Fig 4 — best](images/4/training_reward_length_v97.png)
 
-### Latest attempt (v22, v10f)
+### Latest attempt (v97, train v98)
 
-![Replication Fig 4 — latest](images/4/training_reward_length_v96.png)
+![Replication Fig 4 — latest](images/4/training_reward_length_v97.png)
 
 <!-- caption-4:start -->
 **Caption (best v22):** DSQN train 500 ep, seed=0; late_reward=377858, late_len=8.9; shape_pass=False — best late length so far; timing gates still fail (v22)
@@ -89,17 +89,17 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 <!-- caption-4:end -->
 
 <!-- caption-4-latest:start -->
-**Caption:** DSQN train 500 ep, seed=0; late_reward=-52422, late_len=11.3; shape_pass=True pass=False (reward shape=True full=False, length shape=True full=False) (v96)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=-8066, late_len=8.8; shape_pass=True pass=False (reward shape=True full=True, length shape=True full=False) (v97)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4-latest:end -->
 
-**Status:** Timing shape open — latest **v96** (`late_len=11.3`, `shape_pass=True`); see manifest gates.
+**Status:** **Best rep v97** (train **v98**: double DQN, lr=2.5e-4, timeout weight=0.10) — `shape_pass=True`, Tier-2 alt gates pass, **reward full pass**, len ptp **4.80** (plateau gate needs ≤4.5); late_to **4.67%**. Lineage: `checkpoint_v98.pt` / `checkpoint.pt`.
 
 <!-- gates-4:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: yes, **`pass`**: no, 2026-08-21). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
 
-### Reward (panel a) (`shape_pass`: yes | `pass`: no)
+### Reward (panel a) (`shape_pass`: yes | `pass`: yes)
 
 | Key | Description | Shape | Full |
 |-----|-------------|-------|------|
@@ -107,7 +107,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 | `reward_improves_by_100` | smoothed reward 80–100 better than 0–50 | yes | yes |
 | `reward_by_100_near_zero` | smoothed reward 80–100 toward ~0 | yes | yes |
 | `late_reward_near_zero` | late mean toward paper ~0 (diagnostic) | — | — |
-| `reward_post100_plateau` | smoothed reward flat ep 100+ like paper | — | no |
+| `reward_post100_plateau` | smoothed reward flat ep 100+ like paper | — | yes |
 | `late_reward_above_early` | late mean > first-50 (diagnostic) | — | — |
 | `early_high_variance` | early reward variance (logged) | — | — |
 | `paper_early_reward_mag_near_paper` | digitization — early reward magnitude (diagnostic) | — | — |
