@@ -164,6 +164,10 @@ def train_series(
     learning_rate: float | None = None,
     epsilon_end: float | None = None,
     target_update_period: int | None = None,
+    pulse_width_min: float | None = None,
+    pulse_width_sensitivity: float | None = None,
+    frequency_sensitivity_early_episodes: int | None = None,
+    subthreshold_steps_required: int | None = None,
     resume_path: Path | None = None,
     start_episode: int | None = None,
     checkpoint_path: Path | None = None,
@@ -187,6 +191,17 @@ def train_series(
             cfg = replace(cfg, epsilon_end=epsilon_end)
         if target_update_period is not None:
             cfg = replace(cfg, target_update_period=target_update_period)
+        if pulse_width_min is not None:
+            cfg = replace(cfg, pulse_width_min=pulse_width_min)
+        if pulse_width_sensitivity is not None:
+            cfg = replace(cfg, pulse_width_sensitivity=pulse_width_sensitivity)
+        if frequency_sensitivity_early_episodes is not None:
+            cfg = replace(
+                cfg,
+                frequency_sensitivity_early_episodes=frequency_sensitivity_early_episodes,
+            )
+        if subthreshold_steps_required is not None:
+            cfg = replace(cfg, subthreshold_steps_required=subthreshold_steps_required)
 
     env = NguyenEnvAdapter(config=cfg)
     try:
@@ -562,6 +577,34 @@ def main(argv: list[str] | None = None) -> int:
         metavar="N",
         help="Hard target-network copy period (v92: 225 on v90 recipe for late timeout trim)",
     )
+    parser.add_argument(
+        "--pulse-width-min",
+        type=float,
+        default=None,
+        metavar="MS",
+        help="Minimum pulse width (ms); v108: 0.8 toward paper Fig 6 ~1 ms for Fig 5 energy",
+    )
+    parser.add_argument(
+        "--pulse-width-sensitivity",
+        type=float,
+        default=None,
+        metavar="S",
+        help="Pulse width delta per +1 action (ms); v108: 0.4 for mid-training pw ramp",
+    )
+    parser.add_argument(
+        "--frequency-sensitivity-early-episodes",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Episodes using frequency_sensitivity_early before exploit Hz/step (v108: 100)",
+    )
+    parser.add_argument(
+        "--subthreshold-steps",
+        type=int,
+        default=None,
+        metavar="TU",
+        help="Consecutive sub-threshold steps for early stop (t_u); default from fig4_nguyen_config",
+    )
     parser.add_argument("--plot-only", action="store_true")
     parser.add_argument("--series", type=Path, default=DEFAULT_SERIES)
     parser.add_argument("--checkpoint", type=Path, default=DEFAULT_CHECKPOINT)
@@ -598,7 +641,11 @@ def main(argv: list[str] | None = None) -> int:
             f"short_stop_max_steps={args.short_stop_max_steps} "
             f"short_stop_replay_weight={args.short_stop_replay_weight} "
             f"learning_rate={args.learning_rate} epsilon_end={args.epsilon_end} "
-            f"target_update_period={args.target_update_period} resume={args.resume}",
+            f"target_update_period={args.target_update_period} "
+            f"pulse_width_min={args.pulse_width_min} "
+            f"pulse_width_sensitivity={args.pulse_width_sensitivity} "
+            f"freq_sens_early_ep={args.frequency_sensitivity_early_episodes} "
+            f"subthreshold_steps={args.subthreshold_steps} resume={args.resume}",
             flush=True,
         )
         series, cfg, trainer, train_result = train_series(
@@ -612,6 +659,10 @@ def main(argv: list[str] | None = None) -> int:
             learning_rate=args.learning_rate,
             epsilon_end=args.epsilon_end,
             target_update_period=args.target_update_period,
+            pulse_width_min=args.pulse_width_min,
+            pulse_width_sensitivity=args.pulse_width_sensitivity,
+            frequency_sensitivity_early_episodes=args.frequency_sensitivity_early_episodes,
+            subthreshold_steps_required=args.subthreshold_steps,
             resume_path=args.resume,
             start_episode=args.start_episode,
             checkpoint_path=args.checkpoint,
