@@ -293,11 +293,15 @@ class DSQNTrainer:
         checkpoint_interval: int = 50,
         on_checkpoint: Callable[[int, TrainResult], None] | None = None,
         initial_result: TrainResult | None = None,
+        learn: bool = True,
     ) -> TrainResult:
         """Run ``num_episodes`` of interaction + DQN updates.
 
         When ``start_episode`` > 0, episodes ``start_episode .. num_episodes-1`` are
         trained and series from ``initial_result`` are appended (resume path).
+
+        ``learn=False`` rolls out episodes only (no replay / optimizer updates) for
+        metric relogging from a fixed checkpoint.
         """
         cfg = self.config
         if start_episode >= cfg.num_episodes:
@@ -315,8 +319,10 @@ class DSQNTrainer:
         for episode in range(start_episode, cfg.num_episodes):
             obs, reset_info = env.reset(seed=cfg.seed + episode)
             episode_reward = 0.0
-            episode_spikes = int(reset_info.get("cbgt_spike_count", 0))
-            episode_energy = float(reset_info.get("step_energy", 0.0))
+            # Fig. 5/6 per-episode spikes and energy sum env.step() transitions only
+            # (same steps as episode_lengths); reset() initial integrate is not counted.
+            episode_spikes = 0
+            episode_energy = 0.0
             alpha_betas: list[float] = [float(reset_info.get("alpha_beta", float("nan")))]
             end_dbs = reset_info.get("dbs")
             step_info: dict[str, Any] | None = reset_info
@@ -333,18 +339,19 @@ class DSQNTrainer:
                 episode_spikes += int(step_info.get("cbgt_spike_count", 0))
                 episode_energy += float(step_info.get("step_energy", 0.0))
                 alpha_betas.append(float(step_info.get("alpha_beta", float("nan"))))
-                slot = self.buffer.add(
-                    Transition(
-                        state=flat,
-                        action=int(action_index),
-                        reward=float(reward),
-                        next_state=np.asarray(next_obs, dtype=np.float32).reshape(-1),
-                        done=done,
+                if learn:
+                    slot = self.buffer.add(
+                        Transition(
+                            state=flat,
+                            action=int(action_index),
+                            reward=float(reward),
+                            next_state=np.asarray(next_obs, dtype=np.float32).reshape(-1),
+                            done=done,
+                        )
                     )
-                )
-                episode_slots.append(slot)
-                self.note_step()
-                self.maybe_update()
+                    episode_slots.append(slot)
+                    self.note_step()
+                    self.maybe_update()
                 episode_reward += float(reward)
                 steps += 1
                 obs = next_obs
@@ -353,15 +360,16 @@ class DSQNTrainer:
                 if done:
                     break
 
-            if not terminated_early and episode_slots:
-                self.buffer.mark_timeout_episode(episode_slots)
-            elif (
-                terminated_early
-                and episode_slots
-                and cfg.replay_short_stop_max_steps > 0
-                and steps <= cfg.replay_short_stop_max_steps
-            ):
-                self.buffer.mark_short_stop_episode(episode_slots)
+            if learn:
+                if not terminated_early and episode_slots:
+                    self.buffer.mark_timeout_episode(episode_slots)
+                elif (
+                    terminated_early
+                    and episode_slots
+                    and cfg.replay_short_stop_max_steps > 0
+                    and steps <= cfg.replay_short_stop_max_steps
+                ):
+                    self.buffer.mark_short_stop_episode(episode_slots)
 
             if step_info is not None and step_info.get("dbs") is not None:
                 end_dbs = step_info["dbs"]
@@ -384,6 +392,12 @@ class DSQNTrainer:
             result.episode_energies.append(episode_energy)
             result.episode_alpha_beta_means.append(float(np.nanmean(alpha_betas)))
             result.episode_early_stops.append(terminated_early)
+            if not learn:
+                print(
+                    f"rollout episode {episode + 1}/{cfg.num_episodes} "
+                    f"spikes={episode_spikes} energy={episode_energy:.1f} len={steps}",
+                    flush=True,
+                )
             completed = episode + 1
             if checkpoint_path is not None and checkpoint_interval > 0:
                 if completed % checkpoint_interval == 0 or completed == cfg.num_episodes:

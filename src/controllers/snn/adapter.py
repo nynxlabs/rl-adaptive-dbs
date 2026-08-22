@@ -161,7 +161,8 @@ class NguyenEnvAdapter(gym.Env):
             dt_ms=result.dt_ms,
         )
         self._prev_alpha_beta = alpha_beta
-        spike_count, step_energy = self._step_metrics(result)
+        spike_count = int(np.sum(obs))
+        step_energy = self._step_energy()
         info = {
             "alpha_beta": alpha_beta,
             "dbs": self._dbs,
@@ -180,22 +181,6 @@ class NguyenEnvAdapter(gym.Env):
             record_th_spikes=True,
             record_cor_spikes=True,
         )
-
-    @staticmethod
-    def _cbgt_spike_count(result: IntegrateResult) -> int:
-        """Sum GPi + TH + cortical spike events in one RL step (paper Fig. 5a)."""
-        info = result.info or {}
-        total = 0
-        for key in ("gpi_spike_counts", "th_spike_counts", "cor_spike_counts"):
-            counts = info.get(key)
-            if counts:
-                total += int(np.sum(counts))
-        if total > 0:
-            return total
-        return int(sum(len(times) for times in result.gpi_spikes))
-
-    def _step_metrics(self, result: IntegrateResult) -> tuple[int, float]:
-        return self._cbgt_spike_count(result), self._step_energy()
 
     def step(
         self,
@@ -244,7 +229,8 @@ class NguyenEnvAdapter(gym.Env):
         )
         if truncated and not terminated and self.config.truncation_penalty > 0.0:
             reward -= self.config.truncation_penalty
-        spike_count, step_energy = self._step_metrics(result)
+        spike_count = int(np.sum(obs))
+        step_energy = self._step_energy()
         self._prev_alpha_beta = alpha_beta
         info = {
             "alpha_beta": alpha_beta,

@@ -495,6 +495,8 @@ def fig5_spikes_energy_gates(
     episode_energies: list[float] | np.ndarray,
     *,
     early_hi: float = 50.0,
+    mid_lo: float = 55.0,
+    mid_hi: float = 75.0,
     late_lo: float = 350.0,
     rel_tol: float = DEFAULT_REL_TOL,
     ratio_tol: float = DEFAULT_RATIO_TOL,
@@ -512,6 +514,7 @@ def fig5_spikes_energy_gates(
     spike_early = window_mean(x, spikes, hi=early_hi)
     spike_late = window_mean(x, spikes, lo=late_lo)
     energy_early = window_mean(x, energies, hi=early_hi)
+    energy_mid = window_mean(x, energies, lo=mid_lo, hi=mid_hi)
     energy_late = window_mean(x, energies, lo=late_lo)
 
     paper_s = load_curves("fig5_spikes")
@@ -524,13 +527,18 @@ def fig5_spikes_energy_gates(
     p_spike_early = window_mean(psx, psy, hi=early_hi)
     p_spike_late = window_mean(psx, psy, lo=late_lo)
     p_energy_early = window_mean(pex, pey, hi=early_hi)
+    p_energy_mid = window_mean(pex, pey, lo=mid_lo, hi=mid_hi)
     p_energy_late = window_mean(pex, pey, lo=late_lo)
 
     gates = {
+        "spike_early_near_paper": rel_close(spike_early, p_spike_early, tol=rel_tol),
         "spike_mean_near_paper": rel_close(spike_mean, p_spike_mean, tol=rel_tol),
         "energy_mean_near_paper": rel_close(energy_mean, p_energy_mean, tol=rel_tol),
         "spike_trend_near_paper": ratio_close(
             spike_late, spike_early, p_spike_late, p_spike_early, tol=ratio_tol
+        ),
+        "energy_mid_ramp_near_paper": ratio_close(
+            energy_mid, energy_early, p_energy_mid, p_energy_early, tol=ratio_tol
         ),
         "energy_trend_near_paper": ratio_close(
             energy_late, energy_early, p_energy_late, p_energy_early, tol=ratio_tol
@@ -546,14 +554,21 @@ def fig5_spikes_energy_gates(
             "spike_early": spike_early,
             "spike_late": spike_late,
             "energy_early": energy_early,
+            "energy_mid": energy_mid,
             "energy_late": energy_late,
             "paper_spike_mean": p_spike_mean,
             "paper_energy_mean": p_energy_mean,
+            "paper_spike_early": p_spike_early,
+            "paper_energy_mid": p_energy_mid,
         },
         paper_ref={
             "spikes": str(curves_path("fig5_spikes")),
             "energy": str(curves_path("fig5_energy")),
         },
+        notes=[
+            "Spikes digitization: single traced series (Spike Count); no separate Raw export.",
+            "Energy mid window ep 55–75 targets paper ramp (~ep 60–70); compare Smoothed curve.",
+        ],
     )
 
 
