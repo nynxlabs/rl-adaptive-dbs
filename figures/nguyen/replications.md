@@ -80,7 +80,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 ### Latest attempt (v97, train v98)
 
-![Replication Fig 4 — latest](images/4/training_reward_length_v100.png)
+![Replication Fig 4 — latest](images/4/training_reward_length_v101.png)
 
 <!-- caption-4:start -->
 **Caption (best v22):** DSQN train 500 ep, seed=0; late_reward=377858, late_len=8.9; shape_pass=False — best late length so far; timing gates still fail (v22)
@@ -89,12 +89,12 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 <!-- caption-4:end -->
 
 <!-- caption-4-latest:start -->
-**Caption:** DSQN train 500 ep, seed=0; late_reward=-12136, late_len=8.8; shape_pass=True pass=False (reward shape=True full=False, length shape=True full=True) (v100)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=-16232, late_len=9.3; shape_pass=True pass=False (reward shape=True full=False, length shape=True full=False) (v101)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4-latest:end -->
 
-**Status:** Timing shape open — latest **v100** (`late_len=8.8`, `shape_pass=True`); see manifest gates.
+**Status:** Timing shape open — latest **v101** (`late_len=9.3`, `shape_pass=True`); see manifest gates.
 
 <!-- gates-4:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: yes, **`pass`**: no, 2026-08-21). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
@@ -114,7 +114,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 | `paper_reward_improves_like_paper` | digitization — reward improves (diagnostic) | — | — |
 | `paper_late_reward_ratio_near_paper` | digitization — late/first-50 reward ratio (diagnostic) | — | — |
 
-### Length (panel b) (`shape_pass`: yes | `pass`: yes)
+### Length (panel b) (`shape_pass`: yes | `pass`: no)
 
 | Key | Description | Shape | Full |
 |-----|-------------|-------|------|
@@ -124,7 +124,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 | `length_by_100_near_paper` | smoothed length 80–100 near digitized ~10 | yes | yes |
 | `late_length_paper_band` | late mean length ≤ 12 (diagnostic) | — | — |
 | `paper_late_length_near_paper` | late length near digitized ~8 (diagnostic) | — | — |
-| `length_post100_plateau` | length plateau ep 100+ like paper | — | yes |
+| `length_post100_plateau` | length plateau ep 100+ like paper | — | no |
 | `late_length_no_regression` | smoothed length slope ep 350–490 ≤ 0.02/ep | — | yes |
 | `late_timeout_fraction` | raw timeout rate ep 350–500 ≤ 25% | — | yes |
 | `late_length_level` | smoothed length median ep 350–500 ≤ 14 | — | yes |
