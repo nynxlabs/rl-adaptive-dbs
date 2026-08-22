@@ -94,7 +94,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4-latest:end -->
 
-**Status:** Timing shape open — latest **v120** (`late_len=11.1`, `shape_pass=True`); see manifest gates.
+**Status:** **v119** len full / rew +233; **v120** rew full / late_slope fail; **v121** weight **0.249** in flight.
 
 <!-- gates-4:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: yes, **`pass`**: no, 2026-08-22). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
