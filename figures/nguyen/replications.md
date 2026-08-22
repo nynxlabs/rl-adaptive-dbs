@@ -80,7 +80,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 ### Latest attempt (v97, train v98)
 
-![Replication Fig 4 — latest](images/4/training_reward_length_v118.png)
+![Replication Fig 4 — latest](images/4/training_reward_length_v119.png)
 
 <!-- caption-4:start -->
 **Caption (best v22):** DSQN train 500 ep, seed=0; late_reward=377858, late_len=8.9; shape_pass=False — best late length so far; timing gates still fail (v22)
@@ -89,12 +89,12 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 <!-- caption-4:end -->
 
 <!-- caption-4-latest:start -->
-**Caption:** DSQN train 500 ep, seed=0; late_reward=-120946, late_len=13.6; shape_pass=True pass=False (reward shape=True full=False, length shape=True full=False) (v118)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=-29459, late_len=9.9; shape_pass=True pass=False (reward shape=True full=False, length shape=True full=True) (v119)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4-latest:end -->
 
-**Status:** Best **v116** (reward full, len ptp **4.80**); **v118** tu=50 closed; **v119** short-stop + timeout 0.10 in flight.
+**Status:** **v119** length **full pass**; reward `rew_ptp` **50233** (miss **233**); **v120** weight **0.24** in flight.
 
 <!-- gates-4:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: yes, **`pass`**: no, 2026-08-22). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
@@ -114,7 +114,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 | `paper_reward_improves_like_paper` | digitization — reward improves (diagnostic) | — | — |
 | `paper_late_reward_ratio_near_paper` | digitization — late/first-50 reward ratio (diagnostic) | — | — |
 
-### Length (panel b) (`shape_pass`: yes | `pass`: no)
+### Length (panel b) (`shape_pass`: yes | `pass`: yes)
 
 | Key | Description | Shape | Full |
 |-----|-------------|-------|------|
@@ -124,10 +124,10 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 | `length_by_100_near_paper` | smoothed length 80–100 near digitized ~10 | yes | yes |
 | `late_length_paper_band` | late mean length ≤ 12 (diagnostic) | — | — |
 | `paper_late_length_near_paper` | late length near digitized ~8 (diagnostic) | — | — |
-| `length_post100_plateau` | length plateau ep 100+ like paper | — | no |
+| `length_post100_plateau` | length plateau ep 100+ like paper | — | yes |
 | `late_length_no_regression` | smoothed length slope ep 350–490 ≤ 0.02/ep | — | yes |
-| `late_timeout_fraction` | raw timeout rate ep 350–500 ≤ 25% | — | no |
-| `late_length_level` | smoothed length median ep 350–500 ≤ 14 | — | no |
+| `late_timeout_fraction` | raw timeout rate ep 350–500 ≤ 25% | — | yes |
+| `late_length_level` | smoothed length median ep 350–500 ≤ 14 | — | yes |
 | `length_decreases` | late < early − 1 (diagnostic) | — | — |
 | `paper_length_decreases_like_paper` | digitization — length decreases (diagnostic) | — | — |
 | `paper_early_near_max_length` | digitization — early near max (diagnostic) | — | — |
@@ -156,15 +156,15 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 
 ### Replication
 
-![Replication Fig 5](images/5/spikes_energy_v19.png)
+![Replication Fig 5](images/5/spikes_energy_v20.png)
 
 <!-- caption-5:start -->
-**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=799, energy_mean=533.4; pass=False (v19)
+**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=651, energy_mean=518.3; pass=False (v20)
 
 **Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json`
 <!-- caption-5:end -->
 
-**Status:** Open — see manifest gates (`spikes_energy_v19.png`).
+**Status:** Open — see manifest gates (`spikes_energy_v20.png`).
 
 <!-- gates-5:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-08-22). Every row is required for exit.
@@ -180,7 +180,7 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 | `paper_spike_early_near_paper` | digitization — spike early ep 0–50 | no |
 | `paper_spike_mean_near_paper` | digitization — spike mean | yes |
 | `paper_energy_mean_near_paper` | digitization — energy mean | no |
-| `paper_spike_trend_near_paper` | digitization — spike trend | yes |
+| `paper_spike_trend_near_paper` | digitization — spike trend | no |
 | `paper_energy_mid_ramp_near_paper` | digitization — energy mid ramp ep 55–75 | no |
 | `paper_energy_trend_near_paper` | digitization — energy trend | no |
 | `paper_spike_series_has_variance` | digitization — spike variance | yes |
