@@ -156,15 +156,15 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 
 ### Replication
 
-![Replication Fig 5](images/5/spikes_energy_v11.png)
+![Replication Fig 5](images/5/spikes_energy_v8.png)
 
 <!-- caption-5:start -->
-**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=1233, energy_mean=543.8; pass=False (v11)
+**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=567, energy_mean=562.9; pass=False (v8)
 
 **Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json`
 <!-- caption-5:end -->
 
-**Status:** Open — see manifest gates (`spikes_energy_v11.png`).
+**Status:** Open — see manifest gates (`spikes_energy_v8.png`).
 
 <!-- gates-5:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-08-21). Every row is required for exit.
@@ -175,11 +175,13 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 | `spike_series_has_variance` | spike series has variance | yes |
 | `energy_series_has_variance` | energy series has variance | yes |
 | `energy_not_constant` | energy not constant | yes |
-| `spike_in_paper_band` | mean spikes 400–950/ep | no |
+| `spike_in_paper_band` | mean spikes 400–950/ep | yes |
 | `energy_in_paper_band` | mean 300–3200/ep, max ≤ 3520 | yes |
+| `paper_spike_early_near_paper` | digitization — spike early ep 0–50 | no |
 | `paper_spike_mean_near_paper` | digitization — spike mean | no |
 | `paper_energy_mean_near_paper` | digitization — energy mean | no |
 | `paper_spike_trend_near_paper` | digitization — spike trend | no |
+| `paper_energy_mid_ramp_near_paper` | digitization — energy mid ramp ep 55–75 | no |
 | `paper_energy_trend_near_paper` | digitization — energy trend | no |
 | `paper_spike_series_has_variance` | digitization — spike variance | yes |
 | `paper_energy_not_constant` | digitization — energy not constant | yes |
