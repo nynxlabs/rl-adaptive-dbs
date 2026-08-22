@@ -12,7 +12,7 @@ Figs **1–2** are schematics — **not** replication targets.
 | Panel | Description | Status |
 |-------|-------------|--------|
 | Fig 3 | GPi α–β distribution (PD Off vs PD On) | Pass (rep v22) |
-| Fig 4 | Training reward + episode length | Shape OK (full open) |
+| Fig 4 | Training reward + episode length | Fail (`reward shape:reward_by_100_near_zero`) |
 | Fig 5 | CBGT spikes + DBS energy over training | Fail (`shared_train`) |
 | Fig 6 | α–β + DBS parameters over training | Fail (`shared_train`) |
 | Fig 7 | 50-episode eval (25 steps) | Fail (`checkpoint_lineage_ok`) |
@@ -80,7 +80,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 ### Latest attempt (v97, train v98)
 
-![Replication Fig 4 — latest](images/4/training_reward_length_v112.png)
+![Replication Fig 4 — latest](images/4/training_reward_length_v113.png)
 
 <!-- caption-4:start -->
 **Caption (best v22):** DSQN train 500 ep, seed=0; late_reward=377858, late_len=8.9; shape_pass=False — best late length so far; timing gates still fail (v22)
@@ -89,23 +89,23 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 <!-- caption-4:end -->
 
 <!-- caption-4-latest:start -->
-**Caption:** DSQN train 500 ep, seed=0; late_reward=-4420, late_len=7.0; shape_pass=True pass=False (reward shape=True full=False, length shape=True full=True) (v112)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=92, late_len=6.8; shape_pass=False pass=False (reward shape=False full=False, length shape=False full=False) (v113)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4-latest:end -->
 
-**Status:** Timing shape open — latest **v112** (`late_len=7.0`, `shape_pass=True`); see manifest gates.
+**Status:** Timing shape open — latest **v113** (`late_len=6.8`, `shape_pass=False`); see manifest gates.
 
 <!-- gates-4:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: yes, **`pass`**: no, 2026-08-22). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
+**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: no, **`pass`**: no, 2026-08-22). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
 
-### Reward (panel a) (`shape_pass`: yes | `pass`: no)
+### Reward (panel a) (`shape_pass`: no | `pass`: no)
 
 | Key | Description | Shape | Full |
 |-----|-------------|-------|------|
 | `reward_scale_paper` | early |mean| large (started far from plateau) | yes | yes |
 | `reward_improves_by_100` | smoothed reward 80–100 better than 0–50 | yes | yes |
-| `reward_by_100_near_zero` | smoothed reward 80–100 toward ~0 | yes | yes |
+| `reward_by_100_near_zero` | smoothed reward 80–100 toward ~0 | no | no |
 | `late_reward_near_zero` | late mean toward paper ~0 (diagnostic) | — | — |
 | `reward_post100_plateau` | smoothed reward flat ep 100+ like paper | — | no |
 | `late_reward_above_early` | late mean > first-50 (diagnostic) | — | — |
@@ -114,14 +114,14 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 | `paper_reward_improves_like_paper` | digitization — reward improves (diagnostic) | — | — |
 | `paper_late_reward_ratio_near_paper` | digitization — late/first-50 reward ratio (diagnostic) | — | — |
 
-### Length (panel b) (`shape_pass`: yes | `pass`: yes)
+### Length (panel b) (`shape_pass`: no | `pass`: no)
 
 | Key | Description | Shape | Full |
 |-----|-------------|-------|------|
 | `early_near_max_length` | start at horizon (median first 50 ≥ max−2) | yes | yes |
 | `length_early_smoothed_near_horizon` | smoothed length 0–50 still ~25 | yes | yes |
 | `length_mid_glide_like_paper` | length drop ep 50–100 like paper | yes | yes |
-| `length_by_100_near_paper` | smoothed length 80–100 near digitized ~10 | yes | yes |
+| `length_by_100_near_paper` | smoothed length 80–100 near digitized ~10 | no | no |
 | `late_length_paper_band` | late mean length ≤ 12 (diagnostic) | — | — |
 | `paper_late_length_near_paper` | late length near digitized ~8 (diagnostic) | — | — |
 | `length_post100_plateau` | length plateau ep 100+ like paper | — | yes |
@@ -156,15 +156,15 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 
 ### Replication
 
-![Replication Fig 5](images/5/spikes_energy_v13.png)
+![Replication Fig 5](images/5/spikes_energy_v14.png)
 
 <!-- caption-5:start -->
-**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=531, energy_mean=647.9; pass=False (v13)
+**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=539, energy_mean=662.4; pass=False (v14)
 
 **Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json`
 <!-- caption-5:end -->
 
-**Status:** Open — see manifest gates (`spikes_energy_v13.png`).
+**Status:** Open — see manifest gates (`spikes_energy_v14.png`).
 
 <!-- gates-5:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-08-22). Every row is required for exit.
