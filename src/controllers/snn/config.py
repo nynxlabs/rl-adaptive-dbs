@@ -315,8 +315,9 @@ def fig4_nguyen_config(
     (checkpoint_v83.pt): shape_pass only; Tier-2 blocked by bimodal ptp (~6.5
     vs paper ~1.6). Q-knob probe budget exhausted v80–v87. v88: v83 +
     double_dqn=True (paper-silent stabilizer; targets lower timeout flip rate).
-    v89: v88 + replay_timeout_weight=0.25 (down-weight transitions from timeout
-    episodes in TD loss; paper-silent).
+    v102 at lr=2.49e-4: same reward/length tradeoff as v101; Fig 5 v8 relog shows energy mid-ramp fail
+    because late pw collapses to ~0.45 ms (paper Fig 6 ~1 ms). v103+: pulse_width_min=0.5 blocks
+    late pw collapse for Fig 5 energy panel (paper-silent floor; init still 0.3 ms).
     """
     return SNNConfig(
         seed=seed,
@@ -340,6 +341,7 @@ def fig4_nguyen_config(
         frequency_min=INIT_FREQUENCY_HZ,
         amplitude_min=200.0,
         pulse_width_sensitivity=0.3,
+        pulse_width_min=0.5,
         threshold_reward=300.0,
         energy_penalty=0.0,
         alpha_beta_progress_coef=2500.0,
