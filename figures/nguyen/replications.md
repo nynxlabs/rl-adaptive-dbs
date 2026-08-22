@@ -80,7 +80,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 ### Latest attempt (v97, train v98)
 
-![Replication Fig 4 — latest](images/4/training_reward_length_v121.png)
+![Replication Fig 4 — latest](images/4/training_reward_length_v122.png)
 
 <!-- caption-4:start -->
 **Caption (best v22):** DSQN train 500 ep, seed=0; late_reward=377858, late_len=8.9; shape_pass=False — best late length so far; timing gates still fail (v22)
@@ -89,12 +89,12 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 <!-- caption-4:end -->
 
 <!-- caption-4-latest:start -->
-**Caption:** DSQN train 500 ep, seed=0; late_reward=-29459, late_len=9.9; shape_pass=True pass=False (reward shape=True full=False, length shape=True full=True) (v121)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=-34379, late_len=10.2; shape_pass=True pass=False (reward shape=True full=False, length shape=True full=True) (v122)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4-latest:end -->
 
-**Status:** v119/v121 len full, rew +233; v120 rew full; **v122** weight **0.248** in flight.
+**Status:** weight **0.248–0.25** rew stuck at 50233; **v123** `lr=2.499e-4` in flight.
 
 <!-- gates-4:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: yes, **`pass`**: no, 2026-08-22). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
@@ -156,15 +156,15 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 
 ### Replication
 
-![Replication Fig 5](images/5/spikes_energy_v23.png)
+![Replication Fig 5](images/5/spikes_energy_v24.png)
 
 <!-- caption-5:start -->
-**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=651, energy_mean=518.3; pass=False (v23)
+**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=662, energy_mean=525.0; pass=False (v24)
 
 **Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json`
 <!-- caption-5:end -->
 
-**Status:** Open — see manifest gates (`spikes_energy_v23.png`).
+**Status:** Open — see manifest gates (`spikes_energy_v24.png`).
 
 <!-- gates-5:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-08-22). Every row is required for exit.
