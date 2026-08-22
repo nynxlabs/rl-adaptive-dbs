@@ -80,7 +80,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 ### Latest attempt (v97, train v98)
 
-![Replication Fig 4 — latest](images/4/training_reward_length_v113.png)
+![Replication Fig 4 — latest](images/4/training_reward_length_v114.png)
 
 <!-- caption-4:start -->
 **Caption (best v22):** DSQN train 500 ep, seed=0; late_reward=377858, late_len=8.9; shape_pass=False — best late length so far; timing gates still fail (v22)
@@ -89,12 +89,12 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 <!-- caption-4:end -->
 
 <!-- caption-4-latest:start -->
-**Caption:** DSQN train 500 ep, seed=0; late_reward=92, late_len=6.8; shape_pass=False pass=False (reward shape=False full=False, length shape=False full=False) (v113)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=-283, late_len=6.8; shape_pass=False pass=False (reward shape=False full=False, length shape=False full=False) (v114)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4-latest:end -->
 
-**Status:** Timing shape open — latest **v113** (`late_len=6.8`, `shape_pass=False`); see manifest gates.
+**Status:** Timing shape open — latest **v114** (`late_len=6.8`, `shape_pass=False`); see manifest gates.
 
 <!-- gates-4:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: no, **`pass`**: no, 2026-08-22). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
@@ -124,7 +124,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 | `length_by_100_near_paper` | smoothed length 80–100 near digitized ~10 | no | no |
 | `late_length_paper_band` | late mean length ≤ 12 (diagnostic) | — | — |
 | `paper_late_length_near_paper` | late length near digitized ~8 (diagnostic) | — | — |
-| `length_post100_plateau` | length plateau ep 100+ like paper | — | yes |
+| `length_post100_plateau` | length plateau ep 100+ like paper | — | no |
 | `late_length_no_regression` | smoothed length slope ep 350–490 ≤ 0.02/ep | — | yes |
 | `late_timeout_fraction` | raw timeout rate ep 350–500 ≤ 25% | — | yes |
 | `late_length_level` | smoothed length median ep 350–500 ≤ 14 | — | yes |
@@ -156,15 +156,15 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 
 ### Replication
 
-![Replication Fig 5](images/5/spikes_energy_v14.png)
+![Replication Fig 5](images/5/spikes_energy_v15.png)
 
 <!-- caption-5:start -->
-**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=539, energy_mean=662.4; pass=False (v14)
+**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=528, energy_mean=643.7; pass=False (v15)
 
 **Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json`
 <!-- caption-5:end -->
 
-**Status:** Open — see manifest gates (`spikes_energy_v14.png`).
+**Status:** Open — see manifest gates (`spikes_energy_v15.png`).
 
 <!-- gates-5:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-08-22). Every row is required for exit.
