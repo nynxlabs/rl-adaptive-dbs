@@ -156,15 +156,15 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 
 ### Replication
 
-![Replication Fig 5](images/5/spikes_energy_v8.png)
+![Replication Fig 5](images/5/spikes_energy_v9.png)
 
 <!-- caption-5:start -->
-**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=567, energy_mean=562.9; pass=False (v8)
+**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=432, energy_mean=465.3; pass=False (v9)
 
 **Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json`
 <!-- caption-5:end -->
 
-**Status:** Open — see manifest gates (`spikes_energy_v8.png`).
+**Status:** Open — see manifest gates (`spikes_energy_v9.png`).
 
 <!-- gates-5:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-08-21). Every row is required for exit.
@@ -177,7 +177,7 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 | `energy_not_constant` | energy not constant | yes |
 | `spike_in_paper_band` | mean spikes 400–950/ep | yes |
 | `energy_in_paper_band` | mean 300–3200/ep, max ≤ 3520 | yes |
-| `paper_spike_early_near_paper` | digitization — spike early ep 0–50 | no |
+| `paper_spike_early_near_paper` | digitization — spike early ep 0–50 | yes |
 | `paper_spike_mean_near_paper` | digitization — spike mean | no |
 | `paper_energy_mean_near_paper` | digitization — energy mean | no |
 | `paper_spike_trend_near_paper` | digitization — spike trend | no |
