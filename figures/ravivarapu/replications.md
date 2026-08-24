@@ -300,15 +300,15 @@ Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper` ([se
 
 ### Replication
 
-![Replication Fig 7](images/7/ablation_psd_v17.png)
+![Replication Fig 7](images/7/ablation_psd_v19.png)
 
 <!-- caption-7:start -->
-**Caption:** Ablation GPi beta PSD vs step @ 50 Hz (seed 0); pass=True; baseline offset 34; +PM/+GS independent Gumbel streams (v17)
+**Caption:** Ablation @ 50 Hz; offsets b29/pm11/gs26; late gates: PM≤B, digitized late windows (v19)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/7/manifest.json`
 <!-- caption-7:end -->
 
-**Status:** **Pass** (rep v17) — ablation @ 50 Hz; distinct +PM/+GS; +GS above Baseline late; +GS mid 0.433 vs Baseline 0.390. Manifest `artifacts/figures/papers/ravivarapu/7/manifest.json`.
+**Status:** **Pass** (rep v19) — ablation @ 50 Hz; distinct +PM/+GS; +GS above Baseline late; +GS mid 0.433 vs Baseline 0.408. Manifest `artifacts/figures/papers/ravivarapu/7/manifest.json`.
 
 <!-- gates-7:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/7/manifest.json`; overall **`pass`**: yes, 2026-08-22). Every row is required for exit.
@@ -326,6 +326,10 @@ Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper` ([se
 | `pm_below_baseline_early` | +PM below Baseline on ≥2 of steps 1–5 | yes |
 | `baseline_above_pm_early` | Baseline ≥6 PSD above +PM on ≥3 of steps 1–7 | yes |
 | `gs_above_baseline_late` | +GS above Baseline on steps 8–10 | yes |
+| `baseline_above_pm_late` | Baseline ≥6 PSD above +PM on ≥2 of steps 8–10 | yes |
+| `pm_not_above_baseline_late` | +PM never above Baseline on steps 8–10 | yes |
+| `baseline_late_declines` | Baseline declines steps 8→10 | yes |
+| `gs_late_mean_vs_paper` | +GS late mean within 26 PSD of digitized +GS | yes |
 | `pm_not_sea` | PM closer to baseline than to SEA-DBS | yes |
 | `sea_end_below_baseline` | SEA-DBS end below Baseline | yes |
 | `dig_shared_start_near_paper` | shared start near digitized paper | yes |
@@ -333,6 +337,9 @@ Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper` ([se
 | `dig_pm_early_track_paper` | +PM early steps track digitized +PM | yes |
 | `dig_baseline_mid_track_paper` | Baseline steps 3–7 track digitized Baseline | yes |
 | `dig_pm_mid_track_paper` | +PM steps 3–7 track digitized +PM | yes |
+| `dig_baseline_late_track_paper` | Baseline steps 8–10 track digitized Baseline | yes |
+| `dig_pm_late_track_paper` | +PM steps 8–10 track digitized +PM | yes |
+| `dig_gs_late_track_paper` | +GS steps 8–10 track digitized +GS | yes |
 | `dig_gs_above_baseline_mid` | +GS mid gap vs digitized paper | yes |
 | `dig_sea_steepest_drop` | SEA-DBS steepest drop vs paper | yes |
 <!-- gates-7:end -->
