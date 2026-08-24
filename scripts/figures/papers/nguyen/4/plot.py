@@ -268,6 +268,7 @@ REWARD_LEVEL_TIMING_KEYS = (
 REWARD_LEVEL_FULL_KEYS = (
     *REWARD_LEVEL_TIMING_KEYS,
     "reward_post100_plateau",
+    "reward_late_plateau",
 )
 LENGTH_LEVEL_TIMING_KEYS = (
     "early_near_max_length",  # raw median first 50 at horizon
@@ -278,8 +279,10 @@ LENGTH_LEVEL_TIMING_KEYS = (
 LENGTH_LEVEL_FULL_KEYS = (
     *LENGTH_LEVEL_TIMING_KEYS,
     "length_post100_plateau",
+    "length_late_plateau",
     "late_length_no_regression",
     "late_timeout_fraction",
+    "late_timeout_fraction_300_500",
     "late_length_level",
 )
 REWARD_HEURISTIC_KEYS = REWARD_LEVEL_FULL_KEYS
@@ -292,8 +295,10 @@ LENGTH_HEURISTIC_KEYS = (
     "length_mid_glide_like_paper",
     "length_by_100_near_paper",
     "length_post100_plateau",
+    "length_late_plateau",
     "late_length_no_regression",
     "late_timeout_fraction",
+    "late_timeout_fraction_300_500",
     "late_length_level",
 )
 LENGTH_SHAPE_KEYS = LENGTH_LEVEL_TIMING_KEYS
