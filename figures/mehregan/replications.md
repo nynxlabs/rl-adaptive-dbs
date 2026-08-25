@@ -287,7 +287,7 @@ Dashed vertical at **2 s** (stimulation onset). Paper claims: trained stimulatio
 
 ### Replication
 
-![Replication Fig 5a](images/5a/efficacy_45hz_v17.png)
+![Replication Fig 5a](images/5a/efficacy_45hz_v23.png)
 
 <!-- caption-5a:start -->
 **Caption:** 45 Hz paper-protocol eval, seed 0, checkpoint=checkpoint_skip_regular_02s.pt, skip_regular, 0.2s trailing, v17, trained_mean=395, no_stim_mean=498, periodic_mean=327, trained>periodic, gates pass (2026-08-09)
@@ -349,7 +349,7 @@ Key paper claim: **periodic 30 Hz elevates** beta (stimulation rate inside the b
 
 ### Replication
 
-![Replication Fig 5b](images/5b/efficacy_30hz_v18.png)
+![Replication Fig 5b](images/5b/efficacy_30hz_v23.png)
 
 <!-- caption-5b:start -->
 **Caption:** 30 Hz paper-protocol eval, seed 0, checkpoint=checkpoint.pt, 0.2s trailing, v18, trained_mean=367, no_stim_mean=488, periodic_mean=638, trained<both, gates pass (2026-08-09)
@@ -405,7 +405,7 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 
 ### Replication
 
-![Replication Fig 6a](images/6a/ptq_qat_45hz_v54.png)
+![Replication Fig 6a](images/6a/ptq_qat_45hz_v61.png)
 
 <!-- caption-6a:start -->
 **Caption:** 45 Hz paper-protocol eval, seed 0, fp32_post=336, qat_post=525, PTQ tracks fp32, QAT elevated, 2026-08-09
@@ -479,7 +479,7 @@ Same quantization panel layout as Fig 6a for the **30 Hz** trained model (§IV.A
 
 ### Replication
 
-![Replication Fig 6b](images/6b/ptq_qat_30hz_v33.png)
+![Replication Fig 6b](images/6b/ptq_qat_30hz_v40.png)
 
 <!-- caption-6b:start -->
 **Caption:** 30 Hz paper-protocol eval, seed 0, fp32_post=367, qat_post=499, PTQ tracks fp32, QAT elevated, 2026-08-09

@@ -77,7 +77,7 @@ REPORT3_TRACKER_ALTS: dict[str, tuple[str, str]] = {
     "Rep 6a": ("mehregan", "Replication Fig 6a"),
     "Rep 6b": ("mehregan", "Replication Fig 6b"),
     "Rep N3": ("nguyen", "Replication Fig 3"),
-    "Rep N4": ("nguyen", "Replication Fig 4 — latest"),
+    "Rep N4": ("nguyen", "Replication Fig 4 — best"),
     "Rep R4a": ("ravivarapu", "Replication Fig 4a"),
 }
 
@@ -146,8 +146,8 @@ REPORT3_PANEL_META: dict[str, dict[str, str]] = {
             "training)."
         ),
         "status": (
-            "Revisit in progress: pair with 4b; softmax τ 3→1.4 to avoid "
-            "pattern-0 collapse (locked v18 was τ→1.0)."
+            "Pass (rep **v34**): `actor_lr=7.5e-4`, `critic_warmup_steps=50`, "
+            "τ 3→1.6; all digitization gates pass incl. `mid_fade_vs_paper`."
         ),
         "caption": (
             "The average power of the beta frequency band for each step during "
@@ -163,8 +163,8 @@ REPORT3_PANEL_META: dict[str, dict[str, str]] = {
             "Over episodes 0–8, reward rises toward zero while episode-mean β falls."
         ),
         "status": (
-            "Revisit in progress: match digitized late PSD floor (~0.37, above "
-            "β_t) so reward approaches 0 from below; paired with latest Fig. 4a series."
+            "Pass (rep **v33**): paired to Fig. 4a phase-6; late PSD 0.358 (above "
+            "β_t=0.35), late reward −4.3; all digitization gates pass."
         ),
         "caption": (
             "Beta power in GPi during each episode of training of the $45\\text{Hz}$ "
@@ -248,16 +248,21 @@ REPORT3_PANEL_META: dict[str, dict[str, str]] = {
             "episodes."
         ),
         "status": (
-            "**In progress:** reward-plateau **shape** gates still fail."
+            "**Ship pick v130** (maintainer visual, 2026-08-24): `shape_pass=True`, "
+            "full `pass` open — `reward_post100_plateau`, `length_late_plateau`. "
+            "Gate-iteration lead **v138** (length full, 1 gate). Training toward "
+            "`gates.pass=True` continues."
         ),
         "caption": (
-            "Training rewards and episode lengths over 500 episodes, showing "
-            "progression from exploration to optimization."
+            "Training rewards and episode lengths over 500 episodes (rep **v130**, "
+            "seed 0): strong timing window and calm late plateau vs digitized paper "
+            "overlay; automated full pass still in progress."
         ),
         "gates": (
-            "Reward: scale + late > early (shape pass); reward plateau ep 100–450 still "
-            "fails. Length: decreases + late ≤ 12 (shape pass); mid glide / post-100 "
-            "plateau still fail."
+            "Ship pick **v130** (`manifest_v130.json`): reward `shape_pass` yes / full "
+            "no — `reward_post100_plateau` (rew_ptp ~75k). Length `shape_pass` yes / "
+            "full no — `length_late_plateau` (len ptp ep300–500 ~3.8 vs paper ~2.4). "
+            "Late timeouts 0%."
         ),
     },
     "Rep R4a": {
@@ -265,7 +270,10 @@ REPORT3_PANEL_META: dict[str, dict[str, str]] = {
             "SEA-DBS shows stronger, more consistent β suppression over episodes than "
             "Baseline DDPG."
         ),
-        "status": "**In progress:** **shape** gates still fail; digitized paper overlay on the same axes.",
+        "status": (
+            "Pass (rep **v62**): `shape_pass` and full `pass`; roll-10 display; "
+            "paper overlay (black baseline, grey SEA-DBS)."
+        ),
         "caption": "PSD over training episodes (SEA-DBS vs Baseline).",
         "gates": (
             "SEA-DBS declines steeper than baseline; late SEA below baseline; "
