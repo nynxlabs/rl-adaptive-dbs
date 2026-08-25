@@ -12,7 +12,7 @@ Figs **1–2** are schematics — **not** replication targets.
 | Panel | Description | Status |
 |-------|-------------|--------|
 | Fig 3 | GPi α–β distribution (PD Off vs PD On) | Pass (rep v22) |
-| Fig 4 | Training reward + episode length | Shape OK (full open) |
+| Fig 4 | Training reward + episode length | Ship **v130** / gates lead **v138** (full open) |
 | Fig 5 | CBGT spikes + DBS energy over training | Fail (`paper_spike_early_near_paper`) |
 | Fig 6 | α–β + DBS parameters over training | Fail (`paper_late_alpha_beta_below_theta`) |
 | Fig 7 | 50-episode eval (25 steps) | Fail (`checkpoint_lineage_ok`) |
@@ -74,30 +74,30 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 ![Paper Fig 4](images/4/paper.png)
 
-### Replication (best: v97, train v98)
+### Replication (ship pick: **v130**)
 
-![Replication Fig 4 — best](images/4/training_reward_length_v97.png)
+![Replication Fig 4 — best](images/4/training_reward_length_v130.png)
 
-### Latest attempt (v97, train v98)
+### Latest attempt (**v138**)
 
-![Replication Fig 4 — latest](images/4/training_reward_length_v124.png)
+![Replication Fig 4 — latest](images/4/training_reward_length_v138.png)
 
 <!-- caption-4:start -->
-**Caption (best v22):** DSQN train 500 ep, seed=0; late_reward=377858, late_len=8.9; shape_pass=False — best late length so far; timing gates still fail (v22)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=-5780, late_len=7.2; shape_pass=True pass=False (reward shape=True full=False, length shape=True full=False) (v130) — **maintainer visual/ship pick** (not `gates.pass`).
 
-**Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
+**Manifest:** `artifacts/figures/papers/nguyen/4/manifest_v130.json`
 <!-- caption-4:end -->
 
 <!-- caption-4-latest:start -->
-**Caption:** DSQN train 500 ep, seed=0; late_reward=-19871, late_len=10.0; shape_pass=True pass=False (reward shape=True full=False, length shape=True full=False) (v124)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=-2264, late_len=6.9; shape_pass=True pass=False (reward shape=True full=False, length shape=True full=True) (v138)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4-latest:end -->
 
-**Status:** Timing shape open — latest **v124** (`late_len=10.0`, `shape_pass=True`); see manifest gates.
+**Status:** **Ship/visual pick `v130`** (`shape_pass=True`, 2 full gates open: `reward_post100_plateau`, `length_late_plateau`). Gate-iteration lead **v138** (length full, 1 gate); latest train **v138** — see `caption-4-latest`.
 
 <!-- gates-4:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: yes, **`pass`**: no, 2026-08-24). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
+**Gates set (ship/visual pick v130)** (`artifacts/figures/papers/nguyen/4/manifest_v130.json`; **`shape_pass`**: yes, **`pass`**: no, 2026-08-24). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
 
 ### Reward (panel a) (`shape_pass`: yes | `pass`: no)
 
@@ -107,8 +107,8 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 | `reward_improves_by_100` | smoothed reward 80–100 better than 0–50 | yes | yes |
 | `reward_by_100_near_zero` | smoothed reward 80–100 toward ~0 | yes | yes |
 | `late_reward_near_zero` | late mean toward paper ~0 (diagnostic) | — | — |
-| `reward_post100_plateau` | smoothed reward ptp ep 100–250 ≤ cap | — | yes |
-| `reward_late_plateau` | smoothed reward ptp ep 300–500 near digitized paper | — | no |
+| `reward_post100_plateau` | smoothed reward ptp ep 100–250 ≤ cap | — | no |
+| `reward_late_plateau` | smoothed reward ptp ep 300–500 near digitized paper | — | yes |
 | `late_reward_above_early` | late mean > first-50 (diagnostic) | — | — |
 | `early_high_variance` | early reward variance (logged) | — | — |
 | `paper_early_reward_mag_near_paper` | digitization — early reward magnitude (diagnostic) | — | — |
@@ -129,7 +129,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 | `length_late_plateau` | smoothed length ptp ep 300–500 near digitized paper | — | no |
 | `late_length_no_regression` | smoothed length slope ep 350–490 ≤ 0.02/ep | — | yes |
 | `late_timeout_fraction` | raw timeout rate ep 350–500 ≤ 25% | — | yes |
-| `late_timeout_fraction_300_500` | raw timeout rate ep 300–500 ≤ 2% | — | no |
+| `late_timeout_fraction_300_500` | raw timeout rate ep 300–500 ≤ 2% | — | yes |
 | `late_length_level` | smoothed length median ep 350–500 ≤ 14 | — | yes |
 | `length_decreases` | late < early − 1 (diagnostic) | — | — |
 | `paper_length_decreases_like_paper` | digitization — length decreases (diagnostic) | — | — |
