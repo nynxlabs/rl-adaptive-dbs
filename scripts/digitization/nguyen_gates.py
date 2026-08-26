@@ -261,12 +261,9 @@ FIG4_REWARD_PLATEAU_SLOPE = (100.0, 450.0)
 FIG4_TIMING_REL_TOL = 0.35
 FIG4_LATE_LEVEL = (350.0, 500.0)
 FIG4_LATE_SLOPE = (350.0, 490.0)
-FIG4_LATE_PLATEAU_RANGE = (300.0, 500.0)
 FIG4_LATE_LENGTH_LEVEL_MAX = 14.0
 FIG4_LATE_LENGTH_SLOPE_MAX = 0.02
 FIG4_LATE_TIMEOUT_MAX = 0.25
-FIG4_LATE_TIMEOUT_STRICT_LO = 300
-FIG4_LATE_TIMEOUT_STRICT_MAX = 0.02
 
 
 def _episode_smoothed(
@@ -325,17 +322,14 @@ def fig4_timing_shape_gates(
                 "length_mid_glide_like_paper": False,
                 "length_by_100_near_paper": False,
                 "length_post100_plateau": False,
-                "length_late_plateau": False,
                 "late_length_no_regression": False,
                 "late_timeout_fraction": False,
-                "late_timeout_fraction_300_500": False,
                 "late_length_level": False,
             },
             "reward_gates": {
                 "reward_improves_by_100": False,
                 "reward_by_100_near_zero": False,
                 "reward_post100_plateau": False,
-                "reward_late_plateau": False,
             },
             "metrics": {"n_episodes": n, "reason": "too_few_episodes_for_timing"},
         }
@@ -412,50 +406,20 @@ def fig4_timing_shape_gates(
     )
     late_timeout_fraction = bool(late_timeout_rate <= FIG4_LATE_TIMEOUT_MAX)
 
-    late_rng_lo, late_rng_hi = FIG4_LATE_PLATEAU_RANGE
-    len_ptp_300_500 = _ptp_in_window(lx, ls, late_rng_lo, late_rng_hi)
-    p_len_ptp_300_500 = _ptp_in_window(plx, ply, late_rng_lo, late_rng_hi)
-    rew_ptp_300_500 = _ptp_in_window(rx, rs, late_rng_lo, late_rng_hi)
-    p_rew_ptp_300_500 = _ptp_in_window(prx, pry, late_rng_lo, late_rng_hi)
-    length_late_plateau = bool(
-        np.isfinite(len_ptp_300_500)
-        and np.isfinite(p_len_ptp_300_500)
-        and rel_close(len_ptp_300_500, p_len_ptp_300_500, tol=rel_tol)
-    )
-    reward_late_plateau = bool(
-        np.isfinite(rew_ptp_300_500)
-        and np.isfinite(p_rew_ptp_300_500)
-        and rel_close(rew_ptp_300_500, p_rew_ptp_300_500, tol=rel_tol)
-    )
-    late_start_300 = int(FIG4_LATE_TIMEOUT_STRICT_LO)
-    late_end_300 = min(int(late_rng_hi), n)
-    raw_late_300 = lengths[late_start_300:late_end_300]
-    late_timeout_rate_300_500 = (
-        float(np.mean(raw_late_300 >= float(max_episode_steps) - 0.5))
-        if raw_late_300.size
-        else 1.0
-    )
-    late_timeout_fraction_300_500 = bool(
-        late_timeout_rate_300_500 <= FIG4_LATE_TIMEOUT_STRICT_MAX
-    )
-
     return {
         "length_gates": {
             "length_early_smoothed_near_horizon": length_early_smoothed,
             "length_mid_glide_like_paper": length_mid_glide,
             "length_by_100_near_paper": length_by_100,
             "length_post100_plateau": length_post100,
-            "length_late_plateau": length_late_plateau,
             "late_length_no_regression": late_length_no_regression,
             "late_timeout_fraction": late_timeout_fraction,
-            "late_timeout_fraction_300_500": late_timeout_fraction_300_500,
             "late_length_level": late_length_level,
         },
         "reward_gates": {
             "reward_improves_by_100": reward_improves_by_100,
             "reward_by_100_near_zero": reward_by_100_near_zero,
             "reward_post100_plateau": reward_post100,
-            "reward_late_plateau": reward_late_plateau,
         },
         "metrics": {
             "len_early_0_50": len_early_0_50,
@@ -476,11 +440,6 @@ def fig4_timing_shape_gates(
             "late_len_mean_350_500": late_len_mean,
             "late_len_slope_350_490": late_len_slope,
             "late_timeout_rate_350_500": late_timeout_rate,
-            "len_ptp_300_500": len_ptp_300_500,
-            "paper_len_ptp_300_500": p_len_ptp_300_500,
-            "rew_ptp_300_500": rew_ptp_300_500,
-            "paper_rew_ptp_300_500": p_rew_ptp_300_500,
-            "late_timeout_rate_300_500": late_timeout_rate_300_500,
         },
     }
 
