@@ -240,22 +240,9 @@ class DSQNTrainer:
             target = rewards + cfg.gamma * (1.0 - done) * next_q
 
         if cfg.q_loss_fn == "huber":
-            per_elem = F.smooth_l1_loss(q_sa, target, reduction="none")
+            loss = F.smooth_l1_loss(q_sa, target)
         else:
-            per_elem = F.mse_loss(q_sa, target, reduction="none")
-
-        timeout_w = float(cfg.replay_timeout_weight)
-        short_w = float(cfg.replay_short_stop_weight)
-        if timeout_w != 1.0 or short_w != 1.0:
-            sample_w = np.ones(batch.state.shape[0], dtype=np.float32)
-            if timeout_w != 1.0:
-                sample_w = np.where(batch.timeout_episode, sample_w * timeout_w, sample_w)
-            if short_w != 1.0:
-                sample_w = np.where(batch.short_stop_episode, sample_w * short_w, sample_w)
-            weights = torch.as_tensor(sample_w, dtype=torch.float32, device=self.device)
-            loss = (per_elem * weights).mean()
-        else:
-            loss = per_elem.mean()
+            loss = F.mse_loss(q_sa, target)
         self.optimizer.zero_grad(set_to_none=True)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.dsqn.parameters(), 10.0)
@@ -293,15 +280,11 @@ class DSQNTrainer:
         checkpoint_interval: int = 50,
         on_checkpoint: Callable[[int, TrainResult], None] | None = None,
         initial_result: TrainResult | None = None,
-        learn: bool = True,
     ) -> TrainResult:
         """Run ``num_episodes`` of interaction + DQN updates.
 
         When ``start_episode`` > 0, episodes ``start_episode .. num_episodes-1`` are
         trained and series from ``initial_result`` are appended (resume path).
-
-        ``learn=False`` rolls out episodes only (no replay / optimizer updates) for
-        metric relogging from a fixed checkpoint.
         """
         cfg = self.config
         if start_episode >= cfg.num_episodes:
@@ -328,7 +311,6 @@ class DSQNTrainer:
             step_info: dict[str, Any] | None = reset_info
             steps = 0
             terminated_early = False
-            episode_slots: list[int] = []
             for _ in range(cfg.max_episode_steps):
                 flat = np.asarray(obs, dtype=np.float32).reshape(-1)
                 explore_eps = self.current_epsilon()
@@ -339,19 +321,17 @@ class DSQNTrainer:
                 episode_spikes += int(step_info.get("cbgt_spike_count", 0))
                 episode_energy += float(step_info.get("step_energy", 0.0))
                 alpha_betas.append(float(step_info.get("alpha_beta", float("nan"))))
-                if learn:
-                    slot = self.buffer.add(
-                        Transition(
-                            state=flat,
-                            action=int(action_index),
-                            reward=float(reward),
-                            next_state=np.asarray(next_obs, dtype=np.float32).reshape(-1),
-                            done=done,
-                        )
+                self.buffer.add(
+                    Transition(
+                        state=flat,
+                        action=int(action_index),
+                        reward=float(reward),
+                        next_state=np.asarray(next_obs, dtype=np.float32).reshape(-1),
+                        done=done,
                     )
-                    episode_slots.append(slot)
-                    self.note_step()
-                    self.maybe_update()
+                )
+                self.note_step()
+                self.maybe_update()
                 episode_reward += float(reward)
                 steps += 1
                 obs = next_obs
@@ -359,17 +339,6 @@ class DSQNTrainer:
                     terminated_early = True
                 if done:
                     break
-
-            if learn:
-                if not terminated_early and episode_slots:
-                    self.buffer.mark_timeout_episode(episode_slots)
-                elif (
-                    terminated_early
-                    and episode_slots
-                    and cfg.replay_short_stop_max_steps > 0
-                    and steps <= cfg.replay_short_stop_max_steps
-                ):
-                    self.buffer.mark_short_stop_episode(episode_slots)
 
             if step_info is not None and step_info.get("dbs") is not None:
                 end_dbs = step_info["dbs"]
@@ -392,12 +361,6 @@ class DSQNTrainer:
             result.episode_energies.append(episode_energy)
             result.episode_alpha_beta_means.append(float(np.nanmean(alpha_betas)))
             result.episode_early_stops.append(terminated_early)
-            if not learn:
-                print(
-                    f"rollout episode {episode + 1}/{cfg.num_episodes} "
-                    f"spikes={episode_spikes} energy={episode_energy:.1f} len={steps}",
-                    flush=True,
-                )
             completed = episode + 1
             if checkpoint_path is not None and checkpoint_interval > 0:
                 if completed % checkpoint_interval == 0 or completed == cfg.num_episodes:

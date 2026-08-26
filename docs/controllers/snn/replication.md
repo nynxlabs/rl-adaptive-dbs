@@ -169,6 +169,8 @@ $$
 
 **Chosen (Fig. 4–6):** $N = 1$ (single STN stimulation contact) so per-episode energy matches paper Fig. 5 panel (b) scale (~500–3000 a.u.).
 
+**Per-episode totals (Fig. 5–6):** Sum Eq. (6) and CBGT spike counts over **`env.step()` transitions only** — the same steps counted in Fig. 4 episode length. The `reset()` initial 100 ms integrate is **not** included (observation window only).
+
 Energy enters the **reward** (§8) and reported **~22%** reduction vs. open-loop **130 Hz** DBS after training (§IV).
 
 ---
