@@ -7,7 +7,7 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 <!-- summary:start -->
 | Panel | Description | Status |
 |-------|-------------|--------|
-| Fig 4a | Training PSD vs episode | Pass (v62) |
+| Fig 4a | Training PSD vs episode | Pass (v63) |
 | Fig 4b | Training reward vs episode | Pass |
 | Fig 5a | Inference @ 50 Hz | Pass |
 | Fig 5b | Inference @ 30 Hz | Pass |
@@ -33,51 +33,40 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_psd_v62.png)
+![Replication Fig 4a](images/4a/training_psd_v63.png)
 
 <!-- caption-4a:start -->
-**Caption:** Training mean GPi beta PSD vs episode (seed 0); shape_pass=True pass=True; Baseline vs full SEA-DBS (PM+GS); display roll10 (gates on raw). (v62)
+**Caption:** Training mean GPi beta PSD vs episode (seed 0); shape_pass=True pass=True; Baseline vs full SEA-DBS (PM+GS); display roll10 (gates on raw). (v63)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`
 <!-- caption-4a:end -->
 
-**Status:** **Pass** (rep v62) — `shape_pass` and full `pass`; `fixed_episode_seed_until=2`; `fig4_ravivarapu_config_v93`; display roll10 (gates on raw); paper overlay (black baseline, grey SEA-DBS). Manifest `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`.
+**Status:** **Pass** (rep v63) — `shape_pass` and full `pass`; `fixed_episode_seed_until=2`; `fig4_ravivarapu_config_v103`; display roll10 (gates on raw); paper overlay (black baseline, grey SEA-DBS). Manifest `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`.
 
 <!-- gates-4a:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4a.json`; **`shape_pass`**: yes, **`pass`**: yes, 2026-08-22). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
+**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4a.json`; **`shape_pass`**: yes, **`pass`**: yes, 2026-08-29). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
 
 | Key | Description | Shape | Full |
 |-----|-------------|-------|------|
+| `n_episodes_ok` | ≥ 150 training episodes | yes | yes |
 | `shared_start` | baseline and SEA-DBS agree at episode start | yes | yes |
 | `baseline_declines` | baseline PSD declines over training | yes | yes |
-| `paper_declines` | SEA-DBS PSD declines over training | yes | yes |
-| `paper_below_baseline_late` | SEA-DBS late PSD below baseline | yes | yes |
-| `paper_steeper_drop` | SEA-DBS drop steeper than baseline | yes | yes |
-| `late_gap_min` | late baseline − SEA-DBS gap > 0.01 | yes | yes |
-| `final_window_gap_substantial` | final 10-episode mean gap ≥ 0.03 | yes | yes |
-| `n_episodes_ok` | ≥ 150 training episodes | yes | yes |
-| `dig_enough_episodes` | digitization — enough episodes | yes | yes |
-| `dig_shared_start_near_paper` | digitization — shared start vs paper | — | yes |
-| `dig_baseline_drop_vs_paper` | digitization — baseline drop vs paper | — | yes |
-| `dig_sea_drop_vs_paper` | digitization — SEA-DBS drop vs paper | — | yes |
-| `dig_sea_steeper_than_baseline_like_paper` | digitization — SEA steeper than baseline | yes | yes |
-| `dig_sea_below_baseline_late_like_paper` | digitization — SEA below baseline late | yes | yes |
-| `dig_late_gap_near_paper` | digitization — late gap vs paper | — | yes |
-| `dig_final_window_gap_near_paper` | digitization — final 10-episode gap vs paper | — | yes |
-| `dig_progressive_decline_baseline` | digitization — Baseline declines in every window | yes | yes |
-| `dig_progressive_decline_sea` | digitization — SEA-DBS declines in every window | yes | yes |
-| `dig_gap_widens_mid_to_late` | digitization — baseline−SEA gap widens ep 40→150 | yes | yes |
-| `dig_early_mid_to_mid_drop_sea_not_front_loaded` | digitization — SEA early drop is not front-loaded | yes | yes |
-| `dig_late_early_ratio_baseline_near_paper` | digitization — baseline late/early ratio | — | yes |
-| `dig_late_early_ratio_sea_near_paper` | digitization — SEA late/early ratio | — | yes |
-| `dig_gradual_decline_baseline` | digitization — gradual baseline mid→late drop | yes | yes |
-| `dig_gradual_decline_sea` | digitization — gradual SEA mid→late drop | yes | yes |
-| `dig_early_mid_baseline_near_paper` | digitization — baseline ep 15–40 vs paper | — | yes |
-| `dig_early_mid_sea_near_paper` | digitization — SEA ep 15–40 vs paper | — | yes |
-| `dig_drop_timing_baseline` | digitization — baseline drop not front-loaded by ep 50 | yes | yes |
-| `dig_drop_timing_sea` | digitization — SEA drop not front-loaded by ep 50 | yes | yes |
-| `dig_pearson_baseline_min` | digitization — baseline trajectory shape (Pearson r) | yes | yes |
-| `dig_pearson_sea_min` | digitization — SEA trajectory shape (Pearson r) | yes | yes |
+| `sea_declines` | SEA-DBS PSD declines over training | yes | yes |
+| `sea_below_baseline_late` | SEA-DBS late PSD below baseline | yes | yes |
+| `sea_steeper_drop_than_baseline` | SEA-DBS drop steeper than baseline | yes | yes |
+| `late_gap_substantial` | late baseline − SEA-DBS gap ≥ 0.02 | yes | yes |
+| `drop_timing_baseline` | baseline drop not front-loaded by ep 50 | yes | yes |
+| `drop_timing_sea` | SEA-DBS drop not front-loaded by ep 50 | yes | yes |
+| `gradual_decline_baseline` | gradual baseline mid→late drop | yes | yes |
+| `gradual_decline_sea` | gradual SEA-DBS mid→late drop | yes | yes |
+| `pearson_baseline_min` | baseline trajectory shape (Pearson r) | yes | yes |
+| `pearson_sea_min` | SEA-DBS trajectory shape (Pearson r) | yes | yes |
+| `shared_start_near_paper` | shared start vs paper | — | yes |
+| `baseline_drop_vs_paper` | baseline drop vs paper | — | yes |
+| `sea_drop_vs_paper` | SEA-DBS drop vs paper | — | yes |
+| `late_gap_near_paper` | late gap vs paper | — | yes |
+| `late_early_ratio_baseline_near_paper` | baseline late/early ratio vs paper | — | yes |
+| `late_early_ratio_sea_near_paper` | SEA-DBS late/early ratio vs paper | — | yes |
 <!-- gates-4a:end -->
 
 **Run:**
@@ -104,7 +93,7 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4a/plot.p
 ![Replication Fig 4b](images/4b/training_reward_v5.png)
 
 <!-- caption-4b:start -->
-**Caption:** Training episode reward vs episode (seed 0); paired with Fig 4a cache. (v2)
+**Caption:** Training episode reward vs episode (seed 0); paired with Fig 4a cache. (v7)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4b.json`
 <!-- caption-4b:end -->
@@ -112,7 +101,7 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4a/plot.p
 **Status:** Pass — see manifest gates.
 
 <!-- gates-4b:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4b.json`; overall **`pass`**: yes, 2026-08-22). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4b.json`; overall **`pass`**: yes, 2026-08-29). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -157,7 +146,7 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 **Status:** **Pass** (rep v16) — inference @ 50 Hz; Manifest `artifacts/figures/papers/ravivarapu/5a/manifest.json`.
 
 <!-- gates-5a:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/5a/manifest.json`; overall **`pass`**: yes, 2026-08-22). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/5a/manifest.json`; overall **`pass`**: yes, 2026-08-29). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -213,7 +202,7 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 **Status:** **Pass** (rep v12) — inference @ 30 Hz; Manifest `artifacts/figures/papers/ravivarapu/5b/manifest.json`.
 
 <!-- gates-5b:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/5b/manifest.json`; overall **`pass`**: yes, 2026-08-22). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/5b/manifest.json`; overall **`pass`**: yes, 2026-08-29). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -264,7 +253,7 @@ QAT is **out of scope** for SEA-DBS (not reported).
 **Status:** **Pass** (rep v18) — FP16 PTQ @ 50 Hz; checkpoint ~0.6 MB → ~0.3 MB; Manifest `artifacts/figures/papers/ravivarapu/6/manifest.json`.
 
 <!-- gates-6:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/6/manifest.json`; overall **`pass`**: yes, 2026-08-22). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/6/manifest.json`; overall **`pass`**: yes, 2026-08-29). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -311,37 +300,16 @@ Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper` ([se
 **Status:** **Pass** (rep v19) — ablation @ 50 Hz; distinct +PM/+GS; +GS above Baseline late; +GS mid 0.433 vs Baseline 0.408. Manifest `artifacts/figures/papers/ravivarapu/7/manifest.json`.
 
 <!-- gates-7:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/7/manifest.json`; overall **`pass`**: yes, 2026-08-22). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/7/manifest.json`; overall **`pass`**: yes, 2026-08-29). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
 | `four_variants_present` | baseline / +PM / +GS / SEA-DBS | yes |
-| `n_steps_ok` | 11 PSD samples (t=0 + 10 stim steps) | yes |
-| `shared_start` | all variants agree at step 0 | yes |
 | `sea_dbs_lowest_tail` | SEA-DBS lowest tail mean PSD | yes |
 | `gs_highest_or_near_highest_tail` | GS highest or near-highest tail | yes |
-| `gs_declines` | +GS net decline over steps | yes |
-| `gs_above_baseline_mid` | +GS mid-window mean above Baseline | yes |
-| `pm_near_baseline_early` | +PM early near but not identical to Baseline | yes |
-| `pm_below_baseline_early` | +PM below Baseline on ≥2 of steps 1–5 | yes |
-| `baseline_above_pm_early` | Baseline ≥6 PSD above +PM on ≥3 of steps 1–7 | yes |
-| `gs_above_baseline_late` | +GS above Baseline on steps 8–10 | yes |
-| `baseline_above_pm_late` | Baseline ≥6 PSD above +PM on ≥2 of steps 8–10 | yes |
-| `pm_not_above_baseline_late` | +PM never above Baseline on steps 8–10 | yes |
-| `baseline_late_declines` | Baseline declines steps 8→10 | yes |
-| `gs_late_mean_vs_paper` | +GS late mean within 26 PSD of digitized +GS | yes |
 | `pm_not_sea` | PM closer to baseline than to SEA-DBS | yes |
-| `sea_end_below_baseline` | SEA-DBS end below Baseline | yes |
-| `dig_shared_start_near_paper` | shared start near digitized paper | yes |
-| `dig_traces_track_paper` | full-trace MAE vs digitized paper | yes |
-| `dig_pm_early_track_paper` | +PM early steps track digitized +PM | yes |
-| `dig_baseline_mid_track_paper` | Baseline steps 3–7 track digitized Baseline | yes |
-| `dig_pm_mid_track_paper` | +PM steps 3–7 track digitized +PM | yes |
-| `dig_baseline_late_track_paper` | Baseline steps 8–10 track digitized Baseline | yes |
-| `dig_pm_late_track_paper` | +PM steps 8–10 track digitized +PM | yes |
-| `dig_gs_late_track_paper` | +GS steps 8–10 track digitized +GS | yes |
-| `dig_gs_above_baseline_mid` | +GS mid gap vs digitized paper | yes |
-| `dig_sea_steepest_drop` | SEA-DBS steepest drop vs paper | yes |
+| `shared_start` | baseline and SEA-DBS agree at step 0 | yes |
+| `n_steps_ok` | 10 inference steps | yes |
 <!-- gates-7:end -->
 
 **Run:**

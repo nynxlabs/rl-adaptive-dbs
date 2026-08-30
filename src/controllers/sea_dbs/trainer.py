@@ -197,9 +197,10 @@ class SEA_DBSTrainer:
             adjusted[1] -= patch_boost
 
         no_stim_boost = cfg.actor_late_episode_no_stim_boost
+        stim_late_boost = cfg.actor_late_episode_stim_logit_boost
         late_lo, late_hi = cfg.actor_late_episode_lo, cfg.actor_late_episode_hi
         if (
-            no_stim_boost != 0.0
+            (no_stim_boost != 0.0 or stim_late_boost != 0.0)
             and late_lo > 0
             and late_hi > late_lo
             and late_lo <= ep < late_hi
@@ -209,11 +210,18 @@ class SEA_DBSTrainer:
                 frac = (ep - late_lo) / (span - 1)
             else:
                 frac = 1.0
-            effective = no_stim_boost * frac
-            if adjusted is logits:
-                adjusted = logits.clone()
-            adjusted[0] += effective
-            adjusted[1] -= effective
+            if no_stim_boost != 0.0:
+                effective_no_stim = no_stim_boost * frac
+                if adjusted is logits:
+                    adjusted = logits.clone()
+                adjusted[0] += effective_no_stim
+                adjusted[1] -= effective_no_stim
+            if stim_late_boost != 0.0:
+                effective_stim = stim_late_boost * frac
+                if adjusted is logits:
+                    adjusted = logits.clone()
+                adjusted[0] -= effective_stim
+                adjusted[1] += effective_stim
         return adjusted
 
     def _select_action(self, state: np.ndarray) -> tuple[int, np.ndarray]:
