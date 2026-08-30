@@ -104,17 +104,29 @@ Average **beta-band PSD** across **training episodes** for **Baseline (DDPG)** v
 | 6 | **Episode axis** | 150 episodes | Wrong count |
 | 7 | **Paired with Fig 4b** | Same training run | Mismatched lineage |
 
-**Proposed automated mirrors (redesign — replace current 3-bool gates):**
+**Automated gates (revamped 2-tier suite):**
 
-| Key | Rule (paper-faithful) |
-|-----|------------------------|
-| `shared_start` | $\|p_{\mathrm{early}} - b_{\mathrm{early}}\| < 0.05$ (early = first ~5% episodes, min 3) |
-| `start_in_high_band` | both early means in $[0.40, 0.52]$ on Fig-4a scale (or documented equivalent after `observation_scale`) |
-| `baseline_declines` | $b_{\mathrm{early}} - b_{\mathrm{late}} > 0.02$ |
-| `paper_declines` | $p_{\mathrm{early}} - p_{\mathrm{late}} > 0.04$ |
-| `paper_below_baseline_late` | $p_{\mathrm{late}} < b_{\mathrm{late}}$ (late = 2nd half) |
-| `paper_steeper_drop` | $(p_{\mathrm{early}}-p_{\mathrm{late}}) > (b_{\mathrm{early}}-b_{\mathrm{late}})$ |
-| `late_gap_min` | $b_{\mathrm{late}} - p_{\mathrm{late}} > 0.01$ (paper ~0.02–0.03) |
+| Tier | Key | Rule (paper-faithful) |
+|------|-----|------------------------|
+| **Shape** | `n_episodes_ok` | $N \ge 150$ episodes for both variants |
+| **Shape** | `shared_start` | $\|b_{\mathrm{early}} - s_{\mathrm{early}}\| \le 0.05$ (first 15 eps) |
+| **Shape** | `baseline_declines` | $b_{\mathrm{early}} - b_{\mathrm{late}} \ge 0.02$ |
+| **Shape** | `sea_declines` | $s_{\mathrm{early}} - s_{\mathrm{late}} \ge 0.04$ |
+| **Shape** | `sea_below_baseline_late` | $s_{\mathrm{late}} < b_{\mathrm{late}}$ (last 30 eps) |
+| **Shape** | `sea_steeper_drop_than_baseline` | $(s_{\mathrm{early}}-s_{\mathrm{late}}) > (b_{\mathrm{early}}-b_{\mathrm{late}})$ |
+| **Shape** | `late_gap_substantial` | $b_{\mathrm{late}} - s_{\mathrm{late}} \ge 0.02$ |
+| **Shape** | `drop_timing_baseline` | drop by ep 50 not front-loaded vs paper |
+| **Shape** | `drop_timing_sea` | drop by ep 50 not front-loaded vs paper |
+| **Shape** | `gradual_decline_baseline` | mid (ep 40–80) above late (ep 120–150) by $\ge 30\%$ paper drop |
+| **Shape** | `gradual_decline_sea` | mid (ep 40–80) above late (ep 120–150) by $\ge 30\%$ paper drop |
+| **Shape** | `pearson_baseline_min` | $r(x, b) \ge 0.55$ vs digitized paper baseline curve |
+| **Shape** | `pearson_sea_min` | $r(x, s) \ge 0.55$ vs digitized paper SEA-DBS curve |
+| **Full** | `shared_start_near_paper` | both early means within $25\%$ of paper onset |
+| **Full** | `baseline_drop_vs_paper` | baseline drop $\ge 40\%$ of paper drop |
+| **Full** | `sea_drop_vs_paper` | SEA-DBS drop $\ge 40\%$ of paper drop |
+| **Full** | `late_gap_near_paper` | late gap $\ge 70\%$ of paper late gap |
+| **Full** | `late_early_ratio_baseline_near_paper` | late/early ratio matches paper within $30\%$ |
+| **Full** | `late_early_ratio_sea_near_paper` | late/early ratio matches paper within $30\%$ |
 
 Do **not** pass a frozen / non-learning Baseline. Do **not** use display hacks to force these levels.
 

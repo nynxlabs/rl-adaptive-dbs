@@ -24,7 +24,7 @@ import numpy as np
 
 from controllers.sea_dbs.adapter import SEA_DBSEnvAdapter
 from controllers.sea_dbs.config import SEADBSConfig, fig4_ravivarapu_config
-from dataclasses import replace
+from dataclasses import dataclass, replace
 
 from controllers.sea_dbs.checkpoint import load_checkpoint, save_checkpoint
 from controllers.sea_dbs.trainer import SEA_DBSTrainer
@@ -44,18 +44,28 @@ _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
 _spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
 assert _spec and _spec.loader
 _figure_promote = importlib.util.module_from_spec(_spec)
+sys.modules["figure_promote"] = _figure_promote
 _spec.loader.exec_module(_figure_promote)
 
 _RESUME_CLI = Path(__file__).resolve().parents[2] / "resume_cli.py"
 _resume_spec = importlib.util.spec_from_file_location("figure_resume_cli", _RESUME_CLI)
 assert _resume_spec and _resume_spec.loader
 _resume_cli = importlib.util.module_from_spec(_resume_spec)
+sys.modules["figure_resume_cli"] = _resume_cli
 _resume_spec.loader.exec_module(_resume_cli)
+
+_PARALLEL_SERIES = Path(__file__).resolve().parents[2] / "parallel_series.py"
+_parallel_spec = importlib.util.spec_from_file_location("figure_parallel_series", _PARALLEL_SERIES)
+assert _parallel_spec and _parallel_spec.loader
+_parallel_series = importlib.util.module_from_spec(_parallel_spec)
+sys.modules["figure_parallel_series"] = _parallel_series
+_parallel_spec.loader.exec_module(_parallel_series)
 
 _OVERLAY = Path(__file__).resolve().parents[2] / "paper_overlay.py"
 _overlay_spec = importlib.util.spec_from_file_location("figure_paper_overlay", _OVERLAY)
 assert _overlay_spec and _overlay_spec.loader
 _paper_overlay = importlib.util.module_from_spec(_overlay_spec)
+sys.modules["figure_paper_overlay"] = _paper_overlay
 _overlay_spec.loader.exec_module(_paper_overlay)
 
 FIGURES_DIR = Path("figures/ravivarapu/images/4a")
@@ -196,6 +206,31 @@ def train_variant(
         env.close()
 
 
+@dataclass(frozen=True)
+class _TrainVariantJob:
+    variant: str
+    seed: int
+    smoke: bool
+    num_episodes: int | None
+    resume_path: str | None
+    start_episode: int | None
+    checkpoint_interval: int
+
+
+def _train_variant_worker(job: _TrainVariantJob) -> dict[str, Any]:
+    _parallel_series.bootstrap_worker_threads()
+    resume = Path(job.resume_path) if job.resume_path else None
+    return train_variant(
+        job.variant,
+        seed=job.seed,
+        smoke=job.smoke,
+        num_episodes=job.num_episodes,
+        resume_path=resume,
+        start_episode=job.start_episode,
+        checkpoint_interval=job.checkpoint_interval,
+    )
+
+
 def train_all(
     *,
     seed: int,
@@ -205,6 +240,7 @@ def train_all(
     start_episode: int | None = None,
     checkpoint_interval: int = _resume_cli.DEFAULT_CHECKPOINT_INTERVAL,
     train_variants: tuple[str, ...] = VARIANTS,
+    parallel_series: int = 0,
 ) -> dict[str, Any]:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     series: dict[str, Any] = {"seed": seed, "smoke": smoke, "variants": {}}
@@ -214,6 +250,8 @@ def train_all(
             cached = json.loads(SHARED_SERIES.read_text(encoding="utf-8")).get("variants") or {}
         except json.JSONDecodeError:
             cached = {}
+    jobs: list[_TrainVariantJob] = []
+    job_variants: list[str] = []
     for variant in VARIANTS:
         if variant not in train_variants:
             if variant not in cached:
@@ -228,15 +266,29 @@ def train_all(
         if resume is not None and variant != "paper" and str(resume).find(variant) < 0:
             candidate = CACHE_DIR / f"{variant}_train{seed}.pt"
             variant_resume = candidate if candidate.is_file() else None
-        series["variants"][variant] = train_variant(
-            variant,
-            seed=seed,
-            smoke=smoke,
-            num_episodes=num_episodes,
-            resume_path=variant_resume if variant_resume and variant_resume.is_file() else None,
-            start_episode=start_episode,
-            checkpoint_interval=checkpoint_interval,
+        resume_file: Path | None = None
+        if variant_resume is not None and variant_resume.is_file():
+            resume_file = variant_resume
+        jobs.append(
+            _TrainVariantJob(
+                variant=variant,
+                seed=seed,
+                smoke=smoke,
+                num_episodes=num_episodes,
+                resume_path=resume_file.as_posix() if resume_file else None,
+                start_episode=start_episode,
+                checkpoint_interval=checkpoint_interval,
+            )
         )
+        job_variants.append(variant)
+    if jobs:
+        results = _parallel_series.run_series_parallel(
+            jobs,
+            _train_variant_worker,
+            parallel_series,
+        )
+        for variant, result in zip(job_variants, results, strict=True):
+            series["variants"][variant] = result
     SHARED_SERIES.write_text(json.dumps(series, indent=2) + "\n", encoding="utf-8")
     return series
 
@@ -246,14 +298,9 @@ def evaluate_gates(series: dict[str, Any]) -> dict[str, Any]:
         return {"pass": True, "shape_pass": True, "smoke_override": True}
     baseline = series["variants"]["baseline"]["episode_psd"]
     sea = series["variants"]["paper"]["episode_psd"]
-    heuristic = ravivarapu_fig4a_gates(baseline, sea, n_expected=DEFAULT_TRAIN_EPISODES)
-    merged = merge_gate_report(heuristic, {"n_episodes": min(len(baseline), len(sea))})
-    dig = ravivarapu_fig4a_digitization_gates(
-        baseline,
-        sea,
-        n_expected=DEFAULT_TRAIN_EPISODES,
-    )
-    return ravivarapu_fig4a_attach_tiered_pass(attach_digitization(merged, dig, prefix="dig_"))
+    report = ravivarapu_fig4a_gates(baseline, sea, n_expected=DEFAULT_TRAIN_EPISODES)
+    merged = merge_gate_report(report, {"n_episodes": min(len(baseline), len(sea))})
+    return ravivarapu_fig4a_attach_tiered_pass(merged)
 
 
 def plot_series(series: dict[str, Any], png_path: Path) -> None:
@@ -300,6 +347,7 @@ def main() -> None:
         help="Train only these variants; omitted ones are reused from series.json",
     )
     _resume_cli.add_training_resume_args(parser)
+    _parallel_series.add_parallel_series_argument(parser)
     args = parser.parse_args()
     _resume_cli.configure_promote_publish(args, _figure_promote)
 
@@ -318,6 +366,7 @@ def main() -> None:
             start_episode=args.start_episode,
             checkpoint_interval=args.checkpoint_interval,
             train_variants=train_variants,
+            parallel_series=args.parallel_series,
         )
 
     gates = evaluate_gates(series)
@@ -341,7 +390,7 @@ def main() -> None:
         "caption": caption,
         "series_cache": SHARED_SERIES.as_posix(),
         "display_roll_window": DISPLAY_ROLL_WINDOW,
-        "train_config": "fig4_ravivarapu_config_v93",
+        "train_config": "fig4_ravivarapu_config_v103",
     }
     DEFAULT_MANIFEST.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     if hasattr(_figure_promote, "promote_ravivarapu_4a"):

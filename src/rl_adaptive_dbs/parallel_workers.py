@@ -47,10 +47,16 @@ class TrainSeedJob:
     checkpoint_dir: Path
     config_path: Path | None = None
     smoke: bool = False
+    resume_path: Path | None = None
+    start_episode: int | None = None
+    checkpoint_interval: int = 50
 
 
 def train_seed_worker(job: TrainSeedJob) -> dict[str, Any]:
     """Train one seed in an isolated process with its own MATLAB engine."""
+    from rl_adaptive_dbs.thread_limits import apply_max_threads
+
+    apply_max_threads(1)
     from dataclasses import replace
 
     ckpt_path = job.checkpoint_dir / f"{job.variant}_train{job.seed}.pt"
@@ -74,7 +80,13 @@ def train_seed_worker(job: TrainSeedJob) -> dict[str, Any]:
             "episodes": config.num_episodes,
             "checkpoint": ckpt_path.as_posix(),
         }
-        train_sea_dbs(config=config, checkpoint_path=ckpt_path)
+        train_sea_dbs(
+            config=config,
+            checkpoint_path=ckpt_path,
+            resume_path=job.resume_path,
+            start_episode=job.start_episode,
+            checkpoint_interval=job.checkpoint_interval,
+        )
         return {**plan, "status": "ok"}
 
     if job.controller == "snn":

@@ -205,6 +205,7 @@ SEA_DBS_MATERIAL_FIELDS: tuple[str, ...] = (
     "actor_late_episode_lo",
     "actor_late_episode_hi",
     "actor_late_episode_no_stim_boost",
+    "actor_late_episode_stim_logit_boost",
     "actor_late_episode_boost_ramp",
     "actor_gap_patch_episode_lo",
     "actor_gap_patch_episode_hi",

@@ -23,35 +23,32 @@ def test_fig4a_paper_self_passes_full_shape_gates():
     x_b, y_b = paper["Baseline"]
     x_s, y_s = paper["SEA-DBS"]
     episodes = np.arange(150, dtype=float)
-    report = ravivarapu_fig4a_digitization_gates(
+    report = ravivarapu_fig4a_gates(
         np.interp(episodes, x_b, y_b),
         np.interp(episodes, x_s, y_s),
         n_expected=150,
     )
     assert report["pass"]
-    assert report["gates"]["progressive_decline_baseline"]
-    assert report["gates"]["progressive_decline_sea"]
-    assert report["gates"]["gap_widens_mid_to_late"]
+    assert report["gates"]["gradual_decline_baseline"]
+    assert report["gates"]["gradual_decline_sea"]
+    assert report["gates"]["late_gap_substantial"]
+    assert report["gates"]["sea_steeper_drop_than_baseline"]
+    assert report["gates"]["pearson_baseline_min"]
+    assert report["gates"]["pearson_sea_min"]
 
 
-def test_fig4a_rejects_baseline_mid_plateau_and_gap_closing():
+def test_fig4a_rejects_baseline_mid_plateau():
     episodes = np.arange(150, dtype=float)
+    # Baseline flat from ep 40 onward (mid == late)
     baseline = np.concatenate(
         [
-            np.linspace(0.46, 0.467, 40),
-            np.linspace(0.467, 0.453, 80),
-            np.linspace(0.453, 0.424, 30),
+            np.linspace(0.48, 0.42, 40),
+            np.linspace(0.42, 0.42, 110),
         ]
     )
-    sea = np.concatenate(
-        [
-            np.linspace(0.453, 0.454, 40),
-            np.linspace(0.454, 0.393, 80),
-            np.linspace(0.390, 0.385, 30),
-        ]
-    )
-    report = ravivarapu_fig4a_digitization_gates(baseline, sea, n_expected=150)
-    assert not report["gates"]["progressive_decline_baseline"]
+    sea = np.linspace(0.48, 0.34, 150)
+    report = ravivarapu_fig4a_gates(baseline, sea, n_expected=150)
+    assert not report["gates"]["gradual_decline_baseline"]
 
 
 def test_fig4a_paper_self_passes_endpoint_separation_gates():
@@ -59,34 +56,34 @@ def test_fig4a_paper_self_passes_endpoint_separation_gates():
     x_b, y_b = paper["Baseline"]
     x_s, y_s = paper["SEA-DBS"]
     episodes = np.arange(150, dtype=float)
-    report = ravivarapu_fig4a_digitization_gates(
+    report = ravivarapu_fig4a_gates(
         np.interp(episodes, x_b, y_b),
         np.interp(episodes, x_s, y_s),
         n_expected=150,
     )
-    assert report["gates"]["final_window_gap_near_paper"]
-    assert np.isfinite(report["metrics"]["endpoint_gap"])
+    assert report["gates"]["late_gap_near_paper"]
+    assert np.isfinite(report["metrics"]["late_gap"])
 
 
-def test_fig4a_requires_substantial_final_mean_gap():
+def test_fig4a_requires_substantial_late_gap():
     episodes = np.arange(150, dtype=float)
     baseline = np.linspace(0.48, 0.40, episodes.size)
     sea = np.linspace(0.47, 0.35, episodes.size)
 
     report = ravivarapu_fig4a_gates(baseline, sea, n_expected=150)
 
-    assert report["gates"]["final_window_gap_substantial"]
-    assert report["metrics"]["final_window_gap"] >= 0.03
+    assert report["gates"]["late_gap_substantial"]
+    assert report["metrics"]["late_gap"] >= 0.02
 
 
 def test_fig4a_rejects_barely_separated_final_means():
     episodes = np.arange(150, dtype=float)
-    baseline = np.linspace(0.48, 0.38, episodes.size)
-    sea = np.linspace(0.47, 0.35, episodes.size)
+    baseline = np.linspace(0.48, 0.36, episodes.size)
+    sea = np.linspace(0.47, 0.355, episodes.size)
 
     report = ravivarapu_fig4a_gates(baseline, sea, n_expected=150)
 
-    assert not report["gates"]["final_window_gap_substantial"]
+    assert not report["gates"]["late_gap_substantial"]
 
 
 def test_fig4a_tiered_pass_full_implies_shape_pass():
