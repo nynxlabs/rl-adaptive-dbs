@@ -390,7 +390,7 @@ def main() -> None:
         "caption": caption,
         "series_cache": SHARED_SERIES.as_posix(),
         "display_roll_window": DISPLAY_ROLL_WINDOW,
-        "train_config": "fig4_ravivarapu_config_v107",
+        "train_config": "fig4_ravivarapu_config_v108",
     }
     DEFAULT_MANIFEST.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     if hasattr(_figure_promote, "promote_ravivarapu_4a"):
