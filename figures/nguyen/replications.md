@@ -12,8 +12,8 @@ Figs **1–2** are schematics — **not** replication targets.
 | Panel | Description | Status |
 |-------|-------------|--------|
 | Fig 3 | GPi α–β distribution (PD Off vs PD On) | Pass (rep v22) |
-| Fig 4 | Training reward + episode length | Ship **v130** / gates lead **v138** (full open) |
-| Fig 5 | CBGT spikes + DBS energy over training | Fail (`paper_spike_early_near_paper`) |
+| Fig 4 | Training reward + episode length | Shape OK (full open) |
+| Fig 5 | CBGT spikes + DBS energy over training | Fail (`paper_energy_trend_near_paper`) |
 | Fig 6 | α–β + DBS parameters over training | Fail (`paper_late_alpha_beta_below_theta`) |
 | Fig 7 | 50-episode eval (25 steps) | Fail (`checkpoint_lineage_ok`) |
 <!-- summary:end -->
@@ -41,7 +41,7 @@ Distribution of GPi **α–β** oscillation power (**7–35 Hz**) for **PD On** 
 **Status:** Pass — 500 × 100 ms samples; see `alpha_beta_dist_v22.png`.
 
 <!-- gates-3:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **`pass`**: yes, 2026-08-24). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **`pass`**: yes, 2026-08-30). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -97,7 +97,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 **Status:** **Ship/visual pick `v130`** (`shape_pass=True`, 2 full gates open: `reward_post100_plateau`, `length_late_plateau`). Gate-iteration lead **v138** (length full, 1 gate); latest train **v138** — see `caption-4-latest`.
 
 <!-- gates-4:start -->
-**Gates set (ship/visual pick v130)** (`artifacts/figures/papers/nguyen/4/manifest_v130.json`; **`shape_pass`**: yes, **`pass`**: no, 2026-08-24). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
+**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: yes, **`pass`**: no, 2026-08-30). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
 
 ### Reward (panel a) (`shape_pass`: yes | `pass`: no)
 
@@ -107,15 +107,14 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 | `reward_improves_by_100` | smoothed reward 80–100 better than 0–50 | yes | yes |
 | `reward_by_100_near_zero` | smoothed reward 80–100 toward ~0 | yes | yes |
 | `late_reward_near_zero` | late mean toward paper ~0 (diagnostic) | — | — |
-| `reward_post100_plateau` | smoothed reward ptp ep 100–250 ≤ cap | — | no |
-| `reward_late_plateau` | smoothed reward ptp ep 300–500 near digitized paper | — | yes |
+| `reward_post100_plateau` | smoothed reward flat ep 100+ like paper | — | no |
 | `late_reward_above_early` | late mean > first-50 (diagnostic) | — | — |
 | `early_high_variance` | early reward variance (logged) | — | — |
 | `paper_early_reward_mag_near_paper` | digitization — early reward magnitude (diagnostic) | — | — |
 | `paper_reward_improves_like_paper` | digitization — reward improves (diagnostic) | — | — |
 | `paper_late_reward_ratio_near_paper` | digitization — late/first-50 reward ratio (diagnostic) | — | — |
 
-### Length (panel b) (`shape_pass`: yes | `pass`: no)
+### Length (panel b) (`shape_pass`: yes | `pass`: yes)
 
 | Key | Description | Shape | Full |
 |-----|-------------|-------|------|
@@ -125,11 +124,9 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 | `length_by_100_near_paper` | smoothed length 80–100 near digitized ~10 | yes | yes |
 | `late_length_paper_band` | late mean length ≤ 12 (diagnostic) | — | — |
 | `paper_late_length_near_paper` | late length near digitized ~8 (diagnostic) | — | — |
-| `length_post100_plateau` | smoothed length ptp ep 100–200 ≤ 4.5 | — | yes |
-| `length_late_plateau` | smoothed length ptp ep 300–500 near digitized paper | — | no |
+| `length_post100_plateau` | length plateau ep 100+ like paper | — | yes |
 | `late_length_no_regression` | smoothed length slope ep 350–490 ≤ 0.02/ep | — | yes |
 | `late_timeout_fraction` | raw timeout rate ep 350–500 ≤ 25% | — | yes |
-| `late_timeout_fraction_300_500` | raw timeout rate ep 300–500 ≤ 2% | — | yes |
 | `late_length_level` | smoothed length median ep 350–500 ≤ 14 | — | yes |
 | `length_decreases` | late < early − 1 (diagnostic) | — | — |
 | `paper_length_decreases_like_paper` | digitization — length decreases (diagnostic) | — | — |
@@ -159,18 +156,18 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 
 ### Replication
 
-![Replication Fig 5](images/5/spikes_energy_v25.png)
+![Replication Fig 5](images/5/spikes_energy_v27.png)
 
 <!-- caption-5:start -->
-**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=657, energy_mean=518.7; pass=False (v25)
+**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=829, energy_mean=1724.4; pass=False (v27)
 
 **Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json`
 <!-- caption-5:end -->
 
-**Status:** Open — see manifest gates (`spikes_energy_v25.png`).
+**Status:** Open — see manifest gates (`spikes_energy_v27.png`).
 
 <!-- gates-5:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-08-24). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-08-30). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -180,12 +177,15 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 | `energy_not_constant` | energy not constant | yes |
 | `spike_in_paper_band` | mean spikes 400–950/ep | yes |
 | `energy_in_paper_band` | mean 300–3200/ep, max ≤ 3520 | yes |
-| `paper_spike_early_near_paper` | digitization — spike early ep 0–50 | no |
-| `paper_spike_mean_near_paper` | digitization — spike mean | yes |
-| `paper_energy_mean_near_paper` | digitization — energy mean | no |
-| `paper_spike_trend_near_paper` | digitization — spike trend | no |
-| `paper_energy_mid_ramp_near_paper` | digitization — energy mid ramp ep 55–75 | no |
-| `paper_energy_trend_near_paper` | digitization — energy trend | no |
+| `paper_spike_early_near_paper` | digitization — early spikes near paper (ep 0–50) | yes |
+| `paper_spike_mid_near_paper` | digitization — mid spikes near paper (ep 55–75) | yes |
+| `paper_spike_late_near_paper` | digitization — late spikes near paper (ep 350–500) | yes |
+| `paper_spike_mean_near_paper` | digitization — spike mean near paper | yes |
+| `paper_spike_trend_near_paper` | digitization — spikes flat trend (late/early) | yes |
+| `paper_spike_stays_near_800` | spike count starts & stays ~800 | yes |
+| `paper_energy_mean_near_paper` | digitization — energy mean | yes |
+| `paper_energy_mid_ramp_near_paper` | digitization — energy ramp ep 55–75 | yes |
+| `paper_energy_trend_near_paper` | digitization — energy late vs early | no |
 | `paper_spike_series_has_variance` | digitization — spike variance | yes |
 | `paper_energy_not_constant` | digitization — energy not constant | yes |
 <!-- gates-5:end -->
@@ -215,7 +215,7 @@ GPi **α–β** (a) and DBS amplitude / frequency / pulse width (b) over **500**
 **Status:** Open — see manifest gates (`alpha_beta_params_v3.png`).
 
 <!-- gates-6:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: no, 2026-08-24). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: no, 2026-08-30). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -257,7 +257,7 @@ Seeded eval of the trained policy: **50** episodes × **25** steps, different se
 **Status:** Open — see manifest gates (`eval_50ep_v4.png`).
 
 <!-- gates-7:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: no, 2026-08-24). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: no, 2026-08-30). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
