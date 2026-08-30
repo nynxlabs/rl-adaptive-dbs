@@ -12,8 +12,10 @@ sys.path.insert(0, str(_DIG))
 from ravivarapu_gates import (  # noqa: E402
     load_curves,
     ravivarapu_fig4a_attach_tiered_pass,
-    ravivarapu_fig4a_gates,
     ravivarapu_fig4a_digitization_gates,
+    ravivarapu_fig4a_gates,
+    ravivarapu_fig4b_attach_tiered_pass,
+    ravivarapu_fig4b_gates,
     ravivarapu_inference_gates,
 )
 
@@ -100,6 +102,63 @@ def test_fig4a_tiered_shape_pass_without_full_polish():
 
     flat = {key: (tier == "shape") for key, tier in RAVIVARAPU_FIG4A_GATE_TIER.items()}
     tiered = ravivarapu_fig4a_attach_tiered_pass(flat)
+    assert tiered["shape_pass"]
+    assert not tiered["pass"]
+
+
+def test_fig4b_paper_self_passes_full_gates():
+    paper = load_curves("fig4b")
+    x_b, y_b = paper["Baseline Reward"]
+    x_s, y_s = paper["SEA-DBS Reward"]
+    episodes = np.arange(150, dtype=float)
+    report = ravivarapu_fig4b_gates(
+        np.interp(episodes, x_b, y_b),
+        np.interp(episodes, x_s, y_s),
+        n_expected=150,
+    )
+    assert report["pass"]
+    assert report["gates"]["baseline_rises"]
+    assert report["gates"]["sea_rises"]
+    assert report["gates"]["sea_above_baseline_late"]
+    assert report["gates"]["sea_steeper_rise_than_baseline"]
+    assert report["gates"]["pearson_baseline_min"]
+    assert report["gates"]["pearson_sea_min"]
+    assert report["gates"]["shared_start_near_paper"]
+
+
+def test_fig4b_rejects_non_rising_baseline():
+    episodes = np.arange(150, dtype=float)
+    baseline = np.full(150, -40.0)
+    sea = np.linspace(-40.0, 10.0, 150)
+    report = ravivarapu_fig4b_gates(baseline, sea, n_expected=150)
+    assert not report["gates"]["baseline_rises"]
+    assert not report["pass"]
+
+
+def test_fig4b_rejects_inverted_late_order():
+    episodes = np.arange(150, dtype=float)
+    baseline = np.linspace(-40.0, 15.0, 150)
+    sea = np.linspace(-40.0, -5.0, 150)
+    report = ravivarapu_fig4b_gates(baseline, sea, n_expected=150)
+    assert not report["gates"]["sea_above_baseline_late"]
+    assert not report["gates"]["sea_steeper_rise_than_baseline"]
+    assert not report["pass"]
+
+
+def test_fig4b_tiered_pass_full_implies_shape_pass():
+    from ravivarapu_gates import RAVIVARAPU_FIG4B_GATE_TIER
+
+    flat = {key: True for key in RAVIVARAPU_FIG4B_GATE_TIER}
+    tiered = ravivarapu_fig4b_attach_tiered_pass(flat)
+    assert tiered["shape_pass"]
+    assert tiered["pass"]
+
+
+def test_fig4b_tiered_shape_pass_without_full_polish():
+    from ravivarapu_gates import RAVIVARAPU_FIG4B_GATE_TIER
+
+    flat = {key: (tier == "shape") for key, tier in RAVIVARAPU_FIG4B_GATE_TIER.items()}
+    tiered = ravivarapu_fig4b_attach_tiered_pass(flat)
     assert tiered["shape_pass"]
     assert not tiered["pass"]
 

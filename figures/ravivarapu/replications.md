@@ -7,8 +7,8 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 <!-- summary:start -->
 | Panel | Description | Status |
 |-------|-------------|--------|
-| Fig 4a | Training PSD vs episode | Pass (v66) |
-| Fig 4b | Training reward vs episode | Pass (v10) |
+| Fig 4a | Training PSD vs episode | Pass (v67) |
+| Fig 4b | Training reward vs episode | Pass (v13) |
 | Fig 5a | Inference @ 50 Hz | Pass |
 | Fig 5b | Inference @ 30 Hz | Pass |
 | Fig 6 | FP16 PTQ @ 50 Hz | Pass |
@@ -33,15 +33,15 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_psd_v66.png)
+![Replication Fig 4a](images/4a/training_psd_v67.png)
 
 <!-- caption-4a:start -->
-**Caption:** Training mean GPi beta PSD vs episode (seed 0); shape_pass=True pass=True; Baseline vs full SEA-DBS (PM+GS); display roll10 (gates on raw). (v66)
+**Caption:** Training mean GPi beta PSD vs episode (seed 0); shape_pass=True pass=True; Baseline vs full SEA-DBS (PM+GS); display roll10 (gates on raw). (v67)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`
 <!-- caption-4a:end -->
 
-**Status:** **Pass** (rep v66) — `shape_pass` and full `pass`; `fixed_episode_seed_until=2`; `fig4_ravivarapu_config_v107`; display roll10 (gates on raw); paper overlay (black baseline, grey SEA-DBS). Manifest `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`.
+**Status:** **Pass** (rep v67) — `shape_pass` and full `pass`; `fixed_episode_seed_until=2`; `fig4_ravivarapu_config_v108`; display roll10 (gates on raw); paper overlay (black baseline, grey SEA-DBS). Manifest `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`.
 
 <!-- gates-4a:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4a.json`; **`shape_pass`**: yes, **`pass`**: yes, 2026-08-30). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
@@ -64,11 +64,11 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 | `shared_start_near_paper` | shared start vs paper | — | yes |
 | `baseline_drop_vs_paper` | baseline drop vs paper | — | yes |
 | `sea_drop_vs_paper` | SEA-DBS drop vs paper | — | yes |
-| `sea_mid_near_paper` | SEA-DBS mid-training level vs paper | — | — |
-| `sea_midlate_near_paper` | SEA-DBS ep 70–110 level vs paper | — | — |
-| `sea_late_near_paper` | SEA-DBS late level vs paper | — | — |
+| `sea_mid_near_paper` | SEA-DBS mid-training level vs paper | — | yes |
+| `sea_midlate_near_paper` | SEA-DBS ep 70–110 level vs paper | — | yes |
+| `sea_late_near_paper` | SEA-DBS late level vs paper | — | yes |
 | `late_gap_near_paper` | late gap vs paper (bounded) | — | yes |
-| `midlate_gap_near_paper` | ep 70–110 gap vs paper (bounded) | — | — |
+| `midlate_gap_near_paper` | ep 70–110 gap vs paper (bounded) | — | yes |
 | `late_early_ratio_baseline_near_paper` | baseline late/early ratio vs paper | — | yes |
 | `late_early_ratio_sea_near_paper` | SEA-DBS late/early ratio vs paper | — | yes |
 <!-- gates-4a:end -->
@@ -94,10 +94,10 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4a/plot.p
 
 ### Replication
 
-![Replication Fig 4b](images/4b/training_reward_v10.png)
+![Replication Fig 4b](images/4b/training_reward_v13.png)
 
 <!-- caption-4b:start -->
-**Caption:** Training episode reward vs episode (seed 0); paired with Fig 4a cache. (v10)
+**Caption:** Training episode reward vs episode (seed 0); paired with Fig 4a cache; display roll10 (gates on raw). (v13)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4b.json`
 <!-- caption-4b:end -->

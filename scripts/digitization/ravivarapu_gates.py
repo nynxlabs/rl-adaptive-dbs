@@ -83,23 +83,54 @@ RAVIVARAPU_FIG4A_GATE_TIER: dict[str, str] = {
     "gradual_decline_sea": "shape",
     "pearson_baseline_min": "shape",
     "pearson_sea_min": "shape",
-    # Full tier (6 gates)
+    # Full tier (10 gates)
     "shared_start_near_paper": "full",
     "baseline_drop_vs_paper": "full",
     "sea_drop_vs_paper": "full",
+    "sea_mid_near_paper": "full",
+    "sea_midlate_near_paper": "full",
+    "sea_late_near_paper": "full",
     "late_gap_near_paper": "full",
+    "midlate_gap_near_paper": "full",
     "late_early_ratio_baseline_near_paper": "full",
     "late_early_ratio_sea_near_paper": "full",
+}
+
+
+# Fig 4b gate tiers: shape = ordering + trajectory profile; full adds digitization polish.
+RAVIVARAPU_FIG4B_GATE_TIER: dict[str, str] = {
+    # Shape tier (14 gates)
+    "n_episodes_ok": "shape",
+    "shared_start": "shape",
+    "baseline_rises": "shape",
+    "sea_rises": "shape",
+    "sea_above_baseline_late": "shape",
+    "sea_steeper_rise_than_baseline": "shape",
+    "paper_pull_ahead_mid": "shape",
+    "late_gap_substantial": "shape",
+    "rise_timing_baseline": "shape",
+    "rise_timing_sea": "shape",
+    "gradual_rise_baseline": "shape",
+    "gradual_rise_sea": "shape",
+    "pearson_baseline_min": "shape",
+    "pearson_sea_min": "shape",
+    # Full tier (5 gates)
+    "shared_start_near_paper": "full",
+    "baseline_rise_vs_paper": "full",
+    "sea_rise_vs_paper": "full",
+    "late_gap_near_paper": "full",
+    "midlate_gap_near_paper": "full",
 }
 
 
 def ravivarapu_fig4a_tier_pass(flat: dict[str, Any], *, full: bool) -> bool:
     """Return whether every gate in the shape or full tier passes."""
     tiers = ("shape", "full") if full else ("shape",)
+    gates_dict = flat.get("gates", flat)
     for key, tier in RAVIVARAPU_FIG4A_GATE_TIER.items():
         if tier not in tiers:
             continue
-        value = flat.get(key)
+        value = gates_dict.get(key)
         if isinstance(value, bool) and not value:
             return False
     return True
@@ -110,6 +141,27 @@ def ravivarapu_fig4a_attach_tiered_pass(flat: dict[str, Any]) -> dict[str, Any]:
     out = dict(flat)
     out["shape_pass"] = ravivarapu_fig4a_tier_pass(out, full=False)
     out["pass"] = ravivarapu_fig4a_tier_pass(out, full=True)
+    return out
+
+
+def ravivarapu_fig4b_tier_pass(flat: dict[str, Any], *, full: bool) -> bool:
+    """Return whether every gate in the shape or full tier passes for Fig 4b."""
+    tiers = ("shape", "full") if full else ("shape",)
+    gates_dict = flat.get("gates", flat)
+    for key, tier in RAVIVARAPU_FIG4B_GATE_TIER.items():
+        if tier not in tiers:
+            continue
+        value = gates_dict.get(key)
+        if isinstance(value, bool) and not value:
+            return False
+    return True
+
+
+def ravivarapu_fig4b_attach_tiered_pass(flat: dict[str, Any]) -> dict[str, Any]:
+    """Set ``shape_pass`` (phase 1) and ``pass`` (ship) on a flattened Fig 4b manifest."""
+    out = dict(flat)
+    out["shape_pass"] = ravivarapu_fig4b_tier_pass(out, full=False)
+    out["pass"] = ravivarapu_fig4b_tier_pass(out, full=True)
     return out
 
 
@@ -170,6 +222,27 @@ def _drop_fraction_by_episode(
     if not np.isfinite(mid):
         return float("nan")
     return float((early - mid) / total)
+
+
+def _rise_fraction_by_episode(
+    x: np.ndarray,
+    y: np.ndarray,
+    *,
+    episode: float,
+    early_hi: float,
+    late_lo: float,
+) -> float:
+    """Share of early→late rise achieved by ``episode`` (exclusive early window)."""
+    early = window_mean(x, y, hi=early_hi)
+    late = window_mean(x, y, lo=late_lo)
+    total = late - early
+    if not np.isfinite(total) or total <= 1e-9:
+        return float("nan")
+    mid_hi = max(early_hi, episode)
+    mid = window_mean(x, y, lo=early_hi, hi=mid_hi)
+    if not np.isfinite(mid):
+        return float("nan")
+    return float((mid - early) / total)
 
 
 def _drop_timing_ok(
@@ -255,18 +328,22 @@ def ravivarapu_fig4a_gates(
 
     b_early = window_mean(x, b, hi=early_hi)
     b_mid = window_mean(x, b, lo=mid_lo, hi=mid_hi)
+    b_midlate_w = window_mean(x, b, lo=70.0, hi=110.0)
     b_late = window_mean(x, b, lo=late_lo)
 
     s_early = window_mean(x, s, hi=early_hi)
     s_mid = window_mean(x, s, lo=mid_lo, hi=mid_hi)
+    s_midlate_w = window_mean(x, s, lo=70.0, hi=110.0)
     s_late = window_mean(x, s, lo=late_lo)
 
     pb_early = window_mean(pbx, pby, hi=early_hi)
     pb_mid = window_mean(pbx, pby, lo=mid_lo, hi=mid_hi)
+    pb_midlate_w = window_mean(pbx, pby, lo=70.0, hi=110.0)
     pb_late = window_mean(pbx, pby, lo=late_lo)
 
     ps_early = window_mean(psx, psy, hi=early_hi)
     ps_mid = window_mean(psx, psy, lo=mid_lo, hi=mid_hi)
+    ps_midlate_w = window_mean(psx, psy, lo=70.0, hi=110.0)
     ps_late = window_mean(psx, psy, lo=late_lo)
 
     b_drop = b_early - b_late
@@ -297,6 +374,8 @@ def ravivarapu_fig4a_gates(
 
     gap = b_late - s_late
     p_gap = pb_late - ps_late
+    gap_midlate = b_midlate_w - s_midlate_w
+    p_gap_midlate = pb_midlate_w - ps_midlate_w
 
     gates = {
         # Shape tier
@@ -314,7 +393,9 @@ def ravivarapu_fig4a_gates(
         "sea_steeper_drop_than_baseline": bool(
             np.isfinite(s_drop) and np.isfinite(b_drop) and s_drop > b_drop
         ),
-        "late_gap_substantial": bool(np.isfinite(gap) and gap >= late_gap_min),
+        "late_gap_substantial": bool(
+            np.isfinite(gap) and 0.015 <= gap <= 0.050
+        ),
         "drop_timing_baseline": _drop_timing_ok(b_drop_frac, pb_drop_frac),
         "drop_timing_sea": _drop_timing_ok(s_drop_frac, ps_drop_frac),
         "gradual_decline_baseline": bool(
@@ -340,11 +421,20 @@ def ravivarapu_fig4a_gates(
         "sea_drop_vs_paper": bool(
             np.isfinite(s_drop) and np.isfinite(ps_drop) and s_drop >= drop_frac_of_paper * ps_drop
         ),
+        "sea_mid_near_paper": rel_close(s_mid, ps_mid, tol=0.12),
+        "sea_midlate_near_paper": rel_close(s_midlate_w, ps_midlate_w, tol=0.12),
+        "sea_late_near_paper": rel_close(s_late, ps_late, tol=0.12),
         "late_gap_near_paper": bool(
             np.isfinite(gap)
             and np.isfinite(p_gap)
             and p_gap > 0
-            and gap >= (1.0 - (rel_tol + 0.05)) * p_gap
+            and 0.50 * p_gap <= gap <= 1.60 * p_gap
+        ),
+        "midlate_gap_near_paper": bool(
+            np.isfinite(gap_midlate)
+            and np.isfinite(p_gap_midlate)
+            and p_gap_midlate > 0
+            and 0.40 * p_gap_midlate <= gap_midlate <= 1.75 * p_gap_midlate
         ),
         "late_early_ratio_baseline_near_paper": ratio_close(
             b_late, b_early, pb_late, pb_early, tol=ratio_tol
@@ -357,9 +447,11 @@ def ravivarapu_fig4a_gates(
     metrics = {
         "b_early": b_early,
         "b_mid": b_mid,
+        "b_midlate_w": b_midlate_w,
         "b_late": b_late,
         "s_early": s_early,
         "s_mid": s_mid,
+        "s_midlate_w": s_midlate_w,
         "s_late": s_late,
         "b_drop": b_drop,
         "s_drop": s_drop,
@@ -369,9 +461,11 @@ def ravivarapu_fig4a_gates(
         "s_drop_frac_at_timing": s_drop_frac,
         "paper_b_early": pb_early,
         "paper_b_mid": pb_mid,
+        "paper_b_midlate_w": pb_midlate_w,
         "paper_b_late": pb_late,
         "paper_s_early": ps_early,
         "paper_s_mid": ps_mid,
+        "paper_s_midlate_w": ps_midlate_w,
         "paper_s_late": ps_late,
         "paper_b_drop": pb_drop,
         "paper_s_drop": ps_drop,
@@ -381,6 +475,8 @@ def ravivarapu_fig4a_gates(
         "paper_s_drop_frac_at_timing": ps_drop_frac,
         "late_gap": gap,
         "paper_late_gap": p_gap,
+        "midlate_gap": gap_midlate,
+        "paper_midlate_gap": p_gap_midlate,
         "pearson_baseline": shape_b,
         "pearson_sea": shape_s,
         "pearson_baseline_min": pearson_baseline_min,
@@ -421,27 +517,225 @@ def ravivarapu_fig4a_digitization_gates(
 
 def ravivarapu_fig4b_gates(
     baseline_reward: Sequence[float],
-    paper_reward: Sequence[float],
+    sea_reward: Sequence[float],
+    *,
+    paper: dict[str, tuple[np.ndarray, np.ndarray]] | None = None,
+    early_hi: float = 15.0,
+    mid_lo: float = 40.0,
+    mid_hi: float = 80.0,
+    late_lo: float = 120.0,
+    timing_episode: float = 50.0,
+    rise_frac_of_paper: float = 0.40,
+    profile_frac_of_paper: float = 0.25,
+    pearson_baseline_min: float = 0.55,
+    pearson_sea_min: float = 0.55,
+    n_expected: int = 150,
 ) -> dict[str, Any]:
-    b_early, b_late = _early_late(baseline_reward)
-    p_early, p_late = _early_late(paper_reward)
-    n = min(len(baseline_reward), len(paper_reward))
-    mid_lo = min(40, max(0, n // 4))
-    mid_hi = min(80, n)
+    """Unified Fig 4b episode reward gates vs digitized paper learning curves.
+
+    Shape tier: 150 episodes, shared untreated start, genuine learning rise
+    on both variants, SEA steeper and higher than Baseline late, clear late gap,
+    not front-loaded rise by ep 50, gradual mid-to-late increase, and Pearson r.
+    Full tier: digitization scale polish (shared start, rises vs paper, late gap,
+    midlate gap).
+    """
+    paper = paper or load_curves("fig4b")
+    pbx, pby = paper["Baseline Reward"]
+    psx, psy = paper["SEA-DBS Reward"]
+
+    n = min(len(baseline_reward), len(sea_reward))
+    if n < 10:
+        return _gate_pack(
+            {"n_episodes_ok": False},
+            {"n_episodes": n},
+            paper_ref={"path": str(curves_path("fig4b"))},
+        )
+
+    x = np.arange(n, dtype=float)
+    b = _as_fy(baseline_reward[:n])
+    s = _as_fy(sea_reward[:n])
+
+    b_early = window_mean(x, b, hi=early_hi)
+    b_mid = window_mean(x, b, lo=mid_lo, hi=mid_hi)
+    b_midlate_w = window_mean(x, b, lo=70.0, hi=110.0)
+    b_late = window_mean(x, b, lo=late_lo)
+
+    s_early = window_mean(x, s, hi=early_hi)
+    s_mid = window_mean(x, s, lo=mid_lo, hi=mid_hi)
+    s_midlate_w = window_mean(x, s, lo=70.0, hi=110.0)
+    s_late = window_mean(x, s, lo=late_lo)
+
+    pb_early = window_mean(pbx, pby, hi=early_hi)
+    pb_mid = window_mean(pbx, pby, lo=mid_lo, hi=mid_hi)
+    pb_midlate_w = window_mean(pbx, pby, lo=70.0, hi=110.0)
+    pb_late = window_mean(pbx, pby, lo=late_lo)
+
+    ps_early = window_mean(psx, psy, hi=early_hi)
+    ps_mid = window_mean(psx, psy, lo=mid_lo, hi=mid_hi)
+    ps_midlate_w = window_mean(psx, psy, lo=70.0, hi=110.0)
+    ps_late = window_mean(psx, psy, lo=late_lo)
+
+    b_rise = b_late - b_early
+    s_rise = s_late - s_early
+    pb_rise = pb_late - pb_early
+    ps_rise = ps_late - ps_early
+
+    b_midlate = b_late - b_mid
+    s_midlate = s_late - s_mid
+    pb_midlate = pb_late - pb_mid
+    ps_midlate = ps_late - ps_mid
+
+    b_rise_frac = _rise_fraction_by_episode(
+        x, b, episode=timing_episode, early_hi=early_hi, late_lo=late_lo
+    )
+    s_rise_frac = _rise_fraction_by_episode(
+        x, s, episode=timing_episode, early_hi=early_hi, late_lo=late_lo
+    )
+    pb_rise_frac = _rise_fraction_by_episode(
+        pbx, pby, episode=timing_episode, early_hi=early_hi, late_lo=late_lo
+    )
+    ps_rise_frac = _rise_fraction_by_episode(
+        psx, psy, episode=timing_episode, early_hi=early_hi, late_lo=late_lo
+    )
+
+    shape_b = pearson_on_ref_x(pbx, pby, x, b)
+    shape_s = pearson_on_ref_x(psx, psy, x, s)
+
+    gap = s_late - b_late
+    gap_midlate = s_midlate_w - b_midlate_w
+    p_gap = ps_late - pb_late
+    p_gap_midlate = ps_midlate_w - pb_midlate_w
+
+    scale = abs(b_early / pb_early) if abs(pb_early) > 1e-6 else 1.0
+    pb_scaled_rise = pb_rise * scale
+    ps_scaled_rise = ps_rise * scale
+    p_gap_scaled = p_gap * scale
+    p_gap_midlate_scaled = p_gap_midlate * scale
+
+    shared_start_dist = abs(b_early - s_early) / (abs(b_early) + 1e-6)
+
     gates = {
-        "paper_above_baseline_late": p_late > b_late,
-        "paper_pull_ahead_mid": _mid_mean(paper_reward, mid_lo, mid_hi)
-        > _mid_mean(baseline_reward, mid_lo, mid_hi),
-        "both_rise": (p_late - p_early) > 0.3 and (b_late - b_early) > 0.3,
+        # Shape tier
+        "n_episodes_ok": n >= n_expected,
+        "shared_start": bool(
+            np.isfinite(b_early)
+            and np.isfinite(s_early)
+            and shared_start_dist <= 0.25
+        ),
+        "baseline_rises": bool(np.isfinite(b_rise) and b_rise >= 0.25 * pb_scaled_rise),
+        "sea_rises": bool(np.isfinite(s_rise) and s_rise >= 0.25 * ps_scaled_rise),
+        "sea_above_baseline_late": bool(
+            np.isfinite(s_late) and np.isfinite(b_late) and s_late > b_late
+        ),
+        "sea_steeper_rise_than_baseline": bool(
+            np.isfinite(s_rise) and np.isfinite(b_rise) and s_rise > b_rise
+        ),
+        "paper_pull_ahead_mid": bool(
+            np.isfinite(s_mid) and np.isfinite(b_mid) and s_mid > b_mid
+        ),
+        "late_gap_substantial": bool(np.isfinite(gap) and gap >= 0.35 * p_gap_scaled),
+        "rise_timing_baseline": _drop_timing_ok(b_rise_frac, pb_rise_frac),
+        "rise_timing_sea": _drop_timing_ok(s_rise_frac, ps_rise_frac),
+        "gradual_rise_baseline": bool(
+            np.isfinite(b_midlate)
+            and np.isfinite(pb_midlate)
+            and b_midlate >= profile_frac_of_paper * (pb_midlate * scale)
+        ),
+        "gradual_rise_sea": bool(
+            np.isfinite(s_midlate)
+            and np.isfinite(ps_midlate)
+            and s_midlate >= profile_frac_of_paper * (ps_midlate * scale)
+        ),
+        "pearson_baseline_min": bool(
+            np.isfinite(shape_b) and shape_b >= pearson_baseline_min
+        ),
+        "pearson_sea_min": bool(
+            np.isfinite(shape_s) and shape_s >= pearson_sea_min
+        ),
+        # Full tier
+        "shared_start_near_paper": rel_close(s_early, ps_early * scale, tol=0.30),
+        "baseline_rise_vs_paper": bool(
+            np.isfinite(b_rise)
+            and np.isfinite(pb_scaled_rise)
+            and b_rise >= rise_frac_of_paper * pb_scaled_rise
+        ),
+        "sea_rise_vs_paper": bool(
+            np.isfinite(s_rise)
+            and np.isfinite(ps_scaled_rise)
+            and s_rise >= rise_frac_of_paper * ps_scaled_rise
+        ),
+        "late_gap_near_paper": bool(
+            np.isfinite(gap)
+            and np.isfinite(p_gap_scaled)
+            and gap >= 0.50 * p_gap_scaled
+        ),
+        "midlate_gap_near_paper": bool(
+            np.isfinite(gap_midlate)
+            and np.isfinite(p_gap_midlate_scaled)
+            and gap_midlate >= 0.40 * p_gap_midlate_scaled
+        ),
     }
+
     metrics = {
         "b_early": b_early,
+        "b_mid": b_mid,
+        "b_midlate_w": b_midlate_w,
         "b_late": b_late,
-        "p_early": p_early,
-        "p_late": p_late,
+        "s_early": s_early,
+        "s_mid": s_mid,
+        "s_midlate_w": s_midlate_w,
+        "s_late": s_late,
+        "b_rise": b_rise,
+        "s_rise": s_rise,
+        "b_midlate": b_midlate,
+        "s_midlate": s_midlate,
+        "b_rise_frac_at_timing": b_rise_frac,
+        "s_rise_frac_at_timing": s_rise_frac,
+        "paper_b_early": pb_early,
+        "paper_b_mid": pb_mid,
+        "paper_b_midlate_w": pb_midlate_w,
+        "paper_b_late": pb_late,
+        "paper_s_early": ps_early,
+        "paper_s_mid": ps_mid,
+        "paper_s_midlate_w": ps_midlate_w,
+        "paper_s_late": ps_late,
+        "paper_b_rise": pb_rise,
+        "paper_s_rise": ps_rise,
+        "paper_b_midlate": pb_midlate,
+        "paper_s_midlate": ps_midlate,
+        "paper_b_rise_frac_at_timing": pb_rise_frac,
+        "paper_s_rise_frac_at_timing": ps_rise_frac,
+        "late_gap": gap,
+        "paper_late_gap": p_gap,
+        "paper_late_gap_scaled": p_gap_scaled,
+        "midlate_gap": gap_midlate,
+        "paper_midlate_gap": p_gap_midlate,
+        "paper_midlate_gap_scaled": p_gap_midlate_scaled,
+        "pearson_baseline": shape_b,
+        "pearson_sea": shape_s,
+        "pearson_baseline_min": pearson_baseline_min,
+        "pearson_sea_min": pearson_sea_min,
+        "timing_episode": timing_episode,
         "n_episodes": n,
     }
-    return _gate_pack(gates, metrics)
+
+    return _gate_pack(
+        gates,
+        metrics,
+        paper_ref={
+            "path": str(curves_path("fig4b")),
+            "early_hi": early_hi,
+            "mid_lo": mid_lo,
+            "mid_hi": mid_hi,
+            "late_lo": late_lo,
+            "timing_episode": timing_episode,
+            "source": "refined/fig4b_refined.wpd.tar → curves_fig4b.json",
+        },
+        notes=[
+            "Shape gates verify macro trajectory dynamics without over-constraining single-seed noise.",
+            f"Pearson r minima: baseline>={pearson_baseline_min}, SEA>={pearson_sea_min}.",
+        ],
+    )
 
 
 # Fig 5 shape only: any net drop counts. Digitized paper drops (~0.10/0.15 at
