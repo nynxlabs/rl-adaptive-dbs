@@ -69,13 +69,16 @@ def merge_gate_report(dig: dict[str, Any], extra: dict[str, Any]) -> dict[str, A
 
 # Fig 4a gate tiers: shape = ordering + trajectory profile; full adds digitization polish.
 RAVIVARAPU_FIG4A_GATE_TIER: dict[str, str] = {
-    # Shape tier (13 gates)
+    # Shape tier (16 gates)
     "n_episodes_ok": "shape",
     "shared_start": "shape",
     "baseline_declines": "shape",
     "sea_declines": "shape",
+    "sea_below_baseline_mid": "shape",
+    "sea_below_baseline_midlate": "shape",
     "sea_below_baseline_late": "shape",
     "sea_steeper_drop_than_baseline": "shape",
+    "gap_widens_over_training": "shape",
     "late_gap_substantial": "shape",
     "drop_timing_baseline": "shape",
     "drop_timing_sea": "shape",
@@ -83,15 +86,16 @@ RAVIVARAPU_FIG4A_GATE_TIER: dict[str, str] = {
     "gradual_decline_sea": "shape",
     "pearson_baseline_min": "shape",
     "pearson_sea_min": "shape",
-    # Full tier (10 gates)
+    # Full tier (11 gates)
     "shared_start_near_paper": "full",
     "baseline_drop_vs_paper": "full",
     "sea_drop_vs_paper": "full",
     "sea_mid_near_paper": "full",
     "sea_midlate_near_paper": "full",
     "sea_late_near_paper": "full",
-    "late_gap_near_paper": "full",
+    "mid_gap_near_paper": "full",
     "midlate_gap_near_paper": "full",
+    "late_gap_near_paper": "full",
     "late_early_ratio_baseline_near_paper": "full",
     "late_early_ratio_sea_near_paper": "full",
 }
@@ -372,10 +376,14 @@ def ravivarapu_fig4a_gates(
     shape_b = pearson_on_ref_x(pbx, pby, x, b)
     shape_s = pearson_on_ref_x(psx, psy, x, s)
 
-    gap = b_late - s_late
-    p_gap = pb_late - ps_late
+    gap_early = b_early - s_early
+    p_gap_early = pb_early - ps_early
+    gap_mid = b_mid - s_mid
+    p_gap_mid = pb_mid - ps_mid
     gap_midlate = b_midlate_w - s_midlate_w
     p_gap_midlate = pb_midlate_w - ps_midlate_w
+    gap = b_late - s_late
+    p_gap = pb_late - ps_late
 
     gates = {
         # Shape tier
@@ -387,11 +395,25 @@ def ravivarapu_fig4a_gates(
         ),
         "baseline_declines": bool(np.isfinite(b_drop) and b_drop >= 0.02),
         "sea_declines": bool(np.isfinite(s_drop) and s_drop >= 0.04),
+        "sea_below_baseline_mid": bool(
+            np.isfinite(s_mid) and np.isfinite(b_mid) and s_mid < b_mid
+        ),
+        "sea_below_baseline_midlate": bool(
+            np.isfinite(s_midlate_w) and np.isfinite(b_midlate_w) and s_midlate_w < b_midlate_w
+        ),
         "sea_below_baseline_late": bool(
             np.isfinite(s_late) and np.isfinite(b_late) and s_late < b_late
         ),
         "sea_steeper_drop_than_baseline": bool(
             np.isfinite(s_drop) and np.isfinite(b_drop) and s_drop > b_drop
+        ),
+        "gap_widens_over_training": bool(
+            np.isfinite(gap_mid)
+            and np.isfinite(gap_midlate)
+            and np.isfinite(gap)
+            and gap_mid >= -0.005
+            and gap_midlate >= gap_mid - 0.005
+            and gap >= gap_midlate - 0.008
         ),
         "late_gap_substantial": bool(
             np.isfinite(gap) and 0.015 <= gap <= 0.050
@@ -424,17 +446,23 @@ def ravivarapu_fig4a_gates(
         "sea_mid_near_paper": rel_close(s_mid, ps_mid, tol=0.12),
         "sea_midlate_near_paper": rel_close(s_midlate_w, ps_midlate_w, tol=0.12),
         "sea_late_near_paper": rel_close(s_late, ps_late, tol=0.12),
-        "late_gap_near_paper": bool(
-            np.isfinite(gap)
-            and np.isfinite(p_gap)
-            and p_gap > 0
-            and 0.50 * p_gap <= gap <= 1.60 * p_gap
+        "mid_gap_near_paper": bool(
+            np.isfinite(gap_mid)
+            and np.isfinite(p_gap_mid)
+            and p_gap_mid > 0
+            and 0.40 * p_gap_mid <= gap_mid <= 1.80 * p_gap_mid
         ),
         "midlate_gap_near_paper": bool(
             np.isfinite(gap_midlate)
             and np.isfinite(p_gap_midlate)
             and p_gap_midlate > 0
             and 0.40 * p_gap_midlate <= gap_midlate <= 1.75 * p_gap_midlate
+        ),
+        "late_gap_near_paper": bool(
+            np.isfinite(gap)
+            and np.isfinite(p_gap)
+            and p_gap > 0
+            and 0.50 * p_gap <= gap <= 1.60 * p_gap
         ),
         "late_early_ratio_baseline_near_paper": ratio_close(
             b_late, b_early, pb_late, pb_early, tol=ratio_tol
@@ -473,10 +501,14 @@ def ravivarapu_fig4a_gates(
         "paper_s_midlate": ps_midlate,
         "paper_b_drop_frac_at_timing": pb_drop_frac,
         "paper_s_drop_frac_at_timing": ps_drop_frac,
-        "late_gap": gap,
-        "paper_late_gap": p_gap,
+        "early_gap": gap_early,
+        "paper_early_gap": p_gap_early,
+        "mid_gap": gap_mid,
+        "paper_mid_gap": p_gap_mid,
         "midlate_gap": gap_midlate,
         "paper_midlate_gap": p_gap_midlate,
+        "late_gap": gap,
+        "paper_late_gap": p_gap,
         "pearson_baseline": shape_b,
         "pearson_sea": shape_s,
         "pearson_baseline_min": pearson_baseline_min,
