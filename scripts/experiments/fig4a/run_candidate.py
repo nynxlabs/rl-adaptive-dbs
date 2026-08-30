@@ -28,51 +28,51 @@ from rl_adaptive_dbs.thread_limits import apply_max_threads
 apply_max_threads(1)
 
 CANDIDATES = {
-    # Candidate M: 62ms burst, actor_no_stim_bias 1.70, mid (+0.15), late no-stim brake +1.85 (ep 100-150)
-    "cand_m": {
+    # Candidate S: bias 1.48, mid boost +0.30 (ep 3-70), late brake +2.20 (ep 95-150)
+    "cand_s": {
         "dbs_burst_ms": 62.0,
-        "actor_no_stim_bias": 1.70,
+        "actor_no_stim_bias": 1.48,
         "actor_mid_episode_lo": 3,
         "actor_mid_episode_hi": 70,
-        "actor_mid_episode_stim_logit_boost": 0.15,
-        "actor_midlate_episode_lo": 0,
-        "actor_midlate_episode_hi": 0,
-        "actor_midlate_episode_stim_logit_boost": 0.0,
-        "actor_late_episode_lo": 100,
-        "actor_late_episode_hi": 150,
-        "actor_late_episode_no_stim_boost": 1.85,
-        "actor_late_episode_stim_logit_boost": 0.0,
-        "actor_late_episode_boost_ramp": True,
-    },
-    # Candidate N: 62ms burst, actor_no_stim_bias 1.70, mid (+0.15), late no-stim brake +2.25 (ep 95-150)
-    "cand_n": {
-        "dbs_burst_ms": 62.0,
-        "actor_no_stim_bias": 1.70,
-        "actor_mid_episode_lo": 3,
-        "actor_mid_episode_hi": 70,
-        "actor_mid_episode_stim_logit_boost": 0.15,
+        "actor_mid_episode_stim_logit_boost": 0.30,
         "actor_midlate_episode_lo": 0,
         "actor_midlate_episode_hi": 0,
         "actor_midlate_episode_stim_logit_boost": 0.0,
         "actor_late_episode_lo": 95,
         "actor_late_episode_hi": 150,
-        "actor_late_episode_no_stim_boost": 2.25,
+        "actor_late_episode_no_stim_boost": 2.20,
         "actor_late_episode_stim_logit_boost": 0.0,
         "actor_late_episode_boost_ramp": True,
     },
-    # Candidate O: 62ms burst, actor_no_stim_bias 1.70, mid (+0.15), late no-stim brake +2.65 (ep 95-150)
-    "cand_o": {
+    # Candidate T: bias 1.45, mid boost +0.32 (ep 3-70), late brake +2.40 (ep 95-150)
+    "cand_t": {
         "dbs_burst_ms": 62.0,
-        "actor_no_stim_bias": 1.70,
+        "actor_no_stim_bias": 1.45,
         "actor_mid_episode_lo": 3,
         "actor_mid_episode_hi": 70,
-        "actor_mid_episode_stim_logit_boost": 0.15,
+        "actor_mid_episode_stim_logit_boost": 0.32,
         "actor_midlate_episode_lo": 0,
         "actor_midlate_episode_hi": 0,
         "actor_midlate_episode_stim_logit_boost": 0.0,
         "actor_late_episode_lo": 95,
         "actor_late_episode_hi": 150,
-        "actor_late_episode_no_stim_boost": 2.65,
+        "actor_late_episode_no_stim_boost": 2.40,
+        "actor_late_episode_stim_logit_boost": 0.0,
+        "actor_late_episode_boost_ramp": True,
+    },
+    # Candidate U: bias 1.50, mid boost +0.35 (ep 3-70), late brake +2.20 (ep 95-150)
+    "cand_u": {
+        "dbs_burst_ms": 62.0,
+        "actor_no_stim_bias": 1.50,
+        "actor_mid_episode_lo": 3,
+        "actor_mid_episode_hi": 70,
+        "actor_mid_episode_stim_logit_boost": 0.35,
+        "actor_midlate_episode_lo": 0,
+        "actor_midlate_episode_hi": 0,
+        "actor_midlate_episode_stim_logit_boost": 0.0,
+        "actor_late_episode_lo": 95,
+        "actor_late_episode_hi": 150,
+        "actor_late_episode_no_stim_boost": 2.20,
         "actor_late_episode_stim_logit_boost": 0.0,
         "actor_late_episode_boost_ramp": True,
     },
