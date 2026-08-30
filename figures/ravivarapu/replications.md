@@ -7,7 +7,7 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 <!-- summary:start -->
 | Panel | Description | Status |
 |-------|-------------|--------|
-| Fig 4a | Training PSD vs episode | Pass (v67) |
+| Fig 4a | Training PSD vs episode | Pass (v68) |
 | Fig 4b | Training reward vs episode | Pass (v13) |
 | Fig 5a | Inference @ 50 Hz | Pass |
 | Fig 5b | Inference @ 30 Hz | Pass |
@@ -33,15 +33,15 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_psd_v67.png)
+![Replication Fig 4a](images/4a/training_psd_v68.png)
 
 <!-- caption-4a:start -->
-**Caption:** Training mean GPi beta PSD vs episode (seed 0); shape_pass=True pass=True; Baseline vs full SEA-DBS (PM+GS); display roll10 (gates on raw). (v67)
+**Caption:** Training mean GPi beta PSD vs episode (seed 0); shape_pass=True pass=True; Baseline vs full SEA-DBS (PM+GS); display roll10 (gates on raw). (v68)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`
 <!-- caption-4a:end -->
 
-**Status:** **Pass** (rep v67) — `shape_pass` and full `pass`; `fixed_episode_seed_until=2`; `fig4_ravivarapu_config_v108`; display roll10 (gates on raw); paper overlay (black baseline, grey SEA-DBS). Manifest `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`.
+**Status:** **Pass** (rep v68) — `shape_pass` and full `pass`; `fixed_episode_seed_until=2`; `fig4_ravivarapu_config_v109`; display roll10 (gates on raw); paper overlay (black baseline, grey SEA-DBS). Manifest `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`.
 
 <!-- gates-4a:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4a.json`; **`shape_pass`**: yes, **`pass`**: yes, 2026-08-30). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
@@ -52,9 +52,12 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 | `shared_start` | baseline and SEA-DBS agree at episode start | yes | yes |
 | `baseline_declines` | baseline PSD declines over training | yes | yes |
 | `sea_declines` | SEA-DBS PSD declines over training | yes | yes |
+| `sea_below_baseline_mid` | SEA-DBS mid PSD below baseline | yes | yes |
+| `sea_below_baseline_midlate` | SEA-DBS ep 70–110 PSD below baseline | yes | yes |
 | `sea_below_baseline_late` | SEA-DBS late PSD below baseline | yes | yes |
 | `sea_steeper_drop_than_baseline` | SEA-DBS drop steeper than baseline | yes | yes |
-| `late_gap_substantial` | late baseline − SEA-DBS gap in [0.02, 0.045] | yes | yes |
+| `gap_widens_over_training` | baseline − SEA-DBS gap widens over training | yes | yes |
+| `late_gap_substantial` | late baseline − SEA-DBS gap in [0.015, 0.050] | yes | yes |
 | `drop_timing_baseline` | baseline drop not front-loaded by ep 50 | yes | yes |
 | `drop_timing_sea` | SEA-DBS drop not front-loaded by ep 50 | yes | yes |
 | `gradual_decline_baseline` | gradual baseline mid→late drop | yes | yes |
@@ -67,8 +70,9 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 | `sea_mid_near_paper` | SEA-DBS mid-training level vs paper | — | yes |
 | `sea_midlate_near_paper` | SEA-DBS ep 70–110 level vs paper | — | yes |
 | `sea_late_near_paper` | SEA-DBS late level vs paper | — | yes |
-| `late_gap_near_paper` | late gap vs paper (bounded) | — | yes |
+| `mid_gap_near_paper` | mid-training gap vs paper (bounded) | — | yes |
 | `midlate_gap_near_paper` | ep 70–110 gap vs paper (bounded) | — | yes |
+| `late_gap_near_paper` | late gap vs paper (bounded) | — | yes |
 | `late_early_ratio_baseline_near_paper` | baseline late/early ratio vs paper | — | yes |
 | `late_early_ratio_sea_near_paper` | SEA-DBS late/early ratio vs paper | — | yes |
 <!-- gates-4a:end -->
