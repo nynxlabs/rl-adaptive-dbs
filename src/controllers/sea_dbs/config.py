@@ -163,6 +163,7 @@ class SEADBSConfig:
     actor_late_episode_lo: int = 0
     actor_late_episode_hi: int = 0
     actor_late_episode_no_stim_boost: float = 0.0
+    actor_late_episode_stim_logit_boost: float = 0.0
     actor_late_episode_boost_ramp: bool = True
     # Narrow mid-late gap patch (paper-silent): lifts ep ~142–145 without the
     # wide-late lift that costs pearson (v74 lesson).
@@ -262,20 +263,27 @@ def fig4_ravivarapu_config(
             cfg,
             actor_no_stim_bias=1.25,
             gs_tau0=5.0,
-            gs_lambda=1.25e-5,
+            gs_lambda=5.5e-4,
             gs_tau_min=0.42,
             update_frequency=2,
             pm_warmup_steps=15000,
             actor_lr=7.5e-6,
             critic_lr=1.45e-4,
             actor_mid_episode_lo=3,
-            actor_mid_episode_hi=50,
-            actor_mid_episode_stim_logit_boost=0.40,
+            actor_mid_episode_hi=75,
+            actor_mid_episode_stim_logit_boost=0.35,
+            actor_midlate_episode_lo=75,
+            actor_midlate_episode_hi=150,
+            actor_midlate_episode_stim_logit_boost=0.35,
+            actor_late_episode_lo=125,
+            actor_late_episode_hi=150,
+            actor_late_episode_stim_logit_boost=0.30,
+            actor_late_episode_boost_ramp=True,
         )
     if variant == "baseline":
         return replace(
             cfg,
-            actor_no_stim_bias=1.81,
+            actor_no_stim_bias=1.45,
             force_gumbel_softmax=True,
             gs_tau0=5.0,
             gs_lambda=6.1e-5,
@@ -286,17 +294,17 @@ def fig4_ravivarapu_config(
             gs_late_tau_floor=0.94,
             actor_mid_episode_lo=3,
             actor_mid_episode_hi=80,
-            actor_mid_episode_stim_logit_boost=0.58,
+            actor_mid_episode_stim_logit_boost=0.65,
             actor_midlate_episode_lo=80,
-            actor_midlate_episode_hi=120,
-            actor_midlate_episode_stim_logit_boost=0.45,
+            actor_midlate_episode_hi=150,
+            actor_midlate_episode_stim_logit_boost=0.25,
             actor_gap_patch_episode_lo=0,
             actor_gap_patch_episode_hi=0,
             actor_gap_patch_no_stim_boost=0.0,
-            actor_late_episode_lo=138,
-            actor_late_episode_hi=150,
-            actor_late_episode_no_stim_boost=0.13,
-            actor_late_episode_boost_ramp=True,
+            actor_late_episode_lo=0,
+            actor_late_episode_hi=0,
+            actor_late_episode_no_stim_boost=0.0,
+            actor_late_episode_boost_ramp=False,
             epsilon_start=0.21,
             epsilon_end=0.21,
             update_frequency=2,
