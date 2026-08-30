@@ -93,6 +93,9 @@ class SNNConfig:
     # (protects ep1–~30 from lucky 80 Hz random walks; v66 FAIL at ε≈1).
     frequency_sensitivity_explore_epsilon_max: float = 0.7
     pulse_width_sensitivity: float = 0.05  # ms per +1
+    # Episodes [0, N) use early ms/step; episode N+ uses pulse_width_sensitivity.
+    pulse_width_sensitivity_early: float = 0.0
+    pulse_width_sensitivity_early_episodes: int = 0
 
     # Reward Eq. (7) coefficients (open)
     energy_penalty: float = 0.01  # δ
@@ -115,6 +118,9 @@ class SNNConfig:
     frequency_min: float = 0.0
     frequency_max: float = 200.0
     pulse_width_min: float = 0.05
+    pulse_width_min_early: float = 0.05
+    pulse_width_min_early_episodes: int = 0
+    pulse_width_min_ramp_end_episode: int = 0
     pulse_width_max: float = 2.0
 
     # Stimulated neuron count N in Eq. (6) — single STN contact (paper Fig. 5 scale).
@@ -179,6 +185,42 @@ class SNNConfig:
         t = max(0.0, min(1.0, t))
         return exploit + t * (explore - exploit)
 
+    def pulse_width_sensitivity_at_epsilon(
+        self,
+        epsilon: float,
+        *,
+        episode: int | None = None,
+    ) -> float:
+        """Effective ms/step for ternary +pulse_width (early episode curriculum)."""
+        del epsilon
+        early_eps = int(self.pulse_width_sensitivity_early_episodes)
+        early_pw = float(self.pulse_width_sensitivity_early)
+        if early_eps > 0 and early_pw > 0.0 and episode is not None and episode < early_eps:
+            return early_pw
+        return float(self.pulse_width_sensitivity)
+
+    def pulse_width_min_at_episode(
+        self,
+        episode: int | None = None,
+    ) -> float:
+        """Effective minimum pulse width (early episode curriculum + linear ramp)."""
+        if episode is None:
+            return float(self.pulse_width_min)
+        early_eps = int(self.pulse_width_min_early_episodes)
+        ramp_end = int(self.pulse_width_min_ramp_end_episode)
+        early_min = float(self.pulse_width_min_early)
+        late_min = float(self.pulse_width_min)
+        if early_eps <= 0 and ramp_end <= 0:
+            return late_min
+        if episode < early_eps:
+            return early_min
+        if ramp_end > early_eps:
+            if episode >= ramp_end:
+                return late_min
+            t = (episode - early_eps) / float(ramp_end - early_eps)
+            return early_min + t * (late_min - early_min)
+        return late_min
+
     def for_smoke(
         self,
         *,
@@ -199,7 +241,7 @@ class SNNConfig:
             replay_update_cadence=8,
             replay_capacity=128,
             target_update_period=2,
-            epsilon_decay_steps=max(1, int(episodes) * int(max_steps)),
+            epsilon_decay_steps=max(1, int(max_steps) * 10),
             log_episodes=True,
             frequency_min=10.0,
             amplitude_min=50.0,
@@ -340,8 +382,13 @@ def fig4_nguyen_config(
         frequency_sensitivity_explore=0.0,
         frequency_min=INIT_FREQUENCY_HZ,
         amplitude_min=200.0,
-        pulse_width_sensitivity=0.3,
-        pulse_width_min=0.5,
+        pulse_width_sensitivity=0.20,
+        pulse_width_sensitivity_early=0.02,
+        pulse_width_sensitivity_early_episodes=50,
+        pulse_width_min=0.85,
+        pulse_width_min_early=0.05,
+        pulse_width_min_early_episodes=50,
+        pulse_width_min_ramp_end_episode=100,
         threshold_reward=300.0,
         energy_penalty=0.0,
         alpha_beta_progress_coef=2500.0,

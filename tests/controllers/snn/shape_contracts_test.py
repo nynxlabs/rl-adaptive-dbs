@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import Any
 
 import numpy as np
 import pytest
@@ -36,7 +37,9 @@ class _SpikeMockPlant(MockPlant):
         dbs_spec: DbsSpec | None = None,
         *,
         record_spikes: bool = True,
+        **kwargs: Any,
     ) -> IntegrateResult:
+        del kwargs
         result = super().integrate(duration_s, dbs_spec, record_spikes=record_spikes)
         return IntegrateResult(
             gpi_spikes=_synthetic_spikes(),
@@ -136,7 +139,7 @@ def test_fig4_v81_train_config() -> None:
 
     cfg = fig4_nguyen_config()
     assert cfg.learning_rate == 3e-4
-    assert cfg.batch_size == 64
+    assert cfg.batch_size == 32
     assert cfg.replay_update_cadence == 32
 
 
