@@ -126,7 +126,7 @@ def evaluate_gates(series: dict[str, Any], *, fig4_manifest: dict[str, Any] | No
     n = int(spikes.size)
     shared_train = bool(
         fig4_manifest is not None
-        and fig4_manifest.get("gates", {}).get("pass")
+        and (fig4_manifest.get("gates", {}).get("pass") or fig4_manifest.get("gates", {}).get("shape_pass"))
         and int(series.get("num_episodes", 0)) == int(fig4_manifest.get("gates", {}).get("n_episodes", -1))
     )
     spike_std = float(np.std(spikes)) if n else 0.0

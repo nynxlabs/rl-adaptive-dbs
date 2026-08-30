@@ -156,15 +156,15 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 
 ### Replication
 
-![Replication Fig 5](images/5/spikes_energy_v27.png)
+![Replication Fig 5](images/5/spikes_energy_v32.png)
 
 <!-- caption-5:start -->
-**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=829, energy_mean=1724.4; pass=False (v27)
+**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=833, energy_mean=1724.4; pass=False (v32)
 
 **Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json`
 <!-- caption-5:end -->
 
-**Status:** Open — see manifest gates (`spikes_energy_v27.png`).
+**Status:** Open — see manifest gates (`spikes_energy_v32.png`).
 
 <!-- gates-5:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-08-30). Every row is required for exit.

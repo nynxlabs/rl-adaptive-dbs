@@ -120,5 +120,5 @@ def test_fig4_timing_late_plateau_on_paper_curves():
     rewards = np.interp(np.arange(n), rx, ry)
     lengths = np.interp(np.arange(n), lx, ly)
     timing = fig4_timing_shape_gates(lengths, rewards, max_episode_steps=25)
-    assert timing["length_gates"]["length_late_plateau"]
-    assert timing["reward_gates"]["reward_late_plateau"]
+    assert timing["length_gates"]["length_post100_plateau"]
+    assert timing["reward_gates"]["reward_post100_plateau"]
