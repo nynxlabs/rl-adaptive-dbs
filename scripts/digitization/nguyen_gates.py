@@ -512,6 +512,7 @@ def fig5_spikes_energy_gates(
     spike_mean = float(np.mean(spikes))
     energy_mean = float(np.mean(energies))
     spike_early = window_mean(x, spikes, hi=early_hi)
+    spike_mid = window_mean(x, spikes, lo=mid_lo, hi=mid_hi)
     spike_late = window_mean(x, spikes, lo=late_lo)
     energy_early = window_mean(x, energies, hi=early_hi)
     energy_mid = window_mean(x, energies, lo=mid_lo, hi=mid_hi)
@@ -525,6 +526,7 @@ def fig5_spikes_energy_gates(
     p_spike_mean = float(np.mean(psy))
     p_energy_mean = float(np.mean(pey))
     p_spike_early = window_mean(psx, psy, hi=early_hi)
+    p_spike_mid = window_mean(psx, psy, lo=mid_lo, hi=mid_hi)
     p_spike_late = window_mean(psx, psy, lo=late_lo)
     p_energy_early = window_mean(pex, pey, hi=early_hi)
     p_energy_mid = window_mean(pex, pey, lo=mid_lo, hi=mid_hi)
@@ -532,11 +534,19 @@ def fig5_spikes_energy_gates(
 
     gates = {
         "spike_early_near_paper": rel_close(spike_early, p_spike_early, tol=rel_tol),
+        "spike_mid_near_paper": rel_close(spike_mid, p_spike_mid, tol=rel_tol),
+        "spike_late_near_paper": rel_close(spike_late, p_spike_late, tol=rel_tol),
         "spike_mean_near_paper": rel_close(spike_mean, p_spike_mean, tol=rel_tol),
-        "energy_mean_near_paper": rel_close(energy_mean, p_energy_mean, tol=rel_tol),
         "spike_trend_near_paper": ratio_close(
             spike_late, spike_early, p_spike_late, p_spike_early, tol=ratio_tol
         ),
+        "spike_stays_near_800": bool(
+            600.0 <= spike_early <= 1000.0
+            and 600.0 <= spike_mid <= 1000.0
+            and 600.0 <= spike_late <= 1000.0
+            and 600.0 <= spike_mean <= 1000.0
+        ),
+        "energy_mean_near_paper": rel_close(energy_mean, p_energy_mean, tol=rel_tol),
         "energy_mid_ramp_near_paper": ratio_close(
             energy_mid, energy_early, p_energy_mid, p_energy_early, tol=ratio_tol
         ),
@@ -552,6 +562,7 @@ def fig5_spikes_energy_gates(
             "spike_mean": spike_mean,
             "energy_mean": energy_mean,
             "spike_early": spike_early,
+            "spike_mid": spike_mid,
             "spike_late": spike_late,
             "energy_early": energy_early,
             "energy_mid": energy_mid,
@@ -559,6 +570,8 @@ def fig5_spikes_energy_gates(
             "paper_spike_mean": p_spike_mean,
             "paper_energy_mean": p_energy_mean,
             "paper_spike_early": p_spike_early,
+            "paper_spike_mid": p_spike_mid,
+            "paper_spike_late": p_spike_late,
             "paper_energy_mid": p_energy_mid,
         },
         paper_ref={

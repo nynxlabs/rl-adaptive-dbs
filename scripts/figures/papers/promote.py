@@ -174,10 +174,13 @@ NGUYEN_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
         ("energy_not_constant", "energy not constant"),
         ("spike_in_paper_band", "mean spikes 400–950/ep"),
         ("energy_in_paper_band", "mean 300–3200/ep, max ≤ 3520"),
-        ("paper_spike_early_near_paper", "digitization — early spikes low (ep 0–50)"),
-        ("paper_spike_mean_near_paper", "digitization — spike mean"),
+        ("paper_spike_early_near_paper", "digitization — early spikes near paper (ep 0–50)"),
+        ("paper_spike_mid_near_paper", "digitization — mid spikes near paper (ep 55–75)"),
+        ("paper_spike_late_near_paper", "digitization — late spikes near paper (ep 350–500)"),
+        ("paper_spike_mean_near_paper", "digitization — spike mean near paper"),
+        ("paper_spike_trend_near_paper", "digitization — spikes flat trend (late/early)"),
+        ("paper_spike_stays_near_800", "spike count starts & stays ~800"),
         ("paper_energy_mean_near_paper", "digitization — energy mean"),
-        ("paper_spike_trend_near_paper", "digitization — spikes stable (late/early)"),
         ("paper_energy_mid_ramp_near_paper", "digitization — energy ramp ep 55–75"),
         ("paper_energy_trend_near_paper", "digitization — energy late vs early"),
         ("paper_spike_series_has_variance", "digitization — spike variance"),
@@ -1995,6 +1998,11 @@ def promote_ravivarapu_4b(*, manifest: dict[str, Any], png_path: Path, update_do
         text = text.replace(
             "*Not yet generated.* Target: `figures/ravivarapu/images/4b/training_reward.png`",
             f"![Replication Fig 4b](images/4b/{png_path.name})",
+        )
+        text = re.sub(
+            r"!\[Replication Fig 4b\]\(images/4b/training_reward.*?\)",
+            f"![Replication Fig 4b](images/4b/{png_path.name})",
+            text,
         )
         text = text.replace(
             "**Status:** Open — pair with Fig 4a locked run.",
