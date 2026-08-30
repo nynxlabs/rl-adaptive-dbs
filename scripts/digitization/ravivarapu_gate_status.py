@@ -24,7 +24,7 @@ RAVIVARAPU_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
         ("sea_declines", "SEA-DBS PSD declines over training"),
         ("sea_below_baseline_late", "SEA-DBS late PSD below baseline"),
         ("sea_steeper_drop_than_baseline", "SEA-DBS drop steeper than baseline"),
-        ("late_gap_substantial", "late baseline − SEA-DBS gap ≥ 0.02"),
+        ("late_gap_substantial", "late baseline − SEA-DBS gap in [0.02, 0.045]"),
         ("drop_timing_baseline", "baseline drop not front-loaded by ep 50"),
         ("drop_timing_sea", "SEA-DBS drop not front-loaded by ep 50"),
         ("gradual_decline_baseline", "gradual baseline mid→late drop"),
@@ -34,14 +34,34 @@ RAVIVARAPU_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
         ("shared_start_near_paper", "shared start vs paper"),
         ("baseline_drop_vs_paper", "baseline drop vs paper"),
         ("sea_drop_vs_paper", "SEA-DBS drop vs paper"),
-        ("late_gap_near_paper", "late gap vs paper"),
+        ("sea_mid_near_paper", "SEA-DBS mid-training level vs paper"),
+        ("sea_midlate_near_paper", "SEA-DBS ep 70–110 level vs paper"),
+        ("sea_late_near_paper", "SEA-DBS late level vs paper"),
+        ("late_gap_near_paper", "late gap vs paper (bounded)"),
+        ("midlate_gap_near_paper", "ep 70–110 gap vs paper (bounded)"),
         ("late_early_ratio_baseline_near_paper", "baseline late/early ratio vs paper"),
         ("late_early_ratio_sea_near_paper", "SEA-DBS late/early ratio vs paper"),
     ],
     "4b": [
-        ("paper_above_baseline_late", "SEA-DBS late reward > baseline"),
+        ("n_episodes_ok", "≥ 150 training episodes"),
+        ("shared_start", "baseline and SEA-DBS agree at episode start"),
+        ("baseline_rises", "baseline reward rises over training"),
+        ("sea_rises", "SEA-DBS reward rises over training"),
+        ("sea_above_baseline_late", "SEA-DBS late reward above baseline"),
+        ("sea_steeper_rise_than_baseline", "SEA-DBS rise steeper than baseline"),
         ("paper_pull_ahead_mid", "SEA-DBS ahead in mid training window"),
-        ("both_rise", "both series rise from early to late"),
+        ("late_gap_substantial", "late SEA-DBS − baseline gap substantial"),
+        ("rise_timing_baseline", "baseline rise not front-loaded by ep 50"),
+        ("rise_timing_sea", "SEA-DBS rise not front-loaded by ep 50"),
+        ("gradual_rise_baseline", "gradual baseline mid→late rise"),
+        ("gradual_rise_sea", "gradual SEA-DBS mid→late rise"),
+        ("pearson_baseline_min", "baseline trajectory shape (Pearson r)"),
+        ("pearson_sea_min", "SEA-DBS trajectory shape (Pearson r)"),
+        ("shared_start_near_paper", "shared start vs paper"),
+        ("baseline_rise_vs_paper", "baseline rise vs paper"),
+        ("sea_rise_vs_paper", "SEA-DBS rise vs paper"),
+        ("late_gap_near_paper", "late gap vs paper (scaled)"),
+        ("midlate_gap_near_paper", "ep 70–110 gap vs paper (scaled)"),
     ],
     "5a": [
         ("n_steps_ok", "11 PSD samples (t=0 + 10 stim steps)"),
@@ -112,16 +132,28 @@ RAVIVARAPU_SUMMARY_ROWS: tuple[tuple[str, str, str], ...] = (
 RAVIVARAPU_STATUS_NOTES: dict[str, str] = {}
 
 
-def _fig4a_gate_tier() -> dict[str, str]:
-    from ravivarapu_gates import RAVIVARAPU_FIG4A_GATE_TIER
+def _fig_gate_tier(panel: str) -> dict[str, str]:
+    if panel == "4a":
+        from ravivarapu_gates import RAVIVARAPU_FIG4A_GATE_TIER
 
-    return RAVIVARAPU_FIG4A_GATE_TIER
+        return RAVIVARAPU_FIG4A_GATE_TIER
+    if panel == "4b":
+        from ravivarapu_gates import RAVIVARAPU_FIG4B_GATE_TIER
+
+        return RAVIVARAPU_FIG4B_GATE_TIER
+    return {}
 
 
-def _fig4a_tier_pass(gate_values: dict[str, Any], *, full: bool) -> bool:
-    from ravivarapu_gates import ravivarapu_fig4a_tier_pass
+def _fig_tier_pass(gate_values: dict[str, Any], *, panel: str, full: bool) -> bool:
+    if panel == "4a":
+        from ravivarapu_gates import ravivarapu_fig4a_tier_pass
 
-    return ravivarapu_fig4a_tier_pass(gate_values, full=full)
+        return ravivarapu_fig4a_tier_pass(gate_values, full=full)
+    if panel == "4b":
+        from ravivarapu_gates import ravivarapu_fig4b_tier_pass
+
+        return ravivarapu_fig4b_tier_pass(gate_values, full=full)
+    return False
 
 
 @dataclass(frozen=True)
@@ -165,8 +197,8 @@ def _pass_cell(value: bool | None) -> str:
     return "yes" if value else "no"
 
 
-def _fig4a_tier_cell(key: str, gate_values: dict[str, Any], *, column: str) -> str:
-    tier = _fig4a_gate_tier().get(key)
+def _fig_tier_cell(key: str, gate_values: dict[str, Any], *, panel: str, column: str) -> str:
+    tier = _fig_gate_tier(panel).get(key)
     if tier is None:
         return "—"
     if column == "shape" and tier == "full":
@@ -174,11 +206,11 @@ def _fig4a_tier_cell(key: str, gate_values: dict[str, Any], *, column: str) -> s
     return _pass_cell(gate_values.get(key) if isinstance(gate_values.get(key), bool) else None)
 
 
-def _fig4a_overall_pass(gate_values: dict[str, Any], *, full: bool) -> bool | None:
+def _fig_overall_pass(gate_values: dict[str, Any], *, panel: str, full: bool) -> bool | None:
     field = "pass" if full else "shape_pass"
     if isinstance(gate_values.get(field), bool):
         return bool(gate_values[field])
-    return _fig4a_tier_pass(gate_values, full=full)
+    return _fig_tier_pass(gate_values, panel=panel, full=full)
 
 
 def _panel_gate_values(manifest: dict[str, Any], panel: str) -> dict[str, bool]:
@@ -204,9 +236,9 @@ def evaluate_panel(panel: str) -> PanelGateStatus:
     manifest = _load_json(manifest_path)
     gate_values = manifest.get("gates") or {}
     gates = _panel_gate_values(manifest, panel)
-    if panel == "4a":
-        shape_overall = _fig4a_overall_pass(gate_values, full=False)
-        overall = _fig4a_overall_pass(gate_values, full=True)
+    if panel in ("4a", "4b"):
+        shape_overall = _fig_overall_pass(gate_values, panel=panel, full=False)
+        overall = _fig_overall_pass(gate_values, panel=panel, full=True)
     else:
         shape_overall = None
         overall = _all_rows_pass(gate_values, panel)
@@ -221,7 +253,7 @@ def evaluate_panel(panel: str) -> PanelGateStatus:
     )
 
 
-def _render_fig4a_gate_block(status: PanelGateStatus) -> str:
+def _render_fig_tiered_gate_block(status: PanelGateStatus) -> str:
     manifest_path = _REPO / status.source
     gate_values: dict[str, Any] = {}
     if manifest_path.is_file():
@@ -239,15 +271,15 @@ def _render_fig4a_gate_block(status: PanelGateStatus) -> str:
     for row in status.rows:
         lines.append(
             f"| `{row.key}` | {row.description} | "
-            f"{_fig4a_tier_cell(row.key, gate_values, column='shape')} | "
-            f"{_fig4a_tier_cell(row.key, gate_values, column='full')} |"
+            f"{_fig_tier_cell(row.key, gate_values, panel=status.panel, column='shape')} | "
+            f"{_fig_tier_cell(row.key, gate_values, panel=status.panel, column='full')} |"
         )
     return "\n".join(lines)
 
 
 def render_gate_block(status: PanelGateStatus) -> str:
-    if status.panel == "4a":
-        return _render_fig4a_gate_block(status)
+    if status.panel in ("4a", "4b"):
+        return _render_fig_tiered_gate_block(status)
     overall = _pass_cell(status.overall)
     lines = [
         f"**Gates set** (`{status.source}`; overall **`{status.pass_field}`**: {overall}, "
@@ -264,14 +296,14 @@ def render_gate_block(status: PanelGateStatus) -> str:
 
 
 def _summary_status_line(status: PanelGateStatus, note: str = "") -> str:
-    if status.panel == "4a":
+    if status.panel in ("4a", "4b"):
         if status.overall:
             return f"Pass ({note})" if note else "Pass"
         if status.shape_overall and status.overall is False:
             return f"Shape OK (full open){f', {note}' if note else ''}"
         failed = [key for key, value in status.gates.items() if value is False]
         if failed:
-            tier = _fig4a_gate_tier().get(failed[0], "full")
+            tier = _fig_gate_tier(status.panel).get(failed[0], "full")
             prefix = "shape" if tier == "shape" else "full"
             detail = f"`{failed[0]}` ({prefix})"
             if note:
@@ -301,7 +333,7 @@ def render_summary_table(statuses: dict[str, PanelGateStatus]) -> str:
     for panel_key, label, description in RAVIVARAPU_SUMMARY_ROWS:
         status = statuses[panel_key]
         note = RAVIVARAPU_STATUS_NOTES.get(panel_key, "")
-        if panel_key == "4a":
+        if panel_key in ("4a", "4b"):
             manifest_path = _REPO / RAVIVARAPU_MANIFEST_BY_PANEL[panel_key]
             if manifest_path.is_file():
                 manifest = _load_json(manifest_path)
