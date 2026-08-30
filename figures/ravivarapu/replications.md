@@ -8,7 +8,7 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Panel | Description | Status |
 |-------|-------------|--------|
 | Fig 4a | Training PSD vs episode | Pass (v66) |
-| Fig 4b | Training reward vs episode | Pass |
+| Fig 4b | Training reward vs episode | Pass (v10) |
 | Fig 5a | Inference @ 50 Hz | Pass |
 | Fig 5b | Inference @ 30 Hz | Pass |
 | Fig 6 | FP16 PTQ @ 50 Hz | Pass |
@@ -54,7 +54,7 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 | `sea_declines` | SEA-DBS PSD declines over training | yes | yes |
 | `sea_below_baseline_late` | SEA-DBS late PSD below baseline | yes | yes |
 | `sea_steeper_drop_than_baseline` | SEA-DBS drop steeper than baseline | yes | yes |
-| `late_gap_substantial` | late baseline − SEA-DBS gap ≥ 0.02 | yes | yes |
+| `late_gap_substantial` | late baseline − SEA-DBS gap in [0.02, 0.045] | yes | yes |
 | `drop_timing_baseline` | baseline drop not front-loaded by ep 50 | yes | yes |
 | `drop_timing_sea` | SEA-DBS drop not front-loaded by ep 50 | yes | yes |
 | `gradual_decline_baseline` | gradual baseline mid→late drop | yes | yes |
@@ -64,7 +64,11 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 | `shared_start_near_paper` | shared start vs paper | — | yes |
 | `baseline_drop_vs_paper` | baseline drop vs paper | — | yes |
 | `sea_drop_vs_paper` | SEA-DBS drop vs paper | — | yes |
-| `late_gap_near_paper` | late gap vs paper | — | yes |
+| `sea_mid_near_paper` | SEA-DBS mid-training level vs paper | — | — |
+| `sea_midlate_near_paper` | SEA-DBS ep 70–110 level vs paper | — | — |
+| `sea_late_near_paper` | SEA-DBS late level vs paper | — | — |
+| `late_gap_near_paper` | late gap vs paper (bounded) | — | yes |
+| `midlate_gap_near_paper` | ep 70–110 gap vs paper (bounded) | — | — |
 | `late_early_ratio_baseline_near_paper` | baseline late/early ratio vs paper | — | yes |
 | `late_early_ratio_sea_near_paper` | SEA-DBS late/early ratio vs paper | — | yes |
 <!-- gates-4a:end -->
@@ -90,10 +94,10 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4a/plot.p
 
 ### Replication
 
-![Replication Fig 4b](images/4b/training_reward_v5.png)
+![Replication Fig 4b](images/4b/training_reward_v10.png)
 
 <!-- caption-4b:start -->
-**Caption:** Training episode reward vs episode (seed 0); paired with Fig 4a cache. (v7)
+**Caption:** Training episode reward vs episode (seed 0); paired with Fig 4a cache. (v10)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4b.json`
 <!-- caption-4b:end -->
@@ -101,13 +105,29 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4a/plot.p
 **Status:** Pass — see manifest gates.
 
 <!-- gates-4b:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4b.json`; overall **`pass`**: yes, 2026-08-30). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4b.json`; **`shape_pass`**: yes, **`pass`**: yes, 2026-08-30). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
 
-| Key | Description | Pass |
-|-----|-------------|------|
-| `paper_above_baseline_late` | SEA-DBS late reward > baseline | yes |
-| `paper_pull_ahead_mid` | SEA-DBS ahead in mid training window | yes |
-| `both_rise` | both series rise from early to late | yes |
+| Key | Description | Shape | Full |
+|-----|-------------|-------|------|
+| `n_episodes_ok` | ≥ 150 training episodes | yes | yes |
+| `shared_start` | baseline and SEA-DBS agree at episode start | yes | yes |
+| `baseline_rises` | baseline reward rises over training | yes | yes |
+| `sea_rises` | SEA-DBS reward rises over training | yes | yes |
+| `sea_above_baseline_late` | SEA-DBS late reward above baseline | yes | yes |
+| `sea_steeper_rise_than_baseline` | SEA-DBS rise steeper than baseline | yes | yes |
+| `paper_pull_ahead_mid` | SEA-DBS ahead in mid training window | yes | yes |
+| `late_gap_substantial` | late SEA-DBS − baseline gap substantial | yes | yes |
+| `rise_timing_baseline` | baseline rise not front-loaded by ep 50 | yes | yes |
+| `rise_timing_sea` | SEA-DBS rise not front-loaded by ep 50 | yes | yes |
+| `gradual_rise_baseline` | gradual baseline mid→late rise | yes | yes |
+| `gradual_rise_sea` | gradual SEA-DBS mid→late rise | yes | yes |
+| `pearson_baseline_min` | baseline trajectory shape (Pearson r) | yes | yes |
+| `pearson_sea_min` | SEA-DBS trajectory shape (Pearson r) | yes | yes |
+| `shared_start_near_paper` | shared start vs paper | — | yes |
+| `baseline_rise_vs_paper` | baseline rise vs paper | — | yes |
+| `sea_rise_vs_paper` | SEA-DBS rise vs paper | — | yes |
+| `late_gap_near_paper` | late gap vs paper (scaled) | — | yes |
+| `midlate_gap_near_paper` | ep 70–110 gap vs paper (scaled) | — | yes |
 <!-- gates-4b:end -->
 
 **Run:**
