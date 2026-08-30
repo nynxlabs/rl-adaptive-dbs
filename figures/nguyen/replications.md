@@ -13,7 +13,7 @@ Figs **1–2** are schematics — **not** replication targets.
 |-------|-------------|--------|
 | Fig 3 | GPi α–β distribution (PD Off vs PD On) | Pass (rep v22) |
 | Fig 4 | Training reward + episode length | Shape OK (full open) |
-| Fig 5 | CBGT spikes + DBS energy over training | Pass (rep v49) |
+| Fig 5 | CBGT spikes + DBS energy over training | Pass (rep v50) |
 | Fig 6 | α–β + DBS parameters over training | Fail (`paper_late_alpha_beta_below_theta`) |
 | Fig 7 | 50-episode eval (25 steps) | Fail (`checkpoint_lineage_ok`) |
 <!-- summary:end -->
@@ -80,7 +80,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 ### Latest attempt (**v138**)
 
-![Replication Fig 4 — latest](images/4/training_reward_length_v154.png)
+![Replication Fig 4 — latest](images/4/training_reward_length_v155.png)
 
 <!-- caption-4:start -->
 **Caption:** DSQN train 500 ep, seed=0; late_reward=-5780, late_len=7.2; shape_pass=True pass=False (reward shape=True full=False, length shape=True full=False) (v130) — **maintainer visual/ship pick** (not `gates.pass`).
@@ -89,12 +89,12 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 <!-- caption-4:end -->
 
 <!-- caption-4-latest:start -->
-**Caption:** DSQN train 500 ep, seed=0; late_reward=-8604, late_len=7.2; shape_pass=True pass=False (reward shape=True full=False, length shape=True full=False) (v154)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=-3544, late_len=7.0; shape_pass=True pass=False (reward shape=True full=False, length shape=True full=False) (v155)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4-latest:end -->
 
-**Status:** Timing shape open — latest **v154** (`late_len=7.2`, `shape_pass=True`); see manifest gates.
+**Status:** Timing shape open — latest **v155** (`late_len=7.0`, `shape_pass=True`); see manifest gates.
 
 <!-- gates-4:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: yes, **`pass`**: no, 2026-08-30). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
@@ -156,15 +156,15 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 
 ### Replication
 
-![Replication Fig 5](images/5/spikes_energy_v49.png)
+![Replication Fig 5](images/5/spikes_energy_v50.png)
 
 <!-- caption-5:start -->
-**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=833, energy_mean=1724.9; pass=True (v49)
+**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=833, energy_mean=1852.4; pass=True (v50)
 
 **Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json`
 <!-- caption-5:end -->
 
-**Status:** Pass — see manifest gates (`spikes_energy_v49.png`).
+**Status:** Pass — see manifest gates (`spikes_energy_v50.png`).
 
 <!-- gates-5:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: yes, 2026-08-30). Every row is required for exit.
