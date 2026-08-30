@@ -532,6 +532,9 @@ def fig5_spikes_energy_gates(
     p_energy_mid = window_mean(pex, pey, lo=mid_lo, hi=mid_hi)
     p_energy_late = window_mean(pex, pey, lo=late_lo)
 
+    pearson_e = pearson_on_ref_x(pex, pey, x, energies)
+    pearson_s = pearson_on_ref_x(psx, psy, x, spikes)
+
     gates = {
         "spike_early_near_paper": rel_close(spike_early, p_spike_early, tol=rel_tol),
         "spike_mid_near_paper": rel_close(spike_mid, p_spike_mid, tol=rel_tol),
@@ -546,6 +549,9 @@ def fig5_spikes_energy_gates(
             and 600.0 <= spike_late <= 1000.0
             and 600.0 <= spike_mean <= 1000.0
         ),
+        "energy_early_near_paper": rel_close(energy_early, p_energy_early, tol=rel_tol),
+        "energy_mid_near_paper": rel_close(energy_mid, p_energy_mid, tol=rel_tol),
+        "energy_late_near_paper": rel_close(energy_late, p_energy_late, tol=rel_tol),
         "energy_mean_near_paper": rel_close(energy_mean, p_energy_mean, tol=rel_tol),
         "energy_mid_ramp_near_paper": ratio_close(
             energy_mid, energy_early, p_energy_mid, p_energy_early, tol=ratio_tol
@@ -553,6 +559,8 @@ def fig5_spikes_energy_gates(
         "energy_trend_near_paper": ratio_close(
             energy_late, energy_early, p_energy_late, p_energy_early, tol=ratio_tol
         ),
+        "energy_monotonic_rise": bool(energy_early < energy_mid < energy_late),
+        "energy_late_above_early": bool(energy_late > energy_early * 1.25),
         "spike_series_has_variance": float(np.std(spikes)) > 0.0,
         "energy_not_constant": float(np.std(energies)) > 0.01 * max(abs(energy_mean), 1.0),
     }
@@ -572,7 +580,11 @@ def fig5_spikes_energy_gates(
             "paper_spike_early": p_spike_early,
             "paper_spike_mid": p_spike_mid,
             "paper_spike_late": p_spike_late,
+            "paper_energy_early": p_energy_early,
             "paper_energy_mid": p_energy_mid,
+            "paper_energy_late": p_energy_late,
+            "pearson_energy": pearson_e,
+            "pearson_spikes": pearson_s,
         },
         paper_ref={
             "spikes": str(curves_path("fig5_spikes")),
