@@ -67,6 +67,15 @@ def test_fig5_paper_self_consistent():
     energies = np.interp(np.arange(n), ex, ey)
     report = fig5_spikes_energy_gates(spikes, energies)
     assert report["gates"]["spike_mean_near_paper"]
+    assert report["gates"]["spike_stays_near_800"]
+    assert report["gates"]["energy_early_near_paper"]
+    assert report["gates"]["energy_mid_near_paper"]
+    assert report["gates"]["energy_late_near_paper"]
+    assert report["gates"]["energy_mean_near_paper"]
+    assert report["gates"]["energy_mid_ramp_near_paper"]
+    assert report["gates"]["energy_trend_near_paper"]
+    assert report["gates"]["energy_monotonic_rise"]
+    assert report["gates"]["energy_late_above_early"]
     assert report["pass"]
 
 

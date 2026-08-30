@@ -62,12 +62,18 @@ class DBSParameterState:
             raise ValueError(msg)
 
         if epsilon is not None or episode is not None:
+            eps_val = 0.0 if epsilon is None else epsilon
             freq_sens = cfg.frequency_sensitivity_at_epsilon(
-                0.0 if epsilon is None else epsilon,
+                eps_val,
+                episode=episode,
+            )
+            pw_sens = cfg.pulse_width_sensitivity_at_epsilon(
+                eps_val,
                 episode=episode,
             )
         else:
             freq_sens = cfg.frequency_sensitivity
+            pw_sens = cfg.pulse_width_sensitivity
 
         self.amplitude = float(
             np.clip(
@@ -83,10 +89,11 @@ class DBSParameterState:
                 cfg.frequency_max,
             )
         )
+        pw_min = cfg.pulse_width_min_at_episode(episode)
         self.pulse_width_ms = float(
             np.clip(
-                self.pulse_width_ms + actions[2] * cfg.pulse_width_sensitivity,
-                cfg.pulse_width_min,
+                self.pulse_width_ms + actions[2] * pw_sens,
+                pw_min,
                 cfg.pulse_width_max,
             )
         )

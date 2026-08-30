@@ -165,7 +165,12 @@ def train_series(
     epsilon_end: float | None = None,
     target_update_period: int | None = None,
     pulse_width_min: float | None = None,
+    pulse_width_min_early: float | None = None,
+    pulse_width_min_early_episodes: int | None = None,
+    pulse_width_min_ramp_end_episode: int | None = None,
     pulse_width_sensitivity: float | None = None,
+    pulse_width_sensitivity_early: float | None = None,
+    pulse_width_sensitivity_early_episodes: int | None = None,
     frequency_sensitivity_early_episodes: int | None = None,
     subthreshold_steps_required: int | None = None,
     resume_path: Path | None = None,
@@ -193,8 +198,21 @@ def train_series(
             cfg = replace(cfg, target_update_period=target_update_period)
         if pulse_width_min is not None:
             cfg = replace(cfg, pulse_width_min=pulse_width_min)
+        if pulse_width_min_early is not None:
+            cfg = replace(cfg, pulse_width_min_early=pulse_width_min_early)
+        if pulse_width_min_early_episodes is not None:
+            cfg = replace(cfg, pulse_width_min_early_episodes=pulse_width_min_early_episodes)
+        if pulse_width_min_ramp_end_episode is not None:
+            cfg = replace(cfg, pulse_width_min_ramp_end_episode=pulse_width_min_ramp_end_episode)
         if pulse_width_sensitivity is not None:
             cfg = replace(cfg, pulse_width_sensitivity=pulse_width_sensitivity)
+        if pulse_width_sensitivity_early is not None:
+            cfg = replace(cfg, pulse_width_sensitivity_early=pulse_width_sensitivity_early)
+        if pulse_width_sensitivity_early_episodes is not None:
+            cfg = replace(
+                cfg,
+                pulse_width_sensitivity_early_episodes=pulse_width_sensitivity_early_episodes,
+            )
         if frequency_sensitivity_early_episodes is not None:
             cfg = replace(
                 cfg,
@@ -590,11 +608,46 @@ def main(argv: list[str] | None = None) -> int:
         help="Minimum pulse width (ms); v108: 0.8 toward paper Fig 6 ~1 ms for Fig 5 energy",
     )
     parser.add_argument(
+        "--pulse-width-min-early",
+        type=float,
+        default=None,
+        metavar="MS",
+        help="Early episodes minimum pulse width (ms)",
+    )
+    parser.add_argument(
+        "--pulse-width-min-early-episodes",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Episodes using pulse_width_min_early before exploit floor",
+    )
+    parser.add_argument(
+        "--pulse-width-min-ramp-end-episode",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Episode where pulse_width_min linear ramp reaches full pulse_width_min",
+    )
+    parser.add_argument(
         "--pulse-width-sensitivity",
         type=float,
         default=None,
         metavar="S",
         help="Pulse width delta per +1 action (ms); v108: 0.4 for mid-training pw ramp",
+    )
+    parser.add_argument(
+        "--pulse-width-sensitivity-early",
+        type=float,
+        default=None,
+        metavar="S",
+        help="Early episodes pulse width delta per +1 action (ms)",
+    )
+    parser.add_argument(
+        "--pulse-width-sensitivity-early-episodes",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Episodes using pulse_width_sensitivity_early before exploit ms/step",
     )
     parser.add_argument(
         "--frequency-sensitivity-early-episodes",
@@ -665,7 +718,12 @@ def main(argv: list[str] | None = None) -> int:
             epsilon_end=args.epsilon_end,
             target_update_period=args.target_update_period,
             pulse_width_min=args.pulse_width_min,
+            pulse_width_min_early=args.pulse_width_min_early,
+            pulse_width_min_early_episodes=args.pulse_width_min_early_episodes,
+            pulse_width_min_ramp_end_episode=args.pulse_width_min_ramp_end_episode,
             pulse_width_sensitivity=args.pulse_width_sensitivity,
+            pulse_width_sensitivity_early=args.pulse_width_sensitivity_early,
+            pulse_width_sensitivity_early_episodes=args.pulse_width_sensitivity_early_episodes,
             frequency_sensitivity_early_episodes=args.frequency_sensitivity_early_episodes,
             subthreshold_steps_required=args.subthreshold_steps,
             resume_path=args.resume,
