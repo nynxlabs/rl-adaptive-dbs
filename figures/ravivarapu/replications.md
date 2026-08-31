@@ -159,15 +159,15 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 
 ### Replication
 
-![Replication Fig 5a](images/5a/inference_50hz_v16.png)
+![Replication Fig 5a](images/5a/inference_50hz_v18.png)
 
 <!-- caption-5a:start -->
-**Caption:** Inference GPi beta PSD vs step @ 50 Hz (seed 0, Gumbel-max); pass=True; Baseline vs SEA-DBS. (v16)
+**Caption:** Inference GPi beta PSD vs step @ 50 Hz (seed 0, Gumbel-max); pass=True; Baseline vs SEA-DBS. (v18)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/5a/manifest.json`
 <!-- caption-5a:end -->
 
-**Status:** **Pass** (rep v16) — inference @ 50 Hz; Manifest `artifacts/figures/papers/ravivarapu/5a/manifest.json`.
+**Status:** **Pass** (rep v18) — inference @ 50 Hz; Manifest `artifacts/figures/papers/ravivarapu/5a/manifest.json`.
 
 <!-- gates-5a:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/5a/manifest.json`; overall **`pass`**: yes, 2026-08-30). Every row is required for exit.
@@ -181,6 +181,7 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 | `paper_end_below_baseline` | SEA-DBS end PSD below baseline | yes |
 | `paper_steeper_drop` | SEA-DBS drop steeper than baseline | yes |
 | `carrier_hz_ok` | carrier frequency 50 Hz | yes |
+| `shared_start_near_paper` | shared start vs paper ~462.5 | yes |
 | `early_mae_baseline` | steps 0–5 MAE vs digitized Baseline ≤ 0.03 | yes |
 | `early_mae_sea` | steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03 | yes |
 | `early_mae_sea_3_5` | steps 3–5 MAE vs digitized SEA-DBS ≤ 0.020 | yes |
