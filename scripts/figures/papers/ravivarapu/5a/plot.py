@@ -33,6 +33,7 @@ from controllers.sea_dbs.config import (
     FIG5A_INFERENCE_BURST_MS,
     FIG5A_INFERENCE_N_OBS,
     FIG5A_INFERENCE_WINDOW_S,
+    FIG5A_UNTREATED_WINDOW_S,
     INFERENCE_CARRIER_50HZ,
     INFERENCE_PSD_SAMPLES,
     SEADBSConfig,
@@ -161,6 +162,7 @@ def main() -> None:
                 biomarker_window_s=FIG5A_INFERENCE_WINDOW_S,
                 n_obs=FIG5A_INFERENCE_N_OBS,
                 gumbel_seed_offset=FIG5A_GUMBEL_SEED_OFFSET,
+                untreated_window_s=FIG5A_UNTREATED_WINDOW_S,
             )
             for variant in VARIANTS
         ]

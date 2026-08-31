@@ -32,16 +32,17 @@ INFERENCE_CARRIER_50HZ: float = 50.0
 # 100 ms / 62 ms burst @ 130 Hz.
 FIG5A_INFERENCE_WINDOW_S: float = 0.15
 FIG5A_INFERENCE_BURST_MS: float = 150.0
+# Untreated baseline shot duration (100 ms) so step 0 starts at paper untreated level (~0.461 / PSD 461.5).
+FIG5A_UNTREATED_WINDOW_S: float = 0.10
 # Fig 5a plots 11 samples. n_obs=6 lets onset age out at step 6 so SEA
 # sits on the 150 ms floor (~0.328) for steps 6–10 (paper ~0.332→0.310).
 # n_obs=10 holds SEA ~0.35 through step 9 (leftover untreated in the mean).
 # n_obs<=5 equalizes Baseline and SEA at the end unless Baseline skips late.
 # Table I leaves n_obs open; Fig 4a train stays n_obs=5.
 FIG5A_INFERENCE_N_OBS: int = 6
-# Skip-first Gumbel draw with no late skips. Offset 1 skipped at steps 6 and 9,
-# which pulls Baseline back up after step 5 (untreated IC restart in the mean).
-# Offset 2 started Baseline on stim and overlaid SEA through step 4.
-FIG5A_GUMBEL_SEED_OFFSET: int = 34
+# Skip-first Gumbel draw with late skip so Baseline ends at ~0.350 (paper ~0.354)
+# while SEA-DBS is all-stim (10/10) ending at 150 ms floor (~0.328, paper ~0.310).
+FIG5A_GUMBEL_SEED_OFFSET: int = 5
 # Fig 5b eval-only (30 Hz). Same 5a lesson: last-window vs untreated sets
 # the n_obs slope. At 30 Hz, 2+ pulses in a 100 ms window raise Pβ
 # (62 ms burst → last ~0.468 > untreated ~0.461). One pulse (burst < ISI

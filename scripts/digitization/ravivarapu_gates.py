@@ -875,6 +875,9 @@ def ravivarapu_inference_gates(
             early_mae_p_35 = float(np.mean(np.abs(p_early[3:] - paper_s[3:])))
             early_drop_p = float(p_early[0] - p_early[-1])
             early_drop_b = float(b_early[0] - b_early[-1])
+            gates["shared_start_near_paper"] = bool(
+                abs(b0 - float(paper_b[0])) <= 0.02 and abs(p0 - float(paper_s[0])) <= 0.02
+            )
             gates["early_mae_baseline"] = early_mae_b <= INFERENCE_EARLY_MAE_MAX
             gates["early_mae_sea"] = early_mae_p <= INFERENCE_EARLY_MAE_MAX
             gates["early_mae_sea_3_5"] = early_mae_p_35 <= INFERENCE_EARLY_SEA_MAE_3_5_MAX

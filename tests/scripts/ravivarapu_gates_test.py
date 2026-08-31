@@ -164,11 +164,12 @@ def test_fig4b_tiered_shape_pass_without_full_polish():
 
 
 def test_inference_shape_gates_pass_on_split_decline():
-    # 150 ms / n_obs=6: SEA reaches the last-window floor at step 6.
-    baseline = [0.4981, 0.4981, 0.4414, 0.4556, 0.4300, 0.4130, 0.3846, 0.3563, 0.3563, 0.3563, 0.3563]
-    sea = [0.4981, 0.4130, 0.3846, 0.3704, 0.3619, 0.3563, 0.3279, 0.3279, 0.3279, 0.3279, 0.3279]
+    # 150 ms / n_obs=6 with 100 ms untreated start: SEA reaches the last-window floor at step 6.
+    baseline = [0.4606, 0.4606, 0.4164, 0.4274, 0.4075, 0.3943, 0.3721, 0.3500, 0.3500, 0.3500, 0.3500]
+    sea = [0.4606, 0.3943, 0.3721, 0.3611, 0.3544, 0.3500, 0.3279, 0.3279, 0.3279, 0.3279, 0.3279]
     report = ravivarapu_inference_gates(baseline, sea, carrier_hz=50.0)
     assert report["pass"]
+    assert report["gates"]["shared_start_near_paper"]
     assert report["gates"]["baseline_declines"]
     assert report["gates"]["paper_declines"]
     assert report["gates"]["paper_end_below_baseline"]

@@ -85,6 +85,7 @@ class RavivarapuInferenceEvalJob:
     n_obs: int
     gumbel_seed_offset: int
     dbs_pulse_delay_ms: float | None = None
+    untreated_window_s: float | None = None
 
 
 @dataclass(frozen=True)
@@ -113,6 +114,8 @@ def ravivarapu_inference_eval_worker(job: RavivarapuInferenceEvalJob) -> Ravivar
     }
     if job.dbs_pulse_delay_ms is not None:
         kwargs["dbs_pulse_delay_ms"] = job.dbs_pulse_delay_ms
+    if job.untreated_window_s is not None:
+        kwargs["untreated_window_s"] = job.untreated_window_s
     payload = evaluate(
         Path(job.checkpoint),
         config=SEADBSConfig(variant=job.variant, seed=job.seed),
