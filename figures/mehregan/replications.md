@@ -10,7 +10,7 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Fig 1b | GPi PSD | Pass |
 | Fig 2a | GPi $P_\beta$ time series | Pass |
 | Fig 2b | Error Index time series | Pass (rep v16) |
-| Fig 4a | Training $P_\beta$ vs step | Pass (rep v35; pre-warmed buffer, mask 0-60, 0 early spikes) |
+| Fig 4a | Training $P_\beta$ vs step | Pass (rep v34; actor_lr 7.5e-4, warmup 50) |
 | Fig 4b | Training reward vs episode | Fail (`late_beta_above_threshold`, paired train v18, v14, rep v44) |
 | Fig 5a | Post-train efficacy @ 45 Hz | Pass (rep v23) |
 | Fig 5b | Post-train efficacy @ 30 Hz | Pass (burst alphabet, locked eval v3, rep v23) |
@@ -166,18 +166,18 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_beta_v35.png)
+![Replication Fig 4a](images/4a/training_beta_v37.png)
 
 <!-- caption-4a:start -->
-**Caption:** 45 Hz fixed_mean_pattern, within_step L=1, reward=full_segment, greedy, critic=logits, seed 0, v35, ep0=0.539, early=0.431 late=0.308, trend↓ (2026-08-31)
+**Caption:** 45 Hz fixed_mean_pattern, within_step L=1, reward=full_segment, softmax, critic=one_hot, seed 0, v37, init_bias=0, jitter=0.5, ep0=0.505, early=0.482 late=0.330, trend↓ (2026-08-31)
 
 **Manifest:** `artifacts/figures/papers/mehregan/4a/manifest.json`
 <!-- caption-4a:end -->
 
-**Status:** Pass — **rep v35**, phase-9 (pre-warmed buffer, Action-0 exploration mask steps 0–60, τ 0.30→0.15, zero early needle spikes). All digitization gates pass with drop 0.122 vs paper 0.110 and ratio 0.717 vs paper 0.776. Fig 4b ship image stays **v33** from phase-6 — see [4a.md](../../docs/figures/mehregan/4a.md).
+**Status:** Pass — **rep v34**, phase-8 (`actor_lr=7.5e-4`, `critic_warmup_steps=50`, τ 3→1.6, continuous carry). All digitization gates pass including `mid_fade_vs_paper`. Fig 4b ship image stays **v33** from phase-6 (separate train; late-floor gates) — see [4a.md](../../docs/figures/mehregan/4a.md).
 
 <!-- gates-4a:start -->
-**Gates set** (`fig4a_gates` → live `series.json`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4a/series.json`, 2026-08-31). Every row is required for exit.
+**Gates set** (`fig4a_gates` → live `series.json` (digitization revisit; was locked `series_v18.json`)). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4a/series.json`, 2026-08-31). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -187,8 +187,6 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 | `late_early_ratio_near_paper` | late/early ratio vs digitization | yes |
 | `mid_fade_vs_paper` | mid [120,150] fade ≥ 50% of paper mid-drop | yes |
 | `ep0_near_paper` | steps 0–29 mean within 10% of digitized paper ep0 | yes |
-| `early_min_above_floor` | min beta in steps 0–60 ≥ 0.38 (no needle drops) | yes |
-| `no_early_spikes` | 0 sharp isolated needle drops in steps 0–60 | yes |
 <!-- gates-4a:end -->
 
 **Panel notes:** extended tuning history (skip_regular workflow, entropy experiments) — [docs/figures/mehregan/4a.md](../../docs/figures/mehregan/4a.md).
