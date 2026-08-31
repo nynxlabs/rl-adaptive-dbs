@@ -227,11 +227,28 @@ def evaluate_ablation_steps(
     carrier_hz: float | None = None,
 ) -> dict[str, Any]:
     """Short PSD eval trace (Fig 7 / Fig 6 — 10 stimulation steps)."""
+    from controllers.sea_dbs.config import (
+        FIG5A_GUMBEL_SEED_OFFSET,
+        FIG5A_INFERENCE_BURST_MS,
+        FIG5A_INFERENCE_N_OBS,
+        FIG5A_INFERENCE_WINDOW_S,
+        FIG5A_PREFILL_OBS_WINDOW,
+        FIG5A_UNTREATED_WINDOW_S,
+        INFERENCE_CARRIER_50HZ,
+    )
+
     return evaluate(
         checkpoint,
         config=config,
         plant=plant,
         episodes=1,
         max_steps=n_steps,
-        carrier_hz=carrier_hz,
+        carrier_hz=carrier_hz or INFERENCE_CARRIER_50HZ,
+        action_mode="gumbel",
+        dbs_burst_ms=FIG5A_INFERENCE_BURST_MS,
+        biomarker_window_s=FIG5A_INFERENCE_WINDOW_S,
+        n_obs=FIG5A_INFERENCE_N_OBS,
+        gumbel_seed_offset=FIG5A_GUMBEL_SEED_OFFSET,
+        untreated_window_s=FIG5A_UNTREATED_WINDOW_S,
+        prefill_obs_window=FIG5A_PREFILL_OBS_WINDOW,
     )

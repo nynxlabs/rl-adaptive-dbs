@@ -391,3 +391,35 @@ def test_inference_mid_window_rejects_onset_fill():
     report = ravivarapu_inference_gates(baseline, sea, carrier_hz=50.0)
     assert not report["gates"]["mid_mae_sea"]
     assert not report["pass"]
+
+
+def test_fig6_gates_pass():
+    from ravivarapu_gates import ravivarapu_fig6_gates
+
+    traces = {
+        "Baseline": [0.4606, 0.4606, 0.4376, 0.4376, 0.4146, 0.3916, 0.3686, 0.3456, 0.3456, 0.3456, 0.3456],
+        "Baseline + PTQ(fp16)": [0.4606, 0.4606, 0.4606, 0.4606, 0.4376, 0.4146, 0.3916, 0.3686, 0.3686, 0.3686, 0.3686],
+        "SEA-DBS": [0.4606, 0.4376, 0.4146, 0.3916, 0.3686, 0.3456, 0.3226, 0.3226, 0.3226, 0.3226, 0.3226],
+        "SEA-DBS + PTQ(fp16)": [0.4606, 0.4376, 0.4146, 0.4146, 0.3916, 0.3686, 0.3456, 0.3456, 0.3456, 0.3226, 0.3226],
+    }
+    report = ravivarapu_fig6_gates(traces)
+    assert report["pass"]
+    assert report["gates"]["shared_start_near_paper"]
+    assert report["gates"]["sea_below_baseline"]
+    assert report["gates"]["sea_ptq_below_baseline"]
+
+
+def test_fig7_gates_pass():
+    from ravivarapu_gates import ravivarapu_fig7_gates
+
+    traces = {
+        "baseline": [0.4606, 0.4606, 0.4385, 0.4385, 0.4164, 0.3943, 0.3721, 0.3500, 0.3500, 0.3500, 0.3500],
+        "baseline-pm": [0.4606, 0.4606, 0.4385, 0.4385, 0.4164, 0.3943, 0.3721, 0.3500, 0.3500, 0.3500, 0.3500],
+        "baseline-gs": [0.4606, 0.4606, 0.4606, 0.4606, 0.4385, 0.4164, 0.3943, 0.3721, 0.3721, 0.3721, 0.3721],
+        "paper": [0.4606, 0.4385, 0.4164, 0.3943, 0.3721, 0.3500, 0.3279, 0.3279, 0.3279, 0.3279, 0.3279],
+    }
+    report = ravivarapu_fig7_gates(traces)
+    assert report["pass"]
+    assert report["gates"]["shared_start_near_paper"]
+    assert report["gates"]["sea_dbs_lowest_tail"]
+    assert report["gates"]["pm_not_sea"]
