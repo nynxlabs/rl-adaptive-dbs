@@ -48,6 +48,7 @@ def evaluate(
     ptq_noise_seed: int | None = None,
     untreated_window_s: float | None = None,
     plant_integration_mode: str | None = None,
+    prefill_obs_window: bool | None = None,
 ) -> dict[str, Any]:
     """Roll out a trained actor; returns summary metrics and per-step traces.
 
@@ -101,6 +102,8 @@ def evaluate(
         cfg = replace(cfg, untreated_window_s=float(untreated_window_s))
     if plant_integration_mode is not None:
         cfg = replace(cfg, plant_integration_mode=plant_integration_mode)  # type: ignore[arg-type]
+    if prefill_obs_window is not None:
+        cfg = replace(cfg, prefill_obs_window=bool(prefill_obs_window))
 
     policy: Actor | FP16ActorWrapper = actor
     noise = float(ptq_weight_noise)
