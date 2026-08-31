@@ -75,6 +75,7 @@ RAVIVARAPU_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
         ("paper_end_below_baseline", "SEA-DBS end PSD below baseline"),
         ("paper_steeper_drop", "SEA-DBS drop steeper than baseline"),
         ("carrier_hz_ok", "carrier frequency 50 Hz"),
+        ("shared_start_near_paper", "shared start vs paper ~462.5"),
         ("early_mae_baseline", "steps 0–5 MAE vs digitized Baseline ≤ 0.03"),
         ("early_mae_sea", "steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03"),
         ("early_mae_sea_3_5", "steps 3–5 MAE vs digitized SEA-DBS ≤ 0.020"),
