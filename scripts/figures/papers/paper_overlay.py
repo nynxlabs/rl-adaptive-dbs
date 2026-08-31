@@ -689,20 +689,48 @@ def overlay_nguyen_fig6(
     return {"power": (power_sy, power_raw), "params": (np.concatenate(param_ys),)}
 
 
-def overlay_nguyen_fig7(ax, *, show_confidence: bool = False) -> dict[str, tuple[np.ndarray, np.ndarray]]:
-    """Overlay paper mean (+ optional θ). Skip 95% CI by default — WPD stores
-    upper/lower bounds interleaved as one series, which zigzags if plotted as a line.
-    """
+def overlay_nguyen_fig7(ax, *, show_confidence: bool = True) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """Overlay paper mean, θ threshold, and smooth 95% CI band from digitization."""
     curves = load_panel_curves(NGUYEN_DIG / "curves_fig7.json")
+    extra_ys = []
+    if show_confidence and "95% Confidence" in curves:
+        cx, cy = curves["95% Confidence"]
+        # Split polygon into upper and lower envelopes and sort by x for clean fill_between
+        split_idx = len(cx) // 2 + 1
+        ux, uy = cx[:split_idx], cy[:split_idx]
+        lx, ly = cx[split_idx - 1:][::-1], cy[split_idx - 1:][::-1]
+        u_sort = np.argsort(ux)
+        ux, uy = ux[u_sort], uy[u_sort]
+        l_sort = np.argsort(lx)
+        lx, ly = lx[l_sort], ly[l_sort]
+
+        x_grid = np.linspace(0.0, 24.0, 100)
+        u_grid = np.interp(x_grid, ux, uy)
+        l_grid = np.interp(x_grid, lx, ly)
+
+        ax.fill_between(
+            x_grid,
+            l_grid,
+            u_grid,
+            color="#ff7f0e",
+            alpha=0.15,
+            edgecolor="#d95f02",
+            linewidth=0.8,
+            linestyle="--",
+            label="Paper 95% CI (digitized)",
+            zorder=1.5,
+        )
+        extra_ys.extend([u_grid, l_grid])
+
     avg_x, avg_y = pick_series(curves, "average")
     overlay_on_axis(
         ax,
         avg_x,
         avg_y,
         label="Paper mean (digitized)",
-        outline_color=NGUYEN_POWER,
+        outline_color="#d95f02",
     )
-    extra_ys = [avg_y]
+    extra_ys.append(avg_y)
     if "threshold" in curves:
         tx, ty = curves["threshold"]
         overlay_on_axis(
@@ -715,18 +743,7 @@ def overlay_nguyen_fig7(ax, *, show_confidence: bool = False) -> dict[str, tuple
             linewidth=1.4,
         )
         extra_ys.append(ty)
-    if show_confidence and "95% Confidence" in curves:
-        cx, cy = curves["95% Confidence"]
-        overlay_on_axis(
-            ax,
-            cx,
-            cy,
-            label="Paper 95% CI (digitized)",
-            outline_color=NGUYEN_POWER,
-            raw=True,
-        )
-        extra_ys.append(cy)
-    return {"mean": (avg_y, np.concatenate(extra_ys))}
+    return {"mean": (avg_y, np.concatenate(extra_ys) if extra_ys else avg_y)}
 
 
 # --- Mehregan ---
