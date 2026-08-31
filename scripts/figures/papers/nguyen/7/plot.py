@@ -108,7 +108,6 @@ def evaluate_gates(
     }
     if not checkpoint_ok:
         heuristic["reason"] = "fig4_train_not_passing"
-        return heuristic
 
     dig = fig7_eval_gates(
         eval_payload["alpha_beta_trajectories"],
@@ -122,18 +121,36 @@ def plot_eval(eval_payload: dict[str, Any], out_path: Path) -> dict[str, Any]:
     trajectories: list[list[float]] = eval_payload["alpha_beta_trajectories"]
     max_len = max(len(tr) for tr in trajectories)
     step_means = []
+    step_lowers = []
+    step_uppers = []
     for step in range(max_len):
         vals = [float(tr[step]) for tr in trajectories if step < len(tr)]
-        step_means.append(float(np.mean(vals)) if vals else float("nan"))
+        if vals:
+            step_means.append(float(np.mean(vals)))
+            step_lowers.append(float(np.percentile(vals, 2.5)))
+            step_uppers.append(float(np.percentile(vals, 97.5)))
+        else:
+            step_means.append(float("nan"))
+            step_lowers.append(float("nan"))
+            step_uppers.append(float("nan"))
     steps = np.arange(len(step_means), dtype=float)
     mean_trace = np.asarray(step_means, dtype=float)
 
     fig, ax = plt.subplots(figsize=(8.0, 4.5), constrained_layout=True)
-    for tr in trajectories[: min(10, len(trajectories))]:
-        ax.plot(np.arange(len(tr)), tr, color="#9ecae1", linewidth=0.6, alpha=0.35)
-    ax.plot(steps, mean_trace, color="#08519c", linewidth=2.0, label="Mean")
-    ax.axhline(BIOMARKER_THRESHOLD, color="#d62728", linestyle="--", linewidth=1.2, label="θ=150")
-    _paper_overlay.overlay_nguyen_fig7(ax)
+    ax.fill_between(
+        steps,
+        step_lowers,
+        step_uppers,
+        color="#9ecae1",
+        alpha=0.30,
+        edgecolor="#08519c",
+        linewidth=0.8,
+        label="Replication 95% CI",
+        zorder=2,
+    )
+    ax.plot(steps, mean_trace, color="#08519c", linewidth=2.2, label="Replication Mean", zorder=3)
+    ax.axhline(BIOMARKER_THRESHOLD, color="#d62728", linestyle="--", linewidth=1.2, label="θ=150 (threshold)")
+    _paper_overlay.overlay_nguyen_fig7(ax, show_confidence=True)
     ax.set_xlabel("Time Step")
     ax.set_ylabel("α–β Power")
     ax.set_title("Evaluation α–β (50 episodes)")
