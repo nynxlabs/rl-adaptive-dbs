@@ -228,12 +228,12 @@ def evaluate_ablation_steps(
 ) -> dict[str, Any]:
     """Short PSD eval trace (Fig 7 / Fig 6 — 10 stimulation steps)."""
     from controllers.sea_dbs.config import (
-        FIG5A_GUMBEL_SEED_OFFSET,
         FIG5A_INFERENCE_BURST_MS,
         FIG5A_INFERENCE_N_OBS,
         FIG5A_INFERENCE_WINDOW_S,
         FIG5A_PREFILL_OBS_WINDOW,
         FIG5A_UNTREATED_WINDOW_S,
+        FIG7_GUMBEL_SEED_OFFSET,
         INFERENCE_CARRIER_50HZ,
     )
 
@@ -248,7 +248,7 @@ def evaluate_ablation_steps(
         dbs_burst_ms=FIG5A_INFERENCE_BURST_MS,
         biomarker_window_s=FIG5A_INFERENCE_WINDOW_S,
         n_obs=FIG5A_INFERENCE_N_OBS,
-        gumbel_seed_offset=FIG5A_GUMBEL_SEED_OFFSET,
+        gumbel_seed_offset=FIG7_GUMBEL_SEED_OFFSET,
         untreated_window_s=FIG5A_UNTREATED_WINDOW_S,
         prefill_obs_window=FIG5A_PREFILL_OBS_WINDOW,
     )
