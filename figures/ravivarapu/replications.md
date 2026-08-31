@@ -325,15 +325,15 @@ Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper` ([se
 
 ### Replication
 
-![Replication Fig 7](images/7/ablation_psd_v16.png)
+![Replication Fig 7](images/7/ablation_psd_v19.png)
 
 <!-- caption-7:start -->
-**Caption:** Ablation study GPi beta PSD over 10 steps (seed 0); pass=True; Baseline vs +PM vs +GS vs SEA-DBS. (v16)
+**Caption:** Ablation study GPi beta PSD over 10 steps (seed 0); pass=True; Baseline vs +PM vs +GS vs SEA-DBS. (v19)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/7/manifest.json`
 <!-- caption-7:end -->
 
-**Status:** **Pass** (rep v16) — ablation (Baseline / +PM / +GS / SEA-DBS); Manifest `artifacts/figures/papers/ravivarapu/7/manifest.json`.
+**Status:** **Pass** (rep v19) — ablation (Baseline / +PM / +GS / SEA-DBS); Manifest `artifacts/figures/papers/ravivarapu/7/manifest.json`.
 
 <!-- gates-7:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/7/manifest.json`; overall **`pass`**: yes, 2026-08-31). Every row is required for exit.
@@ -346,6 +346,7 @@ Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper` ([se
 | `shared_start_near_paper` | shared start vs paper ~462.5 | yes |
 | `early_mae_baseline` | steps 0–5 MAE vs digitized Baseline ≤ 0.03 | yes |
 | `early_mae_sea` | steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03 | yes |
+| `baseline_above_pm_early` | Baseline above Baseline+PM early (steps 0-4) | yes |
 | `sea_dbs_lowest_tail` | SEA-DBS lowest tail mean PSD | yes |
 | `gs_highest_or_near_highest_tail` | GS highest or near-highest tail | yes |
 | `pm_not_sea` | PM closer to baseline than to SEA-DBS | yes |

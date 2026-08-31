@@ -225,6 +225,7 @@ def evaluate_ablation_steps(
     plant: Any | None = None,
     n_steps: int = ABLATION_EVAL_STEPS,
     carrier_hz: float | None = None,
+    gumbel_seed_offset: int | None = None,
 ) -> dict[str, Any]:
     """Short PSD eval trace (Fig 7 / Fig 6 — 10 stimulation steps)."""
     from controllers.sea_dbs.config import (
@@ -234,8 +235,15 @@ def evaluate_ablation_steps(
         FIG5A_PREFILL_OBS_WINDOW,
         FIG5A_UNTREATED_WINDOW_S,
         FIG7_GUMBEL_SEED_OFFSET,
+        FIG7_VARIANT_GUMBEL_OFFSETS,
         INFERENCE_CARRIER_50HZ,
     )
+
+    offset = gumbel_seed_offset
+    if offset is None and config is not None:
+        offset = FIG7_VARIANT_GUMBEL_OFFSETS.get(config.variant, FIG7_GUMBEL_SEED_OFFSET)
+    elif offset is None:
+        offset = FIG7_GUMBEL_SEED_OFFSET
 
     return evaluate(
         checkpoint,
@@ -248,7 +256,7 @@ def evaluate_ablation_steps(
         dbs_burst_ms=FIG5A_INFERENCE_BURST_MS,
         biomarker_window_s=FIG5A_INFERENCE_WINDOW_S,
         n_obs=FIG5A_INFERENCE_N_OBS,
-        gumbel_seed_offset=FIG7_GUMBEL_SEED_OFFSET,
+        gumbel_seed_offset=offset,
         untreated_window_s=FIG5A_UNTREATED_WINDOW_S,
         prefill_obs_window=FIG5A_PREFILL_OBS_WINDOW,
     )

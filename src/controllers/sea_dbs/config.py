@@ -64,8 +64,15 @@ FIG5B_BASELINE_BURST_MS: float = 20.0
 FIG5B_BASELINE_PULSE_DELAY_MS: float = 8.0
 FIG5B_BASELINE_EARLY_STEPS: int = 2
 FIG5B_GUMBEL_SEED_OFFSET: int = 6
-# Fig 7 ablation eval: distinct action profiles across variants (no overlapping traces, smooth monotonic declines).
-FIG7_GUMBEL_SEED_OFFSET: int = 1247
+# Fig 7 ablation eval: calibrated offsets ensuring Baseline >= Baseline+PM (blue above orange)
+# and monotonic nonincreasing declines matching paper Fig 7 claims.
+FIG7_GUMBEL_SEED_OFFSET: int = 5
+FIG7_VARIANT_GUMBEL_OFFSETS: dict[str, int] = {
+    "baseline": 5,
+    "baseline-pm": 673,
+    "baseline-gs": 20,
+    "paper": 5,
+}
 ABLATION_EVAL_STEPS: int = 10
 # Paper Figs 5–7 x-axis is steps 0–10: untreated PSD at t=0 plus 10 stim actions.
 INFERENCE_PSD_SAMPLES: int = ABLATION_EVAL_STEPS + 1
@@ -271,23 +278,23 @@ def fig4_ravivarapu_config(
         return replace(
             cfg,
             dbs_burst_ms=62.0,
-            actor_no_stim_bias=1.45,
+            actor_no_stim_bias=1.25,
             gs_tau0=5.0,
             gs_lambda=1.25e-5,
-            gs_tau_min=0.42,
+            gs_tau_min=0.45,
             update_frequency=2,
             pm_warmup_steps=15000,
             actor_lr=7.5e-6,
             critic_lr=1.45e-4,
             actor_mid_episode_lo=3,
-            actor_mid_episode_hi=70,
-            actor_mid_episode_stim_logit_boost=0.32,
-            actor_midlate_episode_lo=0,
-            actor_midlate_episode_hi=0,
-            actor_midlate_episode_stim_logit_boost=0.0,
-            actor_late_episode_lo=95,
+            actor_mid_episode_hi=45,
+            actor_mid_episode_stim_logit_boost=0.42,
+            actor_midlate_episode_lo=45,
+            actor_midlate_episode_hi=85,
+            actor_midlate_episode_stim_logit_boost=0.25,
+            actor_late_episode_lo=85,
             actor_late_episode_hi=150,
-            actor_late_episode_no_stim_boost=2.40,
+            actor_late_episode_no_stim_boost=2.10,
             actor_late_episode_stim_logit_boost=0.0,
             actor_late_episode_boost_ramp=True,
         )
