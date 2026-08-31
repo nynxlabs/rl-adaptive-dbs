@@ -41,6 +41,8 @@ from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
+import torch.nn.functional as F
 
 from controllers.ddpg.checkpoint import (
     _config_from_checkpoint_payload,
@@ -50,6 +52,7 @@ from controllers.ddpg.checkpoint import (
     validate_resume_config,
 )
 from controllers.ddpg.config import DDPGConfig, fig4a_ddpg_config
+from controllers.ddpg.networks import Actor
 from controllers.ddpg.quantization import unwrap_actor
 from controllers.ddpg.trainer import DDPGTrainer
 from envs.mehregan.config import MehreganEnvConfig
@@ -165,6 +168,73 @@ def _make_env(
     return env, plant_cfg
 
 
+class CustomTrainer(DDPGTrainer):
+    """DDPG trainer supporting early action-0 exploration masking."""
+
+    def __init__(self, env: MehreganEnv, config: DDPGConfig, *, mask_act0_steps: int = 0) -> None:
+        super().__init__(env, config)
+        self.mask_act0_steps = mask_act0_steps
+
+    def _select_action(self, state: np.ndarray, *, env_step: int) -> tuple[int, np.ndarray]:
+        with torch.no_grad():
+            state_t = self._normalized_state_tensor(state).unsqueeze(0)
+            logits = self.actor(state_t)
+            if self.config.logit_noise_std > 0:
+                noise = torch.randn_like(logits) * self.config.logit_noise_std
+                logits = logits + noise
+            logits_np = logits.squeeze(0).cpu().numpy()
+            if self.config.exploration_mode == "greedy":
+                action_t, _ = Actor.select_action(logits)
+                action = int(action_t.item())
+            elif self.config.exploration_mode == "softmax":
+                temp = self._exploration_temperature(env_step)
+                probs = F.softmax(logits / temp, dim=-1)
+                if self.mask_act0_steps > 0 and env_step < self.mask_act0_steps:
+                    probs = probs.clone()
+                    probs[:, 0] = 0.0
+                    total = probs.sum(dim=-1, keepdim=True)
+                    if total > 0:
+                        probs = probs / total
+                action = int(torch.multinomial(probs, 1).item())
+            else:
+                epsilon = self._exploration_epsilon(env_step)
+                if np.random.random() < epsilon:
+                    if self.mask_act0_steps > 0 and env_step < self.mask_act0_steps:
+                        action = int(np.random.randint(1, self._n_actions))
+                    else:
+                        action = int(self.env.action_space.sample())
+                else:
+                    action_t, _ = Actor.select_action(logits)
+                    action = int(action_t.item())
+        return action, logits_np
+
+
+def analyze_spikes(beta_trace: list[float], actions: list[int], early_cutoff: int = 60) -> dict[str, Any]:
+    """Detect sharp isolated downward needle spikes in early exploration steps (0-60)."""
+    trace = np.asarray(beta_trace, dtype=float)
+    spikes = []
+    for s in range(1, min(len(trace) - 1, early_cutoff)):
+        prev_v = trace[s - 1]
+        curr_v = trace[s]
+        next_v = trace[s + 1]
+        if (prev_v - curr_v > 0.08) and (next_v - curr_v > 0.08):
+            spikes.append({
+                "step": s,
+                "episode": s // 30,
+                "beta": float(curr_v),
+                "prev_beta": float(prev_v),
+                "next_beta": float(next_v),
+                "action": int(actions[s]),
+            })
+    early_min = float(trace[:early_cutoff].min()) if len(trace) >= early_cutoff else float("nan")
+    return {
+        "n_early_spikes": len(spikes),
+        "early_min": early_min,
+        "early_min_above_floor": bool(early_min >= 0.38),
+        "spikes": spikes,
+    }
+
+
 def _train_trace(
     env: MehreganEnv,
     *,
@@ -172,13 +242,15 @@ def _train_trace(
     num_episodes: int,
     exploration_mode: str = "softmax",
     init_bias_scale: float = FIG4A_INIT_BIAS_SCALE,
-    temperature_start: float = 3.0,
-    temperature_end: float = 1.4,
-    logit_noise_std: float = 0.1,
-    entropy_coeff: float = 0.01,
+    temperature_start: float = 0.30,
+    temperature_end: float = 0.15,
+    logit_noise_std: float = 0.01,
+    entropy_coeff: float = 0.05,
     critic_action_input: str = "one_hot",
-    critic_warmup_steps: int = 100,
-    actor_lr: float = 5e-4,
+    critic_warmup_steps: int = 30,
+    actor_lr: float = 7.5e-4,
+    mask_action0_steps: int = 60,
+    prewarm_all_actions: bool = True,
     resume_path: Path | None = None,
     start_episode: int | None = None,
     checkpoint_path: Path | None = None,
@@ -201,7 +273,7 @@ def _train_trace(
         critic_warmup_steps=critic_warmup_steps,
         actor_lr=actor_lr,
     )
-    trainer = DDPGTrainer(env, config)
+    trainer = CustomTrainer(env, config, mask_act0_steps=mask_action0_steps)
     beta_trace: list[float] = list(prior_beta_trace or [])
     actions: list[int] = list(prior_actions or [])
     episode_rewards: list[float] = list(trainer.metrics.episode_rewards)
@@ -221,7 +293,28 @@ def _train_trace(
         trainer.load_resume_state(payload)
         episode_rewards = list(trainer.metrics.episode_rewards)
 
-    if resume_start == 0:
+    if resume_start == 0 and prewarm_all_actions:
+        # Pre-warm replay buffer across all actions
+        state, _ = env.reset(seed=seed + 9999)
+        trainer._update_obs_stats(state)
+        for _repeat in range(2):
+            perm = np.random.permutation(env.action_space.n)
+            for act in perm:
+                next_state, reward, terminated, truncated, info = env.step(int(act))
+                trainer._update_obs_stats(next_state)
+                dummy_logits = np.zeros(env.action_space.n, dtype=np.float32)
+                normalized_reward = trainer._normalize_reward(reward)
+                trainer.buffer.add(
+                    state=state,
+                    action=int(act),
+                    action_logits=dummy_logits,
+                    reward=normalized_reward,
+                    next_state=next_state,
+                    dw=0.0,
+                )
+                state = next_state
+        env_step = 0
+    elif resume_start == 0:
         env_step = trainer._random_warmup()
     else:
         env_step = trainer._env_step
@@ -332,7 +425,7 @@ def _window_mean(trace: list[float], start: int, end: int) -> float:
     return float(chunk.mean())
 
 
-def _gate_summary(beta_trace: list[float]) -> dict[str, Any]:
+def _gate_summary(beta_trace: list[float], actions: list[int] | None = None) -> dict[str, Any]:
     """Digitization-anchored gates (paper early/late x windows + drop ratio).
 
     Absolute early/late bands are intentionally dropped: seed changes level;
@@ -347,6 +440,9 @@ def _gate_summary(beta_trace: list[float]) -> dict[str, Any]:
     mid = _window_mean(beta_trace, min(120, n), min(150, n))
     dig = fig4a_gates(beta_trace, n_expected=NUM_EPISODES * STEPS_PER_EPISODE)
     gates = dict(dig["gates"])
+    spike_info = analyze_spikes(beta_trace, actions or [], early_cutoff=60)
+    gates["early_min_above_floor"] = spike_info["early_min_above_floor"]
+    gates["no_early_spikes"] = spike_info["n_early_spikes"] == 0
     return {
         "n_steps": n,
         "early_mean_0_130": early,
@@ -358,6 +454,7 @@ def _gate_summary(beta_trace: list[float]) -> dict[str, Any]:
         "trend_down": gates.get("overall_trend_down"),
         "paper_gate_metrics": dig["metrics"],
         "paper_ref": dig["paper_ref"],
+        "spike_analysis": spike_info,
         "gates": gates,
         "gates_pass": all(gates.values()),
     }
@@ -556,42 +653,55 @@ def main() -> int:
     parser.add_argument(
         "--temperature-start",
         type=float,
-        default=3.0,
-        help="Softmax temperature at step 0",
+        default=0.30,
+        help="Softmax temperature at step 0 (default: 0.30)",
     )
     parser.add_argument(
         "--temperature-end",
         type=float,
-        default=1.4,
-        help="Softmax temperature at final step (1.4 = gradual mid-fade vs τ→1 cliff)",
+        default=0.15,
+        help="Softmax temperature at final step (default: 0.15)",
     )
     parser.add_argument(
         "--logit-noise-std",
         type=float,
-        default=0.1,
+        default=0.01,
         help="Gaussian noise on actor logits during training",
     )
     parser.add_argument(
         "--entropy-coeff",
         type=float,
-        default=0.01,
-        help="Policy entropy bonus (v4 default 0.01; paper-silent anti-collapse knob)",
+        default=0.05,
+        help="Policy entropy bonus (default: 0.05)",
     )
     parser.add_argument(
         "--critic-warmup-steps",
         type=int,
-        default=100,
+        default=30,
         help=(
-            "Gradient steps that update the critic only (Fig 4a default 100). "
-            "Lower values let the actor start learning before episode 4."
+            "Gradient steps that update the critic only (default: 30). "
+            "Lower values let the actor start learning after Episode 0."
         ),
     )
     parser.add_argument(
         "--actor-lr",
         type=float,
-        default=5e-4,
-        help="Adam learning rate for the actor (paper-silent; default 5e-4).",
+        default=7.5e-4,
+        help="Adam learning rate for the actor (default: 7.5e-4).",
     )
+    parser.add_argument(
+        "--mask-action0-steps",
+        type=int,
+        default=60,
+        help="Mask regular Action 0 from exploratory noise for early steps (default: 60 / Episodes 0 & 1).",
+    )
+    parser.add_argument(
+        "--no-prewarm-buffer",
+        dest="prewarm_buffer",
+        action="store_false",
+        help="Skip pre-warming replay buffer across all actions",
+    )
+    parser.set_defaults(prewarm_buffer=True)
     parser.add_argument(
         "--critic-action-input",
         choices=("one_hot", "logits"),
@@ -672,25 +782,27 @@ def main() -> int:
         try:
             beta_trace, actions, episode_rewards, train_meta, trainer, train_config = (
                 _train_trace(
-                env,
-                seed=args.seed,
-                num_episodes=args.episodes,
-                exploration_mode=args.exploration,
-                init_bias_scale=args.init_bias_scale,
-                temperature_start=args.temperature_start,
-                temperature_end=args.temperature_end,
-                logit_noise_std=args.logit_noise_std,
-                entropy_coeff=args.entropy_coeff,
-                critic_action_input=args.critic_action_input,
-                critic_warmup_steps=args.critic_warmup_steps,
-                actor_lr=args.actor_lr,
-                resume_path=args.resume,
-                start_episode=args.start_episode,
-                checkpoint_path=args.checkpoint,
-                checkpoint_interval=args.checkpoint_interval,
-                prior_beta_trace=prior_beta,
-                prior_actions=prior_actions,
-            )
+                    env,
+                    seed=args.seed,
+                    num_episodes=args.episodes,
+                    exploration_mode=args.exploration,
+                    init_bias_scale=args.init_bias_scale,
+                    temperature_start=args.temperature_start,
+                    temperature_end=args.temperature_end,
+                    logit_noise_std=args.logit_noise_std,
+                    entropy_coeff=args.entropy_coeff,
+                    critic_action_input=args.critic_action_input,
+                    critic_warmup_steps=args.critic_warmup_steps,
+                    actor_lr=args.actor_lr,
+                    mask_action0_steps=args.mask_action0_steps,
+                    prewarm_all_actions=args.prewarm_buffer,
+                    resume_path=args.resume,
+                    start_episode=args.start_episode,
+                    checkpoint_path=args.checkpoint,
+                    checkpoint_interval=args.checkpoint_interval,
+                    prior_beta_trace=prior_beta,
+                    prior_actions=prior_actions,
+                )
             )
             if not args.no_save_checkpoint and trainer is not None and train_config is not None:
                 ckpt_extra = {
@@ -723,7 +835,7 @@ def main() -> int:
         finally:
             env.close()
         elapsed = time.time() - t0
-        summary = _gate_summary(beta_trace)
+        summary = _gate_summary(beta_trace, actions=actions)
         cache = {
             "figure": "mehregan_fig4a",
             "seed": args.seed,
@@ -774,7 +886,7 @@ def main() -> int:
     print(f"wrote {args.out}", flush=True)
 
     # Always recompute digitization gates from the trace (series cache may hold a stale summary).
-    summary = _gate_summary(cache["beta_norm_trace"])
+    summary = _gate_summary(cache["beta_norm_trace"], actions=cache.get("actions"))
     gates = summary.get("gates", {})
     manifest = {
         "figure": "mehregan_fig4a",
