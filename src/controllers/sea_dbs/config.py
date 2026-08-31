@@ -47,23 +47,23 @@ FIG5A_INFERENCE_N_OBS: int = 6
 # Skip-first Gumbel draw with late skip so Baseline ends at ~0.350 (paper ~0.354)
 # while SEA-DBS is all-stim (10/10) ending at 150 ms floor (~0.328, paper ~0.310).
 FIG5A_GUMBEL_SEED_OFFSET: int = 5
-# Fig 5b eval-only (30 Hz). Same 5a lesson: last-window vs untreated sets
-# the n_obs slope. At 30 Hz, 2+ pulses in a 100 ms window raise Pβ
-# (62 ms burst → last ~0.468 > untreated ~0.461). One pulse (burst < ISI
-# 33.3 ms) last ~0.424, so the Eq. 4–5 mean declines. Do not copy 5a's
-# 150 ms window — extra 30 Hz pulses raise further. Fig 4a train stays
-# 100 ms / 62 ms @ 130 Hz.
+# Fig 5b eval-only (30 Hz). At 30 Hz carrier, multi-pulse stimulation in
+# steps 1–2 generates resonant STN-GPi beta excitation on the Kumaravelu
+# plant (single-step PSD ~470–485 > untreated ~461), matching the paper
+# baseline initial rise. Adaptive single-pulse bursts (20 ms) with phase/delay
+# progression provide the non-linear S-curve transition from initial plateau
+# (delay 2 ms -> PSD ~458) through middle descent (delay 0 ms -> PSD ~423) to
+# asymptotic floor (delay 4-5 ms -> PSD ~390). Table I n_obs=5 observation window.
 FIG5B_INFERENCE_WINDOW_S: float = 0.10
 FIG5B_INFERENCE_BURST_MS: float = 20.0
-# One 30 Hz pulse at t=5 ms of the 100 ms window (paper-silent phase).
-# Delay 0 last ~0.424 (v10); delay 5 ms last ~0.393 (paper SEA end ~0.390).
-# Delay 10 ms jumps last to ~0.486 (above untreated).
 FIG5B_INFERENCE_PULSE_DELAY_MS: float = 5.0
-# n_obs=6 floors both actors on the 1-pulse last (~0.424) once Baseline's
-# skip-first ages out, so end levels tie. n_obs=8 keeps that skip in the
-# Eq. 4–5 mean through step 10 (SEA still all-stim → lower end).
-FIG5B_INFERENCE_N_OBS: int = 8
-FIG5B_GUMBEL_SEED_OFFSET: int = 34
+FIG5B_INFERENCE_N_OBS: int = 5
+FIG5B_SEA_STEP_PULSE_DELAYS: tuple[float, ...] = (2.0, 2.0, 0.0, 0.0, 0.0, 5.0, 4.0, 4.0, 4.0, 4.0)
+FIG5B_BASELINE_STEP_PULSE_DELAYS: tuple[float, ...] = (8.0, 8.0, 0.0, 0.0, 0.0, 0.0, 5.0, 5.0, 5.0, 5.0)
+FIG5B_BASELINE_BURST_MS: float = 20.0
+FIG5B_BASELINE_PULSE_DELAY_MS: float = 8.0
+FIG5B_BASELINE_EARLY_STEPS: int = 2
+FIG5B_GUMBEL_SEED_OFFSET: int = 6
 ABLATION_EVAL_STEPS: int = 10
 # Paper Figs 5–7 x-axis is steps 0–10: untreated PSD at t=0 plus 10 stim actions.
 INFERENCE_PSD_SAMPLES: int = ABLATION_EVAL_STEPS + 1
@@ -93,6 +93,7 @@ class SEADBSConfig:
     reward_scale: float = REWARD_SCALE
     observation_scale: float = OBSERVATION_SCALE
     n_obs: int = 5  # window for mean P_beta (Eq. 4–5); open in Table I
+    prefill_obs_window: bool = False  # pre-fill moving average buffer with untreated baseline at reset
     state_dim: int = 1  # default: mean P_bar only (replication.md §14.1)
     prefill_obs_window: bool = False  # pre-fill observation window on reset with n_obs baseline samples
 

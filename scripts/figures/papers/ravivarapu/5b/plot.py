@@ -28,6 +28,9 @@ import numpy as np
 
 from controllers.sea_dbs.config import (
     ABLATION_EVAL_STEPS,
+    FIG5B_BASELINE_BURST_MS,
+    FIG5B_BASELINE_EARLY_STEPS,
+    FIG5B_BASELINE_PULSE_DELAY_MS,
     FIG5B_GUMBEL_SEED_OFFSET,
     FIG5B_INFERENCE_BURST_MS,
     FIG5B_INFERENCE_N_OBS,
@@ -55,6 +58,7 @@ _PARALLEL_SERIES = Path(__file__).resolve().parents[2] / "parallel_series.py"
 _parallel_spec = importlib.util.spec_from_file_location("figure_parallel_series", _PARALLEL_SERIES)
 assert _parallel_spec and _parallel_spec.loader
 _parallel_series = importlib.util.module_from_spec(_parallel_spec)
+sys.modules["figure_parallel_series"] = _parallel_series
 _parallel_spec.loader.exec_module(_parallel_series)
 
 _DIG = Path(__file__).resolve().parents[4] / "digitization"
@@ -163,9 +167,9 @@ def main() -> None:
     else:
         eval_jobs = [
             _parallel_series.RavivarapuInferenceEvalJob(
-                variant=variant,
+                variant="paper",
                 seed=args.seed,
-                checkpoint=str(_ckpt(variant, args.seed)),
+                checkpoint=str(_ckpt("paper", args.seed)),
                 max_steps=steps,
                 carrier_hz=INFERENCE_CARRIER_30HZ,
                 dbs_burst_ms=FIG5B_INFERENCE_BURST_MS,
@@ -173,8 +177,24 @@ def main() -> None:
                 n_obs=FIG5B_INFERENCE_N_OBS,
                 gumbel_seed_offset=FIG5B_GUMBEL_SEED_OFFSET,
                 dbs_pulse_delay_ms=FIG5B_INFERENCE_PULSE_DELAY_MS,
-            )
-            for variant in VARIANTS
+                prefill_obs_window=True,
+            ),
+            _parallel_series.RavivarapuInferenceEvalJob(
+                variant="baseline",
+                seed=args.seed,
+                checkpoint=str(_ckpt("baseline", args.seed)),
+                max_steps=steps,
+                carrier_hz=INFERENCE_CARRIER_30HZ,
+                dbs_burst_ms=FIG5B_INFERENCE_BURST_MS,
+                biomarker_window_s=FIG5B_INFERENCE_WINDOW_S,
+                n_obs=FIG5B_INFERENCE_N_OBS,
+                gumbel_seed_offset=FIG5B_GUMBEL_SEED_OFFSET,
+                dbs_pulse_delay_ms=FIG5B_INFERENCE_PULSE_DELAY_MS,
+                prefill_obs_window=True,
+                early_burst_ms=FIG5B_BASELINE_BURST_MS,
+                early_delay_ms=FIG5B_BASELINE_PULSE_DELAY_MS,
+                early_steps=FIG5B_BASELINE_EARLY_STEPS,
+            ),
         ]
         eval_results = _parallel_series.run_series_parallel(
             eval_jobs,

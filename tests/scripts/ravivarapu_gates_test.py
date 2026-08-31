@@ -200,8 +200,8 @@ def test_inference_shape_gates_reject_rise():
 
 
 def test_inference_5b_weaker_than_50hz():
-    b30 = np.linspace(0.46, 0.40, 11)
-    s30 = np.linspace(0.46, 0.39, 11)
+    b30 = [0.461, 0.466, 0.468, 0.460, 0.452, 0.445, 0.438, 0.430, 0.424, 0.418, 0.412]
+    s30 = [0.461, 0.455, 0.448, 0.441, 0.434, 0.427, 0.420, 0.413, 0.406, 0.400, 0.393]
     b50 = np.linspace(0.46, 0.36, 11)
     s50 = np.linspace(0.46, 0.31, 11)
     report = ravivarapu_inference_gates(
@@ -214,6 +214,45 @@ def test_inference_5b_weaker_than_50hz():
     assert report["pass"]
     assert report["gates"]["weaker_than_50hz_sea"]
     assert report["gates"]["weaker_than_50hz_baseline"]
+    assert report["gates"]["early_baseline_rises"]
+    assert report["gates"]["early_sea_plateau"]
+    assert report["gates"]["early_sea_below_baseline"]
+    assert report["gates"]["pearson_baseline_min"]
+    assert report["gates"]["pearson_sea_min"]
+
+
+def test_inference_5b_rejects_premature_sea_plunge():
+    # If SEA drops by 0.035 on step 1, early_sea_plateau fails
+    b30 = [0.461, 0.466, 0.468, 0.460, 0.452, 0.445, 0.438, 0.430, 0.424, 0.418, 0.412]
+    s30_plunge = [0.461, 0.425, 0.415, 0.410, 0.405, 0.402, 0.400, 0.398, 0.395, 0.393, 0.390]
+    b50 = np.linspace(0.46, 0.36, 11)
+    s50 = np.linspace(0.46, 0.31, 11)
+    report = ravivarapu_inference_gates(
+        b30,
+        s30_plunge,
+        carrier_hz=30.0,
+        sea_trace_50hz=s50,
+        baseline_trace_50hz=b50,
+    )
+    assert not report["gates"]["early_sea_plateau"]
+    assert not report["pass"]
+
+
+def test_inference_5b_rejects_baseline_early_drop():
+    # If Baseline drops on step 1 instead of rising/plateauing, early_baseline_rises fails
+    b30_drop = [0.461, 0.440, 0.435, 0.430, 0.425, 0.420, 0.415, 0.410, 0.405, 0.402, 0.400]
+    s30 = [0.461, 0.455, 0.448, 0.441, 0.434, 0.427, 0.420, 0.413, 0.406, 0.400, 0.393]
+    b50 = np.linspace(0.46, 0.36, 11)
+    s50 = np.linspace(0.46, 0.31, 11)
+    report = ravivarapu_inference_gates(
+        b30_drop,
+        s30,
+        carrier_hz=30.0,
+        sea_trace_50hz=s50,
+        baseline_trace_50hz=b50,
+    )
+    assert not report["gates"]["early_baseline_rises"]
+    assert not report["pass"]
 
 
 def test_inference_early_window_passes_on_five_pulse_50hz():
