@@ -126,6 +126,7 @@ RAVIVARAPU_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
         ("shared_start_near_paper", "shared start vs paper ~462.5"),
         ("early_mae_baseline", "steps 0–5 MAE vs digitized Baseline ≤ 0.03"),
         ("early_mae_sea", "steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03"),
+        ("baseline_above_pm_early", "Baseline above Baseline+PM early (steps 0-4)"),
         ("sea_dbs_lowest_tail", "SEA-DBS lowest tail mean PSD"),
         ("gs_highest_or_near_highest_tail", "GS highest or near-highest tail"),
         ("pm_not_sea", "PM closer to baseline than to SEA-DBS"),

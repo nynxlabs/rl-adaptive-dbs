@@ -414,8 +414,8 @@ def test_fig7_gates_pass():
 
     traces = {
         "baseline": [0.4606, 0.4606, 0.4385, 0.4385, 0.4164, 0.3943, 0.3721, 0.3500, 0.3500, 0.3500, 0.3500],
-        "baseline-pm": [0.4606, 0.4606, 0.4385, 0.4385, 0.4164, 0.3943, 0.3721, 0.3500, 0.3500, 0.3500, 0.3500],
-        "baseline-gs": [0.4606, 0.4606, 0.4606, 0.4606, 0.4385, 0.4164, 0.3943, 0.3721, 0.3721, 0.3721, 0.3721],
+        "baseline-pm": [0.4606, 0.4385, 0.4164, 0.3943, 0.3721, 0.3721, 0.3500, 0.3500, 0.3500, 0.3500, 0.3500],
+        "baseline-gs": [0.4606, 0.4606, 0.4606, 0.4385, 0.4385, 0.4164, 0.3943, 0.3943, 0.3943, 0.3943, 0.3943],
         "paper": [0.4606, 0.4385, 0.4164, 0.3943, 0.3721, 0.3500, 0.3279, 0.3279, 0.3279, 0.3279, 0.3279],
     }
     report = ravivarapu_fig7_gates(traces)
@@ -423,3 +423,5 @@ def test_fig7_gates_pass():
     assert report["gates"]["shared_start_near_paper"]
     assert report["gates"]["sea_dbs_lowest_tail"]
     assert report["gates"]["pm_not_sea"]
+    # Baseline must be above or equal to Baseline+PM across steps 0-4
+    assert all(b >= pm for b, pm in zip(traces["baseline"][:5], traces["baseline-pm"][:5]))
