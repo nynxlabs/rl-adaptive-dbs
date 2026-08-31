@@ -325,15 +325,15 @@ Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper` ([se
 
 ### Replication
 
-![Replication Fig 7](images/7/ablation_psd_v21.png)
+![Replication Fig 7](images/7/ablation_psd_v22.png)
 
 <!-- caption-7:start -->
-**Caption:** Ablation study GPi beta PSD over 10 steps (seed 0); pass=True; Baseline vs +PM vs +GS vs SEA-DBS. (v21)
+**Caption:** Ablation study GPi beta PSD over 10 steps (seed 0); pass=True; Baseline vs +PM vs +GS vs SEA-DBS. (v22)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/7/manifest.json`
 <!-- caption-7:end -->
 
-**Status:** **Pass** (rep v21) — ablation (Baseline / +PM / +GS / SEA-DBS); Manifest `artifacts/figures/papers/ravivarapu/7/manifest.json`.
+**Status:** **Pass** (rep v22) — ablation (Baseline / +PM / +GS / SEA-DBS); Manifest `artifacts/figures/papers/ravivarapu/7/manifest.json`.
 
 <!-- gates-7:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/7/manifest.json`; overall **`pass`**: yes, 2026-08-31). Every row is required for exit.
