@@ -49,6 +49,11 @@ def evaluate(
     untreated_window_s: float | None = None,
     plant_integration_mode: str | None = None,
     prefill_obs_window: bool | None = None,
+    early_burst_ms: float | None = None,
+    early_delay_ms: float | None = None,
+    early_steps: int = 0,
+    step_pulse_delays: Sequence[float] | None = None,
+    step_burst_ms: Sequence[float] | None = None,
 ) -> dict[str, Any]:
     """Roll out a trained actor; returns summary metrics and per-step traces.
 
@@ -85,7 +90,13 @@ def evaluate(
     actor, ckpt_cfg = load_actor_from_payload(payload, device=device)
     cfg = ckpt_cfg
     if config is not None:
-        cfg = replace(cfg, variant=config.variant, seed=config.seed, device=config.device)
+        cfg = replace(
+            cfg,
+            variant=config.variant,
+            seed=config.seed,
+            device=config.device,
+            prefill_obs_window=getattr(config, "prefill_obs_window", False),
+        )
     if max_steps is not None:
         cfg = replace(cfg, max_episode_steps=int(max_steps))
     hz = float(carrier_hz if carrier_hz is not None else cfg.carrier_hz)
@@ -135,7 +146,16 @@ def evaluate(
             ep_reward = 0.0
             ep_p_beta = [float(info.get("p_beta_norm", 0.0))]
             ep_actions: list[int] = []
-            for _ in range(cfg.max_episode_steps):
+            for step_idx in range(cfg.max_episode_steps):
+                if early_steps > 0 and step_idx < early_steps:
+                    early_cfg = cfg
+                    if early_burst_ms is not None:
+                        early_cfg = replace(early_cfg, dbs_burst_ms=float(early_burst_ms))
+                    if early_delay_ms is not None:
+                        early_cfg = replace(early_cfg, dbs_pulse_delay_ms=float(early_delay_ms))
+                    env.config = early_cfg
+                else:
+                    env.config = cfg
                 state_t = torch.as_tensor(state, dtype=torch.float32, device=cfg.device).unsqueeze(0)
                 with torch.no_grad():
                     logits = policy(state_t)

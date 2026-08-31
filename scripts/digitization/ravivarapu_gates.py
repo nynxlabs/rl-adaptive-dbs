@@ -790,6 +790,9 @@ INFERENCE_MID_LO = 4
 INFERENCE_MID_SEA_MAE_MAX = 0.012
 INFERENCE_PAPER_Y_TO_NORM = 1000.0
 INFERENCE_EARLY_SERIES_50HZ = ("Baseline 50Hz", "SEA-DBS 50Hz")
+INFERENCE_EARLY_SERIES_30HZ = ("Baseline 30Hz", "SEA-DBS 30Hz")
+INFERENCE_30HZ_PEARSON_MIN = 0.70
+INFERENCE_30HZ_EARLY_MAE_MAX = 0.025
 
 
 def _paper_early_norm(stem: str, series: str, n: int = INFERENCE_EARLY_N) -> np.ndarray | None:
@@ -895,6 +898,38 @@ def ravivarapu_inference_gates(
         late_drop_p = float(p[INFERENCE_LATE_LO] - p_end)
         gates["late_baseline_declines"] = late_drop_b > INFERENCE_LATE_DROP_MIN
         gates["late_sea_declines"] = late_drop_p > INFERENCE_LATE_DROP_MIN
+    if carrier_hz == 30.0 and b.size >= INFERENCE_EARLY_N and p.size >= INFERENCE_EARLY_N:
+        paper_b = _paper_early_norm("fig5b", INFERENCE_EARLY_SERIES_30HZ[0])
+        paper_s = _paper_early_norm("fig5b", INFERENCE_EARLY_SERIES_30HZ[1])
+        paper_b_full = _paper_early_norm("fig5b", INFERENCE_EARLY_SERIES_30HZ[0], n=11)
+        paper_s_full = _paper_early_norm("fig5b", INFERENCE_EARLY_SERIES_30HZ[1], n=11)
+        b_early = b[:INFERENCE_EARLY_N]
+        p_early = p[:INFERENCE_EARLY_N]
+        if paper_b is not None and paper_s is not None:
+            early_mae_b = float(np.mean(np.abs(b_early - paper_b)))
+            early_mae_p = float(np.mean(np.abs(p_early - paper_s)))
+            gates["early_mae_baseline"] = early_mae_b <= INFERENCE_30HZ_EARLY_MAE_MAX
+            gates["early_mae_sea"] = early_mae_p <= INFERENCE_30HZ_EARLY_MAE_MAX
+            # Paper Fig 5b: Baseline rises at step 1 or stays elevated above onset
+            gates["early_baseline_rises"] = b1 >= b0 - 0.002
+            # Paper Fig 5b: SEA-DBS delayed drop / plateau on steps 0-2 (drop <= 0.015 step 1, <= 0.025 step 2)
+            gates["early_sea_plateau"] = bool((p0 - p1 <= 0.015) and (p0 - p2 <= 0.025))
+            # Paper: Baseline above SEA from step 1 through 5
+            gates["early_sea_below_baseline"] = bool(
+                np.all(p_early[1:] < b_early[1:])
+            )
+        # Late window declines
+        late_drop_b = float(b[INFERENCE_LATE_LO] - b_end)
+        late_drop_p = float(p[INFERENCE_LATE_LO] - p_end)
+        gates["late_baseline_declines"] = late_drop_b > INFERENCE_LATE_DROP_MIN
+        gates["late_sea_declines"] = late_drop_p > INFERENCE_LATE_DROP_MIN
+        # Trajectory correlations vs digitized paper
+        if paper_b_full is not None and b.size >= 11:
+            r_b = float(np.corrcoef(b[:11], paper_b_full)[0, 1])
+            gates["pearson_baseline_min"] = bool(np.isfinite(r_b) and r_b >= INFERENCE_30HZ_PEARSON_MIN)
+        if paper_s_full is not None and p.size >= 11:
+            r_s = float(np.corrcoef(p[:11], paper_s_full)[0, 1])
+            gates["pearson_sea_min"] = bool(np.isfinite(r_s) and r_s >= INFERENCE_30HZ_PEARSON_MIN)
     metrics = {
         "carrier_hz": carrier_hz,
         "b_start": b0,

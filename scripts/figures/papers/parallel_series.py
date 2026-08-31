@@ -87,6 +87,11 @@ class RavivarapuInferenceEvalJob:
     dbs_pulse_delay_ms: float | None = None
     untreated_window_s: float | None = None
     prefill_obs_window: bool = False
+    early_burst_ms: float | None = None
+    early_delay_ms: float | None = None
+    early_steps: int = 0
+    step_pulse_delays: tuple[float, ...] | None = None
+    step_burst_ms: tuple[float, ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -113,6 +118,11 @@ def ravivarapu_inference_eval_worker(job: RavivarapuInferenceEvalJob) -> Ravivar
         "n_obs": job.n_obs,
         "gumbel_seed_offset": job.gumbel_seed_offset,
         "prefill_obs_window": job.prefill_obs_window,
+        "early_burst_ms": job.early_burst_ms,
+        "early_delay_ms": job.early_delay_ms,
+        "early_steps": job.early_steps,
+        "step_pulse_delays": job.step_pulse_delays,
+        "step_burst_ms": job.step_burst_ms,
     }
     if job.dbs_pulse_delay_ms is not None:
         kwargs["dbs_pulse_delay_ms"] = job.dbs_pulse_delay_ms
@@ -120,7 +130,7 @@ def ravivarapu_inference_eval_worker(job: RavivarapuInferenceEvalJob) -> Ravivar
         kwargs["untreated_window_s"] = job.untreated_window_s
     payload = evaluate(
         Path(job.checkpoint),
-        config=SEADBSConfig(variant=job.variant, seed=job.seed),
+        config=SEADBSConfig(variant=job.variant, seed=job.seed, prefill_obs_window=job.prefill_obs_window),
         **kwargs,
     )
     actions = payload["action_trajectories"][0]
