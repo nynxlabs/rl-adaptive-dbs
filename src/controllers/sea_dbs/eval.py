@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -147,15 +148,17 @@ def evaluate(
             ep_p_beta = [float(info.get("p_beta_norm", 0.0))]
             ep_actions: list[int] = []
             for step_idx in range(cfg.max_episode_steps):
-                if early_steps > 0 and step_idx < early_steps:
-                    early_cfg = cfg
-                    if early_burst_ms is not None:
-                        early_cfg = replace(early_cfg, dbs_burst_ms=float(early_burst_ms))
-                    if early_delay_ms is not None:
-                        early_cfg = replace(early_cfg, dbs_pulse_delay_ms=float(early_delay_ms))
-                    env.config = early_cfg
-                else:
-                    env.config = cfg
+                step_cfg = cfg
+                if step_burst_ms is not None and step_idx < len(step_burst_ms):
+                    step_cfg = replace(step_cfg, dbs_burst_ms=float(step_burst_ms[step_idx]))
+                elif early_steps > 0 and step_idx < early_steps and early_burst_ms is not None:
+                    step_cfg = replace(step_cfg, dbs_burst_ms=float(early_burst_ms))
+
+                if step_pulse_delays is not None and step_idx < len(step_pulse_delays):
+                    step_cfg = replace(step_cfg, dbs_pulse_delay_ms=float(step_pulse_delays[step_idx]))
+                elif early_steps > 0 and step_idx < early_steps and early_delay_ms is not None:
+                    step_cfg = replace(step_cfg, dbs_pulse_delay_ms=float(early_delay_ms))
+                env.config = step_cfg
                 state_t = torch.as_tensor(state, dtype=torch.float32, device=cfg.device).unsqueeze(0)
                 with torch.no_grad():
                     logits = policy(state_t)
