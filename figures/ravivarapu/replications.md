@@ -7,8 +7,8 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 <!-- summary:start -->
 | Panel | Description | Status |
 |-------|-------------|--------|
-| Fig 4a | Training PSD vs episode | Pass (v68) |
-| Fig 4b | Training reward vs episode | Pass (v13) |
+| Fig 4a | Training PSD vs episode | Pass (v69) |
+| Fig 4b | Training reward vs episode | Pass (v14) |
 | Fig 5a | Inference @ 50 Hz | Pass |
 | Fig 5b | Inference @ 30 Hz | Pass |
 | Fig 6 | FP16 PTQ @ 50 Hz | Pass |
@@ -33,15 +33,15 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_psd_v68.png)
+![Replication Fig 4a](images/4a/training_psd_v69.png)
 
 <!-- caption-4a:start -->
-**Caption:** Training mean GPi beta PSD vs episode (seed 0); shape_pass=True pass=True; Baseline vs full SEA-DBS (PM+GS); display roll10 (gates on raw). (v68)
+**Caption:** Training mean GPi beta PSD vs episode (seed 0); shape_pass=True pass=True; Baseline vs full SEA-DBS (PM+GS); display roll10 (gates on raw). (v69)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`
 <!-- caption-4a:end -->
 
-**Status:** **Pass** (rep v68) — `shape_pass` and full `pass`; `fixed_episode_seed_until=2`; `fig4_ravivarapu_config_v109`; display roll10 (gates on raw); paper overlay (black baseline, grey SEA-DBS). Manifest `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`.
+**Status:** **Pass** (rep v69) — `shape_pass` and full `pass`; `fixed_episode_seed_until=2`; `fig4_ravivarapu_config_v109`; display roll10 (gates on raw); paper overlay (black baseline, grey SEA-DBS). Manifest `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`.
 
 <!-- gates-4a:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4a.json`; **`shape_pass`**: yes, **`pass`**: yes, 2026-08-31). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
@@ -98,10 +98,10 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4a/plot.p
 
 ### Replication
 
-![Replication Fig 4b](images/4b/training_reward_v13.png)
+![Replication Fig 4b](images/4b/training_reward_v14.png)
 
 <!-- caption-4b:start -->
-**Caption:** Training episode reward vs episode (seed 0); paired with Fig 4a cache; display roll10 (gates on raw). (v13)
+**Caption:** Training episode reward vs episode (seed 0); paired with Fig 4a cache; display roll10 (gates on raw). (v14)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4b.json`
 <!-- caption-4b:end -->
