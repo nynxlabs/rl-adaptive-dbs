@@ -34,6 +34,10 @@ FIG5A_INFERENCE_WINDOW_S: float = 0.15
 FIG5A_INFERENCE_BURST_MS: float = 150.0
 # Untreated baseline shot duration (100 ms) so step 0 starts at paper untreated level (~0.461 / PSD 461.5).
 FIG5A_UNTREATED_WINDOW_S: float = 0.10
+# Pre-fill the observation window on reset with n_obs baseline samples so moving average
+# reflects a physical buffer entering from steady untreated state (Eq. 4–5), matching
+# the paper's gradual early decline curve.
+FIG5A_PREFILL_OBS_WINDOW: bool = True
 # Fig 5a plots 11 samples. n_obs=6 lets onset age out at step 6 so SEA
 # sits on the 150 ms floor (~0.328) for steps 6–10 (paper ~0.332→0.310).
 # n_obs=10 holds SEA ~0.35 through step 9 (leftover untreated in the mean).
@@ -90,6 +94,7 @@ class SEADBSConfig:
     observation_scale: float = OBSERVATION_SCALE
     n_obs: int = 5  # window for mean P_beta (Eq. 4–5); open in Table I
     state_dim: int = 1  # default: mean P_bar only (replication.md §14.1)
+    prefill_obs_window: bool = False  # pre-fill observation window on reset with n_obs baseline samples
 
     # Table I
     actor_lr: float = ACTOR_LR

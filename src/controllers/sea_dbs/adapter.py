@@ -183,7 +183,11 @@ class SEA_DBSEnvAdapter(gym.Env):
             record_spikes=True,
         )
         raw = self._raw_p_beta(result)
-        self._obs_window.append(self._normalize_p_beta(raw))
+        norm_val = self._normalize_p_beta(raw)
+        if self.config.prefill_obs_window:
+            self._obs_window.extend([norm_val] * self.config.n_obs)
+        else:
+            self._obs_window.append(norm_val)
         obs = self._observation_from_window()
         mean_norm = self._mean_p_beta()
         info = {

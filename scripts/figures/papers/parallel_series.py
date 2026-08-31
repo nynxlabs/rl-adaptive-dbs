@@ -86,6 +86,7 @@ class RavivarapuInferenceEvalJob:
     gumbel_seed_offset: int
     dbs_pulse_delay_ms: float | None = None
     untreated_window_s: float | None = None
+    prefill_obs_window: bool = False
 
 
 @dataclass(frozen=True)
@@ -111,6 +112,7 @@ def ravivarapu_inference_eval_worker(job: RavivarapuInferenceEvalJob) -> Ravivar
         "biomarker_window_s": job.biomarker_window_s,
         "n_obs": job.n_obs,
         "gumbel_seed_offset": job.gumbel_seed_offset,
+        "prefill_obs_window": job.prefill_obs_window,
     }
     if job.dbs_pulse_delay_ms is not None:
         kwargs["dbs_pulse_delay_ms"] = job.dbs_pulse_delay_ms
