@@ -47,7 +47,13 @@ def test_window_mean_and_rel_close():
 def test_fig2a_paper_self_consistent():
     paper = load_refined(refined_path("2a"))
     # Feeding paper as replication should pass ordering + ratio gates.
-    report = fig2_time_gates(paper, paper=paper, panel="2a")
+    report = fig2_time_gates(
+        paper,
+        paper=paper,
+        panel="2a",
+        rep_untreated="pd",
+        rep_treated="PD 130Hz Treatment",
+    )
     assert report["gates"]["treated_below_untreated_late"]
     assert report["gates"]["late_ratio_near_paper"]
     assert report["pass"]

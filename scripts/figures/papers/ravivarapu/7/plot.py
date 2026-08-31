@@ -17,14 +17,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from controllers.sea_dbs.config import ABLATION_EVAL_STEPS, SEADBSConfig
-from controllers.sea_dbs.eval import evaluate_ablation_steps
-from controllers.sea_dbs.trainer import train_sea_dbs
+from rl_adaptive_dbs.parallel_workers import TrainSeedJob, train_seed_worker
 
 _RESUME_CLI = Path(__file__).resolve().parents[2] / "resume_cli.py"
 _resume_spec = importlib.util.spec_from_file_location("figure_resume_cli", _RESUME_CLI)
 assert _resume_spec and _resume_spec.loader
 _resume_cli = importlib.util.module_from_spec(_resume_spec)
 _resume_spec.loader.exec_module(_resume_cli)
+
+_PARALLEL_SERIES = Path(__file__).resolve().parents[2] / "parallel_series.py"
+_parallel_spec = importlib.util.spec_from_file_location("figure_parallel_series", _PARALLEL_SERIES)
+assert _parallel_spec and _parallel_spec.loader
+_parallel_series = importlib.util.module_from_spec(_parallel_spec)
+_parallel_spec.loader.exec_module(_parallel_series)
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
 _spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
@@ -62,8 +67,10 @@ def ensure_checkpoints(
     smoke: bool,
     resume: bool = False,
     checkpoint_interval: int = 50,
+    parallel_series: int = 0,
 ) -> None:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    jobs: list[TrainSeedJob] = []
     for variant in VARIANTS:
         ckpt = CACHE_DIR / f"{variant}_train{seed}.pt"
         if ckpt.is_file() and not resume:
@@ -73,12 +80,21 @@ def ensure_checkpoints(
             cfg = cfg.for_smoke(episodes=2, max_steps=5)
         else:
             cfg = replace(cfg, num_episodes=150)
-        train_sea_dbs(
-            config=cfg,
-            checkpoint_path=ckpt,
-            resume_path=ckpt if ckpt.is_file() and resume else None,
-            checkpoint_interval=checkpoint_interval,
+        jobs.append(
+            TrainSeedJob(
+                controller="sea_dbs",
+                variant=variant,
+                seed=seed,
+                episodes=cfg.num_episodes if not smoke else cfg.num_episodes,
+                checkpoint_dir=CACHE_DIR,
+                smoke=smoke,
+                resume_path=ckpt if ckpt.is_file() and resume else None,
+                checkpoint_interval=checkpoint_interval,
+            )
         )
+    if not jobs:
+        return
+    _parallel_series.run_series_parallel(jobs, train_seed_worker, parallel_series)
 
 
 def evaluate_gates(traces: dict[str, list[float]]) -> dict[str, Any]:
@@ -103,6 +119,7 @@ def main() -> None:
         default=_resume_cli.DEFAULT_CHECKPOINT_INTERVAL,
         help=f"Save checkpoint every N episodes (default {_resume_cli.DEFAULT_CHECKPOINT_INTERVAL})",
     )
+    _parallel_series.add_parallel_series_argument(parser)
     args = parser.parse_args()
     steps = 5 if args.smoke else ABLATION_EVAL_STEPS
     if not args.plot_only:
@@ -111,17 +128,24 @@ def main() -> None:
             smoke=args.smoke,
             resume=bool(args.retrain),
             checkpoint_interval=args.checkpoint_interval,
+            parallel_series=args.parallel_series,
         )
 
-    traces: dict[str, list[float]] = {}
-    for variant in VARIANTS:
-        ckpt = CACHE_DIR / f"{variant}_train{args.seed}.pt"
-        payload = evaluate_ablation_steps(
-            ckpt,
-            config=SEADBSConfig(variant=variant, seed=args.seed),
+    eval_jobs = [
+        _parallel_series.RavivarapuAblationEvalJob(
+            variant=variant,
+            seed=args.seed,
+            checkpoint=str(CACHE_DIR / f"{variant}_train{args.seed}.pt"),
             n_steps=steps,
         )
-        traces[variant] = payload["p_beta_trajectories"][0]
+        for variant in VARIANTS
+    ]
+    eval_results = _parallel_series.run_series_parallel(
+        eval_jobs,
+        _parallel_series.ravivarapu_ablation_eval_worker,
+        args.parallel_series,
+    )
+    traces = {variant: trace for variant, trace in eval_results}
 
     fig, ax = plt.subplots(figsize=(7, 4))
     for variant in VARIANTS:

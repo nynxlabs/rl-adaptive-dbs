@@ -47,7 +47,7 @@ import importlib.util
 import json
 import sys
 import time
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -102,6 +102,12 @@ _resume_spec = importlib.util.spec_from_file_location("figure_resume_cli", _RESU
 assert _resume_spec and _resume_spec.loader
 _resume_cli = importlib.util.module_from_spec(_resume_spec)
 _resume_spec.loader.exec_module(_resume_cli)
+
+_PARALLEL_SERIES = Path(__file__).resolve().parents[2] / "parallel_series.py"
+_parallel_spec = importlib.util.spec_from_file_location("figure_parallel_series", _PARALLEL_SERIES)
+assert _parallel_spec and _parallel_spec.loader
+_parallel_series = importlib.util.module_from_spec(_parallel_spec)
+_parallel_spec.loader.exec_module(_parallel_series)
 
 FIGURES_DIR = Path("figures/mehregan/images/6a")
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/6a")
@@ -683,22 +689,134 @@ def _trailing_condition_trace(
     )
 
 
+@dataclass(frozen=True)
+class _TrailingEvalJob:
+    key: str
+    variant_slug: str
+    checkpoint: str
+    seed: int
+    skip_regular: bool
+    fp32_greedy_actions: tuple[int, ...] | None
+    times: tuple[float, ...]
+
+
+@dataclass(frozen=True)
+class _TrailingEvalResult:
+    key: str
+    variant_payload: dict[str, Any]
+    trace: list[float]
+
+
+def _trailing_eval_worker(job: _TrailingEvalJob) -> _TrailingEvalResult:
+    _parallel_series.bootstrap_worker_threads()
+    t0 = time.time()
+    try:
+        ckpt = Path(job.checkpoint)
+        eval_variant = "paper" if job.key == "fp32" else job.variant_slug
+        fp32_actions = list(job.fp32_greedy_actions) if job.fp32_greedy_actions else None
+        actions, eval_note = _variant_actions_fine(
+            ckpt,
+            variant=eval_variant,
+            seed=job.seed,
+            skip_regular=job.skip_regular,
+            fp32_greedy_actions=fp32_actions,
+        )
+        times = np.asarray(job.times, dtype=float)
+        plant = PythonPlant(config=PlantConfig(pd=1, dt_ms=PAPER_DT_MS))
+        alphabet = BurstPatternAlphabet(
+            mean_hz=MEAN_HZ,
+            step_duration_s=TRAILING_RL_STEP_S,
+            dt_ms=float(PAPER_DT_MS),
+            skip_regular=job.skip_regular,
+        )
+        try:
+            trace = _trailing_condition_trace(
+                plant,
+                seed=job.seed,
+                label=job.key,
+                segment_actions=actions,
+                alphabet=alphabet,
+                times=times,
+            )
+        finally:
+            plant.close()
+        variant_payload: dict[str, Any] = {
+            "variant_slug": job.variant_slug,
+            "actions": actions,
+            "p_beta": trace.tolist(),
+            "elapsed_s": round(time.time() - t0, 2),
+        }
+        if eval_note:
+            variant_payload["eval_mode"] = eval_note
+        return _TrailingEvalResult(job.key, variant_payload, trace.tolist())
+    except Exception as exc:  # noqa: BLE001 — cache eval failure in artifact
+        return _TrailingEvalResult(
+            job.key,
+            {
+                "error": repr(exc),
+                "variant_slug": job.variant_slug,
+                "checkpoint": job.checkpoint,
+                "elapsed_s": round(time.time() - t0, 2),
+            },
+            [],
+        )
+
+
+@dataclass(frozen=True)
+class _SegmentEvalJob:
+    key: str
+    variant_slug: str
+    checkpoint: str
+    seed: int
+    skip_regular: bool
+
+
+@dataclass(frozen=True)
+class _SegmentEvalResult:
+    key: str
+    result: dict[str, Any]
+
+
+def _segment_eval_worker(job: _SegmentEvalJob) -> _SegmentEvalResult:
+    _parallel_series.bootstrap_worker_threads()
+    t0 = time.time()
+    try:
+        env = _make_eval_env(skip_regular=job.skip_regular)
+        try:
+            result = evaluate(
+                env,
+                Path(job.checkpoint),
+                config=EvalConfig(seed=job.seed, eval_steps=EVAL_STEPS),
+                variant=job.variant_slug,
+            )
+            result["variant_slug"] = job.variant_slug
+            result["elapsed_s"] = round(time.time() - t0, 2)
+            return _SegmentEvalResult(job.key, result)
+        finally:
+            env.close()
+    except Exception as exc:  # noqa: BLE001 — cache eval failure in artifact
+        return _SegmentEvalResult(
+            job.key,
+            {
+                "error": repr(exc),
+                "variant_slug": job.variant_slug,
+                "checkpoint": job.checkpoint,
+                "elapsed_s": round(time.time() - t0, 2),
+            },
+        )
+
+
 def _run_trailing_variant_evals(
     *,
     fp32_checkpoint: Path,
     qat_checkpoint: Path,
     seed: int,
     skip_regular: bool = SKIP_REGULAR,
+    parallel_series: int = 0,
 ) -> dict[str, Any]:
     t0_all = time.time()
     times = _fig2a.sample_times(_fig2a.STEP_S, duration_s=_fig2a.DISPLAY_S)
-    plant = PythonPlant(config=PlantConfig(pd=1, dt_ms=PAPER_DT_MS))
-    alphabet = BurstPatternAlphabet(
-        mean_hz=MEAN_HZ,
-        step_duration_s=TRAILING_RL_STEP_S,
-        dt_ms=float(PAPER_DT_MS),
-        skip_regular=skip_regular,
-    )
+    times_tuple = tuple(float(t) for t in times.tolist())
     variants = {
         "fp32": ("paper", fp32_checkpoint),
         "ptq-fp16": ("ptq-fp16", fp32_checkpoint),
@@ -729,58 +847,74 @@ def _run_trailing_variant_evals(
         "Fig 6a trailing eval — 0.2 s samples, 2 s window (Fig 5a / 2a protocol)",
         flush=True,
     )
-    try:
-        fp32_greedy_actions: list[int] | None = None
-        for key, (variant, ckpt) in variants.items():
-            if not ckpt.exists():
-                payload["variants"][key] = {"error": f"missing checkpoint: {ckpt}"}
-                continue
-            print(f"eval {key} ({variant})...", flush=True)
-            t0 = time.time()
-            try:
-                eval_variant = "paper" if key == "fp32" else variant
-                if key == "fp32":
-                    actions, eval_note = _variant_actions_fine(
-                        ckpt,
-                        variant=eval_variant,
-                        seed=seed,
-                        skip_regular=skip_regular,
-                    )
-                    fp32_greedy_actions = actions
-                else:
-                    actions, eval_note = _variant_actions_fine(
-                        ckpt,
-                        variant=eval_variant,
-                        seed=seed,
-                        skip_regular=skip_regular,
-                        fp32_greedy_actions=fp32_greedy_actions,
-                    )
-                trace = _trailing_condition_trace(
-                    plant,
+    fp32_greedy_actions: tuple[int, ...] | None = None
+    fp32_ckpt = fp32_checkpoint
+    if not fp32_ckpt.exists():
+        payload["variants"]["fp32"] = {"error": f"missing checkpoint: {fp32_ckpt}"}
+    else:
+        print("eval fp32 (paper)...", flush=True)
+        try:
+            fp32_res = _trailing_eval_worker(
+                _TrailingEvalJob(
+                    key="fp32",
+                    variant_slug="paper",
+                    checkpoint=str(fp32_ckpt),
                     seed=seed,
-                    label=key,
-                    segment_actions=actions,
-                    alphabet=alphabet,
-                    times=times,
+                    skip_regular=skip_regular,
+                    fp32_greedy_actions=None,
+                    times=times_tuple,
                 )
-                variant_payload: dict[str, Any] = {
-                    "variant_slug": variant,
-                    "actions": actions,
-                    "p_beta": trace.tolist(),
-                    "elapsed_s": round(time.time() - t0, 2),
-                }
-                if eval_note:
-                    variant_payload["eval_mode"] = eval_note
-                payload["traces"][key] = trace.tolist()
-                payload["variants"][key] = variant_payload
-            except Exception as exc:  # noqa: BLE001 — cache eval failure in artifact
-                payload["variants"][key] = {
-                    "error": repr(exc),
-                    "variant_slug": variant,
-                    "checkpoint": str(ckpt),
-                }
-    finally:
-        plant.close()
+            )
+            payload["traces"]["fp32"] = fp32_res.trace
+            payload["variants"]["fp32"] = fp32_res.variant_payload
+            fp32_greedy_actions = tuple(fp32_res.variant_payload["actions"])
+        except Exception as exc:  # noqa: BLE001 — cache eval failure in artifact
+            payload["variants"]["fp32"] = {
+                "error": repr(exc),
+                "variant_slug": "paper",
+                "checkpoint": str(fp32_ckpt),
+            }
+
+    tail_jobs: list[_TrailingEvalJob] = []
+    for key, (variant_slug, ckpt) in variants.items():
+        if key == "fp32":
+            continue
+        if not ckpt.exists():
+            payload["variants"][key] = {"error": f"missing checkpoint: {ckpt}"}
+            continue
+        tail_jobs.append(
+            _TrailingEvalJob(
+                key=key,
+                variant_slug=variant_slug,
+                checkpoint=str(ckpt),
+                seed=seed,
+                skip_regular=skip_regular,
+                fp32_greedy_actions=fp32_greedy_actions,
+                times=times_tuple,
+            )
+        )
+
+    if tail_jobs:
+        for job in tail_jobs:
+            print(f"eval {job.key} ({job.variant_slug})...", flush=True)
+        try:
+            results = _parallel_series.run_series_parallel(
+                tail_jobs,
+                _trailing_eval_worker,
+                parallel_series,
+            )
+            for res in results:
+                payload["traces"][res.key] = res.trace
+                payload["variants"][res.key] = res.variant_payload
+        except Exception as exc:  # noqa: BLE001 — rare pool failure
+            for job in tail_jobs:
+                if job.key not in payload["variants"]:
+                    payload["variants"][job.key] = {
+                        "error": repr(exc),
+                        "variant_slug": job.variant_slug,
+                        "checkpoint": job.checkpoint,
+                    }
+
     payload["elapsed_s"] = round(time.time() - t0_all, 2)
     return payload
 
@@ -863,52 +997,50 @@ def _run_segment_variant_evals(
     qat_checkpoint: Path,
     seed: int,
     skip_regular: bool = SKIP_REGULAR,
+    parallel_series: int = 0,
 ) -> dict[str, Any]:
-    env = _make_eval_env(skip_regular=skip_regular)
-    try:
-        variants = {
-            "fp32": ("paper", fp32_checkpoint),
-            "ptq-fp16": ("ptq-fp16", fp32_checkpoint),
-            "ptq-int8": ("ptq-int8", fp32_checkpoint),
-            "qat": ("qat", qat_checkpoint),
-        }
-        payload: dict[str, Any] = {
-            "figure": "mehregan_fig6a",
-            "sampling": "segment",
-            "mean_hz": MEAN_HZ,
-            "seed": seed,
-            "eval_steps": EVAL_STEPS,
-            "skip_regular": skip_regular,
-            "eval_step_duration_s": EVAL_STEP_DURATION_S,
-            "fp32_checkpoint": str(fp32_checkpoint),
-            "qat_checkpoint": str(qat_checkpoint),
-            "variants": {},
-        }
-        for key, (variant, ckpt) in variants.items():
-            if not ckpt.exists():
-                payload["variants"][key] = {"error": f"missing checkpoint: {ckpt}"}
-                continue
-            print(f"eval {key} ({variant})...", flush=True)
-            t0 = time.time()
-            try:
-                result = evaluate(
-                    env,
-                    ckpt,
-                    config=EvalConfig(seed=seed, eval_steps=EVAL_STEPS),
-                    variant=variant,
-                )
-                result["variant_slug"] = variant
-                result["elapsed_s"] = round(time.time() - t0, 2)
-                payload["variants"][key] = result
-            except Exception as exc:  # noqa: BLE001 — cache eval failure in artifact
-                payload["variants"][key] = {
-                    "error": repr(exc),
-                    "variant_slug": variant,
-                    "checkpoint": str(ckpt),
-                }
-        return payload
-    finally:
-        env.close()
+    variants = {
+        "fp32": ("paper", fp32_checkpoint),
+        "ptq-fp16": ("ptq-fp16", fp32_checkpoint),
+        "ptq-int8": ("ptq-int8", fp32_checkpoint),
+        "qat": ("qat", qat_checkpoint),
+    }
+    payload: dict[str, Any] = {
+        "figure": "mehregan_fig6a",
+        "sampling": "segment",
+        "mean_hz": MEAN_HZ,
+        "seed": seed,
+        "eval_steps": EVAL_STEPS,
+        "skip_regular": skip_regular,
+        "eval_step_duration_s": EVAL_STEP_DURATION_S,
+        "fp32_checkpoint": str(fp32_checkpoint),
+        "qat_checkpoint": str(qat_checkpoint),
+        "variants": {},
+    }
+    jobs: list[_SegmentEvalJob] = []
+    for key, (variant, ckpt) in variants.items():
+        if not ckpt.exists():
+            payload["variants"][key] = {"error": f"missing checkpoint: {ckpt}"}
+            continue
+        print(f"eval {key} ({variant})...", flush=True)
+        jobs.append(
+            _SegmentEvalJob(
+                key=key,
+                variant_slug=variant,
+                checkpoint=str(ckpt),
+                seed=seed,
+                skip_regular=skip_regular,
+            )
+        )
+    if jobs:
+        results = _parallel_series.run_series_parallel(
+            jobs,
+            _segment_eval_worker,
+            parallel_series,
+        )
+        for res in results:
+            payload["variants"][res.key] = res.result
+    return payload
 
 
 def _run_variant_evals(
@@ -918,6 +1050,7 @@ def _run_variant_evals(
     seed: int,
     skip_regular: bool = SKIP_REGULAR,
     sampling: str = DEFAULT_SAMPLING,
+    parallel_series: int = 0,
 ) -> dict[str, Any]:
     if sampling == "trailing":
         return _run_trailing_variant_evals(
@@ -925,12 +1058,14 @@ def _run_variant_evals(
             qat_checkpoint=qat_checkpoint,
             seed=seed,
             skip_regular=skip_regular,
+            parallel_series=parallel_series,
         )
     return _run_segment_variant_evals(
         fp32_checkpoint=fp32_checkpoint,
         qat_checkpoint=qat_checkpoint,
         seed=seed,
         skip_regular=skip_regular,
+        parallel_series=parallel_series,
     )
 
 
@@ -1292,6 +1427,7 @@ def main() -> int:
         help="Resume QAT training from this checkpoint (default: fresh QAT train)",
     )
     _resume_cli.add_training_resume_args(parser)
+    _parallel_series.add_parallel_series_argument(parser)
     parser.add_argument(
         "--train-fp32",
         action="store_true",
@@ -1405,6 +1541,7 @@ def main() -> int:
             seed=args.seed,
             skip_regular=skip_regular,
             sampling=args.sampling,
+            parallel_series=args.parallel_series,
         )
         if payload.get("sampling") == "trailing" and QAT_OPEN_LOOP_FALLBACK:
             payload = _apply_qat_open_loop_fallback(

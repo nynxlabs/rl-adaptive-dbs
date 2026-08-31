@@ -162,7 +162,7 @@ Qualitative replication of Mehregan et al. Fig. 2a — GPi beta-band power ($P_\
 | **Plot** | Dense line trace 0–12 s; dashed vertical at **2 s**; y-axis label **PSD** |
 | **Alt mode** | `--sampling segment` — six whole-segment **2 s** bins (step plot) |
 | **Seeds** | Default **0**; `--seeds` for mean across multiple IC draws |
-| **Comparison** | [figures/mehregan/replications.md](figures/mehregan/replications.md) |
+| **Comparison** | [figures/mehregan/replications.md](../figures/mehregan/replications.md) |
 
 ```bash
 uv run python scripts/figures/papers/mehregan/2a/plot.py
@@ -183,7 +183,7 @@ Windowed Error Index (EI, Mehregan Eq. 2 / Gao Eq. 6) over **12 s** for **PD no 
 | **SMCτ source** | `smc_pulse_source='drive'` (default) or `'cor_spikes'` |
 | **EI definition** | `envs.plant.biomarkers.error_index` — Mehregan Eq. (2) / Gao et al. (ICCPS 2020) Eqs. (4)–(6): misfires / (n · |SMC|); 25 ms TH response window |
 | **Plot** | Dense line 0–12 s; y-axis **Error Index** 0–0.4; dashed vertical at **2 s** |
-| **Comparison** | [figures/mehregan/replications.md](figures/mehregan/replications.md) |
+| **Comparison** | [figures/mehregan/replications.md](../figures/mehregan/replications.md) |
 
 ```bash
 uv run --group figures python scripts/figures/papers/mehregan/2b/plot.py

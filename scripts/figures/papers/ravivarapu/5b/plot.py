@@ -38,7 +38,6 @@ from controllers.sea_dbs.config import (
     INFERENCE_PSD_SAMPLES,
     SEADBSConfig,
 )
-from controllers.sea_dbs.eval import evaluate
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
 _spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
@@ -51,6 +50,12 @@ _resume_spec = importlib.util.spec_from_file_location("figure_resume_cli", _RESU
 assert _resume_spec and _resume_spec.loader
 _resume_cli = importlib.util.module_from_spec(_resume_spec)
 _resume_spec.loader.exec_module(_resume_cli)
+
+_PARALLEL_SERIES = Path(__file__).resolve().parents[2] / "parallel_series.py"
+_parallel_spec = importlib.util.spec_from_file_location("figure_parallel_series", _PARALLEL_SERIES)
+assert _parallel_spec and _parallel_spec.loader
+_parallel_series = importlib.util.module_from_spec(_parallel_spec)
+_parallel_spec.loader.exec_module(_parallel_series)
 
 _DIG = Path(__file__).resolve().parents[4] / "digitization"
 if str(_DIG) not in sys.path:
@@ -139,6 +144,7 @@ def main() -> None:
     )
     _resume_cli.add_push_kb_arg(parser)
     _resume_cli.add_update_report3_arg(parser)
+    _parallel_series.add_parallel_series_argument(parser)
     args = parser.parse_args()
     _resume_cli.configure_promote_publish(args, _figure_promote)
     steps = 5 if args.smoke else ABLATION_EVAL_STEPS
@@ -155,33 +161,31 @@ def main() -> None:
         steps = int(cached.get("steps", len(next(iter(traces.values()))) - 1))
         n_expected = int(cached.get("n_psd_samples", len(next(iter(traces.values())))))
     else:
-        traces = {}
-        for variant in VARIANTS:
-            payload = evaluate(
-                _ckpt(variant, args.seed),
-                config=SEADBSConfig(variant=variant, seed=args.seed),
+        eval_jobs = [
+            _parallel_series.RavivarapuInferenceEvalJob(
+                variant=variant,
+                seed=args.seed,
+                checkpoint=str(_ckpt(variant, args.seed)),
                 max_steps=steps,
                 carrier_hz=INFERENCE_CARRIER_30HZ,
-                action_mode="gumbel",
                 dbs_burst_ms=FIG5B_INFERENCE_BURST_MS,
                 biomarker_window_s=FIG5B_INFERENCE_WINDOW_S,
                 n_obs=FIG5B_INFERENCE_N_OBS,
                 gumbel_seed_offset=FIG5B_GUMBEL_SEED_OFFSET,
                 dbs_pulse_delay_ms=FIG5B_INFERENCE_PULSE_DELAY_MS,
             )
-            traces[variant] = payload["p_beta_trajectories"][0]
-            actions[variant] = payload["action_trajectories"][0]
-            eval_meta[variant] = {
-                "carrier_hz": payload["carrier_hz"],
-                "dbs_burst_ms": payload["dbs_burst_ms"],
-                "biomarker_window_s": payload.get("biomarker_window_s"),
-                "n_obs": payload.get("n_obs"),
-                "dbs_pulse_delay_ms": payload.get("dbs_pulse_delay_ms"),
-                "gumbel_seed_offset": FIG5B_GUMBEL_SEED_OFFSET,
-                "n_psd_samples": payload["n_psd_samples"],
-                "action_mode": payload["action_mode"],
-                "stim_frac": float(np.mean(payload["action_trajectories"][0])),
-            }
+            for variant in VARIANTS
+        ]
+        eval_results = _parallel_series.run_series_parallel(
+            eval_jobs,
+            _parallel_series.ravivarapu_inference_eval_worker,
+            args.parallel_series,
+        )
+        traces = {}
+        for result in eval_results:
+            traces[result.variant] = result.trace
+            actions[result.variant] = result.actions
+            eval_meta[result.variant] = result.eval_meta
 
     traces_50 = None
     if FIG5A_SERIES.is_file():
