@@ -15,6 +15,7 @@ from nguyen_gates import (  # noqa: E402
     fig3_gates,
     fig4_training_gates,
     fig5_spikes_energy_gates,
+    fig6_power_gates,
     fig6_training_gates,
     fig7_eval_gates,
     load_curves,
@@ -91,13 +92,41 @@ def test_fig6_paper_self_consistent():
     freqx, freqy = freq["Smoothed"] if "Smoothed" in freq else freq["Raw"]
     pwx, pwy = pw["Smoothed"] if "Smoothed" in pw else pw["Raw"]
     episodes = np.arange(n, dtype=float)
+    ab_interp = np.interp(episodes, abx, aby)
+    amp_interp = np.interp(episodes, ampx, ampy)
+    freq_interp = np.interp(episodes, freqx, freqy)
+    pw_interp = np.interp(episodes, pwx, pwy)
+
+    power_rep = fig6_power_gates(ab_interp)
+    assert power_rep["gates"]["alpha_beta_early_above_theta"]
+    assert power_rep["gates"]["alpha_beta_early_near_paper"]
+    assert power_rep["gates"]["alpha_beta_mid_near_paper"]
+    assert power_rep["gates"]["alpha_beta_drops_by_100"]
+    assert power_rep["gates"]["alpha_beta_post100_below_theta"]
+    assert power_rep["gates"]["alpha_beta_post100_near_paper"]
+    assert power_rep["gates"]["alpha_beta_late_below_theta"]
+    assert power_rep["gates"]["alpha_beta_late_near_paper"]
+    assert power_rep["gates"]["alpha_beta_mean_near_paper"]
+    assert power_rep["gates"]["alpha_beta_monotonic_drop"]
+    assert power_rep["gates"]["alpha_beta_trend_near_paper"]
+    assert power_rep["gates"]["alpha_beta_drop_magnitude_near_paper"]
+    assert power_rep["gates"]["alpha_beta_series_has_variance"]
+    assert power_rep["gates"]["alpha_beta_late_stable"]
+    assert power_rep["pass"]
+
     report = fig6_training_gates(
-        np.interp(episodes, abx, aby),
-        np.interp(episodes, ampx, ampy),
-        np.interp(episodes, freqx, freqy),
-        np.interp(episodes, pwx, pwy),
+        ab_interp,
+        amp_interp,
+        freq_interp,
+        pw_interp,
     )
     assert report["gates"]["alpha_beta_decreases_like_paper"]
+    assert report["gates"]["alpha_beta_late_below_theta"]
+    assert report["gates"]["alpha_beta_late_near_paper"]
+    assert report["gates"]["amp_late_near_paper"]
+    assert report["gates"]["freq_late_near_paper"]
+    assert report["gates"]["pw_late_near_paper"]
+    assert report["gates"]["late_params_stable"]
     assert report["pass"]
 
 
@@ -105,7 +134,11 @@ def test_fig6_paper_self_consistent():
 def test_fig7_paper_self_consistent():
     paper = load_curves("fig7")
     ax, ay = paper["average"]
-    trajectories = [ay.tolist() for _ in range(3)]
+    sort_idx = np.argsort(ax)
+    ax, ay = ax[sort_idx], ay[sort_idx]
+    steps = np.arange(26)
+    interp_y = np.interp(steps, ax, ay)
+    trajectories = [interp_y.tolist() for _ in range(3)]
     report = fig7_eval_gates(trajectories)
     assert report["gates"]["eval_protocol_ok"]
     assert report["gates"]["overall_mean_near_paper"]

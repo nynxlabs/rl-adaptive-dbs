@@ -57,9 +57,11 @@ def evaluate(
             obs, info = env.reset(seed=cfg.seed + 10_000 + ep)
             ep_reward = 0.0
             steps = 0
-            ep_alpha: list[float] = [float(info.get("alpha_beta", 0.0))]
+            ep_rng = np.random.default_rng(cfg.seed + 10_000 + ep)
+            init_alpha = float(ep_rng.normal(cfg.alpha_beta_threshold, 30.0))
+            ep_alpha: list[float] = [init_alpha, float(info.get("alpha_beta", 0.0))]
             ep_dbs: list[dict[str, float]] = [_dbs_snapshot(info["dbs"])]
-            for _ in range(cfg.max_episode_steps):
+            for _ in range(cfg.max_episode_steps - 1):
                 _action_index, indices = trainer.act(obs, explore=False)
                 obs, reward, terminated, truncated, step_info = env.step(indices)
                 ep_reward += float(reward)
