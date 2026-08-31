@@ -216,15 +216,15 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 
 ### Replication
 
-![Replication Fig 5b](images/5b/inference_30hz_v17.png)
+![Replication Fig 5b](images/5b/inference_30hz_v19.png)
 
 <!-- caption-5b:start -->
-**Caption:** Inference GPi beta PSD vs step @ 30 Hz (seed 0, Gumbel-max); pass=True; Baseline vs SEA-DBS. (v17)
+**Caption:** Inference GPi beta PSD vs step @ 30 Hz (seed 0, Gumbel-max); pass=True; Baseline vs SEA-DBS. (v19)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/5b/manifest.json`
 <!-- caption-5b:end -->
 
-**Status:** **Pass** (rep v17) — inference @ 30 Hz; Manifest `artifacts/figures/papers/ravivarapu/5b/manifest.json`.
+**Status:** **Pass** (rep v19) — inference @ 30 Hz; Manifest `artifacts/figures/papers/ravivarapu/5b/manifest.json`.
 
 <!-- gates-5b:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/5b/manifest.json`; overall **`pass`**: yes, 2026-08-31). Every row is required for exit.
@@ -240,15 +240,15 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 | `carrier_hz_ok` | carrier frequency 30 Hz | yes |
 | `weaker_than_50hz_sea` | 30 Hz SEA-DBS weaker suppression than 50 Hz panel | yes |
 | `weaker_than_50hz_baseline` | 30 Hz baseline weaker suppression than 50 Hz panel | yes |
-| `early_baseline_rises` | baseline PSD initial rise at step 1-2 | — |
-| `early_sea_plateau` | SEA-DBS delayed drop / plateau on steps 0-2 | — |
-| `early_sea_below_baseline` | SEA-DBS below baseline on steps 1-5 | — |
-| `early_mae_baseline` | steps 0–5 MAE vs digitized baseline ≤ 0.025 | — |
-| `early_mae_sea` | steps 0–5 MAE vs digitized SEA-DBS ≤ 0.025 | — |
-| `late_baseline_declines` | baseline keeps declining steps 5→10 | — |
-| `late_sea_declines` | SEA-DBS keeps declining steps 5→10 | — |
-| `pearson_baseline_min` | baseline trajectory correlation vs paper (r ≥ 0.70) | — |
-| `pearson_sea_min` | SEA-DBS trajectory correlation vs paper (r ≥ 0.70) | — |
+| `early_baseline_rises` | baseline PSD initial rise at step 1-2 | yes |
+| `early_sea_plateau` | SEA-DBS delayed drop / plateau on steps 0-2 | yes |
+| `early_sea_below_baseline` | SEA-DBS below baseline on steps 1-5 | yes |
+| `early_mae_baseline` | steps 0–5 MAE vs digitized baseline ≤ 0.025 | yes |
+| `early_mae_sea` | steps 0–5 MAE vs digitized SEA-DBS ≤ 0.025 | yes |
+| `late_baseline_declines` | baseline keeps declining steps 5→10 | yes |
+| `late_sea_declines` | SEA-DBS keeps declining steps 5→10 | yes |
+| `pearson_baseline_min` | baseline trajectory correlation vs paper (r ≥ 0.70) | yes |
+| `pearson_sea_min` | SEA-DBS trajectory correlation vs paper (r ≥ 0.70) | yes |
 <!-- gates-5b:end -->
 
 **Run:**
@@ -325,15 +325,15 @@ Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper` ([se
 
 ### Replication
 
-![Replication Fig 7](images/7/ablation_psd_v19.png)
+![Replication Fig 7](images/7/ablation_psd_v21.png)
 
 <!-- caption-7:start -->
-**Caption:** Ablation study GPi beta PSD over 10 steps (seed 0); pass=True; Baseline vs +PM vs +GS vs SEA-DBS. (v19)
+**Caption:** Ablation study GPi beta PSD over 10 steps (seed 0); pass=True; Baseline vs +PM vs +GS vs SEA-DBS. (v21)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/7/manifest.json`
 <!-- caption-7:end -->
 
-**Status:** **Pass** (rep v19) — ablation (Baseline / +PM / +GS / SEA-DBS); Manifest `artifacts/figures/papers/ravivarapu/7/manifest.json`.
+**Status:** **Pass** (rep v21) — ablation (Baseline / +PM / +GS / SEA-DBS); Manifest `artifacts/figures/papers/ravivarapu/7/manifest.json`.
 
 <!-- gates-7:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/7/manifest.json`; overall **`pass`**: yes, 2026-08-31). Every row is required for exit.
