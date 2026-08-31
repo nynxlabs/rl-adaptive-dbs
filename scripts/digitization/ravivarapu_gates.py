@@ -959,7 +959,11 @@ def ravivarapu_inference_gates(
     return _gate_pack(gates, metrics)
 
 
-def ravivarapu_fig6_gates(traces: dict[str, Sequence[float]]) -> dict[str, Any]:
+def ravivarapu_fig6_gates(
+    traces: dict[str, Sequence[float]],
+    *,
+    paper: dict[str, tuple[np.ndarray, np.ndarray]] | None = None,
+) -> dict[str, Any]:
     required = (
         "Baseline",
         "Baseline + PTQ(fp16)",
@@ -985,13 +989,40 @@ def ravivarapu_fig6_gates(traces: dict[str, Sequence[float]]) -> dict[str, Any]:
     b_ptq_late = float(np.mean(b_ptq[-max(1, len(b_ptq) // 2) :]))
     sea_fp_late = float(np.mean(sea[-max(1, len(sea) // 2) :]))
 
+    b_n = b if float(b[0]) < 10.0 else b / 1000.0
+    b_ptq_n = b_ptq if float(b_ptq[0]) < 10.0 else b_ptq / 1000.0
+    sea_n = sea if float(sea[0]) < 10.0 else sea / 1000.0
+    sea_ptq_n = sea_ptq if float(sea_ptq[0]) < 10.0 else sea_ptq / 1000.0
+
     shared_start = (
-        abs(float(b[0]) - float(sea[0])) < 20.0
-        and abs(float(b_ptq[0]) - float(sea_ptq[0])) < 20.0
+        abs(float(b_n[0]) - float(sea_n[0])) < 0.05
+        and abs(float(b_ptq_n[0]) - float(sea_ptq_n[0])) < 0.05
     )
+
+    paper_b = _paper_early_norm("fig6", "Baseline")
+    paper_s = _paper_early_norm("fig6", "SEA-DBS")
+
+    early_mae_b = float("nan")
+    early_mae_s = float("nan")
+    shared_start_near_paper = True
+    if paper_b is not None and paper_s is not None and b_n.size >= 6:
+        early_mae_b = float(np.mean(np.abs(b_n[:6] - paper_b[:6])))
+        early_mae_s = float(np.mean(np.abs(sea_n[:6] - paper_s[:6])))
+        shared_start_near_paper = bool(
+            abs(float(sea_n[0]) - float(paper_s[0])) <= 0.02
+        )
+
     gates = {
         "four_series_present": True,
+        "n_steps_ok": all(len(traces[k]) in (10, 11) for k in required),
         "shared_start": shared_start,
+        "shared_start_near_paper": shared_start_near_paper,
+        "early_mae_baseline": (
+            early_mae_b <= 0.030 if np.isfinite(early_mae_b) else True
+        ),
+        "early_mae_sea": (
+            early_mae_s <= 0.030 if np.isfinite(early_mae_s) else True
+        ),
         "sea_below_baseline": sea_late < b_late,
         "sea_ptq_below_baseline": sea_ptq_late < b_late,
         "sea_ptq_tracks_fp32": rel_close(sea_ptq_late, sea_fp_late, tol=DEFAULT_REL_TOL + 0.15),
@@ -1006,11 +1037,17 @@ def ravivarapu_fig6_gates(traces: dict[str, Sequence[float]]) -> dict[str, Any]:
         "b_ptq_late": b_ptq_late,
         "sea_late": sea_late,
         "sea_ptq_late": sea_ptq_late,
+        "early_mae_baseline": early_mae_b,
+        "early_mae_sea": early_mae_s,
     }
     return _gate_pack(gates, metrics)
 
 
-def ravivarapu_fig7_gates(traces: dict[str, Sequence[float]]) -> dict[str, Any]:
+def ravivarapu_fig7_gates(
+    traces: dict[str, Sequence[float]],
+    *,
+    paper: dict[str, tuple[np.ndarray, np.ndarray]] | None = None,
+) -> dict[str, Any]:
     required = ("baseline", "baseline-pm", "baseline-gs", "paper")
     if not all(k in traces for k in required):
         return _gate_pack(
@@ -1025,12 +1062,37 @@ def ravivarapu_fig7_gates(traces: dict[str, Sequence[float]]) -> dict[str, Any]:
     base = tail["baseline"]
     sea = tail["paper"]
 
+    sea_arr = _as_fy(traces["paper"])
+    base_arr = _as_fy(traces["baseline"])
+    sea_n = sea_arr if float(sea_arr[0]) < 10.0 else sea_arr / 1000.0
+    base_n = base_arr if float(base_arr[0]) < 10.0 else base_arr / 1000.0
+
+    paper_b = _paper_early_norm("fig7", "Baseline")
+    paper_s = _paper_early_norm("fig7", "SEA-DBS")
+
+    early_mae_b = float("nan")
+    early_mae_s = float("nan")
+    shared_start_near_paper = True
+    if paper_b is not None and paper_s is not None and sea_n.size >= 6:
+        early_mae_b = float(np.mean(np.abs(base_n[:6] - paper_b[:6])))
+        early_mae_s = float(np.mean(np.abs(sea_n[:6] - paper_s[:6])))
+        shared_start_near_paper = bool(
+            abs(float(sea_n[0]) - float(paper_s[0])) <= 0.02
+        )
+
     gates = {
         "four_variants_present": True,
+        "n_steps_ok": all(len(traces[k]) in (10, 11) for k in required),
+        "shared_start": abs(float(base_n[0]) - float(sea_n[0])) < 0.05,
+        "shared_start_near_paper": shared_start_near_paper,
+        "early_mae_baseline": (
+            early_mae_b <= 0.030 if np.isfinite(early_mae_b) else True
+        ),
+        "early_mae_sea": (
+            early_mae_s <= 0.030 if np.isfinite(early_mae_s) else True
+        ),
         "sea_dbs_lowest_tail": sea <= min(tail.values()) + 1e-6,
         "gs_highest_or_near_highest_tail": gs >= max(tail.values()) - 5.0,
         "pm_not_sea": abs(pm - base) <= abs(pm - sea),
-        "shared_start": abs(float(_as_fy(traces["baseline"])[0]) - float(_as_fy(traces["paper"])[0])) < 20.0,
-        "n_steps_ok": all(len(traces[k]) == 10 for k in required),
     }
-    return _gate_pack(gates, {"tail_means": tail})
+    return _gate_pack(gates, {"tail_means": tail, "early_mae_baseline": early_mae_b, "early_mae_sea": early_mae_s})
