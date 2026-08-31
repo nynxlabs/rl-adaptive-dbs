@@ -64,8 +64,8 @@ FIG5B_BASELINE_BURST_MS: float = 20.0
 FIG5B_BASELINE_PULSE_DELAY_MS: float = 8.0
 FIG5B_BASELINE_EARLY_STEPS: int = 2
 FIG5B_GUMBEL_SEED_OFFSET: int = 6
-# Fig 7 ablation eval: distinct action profiles across variants (no overlapping traces).
-FIG7_GUMBEL_SEED_OFFSET: int = 840
+# Fig 7 ablation eval: distinct action profiles across variants (no overlapping traces, smooth monotonic declines).
+FIG7_GUMBEL_SEED_OFFSET: int = 1247
 ABLATION_EVAL_STEPS: int = 10
 # Paper Figs 5–7 x-axis is steps 0–10: untreated PSD at t=0 plus 10 stim actions.
 INFERENCE_PSD_SAMPLES: int = ABLATION_EVAL_STEPS + 1
