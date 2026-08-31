@@ -182,11 +182,21 @@ Post-train **inference** at **50 Hz** over **10 steps** (Fig. 5(a)).
 
 ## Fig 5b — inference @ 30 Hz
 
-Same layout at **30 Hz** (Fig. 5(b)).
+Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b)).
 
-**Qualitative gates:** weaker suppression than 5a; SEA still slightly below Baseline at end; shared start; both decline modestly.
+**Qualitative gates:** weaker suppression than 5a; Baseline shows initial beta resonant rise/elevation at steps 1–2 before gradual decline; SEA-DBS shows a delayed, gentle drop (plateau) over steps 0–2 before smooth decline; SEA-DBS strictly below Baseline on late steps; both decline overall.
 
-**Automated shape gates:** same ordering as 5a at 30 Hz, plus `weaker_than_50hz_*` (both variants end above the 50 Hz panel). Digitized 30 Hz drops are ~0.06 Baseline / ~0.07 SEA with a small end gap (~0.01); gates still require the gap and any net decline, not those magnitudes.
+**Automated tiered gates (paper-anchored):**
+- `shared_start`: Baseline and SEA-DBS start in high untreated band ($|s_0 - b_0| \le 0.05$).
+- `early_baseline_rises`: Baseline rises or stays elevated at steps 1–2 ($b_1 \ge b_0 - 0.002$).
+- `early_sea_plateau`: SEA-DBS delayed drop / plateau on steps 0–2 ($s_0 - s_1 \le 0.015$, $s_0 - s_2 \le 0.025$).
+- `early_sea_below_baseline`: SEA-DBS below Baseline across early steps 1–5.
+- `early_mae_*`: Steps 0–5 MAE $\le 0.025$ vs digitized paper curves.
+- `late_*_declines`: Both traces keep declining through steps 5–10.
+- `paper_end_below_baseline`: SEA-DBS ends below Baseline ($s_{10} < b_{10}$).
+- `paper_steeper_drop`: Overall SEA-DBS drop exceeds Baseline drop.
+- `pearson_*_min`: Pearson correlation $r \ge 0.70$ vs digitized paper trajectories.
+- `weaker_than_50hz_*`: Both 30 Hz variants end higher than the 50 Hz panel.
 
 ---
 
