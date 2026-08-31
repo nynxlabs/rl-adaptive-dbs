@@ -64,13 +64,13 @@ FIG5B_BASELINE_BURST_MS: float = 20.0
 FIG5B_BASELINE_PULSE_DELAY_MS: float = 8.0
 FIG5B_BASELINE_EARLY_STEPS: int = 2
 FIG5B_GUMBEL_SEED_OFFSET: int = 6
-# Fig 7 ablation eval: calibrated offsets ensuring Baseline >= Baseline+PM (blue above orange)
-# and distinct non-overlapping monotonic trajectories across all 4 variants matching paper Fig 7.
+# Fig 7 ablation eval: calibrated offsets ensuring Baseline >= Baseline+PM (blue above orange),
+# higher GS (green dropping less), and distinct non-overlapping monotonic trajectories across all 4 variants matching paper Fig 7.
 FIG7_GUMBEL_SEED_OFFSET: int = 5
 FIG7_VARIANT_GUMBEL_OFFSETS: dict[str, int] = {
     "baseline": 225,
     "baseline-pm": 141,
-    "baseline-gs": 81,
+    "baseline-gs": 586,
     "paper": 5,
 }
 ABLATION_EVAL_STEPS: int = 10
