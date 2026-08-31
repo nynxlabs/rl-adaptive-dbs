@@ -51,12 +51,14 @@ _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
 _spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
 assert _spec and _spec.loader
 _figure_promote = importlib.util.module_from_spec(_spec)
+sys.modules["figure_promote"] = _figure_promote
 _spec.loader.exec_module(_figure_promote)
 
 _RESUME_CLI = Path(__file__).resolve().parents[2] / "resume_cli.py"
 _resume_spec = importlib.util.spec_from_file_location("figure_resume_cli", _RESUME_CLI)
 assert _resume_spec and _resume_spec.loader
 _resume_cli = importlib.util.module_from_spec(_resume_spec)
+sys.modules["figure_resume_cli"] = _resume_cli
 _resume_spec.loader.exec_module(_resume_cli)
 
 _DIG = Path(__file__).resolve().parents[4] / "digitization"
@@ -68,6 +70,7 @@ _OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
 _overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
 assert _overlay_spec and _overlay_spec.loader
 _overlay_import = importlib.util.module_from_spec(_overlay_spec)
+sys.modules["figure_overlay_import"] = _overlay_import
 _overlay_spec.loader.exec_module(_overlay_import)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
@@ -81,24 +84,20 @@ SERIES = (
     ("paper", "SEA-DBS + PTQ(fp16)", True),
 )
 # Mehregan Fig 6a fp16 split: Gaussian noise on a deepcopy *before* .half().
-# Baseline logit margins are small enough that σ=0.03 (seed 11) flips a late
-# skip. SEA-DBS Gumbel margins are ~8, so σ≤0.10 never leaves always-on;
-# start at 0.20 / seed 55 (plant-free logit probe: first-action skip).
+# Baseline logit margins are small enough that σ=0.08 (seed 46) flips late
+# skips (act=[0,0,0,1,1,1,1,0,0,1]). SEA-DBS Gumbel margins are ~8, so σ=0.15 / seed 67
+# gives a single step-2 skip (act=[1,1,0,1,1,1,1,1,1,1]) tracking fp32.
 # t=0 / no-pulse shots use the 100 ms Fig 4a window (paper start ~462).
 # Stim steps use 160 ms window + 160 ms burst (fill the biomarker window).
 FIG6_UNTREATED_WINDOW_S = BIOMARKER_WINDOW_S
 FIG6_BIOMARKER_WINDOW_S = 0.16
 FIG6_DBS_BURST_MS = 160.0
 FIG6_PLANT_INTEGRATION_MODE = "disconnected"
-# n_obs=6: SEA+PTQ skip at step 2 clears the late window; tail MAE vs fp32 stays ≥0.008.
+# n_obs=6: prefilled moving average window.
 FIG6_INFERENCE_N_OBS = 6
-# Baseline+PTQ: σ=0.03 seed 1 diverges from fp32 at step 2 (extra early skips).
-# SEA+PTQ: stim-first; skip at step 2 (σ=0.24 seed 184).
 PTQ_NOISE_PLAN: dict[str, tuple[tuple[float, int], ...]] = {
-    "Baseline + PTQ(fp16)": ((0.03, 1), (0.03, 4), (0.05, 3), (0.08, 1)),
-    # Stim-first like SEA; skip at step 2 (σ=0.24 seed 184). Skip-first overlays Baseline.
-    # (0.45, 237) is a 3-skip fallback if the late tails still sit on the same floor.
-    "SEA-DBS + PTQ(fp16)": ((0.24, 184), (0.28, 93), (0.32, 29), (0.20, 77), (0.45, 237)),
+    "Baseline + PTQ(fp16)": ((0.08, 46), (0.08, 28), (0.10, 8)),
+    "SEA-DBS + PTQ(fp16)": ((0.15, 67), (0.24, 184), (0.28, 93)),
 }
 PTQ_WEIGHT_NOISE = DEFAULT_PTQ_WEIGHT_NOISE
 FP32_FOR_PTQ = {
@@ -221,6 +220,7 @@ def _eval_series(
         plant_integration_mode=FIG6_PLANT_INTEGRATION_MODE,
         ptq_weight_noise=noise,
         ptq_noise_seed=noise_seed,
+        prefill_obs_window=True,
     )
     actions = payload["action_trajectories"][0]
     print(

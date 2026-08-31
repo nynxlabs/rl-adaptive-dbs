@@ -108,7 +108,11 @@ RAVIVARAPU_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
     ],
     "6": [
         ("four_series_present", "fp32 + PTQ for baseline and SEA-DBS"),
+        ("n_steps_ok", "11 PSD samples (t=0 + 10 stim steps)"),
         ("shared_start", "paired series share pre-stim level"),
+        ("shared_start_near_paper", "shared start vs paper ~462.5"),
+        ("early_mae_baseline", "steps 0–5 MAE vs digitized Baseline ≤ 0.03"),
+        ("early_mae_sea", "steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03"),
         ("sea_below_baseline", "SEA-DBS fp32 below baseline fp32 late"),
         ("sea_ptq_below_baseline", "SEA-DBS PTQ below baseline fp32 late"),
         ("sea_ptq_tracks_fp32", "SEA-DBS PTQ tracks fp32"),
@@ -117,11 +121,14 @@ RAVIVARAPU_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
     ],
     "7": [
         ("four_variants_present", "baseline / +PM / +GS / SEA-DBS"),
+        ("n_steps_ok", "11 PSD samples (t=0 + 10 stim steps)"),
+        ("shared_start", "baseline and SEA-DBS agree at step 0"),
+        ("shared_start_near_paper", "shared start vs paper ~462.5"),
+        ("early_mae_baseline", "steps 0–5 MAE vs digitized Baseline ≤ 0.03"),
+        ("early_mae_sea", "steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03"),
         ("sea_dbs_lowest_tail", "SEA-DBS lowest tail mean PSD"),
         ("gs_highest_or_near_highest_tail", "GS highest or near-highest tail"),
         ("pm_not_sea", "PM closer to baseline than to SEA-DBS"),
-        ("shared_start", "baseline and SEA-DBS agree at step 0"),
-        ("n_steps_ok", "10 inference steps"),
     ],
 }
 

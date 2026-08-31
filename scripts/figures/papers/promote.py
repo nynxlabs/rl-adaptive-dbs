@@ -2022,6 +2022,7 @@ def promote_ravivarapu_4b(*, manifest: dict[str, Any], png_path: Path, update_do
 PAPER_RAVIVARAPU_5A_PNG = "figures/ravivarapu/images/5a/inference_50hz.png"
 PAPER_RAVIVARAPU_5B_PNG = "figures/ravivarapu/images/5b/inference_30hz.png"
 PAPER_RAVIVARAPU_6_PNG = "figures/ravivarapu/images/6/ptq_fp16_50hz.png"
+PAPER_RAVIVARAPU_7_PNG = "figures/ravivarapu/images/7/ablation_psd.png"
 
 
 def _ravivarapu_inference_status_line(manifest: dict[str, Any], *, panel: str) -> str:
@@ -2172,8 +2173,51 @@ def promote_ravivarapu_6(*, manifest: dict[str, Any], png_path: Path, update_doc
             )
             text = "<!-- caption-6:end -->".join((head, tail))
         PAPER_RAVIVARAPU_DOC.write_text(text)
+def _ravivarapu_fig7_status_line(manifest: dict[str, Any]) -> str:
+    gates = manifest.get("gates") or {}
+    rep = f" (rep v{manifest['png_version']})" if manifest.get("png_version") is not None else ""
+    manifest_rel = "artifacts/figures/papers/ravivarapu/7/manifest.json"
+    if bool(gates.get("pass", False)):
+        return f"**Status:** **Pass**{rep} — ablation (Baseline / +PM / +GS / SEA-DBS); Manifest `{manifest_rel}`."
+    failed = [k for k, v in gates.items() if isinstance(v, bool) and not v and not k.startswith("smoke_")]
+    fail_note = ", ".join(failed[:4]) if failed else "see gates"
+    return f"**Status:** Fail{rep} (`{fail_note}`). Manifest `{manifest_rel}`."
+
+
+def promote_ravivarapu_7(*, manifest: dict[str, Any], png_path: Path, update_docs: bool = True) -> dict[str, str]:
+    caption = manifest.get("caption") or "see manifest"
+    if manifest.get("png_version") is not None:
+        caption = f"{caption} (v{manifest['png_version']})"
+    if PAPER_RAVIVARAPU_DOC.exists() and update_docs:
+        text = PAPER_RAVIVARAPU_DOC.read_text()
+        if "<!-- caption-7:start -->" in text:
+            text = _replace_marker(
+                text,
+                "caption-7",
+                _caption_block(
+                    caption,
+                    "artifacts/figures/papers/ravivarapu/7/manifest.json",
+                ),
+            )
+        text = re.sub(
+            r"!\[Replication Fig 7\]\(images/7/\w+_v\d+\.png\)",
+            f"![Replication Fig 7](images/7/{png_path.name})",
+            text,
+        )
+        parts = text.split("<!-- caption-7:end -->", 1)
+        if len(parts) == 2:
+            head, tail = parts
+            tail = re.sub(
+                r"(?m)^\*\*Status:\*\*.*$",
+                _ravivarapu_fig7_status_line(manifest),
+                tail,
+                count=1,
+            )
+            text = "<!-- caption-7:end -->".join((head, tail))
+        PAPER_RAVIVARAPU_DOC.write_text(text)
     refresh_ravivarapu_gate_tables(update_docs=update_docs)
-    materialize_ship_png(png_path, PAPER_RAVIVARAPU_6_PNG)
+    materialize_ship_png(png_path, PAPER_RAVIVARAPU_7_PNG)
     _after_promote_publish(png_path, update_docs=update_docs)
     return {"png": str(png_path), "caption": caption, "doc": str(PAPER_RAVIVARAPU_DOC)}
+
 
