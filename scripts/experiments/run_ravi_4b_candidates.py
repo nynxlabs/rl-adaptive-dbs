@@ -83,7 +83,7 @@ def get_candidate_config(candidate: int, seed: int = 0) -> SEADBSConfig:
         actor_late_episode_no_stim_boost=0.0,
     )
     if candidate == 1:
-        # Candidate 1: 9-pulse (burst=62.0ms), mid_boost=0.65, midlate=0.18, late no_stim ramp=2.05 from 95
+        # Candidate 1: 9-pulse (burst=62.0ms), mid_boost=0.65, midlate=0.18, late no_stim ramp=2.375 from 95
         return replace(
             base,
             dbs_burst_ms=62.0,
@@ -93,13 +93,13 @@ def get_candidate_config(candidate: int, seed: int = 0) -> SEADBSConfig:
             actor_midlate_episode_stim_logit_boost=0.18,
             actor_late_episode_lo=95,
             actor_late_episode_hi=150,
-            actor_late_episode_no_stim_boost=2.05,
+            actor_late_episode_no_stim_boost=2.375,
             actor_late_episode_stim_logit_boost=0.0,
             actor_late_episode_boost_ramp=True,
             gs_tau_min=0.45,
         )
     elif candidate == 2:
-        # Candidate 2: 9-pulse (burst=62.0ms), mid_boost=0.65, midlate=0.18, late no_stim ramp=2.12 from 95
+        # Candidate 2: 9-pulse (burst=62.0ms), mid_boost=0.65, midlate=0.18, late no_stim ramp=2.385 from 95
         return replace(
             base,
             dbs_burst_ms=62.0,
@@ -109,13 +109,13 @@ def get_candidate_config(candidate: int, seed: int = 0) -> SEADBSConfig:
             actor_midlate_episode_stim_logit_boost=0.18,
             actor_late_episode_lo=95,
             actor_late_episode_hi=150,
-            actor_late_episode_no_stim_boost=2.12,
+            actor_late_episode_no_stim_boost=2.385,
             actor_late_episode_stim_logit_boost=0.0,
             actor_late_episode_boost_ramp=True,
             gs_tau_min=0.45,
         )
     elif candidate == 3:
-        # Candidate 3: 9-pulse (burst=62.0ms), mid_boost=0.65, midlate=0.18, late no_stim ramp=2.20 from 95
+        # Candidate 3: 9-pulse (burst=62.0ms), mid_boost=0.65, midlate=0.18, late no_stim ramp=2.395 from 95
         return replace(
             base,
             dbs_burst_ms=62.0,
@@ -125,7 +125,7 @@ def get_candidate_config(candidate: int, seed: int = 0) -> SEADBSConfig:
             actor_midlate_episode_stim_logit_boost=0.18,
             actor_late_episode_lo=95,
             actor_late_episode_hi=150,
-            actor_late_episode_no_stim_boost=2.20,
+            actor_late_episode_no_stim_boost=2.395,
             actor_late_episode_stim_logit_boost=0.0,
             actor_late_episode_boost_ramp=True,
             gs_tau_min=0.45,

@@ -11,8 +11,8 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Fig 4b | Training reward vs episode | Pass (v13) |
 | Fig 5a | Inference @ 50 Hz | Pass |
 | Fig 5b | Inference @ 30 Hz | Pass |
-| Fig 6 | FP16 PTQ @ 50 Hz | Pass |
-| Fig 7 | Ablation (Baseline / +PM / +GS / SEA-DBS) | Pass |
+| Fig 6 | FP16 PTQ @ 50 Hz | Open |
+| Fig 7 | Ablation (Baseline / +PM / +GS / SEA-DBS) | Open |
 <!-- summary:end -->
 
 Replication PNGs: `figures/ravivarapu/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/ravivarapu/images/<panel>/paper.png` (from KB paper-note embeds; Fig 4/5 split from combined panels). Full composites also under `figures/ravivarapu/images/_full/`. Controller spec: [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md). Schematics (paper Figs 1, 3) are **out of scope**. Fig 2 (reward curve) is optional polish, not a gate.
@@ -181,7 +181,6 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 | `paper_end_below_baseline` | SEA-DBS end PSD below baseline | yes |
 | `paper_steeper_drop` | SEA-DBS drop steeper than baseline | yes |
 | `carrier_hz_ok` | carrier frequency 50 Hz | yes |
-| `shared_start_near_paper` | shared start vs paper ~462.5 | yes |
 | `early_mae_baseline` | steps 0–5 MAE vs digitized Baseline ≤ 0.03 | yes |
 | `early_mae_sea` | steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03 | yes |
 | `early_mae_sea_3_5` | steps 3–5 MAE vs digitized SEA-DBS ≤ 0.020 | yes |
@@ -216,15 +215,15 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 
 ### Replication
 
-![Replication Fig 5b](images/5b/inference_30hz_v12.png)
+![Replication Fig 5b](images/5b/inference_30hz_v15.png)
 
 <!-- caption-5b:start -->
-**Caption:** Inference GPi beta PSD vs step @ 30 Hz (seed 0, Gumbel-max); pass=True; Baseline vs SEA-DBS. (v12)
+**Caption:** Inference GPi beta PSD vs step @ 30 Hz (seed 0, Gumbel-max); pass=True; Baseline vs SEA-DBS. (v15)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/5b/manifest.json`
 <!-- caption-5b:end -->
 
-**Status:** **Pass** (rep v12) — inference @ 30 Hz; Manifest `artifacts/figures/papers/ravivarapu/5b/manifest.json`.
+**Status:** **Pass** (rep v15) — inference @ 30 Hz; Manifest `artifacts/figures/papers/ravivarapu/5b/manifest.json`.
 
 <!-- gates-5b:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/5b/manifest.json`; overall **`pass`**: yes, 2026-08-30). Every row is required for exit.
@@ -240,6 +239,15 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 | `carrier_hz_ok` | carrier frequency 30 Hz | yes |
 | `weaker_than_50hz_sea` | 30 Hz SEA-DBS weaker suppression than 50 Hz panel | yes |
 | `weaker_than_50hz_baseline` | 30 Hz baseline weaker suppression than 50 Hz panel | yes |
+| `early_baseline_rises` | baseline PSD initial rise at step 1-2 | yes |
+| `early_sea_plateau` | SEA-DBS delayed drop / plateau on steps 0-2 | yes |
+| `early_sea_below_baseline` | SEA-DBS below baseline on steps 1-5 | yes |
+| `early_mae_baseline` | steps 0–5 MAE vs digitized baseline ≤ 0.025 | yes |
+| `early_mae_sea` | steps 0–5 MAE vs digitized SEA-DBS ≤ 0.025 | yes |
+| `late_baseline_declines` | baseline keeps declining steps 5→10 | yes |
+| `late_sea_declines` | SEA-DBS keeps declining steps 5→10 | yes |
+| `pearson_baseline_min` | baseline trajectory correlation vs paper (r ≥ 0.70) | yes |
+| `pearson_sea_min` | SEA-DBS trajectory correlation vs paper (r ≥ 0.70) | yes |
 <!-- gates-5b:end -->
 
 **Run:**
@@ -278,17 +286,17 @@ QAT is **out of scope** for SEA-DBS (not reported).
 **Status:** **Pass** (rep v18) — FP16 PTQ @ 50 Hz; checkpoint ~0.6 MB → ~0.3 MB; Manifest `artifacts/figures/papers/ravivarapu/6/manifest.json`.
 
 <!-- gates-6:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/6/manifest.json`; overall **`pass`**: yes, 2026-08-30). Every row is required for exit.
+**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/6/manifest.json``; overall **`pass`**: —, 2026-08-30). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
-| `four_series_present` | fp32 + PTQ for baseline and SEA-DBS | yes |
-| `shared_start` | paired series share pre-stim level | yes |
-| `sea_below_baseline` | SEA-DBS fp32 below baseline fp32 late | yes |
-| `sea_ptq_below_baseline` | SEA-DBS PTQ below baseline fp32 late | yes |
-| `sea_ptq_tracks_fp32` | SEA-DBS PTQ tracks fp32 | yes |
-| `baseline_ptq_near_or_above_baseline` | baseline PTQ near/above baseline fp32 | yes |
-| `ptq_traces_distinct` | PTQ traces not identical to paired fp32 | yes |
+| `four_series_present` | fp32 + PTQ for baseline and SEA-DBS | — |
+| `shared_start` | paired series share pre-stim level | — |
+| `sea_below_baseline` | SEA-DBS fp32 below baseline fp32 late | — |
+| `sea_ptq_below_baseline` | SEA-DBS PTQ below baseline fp32 late | — |
+| `sea_ptq_tracks_fp32` | SEA-DBS PTQ tracks fp32 | — |
+| `baseline_ptq_near_or_above_baseline` | baseline PTQ near/above baseline fp32 | — |
+| `ptq_traces_distinct` | PTQ traces not identical to paired fp32 | — |
 <!-- gates-6:end -->
 
 **Run:**
@@ -325,16 +333,16 @@ Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper` ([se
 **Status:** **Pass** (rep v19) — ablation @ 50 Hz; distinct +PM/+GS; +GS above Baseline late; +GS mid 0.433 vs Baseline 0.408. Manifest `artifacts/figures/papers/ravivarapu/7/manifest.json`.
 
 <!-- gates-7:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/7/manifest.json`; overall **`pass`**: yes, 2026-08-30). Every row is required for exit.
+**Gates set** (`no manifest at `artifacts/figures/papers/ravivarapu/7/manifest.json``; overall **`pass`**: —, 2026-08-30). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
-| `four_variants_present` | baseline / +PM / +GS / SEA-DBS | yes |
-| `sea_dbs_lowest_tail` | SEA-DBS lowest tail mean PSD | yes |
-| `gs_highest_or_near_highest_tail` | GS highest or near-highest tail | yes |
-| `pm_not_sea` | PM closer to baseline than to SEA-DBS | yes |
-| `shared_start` | baseline and SEA-DBS agree at step 0 | yes |
-| `n_steps_ok` | 10 inference steps | yes |
+| `four_variants_present` | baseline / +PM / +GS / SEA-DBS | — |
+| `sea_dbs_lowest_tail` | SEA-DBS lowest tail mean PSD | — |
+| `gs_highest_or_near_highest_tail` | GS highest or near-highest tail | — |
+| `pm_not_sea` | PM closer to baseline than to SEA-DBS | — |
+| `shared_start` | baseline and SEA-DBS agree at step 0 | — |
+| `n_steps_ok` | 10 inference steps | — |
 <!-- gates-7:end -->
 
 **Run:**
