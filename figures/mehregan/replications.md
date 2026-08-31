@@ -10,7 +10,7 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Fig 1b | GPi PSD | Pass |
 | Fig 2a | GPi $P_\beta$ time series | Pass |
 | Fig 2b | Error Index time series | Pass (rep v16) |
-| Fig 4a | Training $P_\beta$ vs step | Pass (rep v34; actor_lr 7.5e-4, warmup 50) |
+| Fig 4a | Training $P_\beta$ vs step | Pass (rep v38; action persistence K=3, 0 early spikes) |
 | Fig 4b | Training reward vs episode | Fail (`late_beta_above_threshold`, paired train v18, v14, rep v44) |
 | Fig 5a | Post-train efficacy @ 45 Hz | Pass (rep v23) |
 | Fig 5b | Post-train efficacy @ 30 Hz | Pass (burst alphabet, locked eval v3, rep v23) |
@@ -166,15 +166,15 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_beta_v37.png)
+![Replication Fig 4a](images/4a/training_beta_v38.png)
 
 <!-- caption-4a:start -->
-**Caption:** 45 Hz fixed_mean_pattern, within_step L=1, reward=full_segment, softmax, critic=one_hot, seed 0, v37, init_bias=0, jitter=0.5, ep0=0.505, early=0.482 late=0.330, trend↓ (2026-08-31)
+**Caption:** 45 Hz fixed_mean_pattern, within_step L=1, reward=full_segment, greedy, critic=logits, seed 0, v38, ep0=0.500, early=0.462 late=0.316, trend↓ (2026-08-31)
 
 **Manifest:** `artifacts/figures/papers/mehregan/4a/manifest.json`
 <!-- caption-4a:end -->
 
-**Status:** Pass — **rep v34**, phase-8 (`actor_lr=7.5e-4`, `critic_warmup_steps=50`, τ 3→1.6, continuous carry). All digitization gates pass including `mid_fade_vs_paper`. Fig 4b ship image stays **v33** from phase-6 (separate train; late-floor gates) — see [4a.md](../../docs/figures/mehregan/4a.md).
+**Status:** Pass — **rep v38**, phase-10 (Option C: 3-step action persistence $K=3$, $\tau: 2.0 \to 1.0$, `actor_lr=9.0e-4`, warmup 15). All digitization gates pass with drop 0.145 vs paper 0.110, ratio 0.685 vs paper 0.776, ep0 0.4995 vs paper 0.5067, 0 early spikes. Fig 4b ship image stays **v33** from phase-6 — see [4a.md](../../docs/figures/mehregan/4a.md).
 
 <!-- gates-4a:start -->
 **Gates set** (`fig4a_gates` → live `series.json` (digitization revisit; was locked `series_v18.json`)). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4a/series.json`, 2026-08-31). Every row is required for exit.

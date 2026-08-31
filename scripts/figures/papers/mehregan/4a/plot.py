@@ -172,13 +172,14 @@ def _train_trace(
     num_episodes: int,
     exploration_mode: str = "softmax",
     init_bias_scale: float = FIG4A_INIT_BIAS_SCALE,
-    temperature_start: float = 3.0,
-    temperature_end: float = 1.4,
-    logit_noise_std: float = 0.1,
-    entropy_coeff: float = 0.01,
+    temperature_start: float = 2.0,
+    temperature_end: float = 1.0,
+    logit_noise_std: float = 0.05,
+    entropy_coeff: float = 0.08,
     critic_action_input: str = "one_hot",
-    critic_warmup_steps: int = 100,
-    actor_lr: float = 5e-4,
+    critic_warmup_steps: int = 15,
+    actor_lr: float = 9.0e-4,
+    action_persistence: int = 3,
     resume_path: Path | None = None,
     start_episode: int | None = None,
     checkpoint_path: Path | None = None,
@@ -231,8 +232,16 @@ def _train_trace(
         trainer._update_obs_stats(state)
         episode_reward = float(info0.get("reward", 0.0))
         terminated = truncated = False
+        action = None
+        logits = None
+        steps_remaining_on_action = 0
+
         while not (terminated or truncated):
-            action, logits = trainer._select_action(state, env_step=env_step)
+            if steps_remaining_on_action <= 0 or action is None:
+                action, logits = trainer._select_action(state, env_step=env_step)
+                steps_remaining_on_action = action_persistence
+            steps_remaining_on_action -= 1
+
             env_step += 1
             next_state, reward, terminated, truncated, info = env.step(action)
             trainer._update_obs_stats(next_state)
@@ -556,41 +565,47 @@ def main() -> int:
     parser.add_argument(
         "--temperature-start",
         type=float,
-        default=3.0,
-        help="Softmax temperature at step 0",
+        default=2.0,
+        help="Softmax temperature at step 0 (default: 2.0)",
     )
     parser.add_argument(
         "--temperature-end",
         type=float,
-        default=1.4,
-        help="Softmax temperature at final step (1.4 = gradual mid-fade vs τ→1 cliff)",
+        default=1.0,
+        help="Softmax temperature at final step (default: 1.0)",
     )
     parser.add_argument(
         "--logit-noise-std",
         type=float,
-        default=0.1,
-        help="Gaussian noise on actor logits during training",
+        default=0.05,
+        help="Gaussian noise on actor logits during training (default: 0.05)",
     )
     parser.add_argument(
         "--entropy-coeff",
         type=float,
-        default=0.01,
-        help="Policy entropy bonus (v4 default 0.01; paper-silent anti-collapse knob)",
+        default=0.08,
+        help="Policy entropy bonus (default: 0.08)",
     )
     parser.add_argument(
         "--critic-warmup-steps",
         type=int,
-        default=100,
+        default=15,
         help=(
-            "Gradient steps that update the critic only (Fig 4a default 100). "
-            "Lower values let the actor start learning before episode 4."
+            "Gradient steps that update the critic only (default: 15). "
+            "Lower values let the actor start learning earlier for organic mid-fade."
         ),
     )
     parser.add_argument(
         "--actor-lr",
         type=float,
-        default=5e-4,
-        help="Adam learning rate for the actor (paper-silent; default 5e-4).",
+        default=9.0e-4,
+        help="Adam learning rate for the actor (default: 9.0e-4).",
+    )
+    parser.add_argument(
+        "--action-persistence",
+        type=int,
+        default=3,
+        help="Number of consecutive 2s steps each selected action is held (Option C, default: 3).",
     )
     parser.add_argument(
         "--critic-action-input",
@@ -672,25 +687,26 @@ def main() -> int:
         try:
             beta_trace, actions, episode_rewards, train_meta, trainer, train_config = (
                 _train_trace(
-                env,
-                seed=args.seed,
-                num_episodes=args.episodes,
-                exploration_mode=args.exploration,
-                init_bias_scale=args.init_bias_scale,
-                temperature_start=args.temperature_start,
-                temperature_end=args.temperature_end,
-                logit_noise_std=args.logit_noise_std,
-                entropy_coeff=args.entropy_coeff,
-                critic_action_input=args.critic_action_input,
-                critic_warmup_steps=args.critic_warmup_steps,
-                actor_lr=args.actor_lr,
-                resume_path=args.resume,
-                start_episode=args.start_episode,
-                checkpoint_path=args.checkpoint,
-                checkpoint_interval=args.checkpoint_interval,
-                prior_beta_trace=prior_beta,
-                prior_actions=prior_actions,
-            )
+                    env,
+                    seed=args.seed,
+                    num_episodes=args.episodes,
+                    exploration_mode=args.exploration,
+                    init_bias_scale=args.init_bias_scale,
+                    temperature_start=args.temperature_start,
+                    temperature_end=args.temperature_end,
+                    logit_noise_std=args.logit_noise_std,
+                    entropy_coeff=args.entropy_coeff,
+                    critic_action_input=args.critic_action_input,
+                    critic_warmup_steps=args.critic_warmup_steps,
+                    actor_lr=args.actor_lr,
+                    action_persistence=args.action_persistence,
+                    resume_path=args.resume,
+                    start_episode=args.start_episode,
+                    checkpoint_path=args.checkpoint,
+                    checkpoint_interval=args.checkpoint_interval,
+                    prior_beta_trace=prior_beta,
+                    prior_actions=prior_actions,
+                )
             )
             if not args.no_save_checkpoint and trainer is not None and train_config is not None:
                 ckpt_extra = {

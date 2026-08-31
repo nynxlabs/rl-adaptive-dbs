@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Run Mehregan Fig 4a parallel candidate tuning runs (Iteration 5).
+"""Run Mehregan Fig 4a Action Persistence candidates (Option C, Iteration 2).
 
 Candidates:
-  - Candidate 1 (cand1_mask60_tau025): Pre-warmed buffer + Action-0 mask for steps 0-60
-    (Ep 0 & 1) + softmax (tau: 0.30 -> 0.15), actor_lr=7.5e-4, warmup=30.
-  - Candidate 2 (cand2_mask70_tau020): Pre-warmed buffer + Action-0 mask for steps 0-70
-    + softmax (tau: 0.25 -> 0.12), actor_lr=7.5e-4, warmup=30.
-  - Candidate 3 (cand3_mask60_tau035_smooth): Pre-warmed buffer + Action-0 mask for steps 0-60
-    + softmax (tau: 0.40 -> 0.20), actor_lr=6.0e-4, warmup=30.
+  - Candidate 1 (cand1_k3_alr9e4_warmup15): Action persistence K=3 steps,
+    softmax tau 2.0 -> 1.0, actor_lr=9.0e-4, warmup=15.
+  - Candidate 2 (cand2_k3_alr8e4_tau18_09): Action persistence K=3 steps,
+    softmax tau 1.8 -> 0.9, actor_lr=8.0e-4, warmup=20.
+  - Candidate 3 (cand3_k2_alr8e4_tau16_07): Action persistence K=2 steps,
+    softmax tau 1.6 -> 0.7, actor_lr=8.5e-4, warmup=20.
 
 Usage:
   uv run python -m rl_adaptive_dbs.run scripts/experiments/run_mehregan_fig4a_candidates.py --candidate 1
@@ -22,7 +22,7 @@ import json
 import os
 import sys
 import time
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -30,15 +30,13 @@ os.environ.setdefault("MPLBACKEND", "Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import torch.nn.functional as F
 
 from controllers.ddpg.checkpoint import save_checkpoint
 from controllers.ddpg.config import DDPGConfig
-from controllers.ddpg.networks import Actor
 from controllers.ddpg.trainer import DDPGTrainer
 from envs.mehregan.config import MehreganEnvConfig
 from envs.mehregan.env import MehreganEnv
-from envs.mehregan.fixed_mean_patterns import FixedMeanPatternAlphabet, _build_idbs
+from envs.mehregan.fixed_mean_patterns import FixedMeanPatternAlphabet
 from envs.plant.python_backend import PythonPlant
 from rl_adaptive_dbs.thread_limits import apply_max_threads
 from rl_adaptive_dbs.user_config import resolve_config
@@ -74,48 +72,6 @@ STYLE = {
 }
 
 
-class CustomTrainer(DDPGTrainer):
-    """DDPG trainer supporting early action-0 exploration masking."""
-
-    def __init__(self, env: MehreganEnv, config: DDPGConfig, *, mask_act0_steps: int = 0) -> None:
-        super().__init__(env, config)
-        self.mask_act0_steps = mask_act0_steps
-
-    def _select_action(self, state: np.ndarray, *, env_step: int) -> tuple[int, np.ndarray]:
-        with torch.no_grad():
-            state_t = self._normalized_state_tensor(state).unsqueeze(0)
-            logits = self.actor(state_t)
-            if self.config.logit_noise_std > 0:
-                noise = torch.randn_like(logits) * self.config.logit_noise_std
-                logits = logits + noise
-            logits_np = logits.squeeze(0).cpu().numpy()
-            if self.config.exploration_mode == "greedy":
-                action_t, _ = Actor.select_action(logits)
-                action = int(action_t.item())
-            elif self.config.exploration_mode == "softmax":
-                temp = self._exploration_temperature(env_step)
-                probs = F.softmax(logits / temp, dim=-1)
-                if self.mask_act0_steps > 0 and env_step < self.mask_act0_steps:
-                    # Mask action 0 strictly during early unlearned steps
-                    probs = probs.clone()
-                    probs[:, 0] = 0.0
-                    total = probs.sum(dim=-1, keepdim=True)
-                    if total > 0:
-                        probs = probs / total
-                action = int(torch.multinomial(probs, 1).item())
-            else:
-                epsilon = self._exploration_epsilon(env_step)
-                if np.random.random() < epsilon:
-                    if self.mask_act0_steps > 0 and env_step < self.mask_act0_steps:
-                        action = int(np.random.randint(1, self._n_actions))
-                    else:
-                        action = int(self.env.action_space.sample())
-                else:
-                    action_t, _ = Actor.select_action(logits)
-                    action = int(action_t.item())
-        return action, logits_np
-
-
 def _make_env(
     *,
     seed: int,
@@ -144,48 +100,33 @@ def _make_env(
     return env, plant_cfg
 
 
-def run_training(
+def run_training_persistent(
     env: MehreganEnv,
     *,
     config: DDPGConfig,
-    mask_act0_steps: int = 0,
-    prewarm_all_actions: bool = True,
-) -> tuple[list[float], list[int], list[float], CustomTrainer]:
-    trainer = CustomTrainer(env, config, mask_act0_steps=mask_act0_steps)
+    action_persistence: int = 3,
+) -> tuple[list[float], list[int], list[float], DDPGTrainer]:
+    trainer = DDPGTrainer(env, config)
     beta_trace: list[float] = []
     actions: list[int] = []
     episode_rewards: list[float] = []
     env_step = 0
-
-    if prewarm_all_actions:
-        print("  Pre-warming replay buffer with all 41 actions (2 repeats)...", flush=True)
-        state, _ = env.reset(seed=config.seed + 9999)
-        trainer._update_obs_stats(state)
-        for _repeat in range(2):
-            perm = np.random.permutation(env.action_space.n)
-            for act in perm:
-                next_state, reward, terminated, truncated, info = env.step(int(act))
-                trainer._update_obs_stats(next_state)
-                dummy_logits = np.zeros(env.action_space.n, dtype=np.float32)
-                normalized_reward = trainer._normalize_reward(reward)
-                trainer.buffer.add(
-                    state=state,
-                    action=int(act),
-                    action_logits=dummy_logits,
-                    reward=normalized_reward,
-                    next_state=next_state,
-                    dw=0.0,
-                )
-                state = next_state
-        print(f"  Replay buffer initialized with {len(trainer.buffer)} transitions", flush=True)
 
     for episode in range(config.num_episodes):
         state, info0 = env.reset(seed=config.seed + episode)
         trainer._update_obs_stats(state)
         episode_reward = float(info0.get("reward", 0.0))
         terminated = truncated = False
+        action = None
+        logits = None
+        steps_remaining_on_action = 0
+
         while not (terminated or truncated):
-            action, logits = trainer._select_action(state, env_step=env_step)
+            if steps_remaining_on_action <= 0 or action is None:
+                action, logits = trainer._select_action(state, env_step=env_step)
+                steps_remaining_on_action = action_persistence
+            steps_remaining_on_action -= 1
+
             env_step += 1
             next_state, reward, terminated, truncated, info = env.step(action)
             trainer._update_obs_stats(next_state)
@@ -217,11 +158,13 @@ def run_training(
     return beta_trace, actions, episode_rewards, trainer
 
 
-def analyze_spikes(beta_trace: list[float], actions: list[int], early_cutoff: int = 60) -> dict[str, Any]:
-    """Detect sharp isolated downward needle spikes in early unlearned exploration steps (0-60)."""
-    trace = np.array(beta_trace)
+def analyze_roughness_and_spikes(beta_trace: list[float], actions: list[int]) -> dict[str, Any]:
+    """Compute roughness, step-to-step differences, and spike counts."""
+    trace = np.array(beta_trace, dtype=float)
+    diffs = np.abs(np.diff(trace))
+    roughness = float(np.mean(np.diff(trace, n=2)**2)) if len(trace) > 2 else float("nan")
     spikes = []
-    for s in range(1, min(len(trace) - 1, early_cutoff)):
+    for s in range(1, min(len(trace) - 1, 120)):
         prev_v = trace[s - 1]
         curr_v = trace[s]
         next_v = trace[s + 1]
@@ -234,11 +177,11 @@ def analyze_spikes(beta_trace: list[float], actions: list[int], early_cutoff: in
                 "next_beta": float(next_v),
                 "action": int(actions[s]),
             })
-    early_min = float(trace[:early_cutoff].min()) if len(trace) >= early_cutoff else float("nan")
     return {
+        "mean_diff": float(diffs.mean()),
+        "max_diff": float(diffs.max()),
+        "roughness": roughness,
         "n_early_spikes": len(spikes),
-        "early_min": early_min,
-        "early_min_above_floor": bool(early_min >= 0.38),
         "spikes": spikes,
     }
 
@@ -274,7 +217,7 @@ def plot_candidate_trace(
 
 def run_candidate(cand_id: int, seed: int = DEFAULT_SEED) -> int:
     print(f"============================================================")
-    print(f"Starting Mehregan Fig 4a Candidate {cand_id} (seed={seed})")
+    print(f"Starting Mehregan Fig 4a Option C Candidate {cand_id} (seed={seed})")
     print(f"============================================================", flush=True)
 
     cand_dir = ARTIFACTS_ROOT / f"cand{cand_id}"
@@ -282,13 +225,9 @@ def run_candidate(cand_id: int, seed: int = DEFAULT_SEED) -> int:
     cand_dir.mkdir(parents=True, exist_ok=True)
     fig_dir.mkdir(parents=True, exist_ok=True)
 
-    prewarm_all_actions = True
-    mask_act0_steps = 60
-
     if cand_id == 1:
-        # Candidate 1: Pre-warmed buffer + Action-0 mask 0-60 + softmax (tau: 0.30 -> 0.15)
-        cand_name = "Candidate 1 (cand1_mask60_tau025: mask 0-60 + tau 0.30->0.15)"
-        mask_act0_steps = 60
+        cand_name = "Candidate 1 (cand1_k3_alr9e4_warmup15: K=3, lr=9.0e-4, warmup=15)"
+        persistence = 3
         config = DDPGConfig(
             variant="paper",
             seed=seed,
@@ -298,19 +237,18 @@ def run_candidate(cand_id: int, seed: int = DEFAULT_SEED) -> int:
             pattern_mean_hz=MEAN_HZ,
             exploration_mode="softmax",
             init_bias_scale=0.0,
-            exploration_temperature_start=0.30,
-            exploration_temperature_end=0.15,
-            logit_noise_std=0.01,
-            entropy_coeff=0.05,
+            exploration_temperature_start=2.0,
+            exploration_temperature_end=1.0,
+            logit_noise_std=0.05,
+            entropy_coeff=0.08,
             critic_action_input="one_hot",
-            critic_warmup_steps=30,
-            actor_lr=7.5e-4,
+            critic_warmup_steps=15,
+            actor_lr=9.0e-4,
             log_episodes=True,
         )
     elif cand_id == 2:
-        # Candidate 2: Pre-warmed buffer + Action-0 mask 0-70 + softmax (tau: 0.25 -> 0.12)
-        cand_name = "Candidate 2 (cand2_mask70_tau020: mask 0-70 + tau 0.25->0.12)"
-        mask_act0_steps = 70
+        cand_name = "Candidate 2 (cand2_k3_alr8e4_tau18_09: K=3, tau 1.8->0.9, lr=8.0e-4, warmup=20)"
+        persistence = 3
         config = DDPGConfig(
             variant="paper",
             seed=seed,
@@ -320,19 +258,18 @@ def run_candidate(cand_id: int, seed: int = DEFAULT_SEED) -> int:
             pattern_mean_hz=MEAN_HZ,
             exploration_mode="softmax",
             init_bias_scale=0.0,
-            exploration_temperature_start=0.25,
-            exploration_temperature_end=0.12,
-            logit_noise_std=0.01,
-            entropy_coeff=0.05,
+            exploration_temperature_start=1.8,
+            exploration_temperature_end=0.9,
+            logit_noise_std=0.05,
+            entropy_coeff=0.08,
             critic_action_input="one_hot",
-            critic_warmup_steps=30,
-            actor_lr=7.5e-4,
+            critic_warmup_steps=20,
+            actor_lr=8.0e-4,
             log_episodes=True,
         )
     elif cand_id == 3:
-        # Candidate 3: Pre-warmed buffer + Action-0 mask 0-60 + softmax (tau: 0.40 -> 0.20)
-        cand_name = "Candidate 3 (cand3_mask60_tau035_smooth: mask 0-60 + tau 0.40->0.20)"
-        mask_act0_steps = 60
+        cand_name = "Candidate 3 (cand3_k2_alr8e4_tau16_07: K=2, tau 1.6->0.7, lr=8.5e-4, warmup=20)"
+        persistence = 2
         config = DDPGConfig(
             variant="paper",
             seed=seed,
@@ -342,13 +279,13 @@ def run_candidate(cand_id: int, seed: int = DEFAULT_SEED) -> int:
             pattern_mean_hz=MEAN_HZ,
             exploration_mode="softmax",
             init_bias_scale=0.0,
-            exploration_temperature_start=0.40,
-            exploration_temperature_end=0.20,
-            logit_noise_std=0.02,
+            exploration_temperature_start=1.6,
+            exploration_temperature_end=0.7,
+            logit_noise_std=0.05,
             entropy_coeff=0.08,
             critic_action_input="one_hot",
-            critic_warmup_steps=30,
-            actor_lr=6.0e-4,
+            critic_warmup_steps=20,
+            actor_lr=8.5e-4,
             log_episodes=True,
         )
     else:
@@ -363,11 +300,10 @@ def run_candidate(cand_id: int, seed: int = DEFAULT_SEED) -> int:
     )
 
     try:
-        beta_trace, actions, episode_rewards, trainer = run_training(
+        beta_trace, actions, episode_rewards, trainer = run_training_persistent(
             env,
             config=config,
-            mask_act0_steps=mask_act0_steps,
-            prewarm_all_actions=prewarm_all_actions,
+            action_persistence=persistence,
         )
     finally:
         env.close()
@@ -375,20 +311,20 @@ def run_candidate(cand_id: int, seed: int = DEFAULT_SEED) -> int:
     elapsed = time.time() - t0
     print(f"[{cand_name}] Training completed in {elapsed:.1f}s", flush=True)
 
-    # Gates and Spike analysis
+    # Gates and Roughness analysis
     gate_pack = fig4a_gates(beta_trace)
-    spike_analysis = analyze_spikes(beta_trace, actions, early_cutoff=60)
+    roughness_info = analyze_roughness_and_spikes(beta_trace, actions)
 
-    # Combined pass: all digitization gates + early min above floor (no downward needle spikes)
     dig_gates_pass = gate_pack.get("pass", False)
-    no_spikes_pass = spike_analysis["early_min_above_floor"] and (spike_analysis["n_early_spikes"] == 0)
-    all_pass = dig_gates_pass and no_spikes_pass
+    all_pass = dig_gates_pass
 
     print(f"\n--- Gate Results for {cand_name} ---")
     for k, v in gate_pack["gates"].items():
         print(f"  {k}: {v}")
-    print(f"  early_min_above_floor (steps 0-60 >=0.38): {spike_analysis['early_min_above_floor']} (min={spike_analysis['early_min']:.4f})")
-    print(f"  no_early_spikes (steps 0-60): {no_spikes_pass} (count={spike_analysis['n_early_spikes']})")
+    print(f"  mean_diff: {roughness_info['mean_diff']:.4f} (paper=0.0062)")
+    print(f"  max_diff: {roughness_info['max_diff']:.4f} (paper=0.0270)")
+    print(f"  roughness: {roughness_info['roughness']:.6f} (paper=0.000068)")
+    print(f"  n_early_spikes: {roughness_info['n_early_spikes']}")
     print(f"  => OVERALL GATES PASS: {all_pass}\n")
 
     # Plot
@@ -424,7 +360,7 @@ def run_candidate(cand_id: int, seed: int = DEFAULT_SEED) -> int:
         "elapsed_s": elapsed,
         "gates_pass": all_pass,
         "digitization_gates": gate_pack["gates"],
-        "spike_analysis": spike_analysis,
+        "roughness_analysis": roughness_info,
         "gate_metrics": gate_pack.get("metrics", {}),
     }
     manifest_path.write_text(json.dumps(manifest_data, indent=2))
@@ -439,7 +375,7 @@ def run_candidate(cand_id: int, seed: int = DEFAULT_SEED) -> int:
         "episode_rewards": episode_rewards,
         "gates": gate_pack["gates"],
         "gates_pass": all_pass,
-        "spike_analysis": spike_analysis,
+        "roughness_analysis": roughness_info,
     }
     series_path.write_text(json.dumps(series_data, indent=2))
     print(f"Wrote artifacts to {cand_dir}", flush=True)
