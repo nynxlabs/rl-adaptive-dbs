@@ -109,8 +109,14 @@ def evaluate_gates(
     if not checkpoint_ok:
         heuristic["reason"] = "fig4_train_not_passing"
 
+    trajectories = eval_payload["alpha_beta_trajectories"]
+    max_len = max(len(tr) for tr in trajectories) if trajectories else 0
+    pad_trajectories = [
+        tr + [tr[-1]] * (max_len - len(tr)) if len(tr) < max_len else tr[:max_len]
+        for tr in trajectories
+    ]
     dig = fig7_eval_gates(
-        eval_payload["alpha_beta_trajectories"],
+        pad_trajectories,
         fig3_pd_on_median=fig3_pd_on_median,
     )
     return attach_digitization(heuristic, dig)
@@ -120,11 +126,15 @@ def plot_eval(eval_payload: dict[str, Any], out_path: Path) -> dict[str, Any]:
     plt.rcParams.update(STYLE)
     trajectories: list[list[float]] = eval_payload["alpha_beta_trajectories"]
     max_len = max(len(tr) for tr in trajectories)
+    pad_trajectories = [
+        tr + [tr[-1]] * (max_len - len(tr)) if len(tr) < max_len else tr[:max_len]
+        for tr in trajectories
+    ]
     step_means = []
     step_lowers = []
     step_uppers = []
     for step in range(max_len):
-        vals = [float(tr[step]) for tr in trajectories if step < len(tr)]
+        vals = [float(tr[step]) for tr in pad_trajectories]
         if vals:
             step_means.append(float(np.mean(vals)))
             step_lowers.append(float(np.percentile(vals, 2.5)))
