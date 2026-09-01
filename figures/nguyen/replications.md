@@ -209,15 +209,15 @@ GPi **α–β** (a) and DBS amplitude / frequency / pulse width (b) over **500**
 
 ### Replication
 
-![Replication Fig 6](images/6/alpha_beta_params_v12.png)
+![Replication Fig 6](images/6/alpha_beta_params_v13.png)
 
 <!-- caption-6:start -->
-**Caption:** Fig 4 shared train 500 ep; αβ_late=163.0, amp=265; pass=False (v12)
+**Caption:** Fig 4 shared train 500 ep; αβ_late=163.0, amp=265; pass=False (v13)
 
 **Manifest:** `artifacts/figures/papers/nguyen/6/manifest.json`
 <!-- caption-6:end -->
 
-**Status:** Open — see manifest gates (`alpha_beta_params_v12.png`).
+**Status:** Open — see manifest gates (`alpha_beta_params_v13.png`).
 
 <!-- gates-6:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: no, 2026-09-01). Every row is required for exit.
