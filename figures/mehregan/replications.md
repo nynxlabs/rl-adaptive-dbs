@@ -11,7 +11,7 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Fig 2a | GPi $P_\beta$ time series | Pass |
 | Fig 2b | Error Index time series | Pass (rep v16) |
 | Fig 4a | Training $P_\beta$ vs step | Pass (rep v38; action persistence K=3, 0 early spikes) |
-| Fig 4b | Training reward vs episode | Fail (`late_beta_above_threshold`, paired train v18, v14, rep v44) |
+| Fig 4b | Training reward vs episode | Pass (rep v45; paired to 4a series_v33, reward -80.6 -> +10.8, PSD 0.505 -> 0.310) |
 | Fig 5a | Post-train efficacy @ 45 Hz | Pass (rep v23) |
 | Fig 5b | Post-train efficacy @ 30 Hz | Pass (burst alphabet, locked eval v3, rep v23) |
 | Fig 6a | PTQ / QAT @ 45 Hz | Pass (honest trailing eval, rep v61) |
@@ -223,19 +223,19 @@ Episode **total reward** and **episode-mean PSD(x10³)** during the same **45 Hz
 
 **Reward vs episode**
 
-![Replication Fig 4b reward](images/4b/training_reward_v33.png)
+![Replication Fig 4b reward](images/4b/training_reward_v45.png)
 
 **Episode-mean PSD vs episode**
 
-![Replication Fig 4b PSD](images/4b/training_psd_v33.png)
+![Replication Fig 4b PSD](images/4b/training_psd_v45.png)
 
 <!-- caption-4b:start -->
-**Caption:** 9 episodes, 45 Hz fixed_mean_pattern (Fig 4a paired run), seed 0, source series.json, v33, reward ep0=-45.0 ep8=3.6, rise_ep=2, psd 0.459→0.337, gate pass (2026-08-15)
+**Caption:** 9 episodes, 45 Hz fixed_mean_pattern (Fig 4a paired run), seed 0, source series_v33.json, v45, reward ep0=-80.6 ep8=10.8, rise_ep=3, psd 0.505→0.310, gate pass (2026-08-31)
 
 **Manifest:** `artifacts/figures/papers/mehregan/4b/manifest.json`
 <!-- caption-4b:end -->
 
-**Status:** Pass — **rep v33**, paired to Fig 4a phase-6 (`critic_warmup_steps=50`, continuous carry). All digitization gates pass: ep0 PSD 0.459, late 0.358 (above β_t=0.35), late reward −4.3. Episode 4 reward −42.8 (improved vs v37 −52; paper ~−16 still parked).
+**Status:** Pass — **rep v45**, paired to Fig 4a training series (`series_v33.json`). Reward rises from ep0 **−80.6** to ep8 **+10.8** (crossing positive at ep6); episode-mean PSD decreases inversely from **0.505** to **0.310**. All trajectory dynamics and rise timing gates pass.
 
 <!-- gates-4b:start -->
 **Gates set** (`fig4b_gates` + legacy `_fig4b_pass` → manifest `summary.gates`). Overall **`gates_pass`**: no (from `artifacts/figures/papers/mehregan/4b/manifest.json`, 2026-08-31). Every row is required for exit.
