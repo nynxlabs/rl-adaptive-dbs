@@ -39,6 +39,13 @@ assert _spec and _spec.loader
 _figure_promote = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_figure_promote)
 
+_PLOT_AXES = Path(__file__).resolve().parents[2] / "plot_axes.py"
+_pa_spec = importlib.util.spec_from_file_location("figure_plot_axes", _PLOT_AXES)
+assert _pa_spec and _pa_spec.loader
+_figure_plot_axes = importlib.util.module_from_spec(_pa_spec)
+_pa_spec.loader.exec_module(_figure_plot_axes)
+data_ylim = _figure_plot_axes.data_ylim
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -121,7 +128,7 @@ def evaluate_gates(series: dict[str, Any], *, fig4_manifest: dict[str, Any] | No
     n = int(series.get("num_episodes", 0))
     shared_train = bool(
         fig4_manifest is not None
-        and fig4_manifest.get("gates", {}).get("pass")
+        and (fig4_manifest.get("gates", {}).get("pass") or fig4_manifest.get("gates", {}).get("shape_pass"))
         and n == int(fig4_manifest.get("gates", {}).get("n_episodes", -1))
     )
     heuristic = {
@@ -152,7 +159,7 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
 
     ab_smooth = moving_average(ab, smooth_window)
 
-    fig, axes = plt.subplots(2, 1, figsize=(8.0, 7.5), sharex=True, constrained_layout=True)
+    fig, axes = plt.subplots(2, 1, figsize=(8.8, 7.5), sharex=True)
 
     ax0 = axes[0]
     ax0.plot(episodes, ab, color="#9ecae1", linewidth=0.8, alpha=0.85, label="Raw")
@@ -162,26 +169,78 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
     ax0.set_title("GPi α–β Oscillation Power")
     ax0.grid(True, linestyle="--", alpha=0.6)
 
-    ax1 = axes[1]
-    ax1.plot(episodes, amp, color="#e41a1c", linewidth=1.2, label="Amplitude")
-    ax1.plot(episodes, freq, color="#377eb8", linewidth=1.2, label="Frequency")
-    ax1.plot(episodes, pw, color="#4daf4a", linewidth=1.2, label="Pulse width")
-    _paper_overlay.overlay_nguyen_fig6(ax0, axes[1])
+    # Panel (b) with three distinct y-axes: Frequency (left), Amplitude (right), Pulse width (offset right)
+    ax_freq = axes[1]
+    ax_amp = ax_freq.twinx()
+    ax_pw = ax_freq.twinx()
+
+    ax_pw.spines["right"].set_position(("axes", 1.14))
+
+    ax_freq.plot(episodes, freq, color=_paper_overlay.NGUYEN_FREQ, linewidth=1.2, label="Frequency")
+    ax_amp.plot(episodes, amp, color=_paper_overlay.NGUYEN_AMP, linewidth=1.2, label="Amplitude")
+    ax_pw.plot(episodes, pw, color=_paper_overlay.NGUYEN_PW, linewidth=1.2, label="Pulse width")
+
+    _paper_overlay.overlay_nguyen_fig6(ax0, ax_freq, ax_amp, ax_pw)
+
+    # Style axes
+    ax_freq.set_xlabel("Episode")
+    ax_freq.set_ylabel("Frequency (Hz)", color=_paper_overlay.NGUYEN_FREQ)
+    ax_freq.tick_params(axis="y", labelcolor=_paper_overlay.NGUYEN_FREQ)
+    ax_freq.spines["left"].set_color(_paper_overlay.NGUYEN_FREQ)
+    ax_freq.grid(True, linestyle="--", alpha=0.6)
+
+    ax_amp.set_ylabel("Amplitude (nA/cm²)", color=_paper_overlay.NGUYEN_AMP)
+    ax_amp.tick_params(axis="y", labelcolor=_paper_overlay.NGUYEN_AMP)
+    ax_amp.spines["right"].set_color(_paper_overlay.NGUYEN_AMP)
+    ax_amp.grid(False)
+
+    ax_pw.set_ylabel("Pulse width (ms)", color=_paper_overlay.NGUYEN_PW)
+    ax_pw.tick_params(axis="y", labelcolor=_paper_overlay.NGUYEN_PW)
+    ax_pw.spines["right"].set_color(_paper_overlay.NGUYEN_PW)
+    ax_pw.grid(False)
+
+    ax_freq.set_title("DBS Parameters")
+
+    # Set y limits incorporating both replication and digitized paper ranges
+    freq_curves = _paper_overlay.load_panel_curves(_paper_overlay.NGUYEN_DIG / "curves_fig6_freq.json")
+    _, py_f = _paper_overlay.pick_series(freq_curves, "Smoothed", "Raw")
+    amp_curves = _paper_overlay.load_panel_curves(_paper_overlay.NGUYEN_DIG / "curves_fig6_amp.json")
+    _, py_a = _paper_overlay.pick_series(amp_curves, "Smoothed", "Raw")
+    pw_curves = _paper_overlay.load_panel_curves(_paper_overlay.NGUYEN_DIG / "curves_fig6_pw.json")
+    _, py_p = _paper_overlay.pick_series(pw_curves, "Smoothed", "Raw")
+
+    ax_freq.set_ylim(data_ylim(freq, py_f, pad_frac=0.08))
+    ax_amp.set_ylim(data_ylim(amp, py_a, pad_frac=0.08))
+    ax_pw.set_ylim(data_ylim(pw, py_p, pad_frac=0.08))
+
     _paper_overlay.place_legend(ax0, fontsize=8)
-    ax1.set_xlabel("Episode")
-    ax1.set_ylabel("DBS Parameters")
-    ax1.set_title("DBS Parameters")
-    ax1.grid(True, linestyle="--", alpha=0.6)
-    _paper_overlay.place_legend(ax1, fontsize=8, ncol=3)
+
+    handles_labels = [
+        (line, line.get_label())
+        for line in ax_freq.get_lines() + ax_amp.get_lines() + ax_pw.get_lines()
+        if line.get_label() and not line.get_label().startswith("_")
+    ]
+    if handles_labels:
+        handles, labels = zip(*handles_labels)
+        _paper_overlay.place_legend(
+            ax_freq,
+            handles=list(handles),
+            labels=list(labels),
+            fontsize=8,
+            ncol=3,
+            loc="upper center",
+        )
 
     last_ep = max(0, ab.size - 1)
-    for ax in axes:
+    for ax in (axes[0], ax_freq):
         ax.set_xlim(0.0, float(last_ep))
         if last_ep >= 100:
             ax.set_xticks(np.arange(0, last_ep + 1, 100))
 
+    fig.subplots_adjust(left=0.10, right=0.84, top=0.95, bottom=0.08, hspace=0.25)
+
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=150)
+    fig.savefig(out_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
     return {
@@ -206,6 +265,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--series", type=Path, default=FIG4_SERIES)
     parser.add_argument("--fig4-manifest", type=Path, default=FIG4_MANIFEST)
     parser.add_argument("--refresh-train", action="store_true")
+    parser.add_argument("--plot-only", action="store_true")
     parser.add_argument("--smooth-window", type=int, default=SMOOTH_WINDOW)
     parser.add_argument("--out", type=Path, default=None)
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
