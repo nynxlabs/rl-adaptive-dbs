@@ -822,7 +822,7 @@ def overlay_nguyen_fig7(ax, *, show_confidence: bool = True) -> dict[str, tuple[
         if "ci_upper" in curves and "ci_lower" in curves:
             ux, uy = curves["ci_upper"]
             lx, ly = curves["ci_lower"]
-            x_grid = np.linspace(0.0, 24.0, 100)
+            x_grid = np.linspace(0.0, 25.0, 100)
             u_grid = np.interp(x_grid, ux, uy)
             l_grid = np.interp(x_grid, lx, ly)
             ax.fill_between(
@@ -848,7 +848,7 @@ def overlay_nguyen_fig7(ax, *, show_confidence: bool = True) -> dict[str, tuple[
             l_sort = np.argsort(lx)
             lx, ly = lx[l_sort], ly[l_sort]
 
-            x_grid = np.linspace(0.0, 24.0, 100)
+            x_grid = np.linspace(0.0, 25.0, 100)
             u_grid = np.interp(x_grid, ux, uy)
             l_grid = np.interp(x_grid, lx, ly)
 

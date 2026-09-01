@@ -15,7 +15,7 @@ Figs **1–2** are schematics — **not** replication targets.
 | Fig 4 | Training reward + episode length | Fail (`reward shape:reward_by_100_near_zero`) |
 | Fig 5 | CBGT spikes + DBS energy over training | Pass (rep v52) |
 | Fig 6 | α–β + DBS parameters over training | Fail (`paper_alpha_beta_post100_below_theta`) |
-| Fig 7 | 50-episode eval (25 steps) | Pass (rep v20) |
+| Fig 7 | 50-episode eval (25 steps) | Pass (rep v21) |
 <!-- summary:end -->
 
 ---
@@ -263,15 +263,15 @@ Seeded eval of the trained policy: **50** episodes × **25** steps, different se
 
 ### Replication
 
-![Replication Fig 7](images/7/eval_50ep_v20.png)
+![Replication Fig 7](images/7/eval_50ep_v21.png)
 
 <!-- caption-7:start -->
-**Caption:** eval 50×26 steps; mean αβ=186.5; pass=True (v20)
+**Caption:** eval 50×26 steps; mean αβ=186.5; pass=True (v21)
 
 **Manifest:** `artifacts/figures/papers/nguyen/7/manifest.json`
 <!-- caption-7:end -->
 
-**Status:** Pass — see manifest gates (`eval_50ep_v20.png`).
+**Status:** Pass — see manifest gates (`eval_50ep_v21.png`).
 
 <!-- gates-7:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: yes, 2026-09-01). Every row is required for exit.
