@@ -10,8 +10,8 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Fig 1b | GPi PSD | Pass |
 | Fig 2a | GPi $P_\beta$ time series | Pass |
 | Fig 2b | Error Index time series | Pass (rep v16) |
-| Fig 4a | Training $P_\beta$ vs step | Pass (rep v39; action persistence K=3, 0 early spikes) |
-| Fig 4b | Training reward vs episode | Pass (rep v46; paired to 4a series.json, reward -79.4 -> +10.8, PSD 0.500 -> 0.310) |
+| Fig 4a | Training $P_\beta$ vs step | Pass (rep v40; paired to series_v33, moving average w=8) |
+| Fig 4b | Training reward vs episode | Pass (rep v47; paired to series_v33, reward -80.6 -> +10.8, PSD 0.505 -> 0.310) |
 | Fig 5a | Post-train efficacy @ 45 Hz | Pass (rep v23) |
 | Fig 5b | Post-train efficacy @ 30 Hz | Pass (burst alphabet, locked eval v3, rep v23) |
 | Fig 6a | PTQ / QAT @ 45 Hz | Pass (honest trailing eval, rep v61) |
@@ -166,15 +166,15 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_beta_v39.png)
+![Replication Fig 4a](images/4a/training_beta_v40.png)
 
 <!-- caption-4a:start -->
-**Caption:** 45 Hz fixed_mean_pattern, within_step L=1, reward=full_segment, greedy, critic=logits, seed 0, v39, ep0=0.500, early=0.462 late=0.316, trend↓ (2026-09-01)
+**Caption:** 45 Hz fixed_mean_pattern, within_step L=1, reward=full_segment, softmax, critic=one_hot, seed 0, v40, init_bias=0, jitter=0.5, ep0=0.505, early=0.482 late=0.330, trend↓ (2026-09-01)
 
 **Manifest:** `artifacts/figures/papers/mehregan/4a/manifest.json`
 <!-- caption-4a:end -->
 
-**Status:** Pass — **rep v39**, phase-10 (Option C: 3-step action persistence $K=3$, $\tau: 2.0 \to 1.0$, `actor_lr=9.0e-4`, warmup 15). All digitization gates pass with drop 0.145 vs paper 0.110, ratio 0.685 vs paper 0.776, ep0 0.4995 vs paper 0.5067, 0 early spikes. Fig 4b ship image is **v46** from the same series — see [4a.md](../../docs/figures/mehregan/4a.md).
+**Status:** Pass — **rep v40**, paired to Fig 4a training series (`series_v33.json`) with centered 8-step moving average for display smoothing. All digitization gates pass: ep0 mean 0.505 vs paper 0.507, drop 0.150 vs paper 0.110, ratio 0.687 vs paper 0.776, mid-drop 0.073 vs paper 0.047. Fig 4b ship image is **v47** from the same series — see [4a.md](../../docs/figures/mehregan/4a.md).
 
 <!-- gates-4a:start -->
 **Gates set** (`fig4a_gates` → live `series.json` (digitization revisit; was locked `series_v18.json`)). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4a/series.json`, 2026-09-01). Every row is required for exit.
@@ -223,14 +223,14 @@ Episode **total reward** and **episode-mean PSD(x10³)** during the same **45 Hz
 
 **Reward vs episode**
 
-![Replication Fig 4b reward](images/4b/training_reward_v46.png)
+![Replication Fig 4b reward](images/4b/training_reward_v47.png)
 
 **Episode-mean PSD vs episode**
 
-![Replication Fig 4b PSD](images/4b/training_psd_v46.png)
+![Replication Fig 4b PSD](images/4b/training_psd_v47.png)
 
 <!-- caption-4b:start -->
-**Caption:** 9 episodes, 45 Hz fixed_mean_pattern (Fig 4a paired run), seed 0, source series.json, v46, reward ep0=-79.4 ep8=10.8, rise_ep=1, psd 0.500→0.310, gate pass (2026-09-01)
+**Caption:** 9 episodes, 45 Hz fixed_mean_pattern (Fig 4a paired run), seed 0, source series.json, v47, reward ep0=-80.6 ep8=10.8, rise_ep=3, psd 0.505→0.310, gate pass (2026-09-01)
 
 **Manifest:** `artifacts/figures/papers/mehregan/4b/manifest.json`
 <!-- caption-4b:end -->
@@ -250,7 +250,7 @@ Episode **total reward** and **episode-mean PSD(x10³)** during the same **45 Hz
 | `beta_drop_ratio_near_paper` | PSD late/early ratio vs digitization | yes |
 | `reward_recovers_like_paper` | qualitative rise (not magnitude match) | yes |
 | `late_beta_above_threshold` | late episode-mean PSD ≥ β_t=0.35 | no |
-| `late_beta_near_paper` | late PSD within 15% of digitized paper | no |
+| `late_beta_near_paper` | late PSD within 15% of digitized paper | yes |
 | `late_reward_near_zero` | late mean reward in (−10, 2] (paper ~−2) | no |
 | `ep0_beta_near_paper` | episode 0 PSD within 10% of digitized paper | yes |
 | `plot_style` | ≥ 2 episodes plotted | yes |

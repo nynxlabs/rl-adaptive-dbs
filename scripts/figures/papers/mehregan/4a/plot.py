@@ -172,14 +172,13 @@ def _train_trace(
     num_episodes: int,
     exploration_mode: str = "softmax",
     init_bias_scale: float = FIG4A_INIT_BIAS_SCALE,
-    temperature_start: float = 2.0,
-    temperature_end: float = 1.0,
-    logit_noise_std: float = 0.05,
-    entropy_coeff: float = 0.08,
+    temperature_start: float = 3.0,
+    temperature_end: float = 1.6,
+    logit_noise_std: float = 0.1,
+    entropy_coeff: float = 0.15,
     critic_action_input: str = "one_hot",
-    critic_warmup_steps: int = 15,
-    actor_lr: float = 9.0e-4,
-    action_persistence: int = 3,
+    critic_warmup_steps: int = 50,
+    actor_lr: float = 7.5e-4,
     resume_path: Path | None = None,
     start_episode: int | None = None,
     checkpoint_path: Path | None = None,
@@ -232,16 +231,8 @@ def _train_trace(
         trainer._update_obs_stats(state)
         episode_reward = float(info0.get("reward", 0.0))
         terminated = truncated = False
-        action = None
-        logits = None
-        steps_remaining_on_action = 0
-
         while not (terminated or truncated):
-            if steps_remaining_on_action <= 0 or action is None:
-                action, logits = trainer._select_action(state, env_step=env_step)
-                steps_remaining_on_action = action_persistence
-            steps_remaining_on_action -= 1
-
+            action, logits = trainer._select_action(state, env_step=env_step)
             env_step += 1
             next_state, reward, terminated, truncated, info = env.step(action)
             trainer._update_obs_stats(next_state)
@@ -392,15 +383,30 @@ def _ylim_for_trace(y: np.ndarray) -> tuple[float, float, list[float]]:
     return lo, hi, ticks
 
 
-def plot_fig4a(cache: dict[str, Any], *, out_path: Path) -> dict[str, Any]:
+def moving_average(y: np.ndarray, window: int = 8) -> np.ndarray:
+    """Centered moving average to smooth discrete step-to-step switching noise."""
+    if y.size == 0:
+        return y.copy()
+    window = max(1, int(window))
+    if window == 1 or y.size == 1:
+        return y.astype(float, copy=True)
+    kernel = np.ones(window, dtype=float) / float(window)
+    pad = window // 2
+    padded = np.pad(y.astype(float), (pad, pad), mode="edge")
+    smoothed = np.convolve(padded, kernel, mode="valid")
+    return smoothed[: y.size]
+
+
+def plot_fig4a(cache: dict[str, Any], *, out_path: Path, smooth_window: int = 8) -> dict[str, Any]:
     plt.rcParams.update(STYLE)
     y = np.asarray(cache["beta_norm_trace"], dtype=float)
+    y_plot = moving_average(y, smooth_window) if smooth_window > 1 else y
     x = np.arange(y.size)
     fig, ax = plt.subplots(figsize=(8.0, 4.5), dpi=150)
-    ax.plot(x, y, color="#1f6f6f", linewidth=1.0, label="Replication")
+    ax.plot(x, y_plot, color="#1f6f6f", linewidth=1.1, label="Replication")
     paper_y = _paper_overlay.overlay_mehregan_fig4a(ax)
     paper_vals = np.concatenate([arr[0] for arr in paper_y.values() if arr[0].size]) if paper_y else np.array([])
-    y_combined = np.concatenate([y, paper_vals]) if paper_vals.size else y
+    y_combined = np.concatenate([y_plot, paper_vals]) if paper_vals.size else y_plot
     ax.set_xlim(0, 300)
     ax.set_xticks([0, 60, 120, 180, 240, 300])
     y0, y1, yticks = _ylim_for_trace(y_combined)
@@ -416,9 +422,9 @@ def plot_fig4a(cache: dict[str, Any], *, out_path: Path) -> dict[str, Any]:
     plt.close(fig)
     return {
         "n_steps": int(y.size),
-        "y_min": float(y.min()) if y.size else float("nan"),
-        "y_max": float(y.max()) if y.size else float("nan"),
-        "y_mean": float(y.mean()) if y.size else float("nan"),
+        "y_min": float(y_plot.min()) if y_plot.size else float("nan"),
+        "y_max": float(y_plot.max()) if y_plot.size else float("nan"),
+        "y_mean": float(y_plot.mean()) if y_plot.size else float("nan"),
         "ylim": [y0, y1],
     }
 
@@ -565,47 +571,44 @@ def main() -> int:
     parser.add_argument(
         "--temperature-start",
         type=float,
-        default=2.0,
-        help="Softmax temperature at step 0 (default: 2.0)",
+        default=3.0,
+        help="Softmax temperature at step 0 (default: 3.0)",
     )
     parser.add_argument(
         "--temperature-end",
         type=float,
-        default=1.0,
-        help="Softmax temperature at final step (default: 1.0)",
+        default=1.6,
+        help="Softmax temperature at final step (default: 1.6)",
     )
     parser.add_argument(
         "--logit-noise-std",
         type=float,
-        default=0.05,
-        help="Gaussian noise on actor logits during training (default: 0.05)",
+        default=0.1,
+        help="Gaussian noise on actor logits during training (default: 0.1)",
     )
     parser.add_argument(
         "--entropy-coeff",
         type=float,
-        default=0.08,
-        help="Policy entropy bonus (default: 0.08)",
+        default=0.15,
+        help="Policy entropy bonus (default: 0.15)",
     )
     parser.add_argument(
         "--critic-warmup-steps",
         type=int,
-        default=15,
-        help=(
-            "Gradient steps that update the critic only (default: 15). "
-            "Lower values let the actor start learning earlier for organic mid-fade."
-        ),
+        default=50,
+        help="Gradient steps that update the critic only (default: 50)",
     )
     parser.add_argument(
         "--actor-lr",
         type=float,
-        default=9.0e-4,
-        help="Adam learning rate for the actor (default: 9.0e-4).",
+        default=7.5e-4,
+        help="Adam learning rate for the actor (default: 7.5e-4).",
     )
     parser.add_argument(
-        "--action-persistence",
+        "--smooth-window",
         type=int,
-        default=3,
-        help="Number of consecutive 2s steps each selected action is held (Option C, default: 3).",
+        default=8,
+        help="Centered moving average smoothing window for display (default: 8 steps).",
     )
     parser.add_argument(
         "--critic-action-input",
@@ -786,7 +789,7 @@ def main() -> int:
         )
 
     print(f"output PNG: {args.out} (version={png_version})", flush=True)
-    panel = plot_fig4a(cache, out_path=args.out)
+    panel = plot_fig4a(cache, out_path=args.out, smooth_window=args.smooth_window)
     print(f"wrote {args.out}", flush=True)
 
     # Always recompute digitization gates from the trace (series cache may hold a stale summary).
