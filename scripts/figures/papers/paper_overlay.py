@@ -457,14 +457,19 @@ def overlay_smoothed_raw_axis(
     smoothed_names: Sequence[str] = ("Smoothed",),
     raw_names: Sequence[str] = ("Raw",),
     outline_color: str = "#333333",
+    snap_x: tuple[float, float] | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Overlay Smoothed (+ optional Raw) from a single digitization file."""
     curves = load_panel_curves(curves_path)
     sx, sy = pick_series(curves, *smoothed_names)
+    if snap_x is not None:
+        sx = snap_x_to_limits(sx, x_min=snap_x[0], x_max=snap_x[1])
     if show_raw:
         for raw_name in raw_names:
             if raw_name in curves:
                 rx, ry = curves[raw_name]
+                if snap_x is not None:
+                    rx = snap_x_to_limits(rx, x_min=snap_x[0], x_max=snap_x[1])
                 overlay_on_axis(
                     ax,
                     rx,
@@ -651,12 +656,14 @@ def overlay_nguyen_fig6(
     ax_pw=None,
     *,
     show_paper_raw: bool = True,
+    snap_power_x: tuple[float, float] | None = (0.0, 500.0),
 ) -> dict[str, tuple[np.ndarray, np.ndarray]]:
     power_sy, power_raw = overlay_smoothed_raw_axis(
         ax_power,
         NGUYEN_DIG / "curves_fig6_power.json",
         show_raw=show_paper_raw,
         outline_color=NGUYEN_POWER,
+        snap_x=snap_power_x,
     )
     if ax_amp is not None and ax_pw is not None:
         ax_map = {

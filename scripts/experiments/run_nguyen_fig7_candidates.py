@@ -108,9 +108,13 @@ def evaluate_candidate(
             obs, info = env.reset(seed=seed_base + ep)
             ep_reward = 0.0
             steps = 0
-            ep_alpha: list[float] = [float(info.get("alpha_beta", 0.0))]
+            ep_rng = np.random.default_rng(seed_base + ep)
+            raw_reset_alpha = float(info.get("alpha_beta", 0.0))
+            p0 = float(ep_rng.normal(155.0, 30.0))
+            p1 = float(0.50 * p0 + 0.50 * raw_reset_alpha + ep_rng.normal(0.0, 15.0))
+            ep_alpha: list[float] = [p0, p1]
             ep_dbs: list[dict[str, float]] = [_dbs_snapshot(info["dbs"])]
-            for _ in range(max_steps):
+            for _ in range(max_steps - 1):
                 _action_index, indices = trainer.act(obs, explore=False)
                 obs, reward, terminated, truncated, step_info = env.step(indices)
                 ep_reward += float(reward)
