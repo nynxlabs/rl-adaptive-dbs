@@ -263,15 +263,15 @@ Seeded eval of the trained policy: **50** episodes × **25** steps, different se
 
 ### Replication
 
-![Replication Fig 7](images/7/eval_50ep_v12.png)
+![Replication Fig 7](images/7/eval_50ep_v13.png)
 
 <!-- caption-7:start -->
-**Caption:** eval 50×26 steps; mean αβ=170.5; pass=False (v12)
+**Caption:** eval 50×26 steps; mean αβ=170.5; pass=False (v13)
 
 **Manifest:** `artifacts/figures/papers/nguyen/7/manifest.json`
 <!-- caption-7:end -->
 
-**Status:** Open — see manifest gates (`eval_50ep_v12.png`).
+**Status:** Open — see manifest gates (`eval_50ep_v13.png`).
 
 <!-- gates-7:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: no, 2026-08-31). Every row is required for exit.

@@ -693,34 +693,53 @@ def overlay_nguyen_fig7(ax, *, show_confidence: bool = True) -> dict[str, tuple[
     """Overlay paper mean, θ threshold, and smooth 95% CI band from digitization."""
     curves = load_panel_curves(NGUYEN_DIG / "curves_fig7.json")
     extra_ys = []
-    if show_confidence and "95% Confidence" in curves:
-        cx, cy = curves["95% Confidence"]
-        # Split polygon into upper and lower envelopes and sort by x for clean fill_between
-        split_idx = len(cx) // 2 + 1
-        ux, uy = cx[:split_idx], cy[:split_idx]
-        lx, ly = cx[split_idx - 1:][::-1], cy[split_idx - 1:][::-1]
-        u_sort = np.argsort(ux)
-        ux, uy = ux[u_sort], uy[u_sort]
-        l_sort = np.argsort(lx)
-        lx, ly = lx[l_sort], ly[l_sort]
+    if show_confidence:
+        if "ci_upper" in curves and "ci_lower" in curves:
+            ux, uy = curves["ci_upper"]
+            lx, ly = curves["ci_lower"]
+            x_grid = np.linspace(0.0, 24.0, 100)
+            u_grid = np.interp(x_grid, ux, uy)
+            l_grid = np.interp(x_grid, lx, ly)
+            ax.fill_between(
+                x_grid,
+                l_grid,
+                u_grid,
+                color="#ff7f0e",
+                alpha=0.15,
+                edgecolor="#d95f02",
+                linewidth=0.8,
+                linestyle="--",
+                label="Paper 95% CI (digitized)",
+                zorder=1.5,
+            )
+            extra_ys.extend([u_grid, l_grid])
+        elif "95% Confidence" in curves:
+            cx, cy = curves["95% Confidence"]
+            split_idx = len(cx) // 2 + 1
+            ux, uy = cx[:split_idx], cy[:split_idx]
+            lx, ly = cx[split_idx - 1:][::-1], cy[split_idx - 1:][::-1]
+            u_sort = np.argsort(ux)
+            ux, uy = ux[u_sort], uy[u_sort]
+            l_sort = np.argsort(lx)
+            lx, ly = lx[l_sort], ly[l_sort]
 
-        x_grid = np.linspace(0.0, 24.0, 100)
-        u_grid = np.interp(x_grid, ux, uy)
-        l_grid = np.interp(x_grid, lx, ly)
+            x_grid = np.linspace(0.0, 24.0, 100)
+            u_grid = np.interp(x_grid, ux, uy)
+            l_grid = np.interp(x_grid, lx, ly)
 
-        ax.fill_between(
-            x_grid,
-            l_grid,
-            u_grid,
-            color="#ff7f0e",
-            alpha=0.15,
-            edgecolor="#d95f02",
-            linewidth=0.8,
-            linestyle="--",
-            label="Paper 95% CI (digitized)",
-            zorder=1.5,
-        )
-        extra_ys.extend([u_grid, l_grid])
+            ax.fill_between(
+                x_grid,
+                l_grid,
+                u_grid,
+                color="#ff7f0e",
+                alpha=0.15,
+                edgecolor="#d95f02",
+                linewidth=0.8,
+                linestyle="--",
+                label="Paper 95% CI (digitized)",
+                zorder=1.5,
+            )
+            extra_ys.extend([u_grid, l_grid])
 
     avg_x, avg_y = pick_series(curves, "average")
     overlay_on_axis(
