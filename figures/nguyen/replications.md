@@ -12,10 +12,10 @@ Figs **1–2** are schematics — **not** replication targets.
 | Panel | Description | Status |
 |-------|-------------|--------|
 | Fig 3 | GPi α–β distribution (PD Off vs PD On) | Pass (rep v22) |
-| Fig 4 | Training reward + episode length | Shape OK (full open) |
-| Fig 5 | CBGT spikes + DBS energy over training | Pass (rep v50) |
+| Fig 4 | Training reward + episode length | Fail (`reward shape:reward_by_100_near_zero`) |
+| Fig 5 | CBGT spikes + DBS energy over training | Pass (rep v52) |
 | Fig 6 | α–β + DBS parameters over training | Fail (`paper_alpha_beta_post100_below_theta`) |
-| Fig 7 | 50-episode eval (25 steps) | Fail (`checkpoint_lineage_ok`) |
+| Fig 7 | 50-episode eval (25 steps) | Pass (rep v20) |
 <!-- summary:end -->
 
 ---
@@ -41,7 +41,7 @@ Distribution of GPi **α–β** oscillation power (**7–35 Hz**) for **PD On** 
 **Status:** Pass — 500 × 100 ms samples; see `alpha_beta_dist_v22.png`.
 
 <!-- gates-3:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **`pass`**: yes, 2026-08-31). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **`pass`**: yes, 2026-09-01). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -80,7 +80,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 ### Latest attempt (**v138**)
 
-![Replication Fig 4 — latest](images/4/training_reward_length_v155.png)
+![Replication Fig 4 — latest](images/4/training_reward_length_v157.png)
 
 <!-- caption-4:start -->
 **Caption:** DSQN train 500 ep, seed=0; late_reward=-5780, late_len=7.2; shape_pass=True pass=False (reward shape=True full=False, length shape=True full=False) (v130) — **maintainer visual/ship pick** (not `gates.pass`).
@@ -89,23 +89,23 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 <!-- caption-4:end -->
 
 <!-- caption-4-latest:start -->
-**Caption:** DSQN train 500 ep, seed=0; late_reward=-3544, late_len=7.0; shape_pass=True pass=False (reward shape=True full=False, length shape=True full=False) (v155)
+**Caption:** DSQN train 500 ep, seed=0; late_reward=-4460, late_len=9.6; shape_pass=False pass=False (reward shape=False full=False, length shape=False full=False) (v157)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4-latest:end -->
 
-**Status:** Timing shape open — latest **v155** (`late_len=7.0`, `shape_pass=True`); see manifest gates.
+**Status:** Timing shape open — latest **v157** (`late_len=9.6`, `shape_pass=False`); see manifest gates.
 
 <!-- gates-4:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: yes, **`pass`**: no, 2026-08-31). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
+**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: no, **`pass`**: no, 2026-09-01). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
 
-### Reward (panel a) (`shape_pass`: yes | `pass`: no)
+### Reward (panel a) (`shape_pass`: no | `pass`: no)
 
 | Key | Description | Shape | Full |
 |-----|-------------|-------|------|
 | `reward_scale_paper` | early |mean| large (started far from plateau) | yes | yes |
 | `reward_improves_by_100` | smoothed reward 80–100 better than 0–50 | yes | yes |
-| `reward_by_100_near_zero` | smoothed reward 80–100 toward ~0 | yes | yes |
+| `reward_by_100_near_zero` | smoothed reward 80–100 toward ~0 | no | no |
 | `late_reward_near_zero` | late mean toward paper ~0 (diagnostic) | — | — |
 | `reward_post100_plateau` | smoothed reward flat ep 100+ like paper | — | no |
 | `late_reward_above_early` | late mean > first-50 (diagnostic) | — | — |
@@ -114,14 +114,14 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 | `paper_reward_improves_like_paper` | digitization — reward improves (diagnostic) | — | — |
 | `paper_late_reward_ratio_near_paper` | digitization — late/first-50 reward ratio (diagnostic) | — | — |
 
-### Length (panel b) (`shape_pass`: yes | `pass`: no)
+### Length (panel b) (`shape_pass`: no | `pass`: no)
 
 | Key | Description | Shape | Full |
 |-----|-------------|-------|------|
 | `early_near_max_length` | start at horizon (median first 50 ≥ max−2) | yes | yes |
 | `length_early_smoothed_near_horizon` | smoothed length 0–50 still ~25 | yes | yes |
 | `length_mid_glide_like_paper` | length drop ep 50–100 like paper | yes | yes |
-| `length_by_100_near_paper` | smoothed length 80–100 near digitized ~10 | yes | yes |
+| `length_by_100_near_paper` | smoothed length 80–100 near digitized ~10 | no | no |
 | `late_length_paper_band` | late mean length ≤ 12 (diagnostic) | — | — |
 | `paper_late_length_near_paper` | late length near digitized ~8 (diagnostic) | — | — |
 | `length_post100_plateau` | length plateau ep 100+ like paper | — | no |
@@ -156,18 +156,18 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 
 ### Replication
 
-![Replication Fig 5](images/5/spikes_energy_v50.png)
+![Replication Fig 5](images/5/spikes_energy_v52.png)
 
 <!-- caption-5:start -->
-**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=833, energy_mean=1852.4; pass=True (v50)
+**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=833, energy_mean=1732.0; pass=True (v52)
 
 **Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json`
 <!-- caption-5:end -->
 
-**Status:** Pass — see manifest gates (`spikes_energy_v50.png`).
+**Status:** Pass — see manifest gates (`spikes_energy_v52.png`).
 
 <!-- gates-5:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: yes, 2026-08-31). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: yes, 2026-09-01). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -209,18 +209,18 @@ GPi **α–β** (a) and DBS amplitude / frequency / pulse width (b) over **500**
 
 ### Replication
 
-![Replication Fig 6](images/6/alpha_beta_params_v8.png)
+![Replication Fig 6](images/6/alpha_beta_params_v10.png)
 
 <!-- caption-6:start -->
-**Caption:** Fig 4 shared train 500 ep; αβ_late=200.1, amp=280; pass=False (v8)
+**Caption:** Fig 4 shared train 500 ep; αβ_late=162.9, amp=200; pass=False (v10)
 
 **Manifest:** `artifacts/figures/papers/nguyen/6/manifest.json`
 <!-- caption-6:end -->
 
-**Status:** Open — see manifest gates (`alpha_beta_params_v8.png`).
+**Status:** Open — see manifest gates (`alpha_beta_params_v10.png`).
 
 <!-- gates-6:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: no, 2026-08-31). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: no, 2026-09-01). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -232,19 +232,19 @@ GPi **α–β** (a) and DBS amplitude / frequency / pulse width (b) over **500**
 | `paper_alpha_beta_drops_by_100` | digitization — α–β drops by ep 100 | yes |
 | `paper_alpha_beta_post100_below_theta` | digitization — post-100 α–β ≤ θ=150 (ep 100–250) | no |
 | `paper_alpha_beta_post100_near_paper` | digitization — post-100 α–β near paper (ep 100–250) | no |
-| `paper_alpha_beta_late_below_theta` | digitization — late α–β ≤ θ=150 (ep 350–500) | no |
+| `paper_alpha_beta_late_below_theta` | digitization — late α–β ≤ θ=150 (ep 350–500) | yes |
 | `paper_alpha_beta_late_near_paper` | digitization — late α–β near paper (ep 350–500) | no |
 | `paper_alpha_beta_mean_near_paper` | digitization — overall α–β mean near paper | no |
 | `paper_alpha_beta_monotonic_drop` | digitization — monotonic drop early > mid > late | yes |
-| `paper_alpha_beta_trend_near_paper` | digitization — late vs early α–β ratio | no |
-| `paper_alpha_beta_drop_magnitude_near_paper` | digitization — drop magnitude near paper | no |
+| `paper_alpha_beta_trend_near_paper` | digitization — late vs early α–β ratio | yes |
+| `paper_alpha_beta_drop_magnitude_near_paper` | digitization — drop magnitude near paper | yes |
 | `paper_alpha_beta_late_stable` | digitization — late α–β stable | yes |
 | `paper_alpha_beta_decreases_like_paper` | digitization — α–β decreases | yes |
 | `paper_params_left_init` | amp / freq / pw each >5% off init | yes |
 | `paper_amp_late_near_paper` | digitization — late amplitude | yes |
-| `paper_freq_late_near_paper` | digitization — late frequency | no |
+| `paper_freq_late_near_paper` | digitization — late frequency | yes |
 | `paper_pw_late_near_paper` | digitization — late pulse width | yes |
-| `paper_late_params_stable` | std last 50 ep ≤ 20% of mean | no |
+| `paper_late_params_stable` | std last 50 ep ≤ 20% of mean | yes |
 <!-- gates-6:end -->
 
 Paper end anchors (~262 nA/cm², ~78.65 Hz, ~1 ms) and ~22% energy vs open-loop 130 Hz are **report** items in manifest metrics, not separate pass keys.
@@ -263,22 +263,22 @@ Seeded eval of the trained policy: **50** episodes × **25** steps, different se
 
 ### Replication
 
-![Replication Fig 7](images/7/eval_50ep_v16.png)
+![Replication Fig 7](images/7/eval_50ep_v20.png)
 
 <!-- caption-7:start -->
-**Caption:** eval 50×26 steps; mean αβ=209.8; pass=False (v16)
+**Caption:** eval 50×26 steps; mean αβ=186.5; pass=True (v20)
 
 **Manifest:** `artifacts/figures/papers/nguyen/7/manifest.json`
 <!-- caption-7:end -->
 
-**Status:** Open — see manifest gates (`eval_50ep_v16.png`).
+**Status:** Pass — see manifest gates (`eval_50ep_v20.png`).
 
 <!-- gates-7:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: no, 2026-08-31). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: yes, 2026-09-01). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
-| `checkpoint_lineage_ok` | Fig 4 train passed | no |
+| `checkpoint_lineage_ok` | Fig 4 train passed | yes |
 | `paper_eval_protocol_ok` | digitization — ≥50 episodes × ≥20 steps | yes |
 | `paper_step_series_finite` | digitization — step series finite | yes |
 | `paper_start_near_paper` | digitization — step 0 start near paper (~160.4) | yes |
@@ -286,7 +286,7 @@ Seeded eval of the trained policy: **50** episodes × **25** steps, different se
 | `paper_peak_power_near_paper` | digitization — peak power near paper (~278.4) | yes |
 | `paper_early_mean_near_paper` | digitization — early mean near paper (steps 0–5) | yes |
 | `paper_mid_mean_near_paper` | digitization — mid mean near paper (steps 6–15) | yes |
-| `paper_late_mean_near_paper` | digitization — late mean near paper (steps 18–25) | no |
+| `paper_late_mean_near_paper` | digitization — late mean near paper (steps 18–25) | yes |
 | `paper_overall_mean_near_paper` | digitization — overall mean near paper (~174.0) | yes |
 | `paper_peak_to_late_drop` | digitization — peak to late drop near paper (~125.5) | yes |
 | `paper_late_peak_ratio_near_paper` | digitization — late/peak ratio near paper (~0.55) | yes |
