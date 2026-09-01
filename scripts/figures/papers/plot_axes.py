@@ -6,7 +6,8 @@ import numpy as np
 
 def data_ylim(
     *arrays: np.ndarray,
-    pad_frac: float = 0.05,
+    pad_frac: float | tuple[float, float] = 0.05,
+    pad_top: float | None = None,
     integer_snap: bool = False,
     extra_values: tuple[float, ...] | list[float] = (),
 ) -> tuple[float, float]:
@@ -28,9 +29,15 @@ def data_ylim(
     y_max = float(y.max())
     if y_max <= y_min:
         y_max = y_min + 1.0
-    pad = pad_frac * (y_max - y_min)
-    lo = y_min - pad
-    hi = y_max + pad
+    rng = y_max - y_min
+    if isinstance(pad_frac, (tuple, list)):
+        pad_lo = float(pad_frac[0]) * rng
+        pad_hi = float(pad_frac[1]) * rng
+    else:
+        pad_lo = float(pad_frac) * rng
+        pad_hi = float(pad_top) * rng if pad_top is not None else float(pad_frac) * rng
+    lo = y_min - pad_lo
+    hi = y_max + pad_hi
     if integer_snap:
         lo = float(np.floor(lo))
         hi = float(np.ceil(hi))
