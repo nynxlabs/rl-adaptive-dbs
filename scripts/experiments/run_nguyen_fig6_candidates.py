@@ -490,6 +490,9 @@ def plot_fig6(series: dict[str, Any], out_path: Path, title_suffix: str = "") ->
     pw = np.asarray(series["episode_pulse_widths"], dtype=float)
     episodes = np.arange(ab.size, dtype=float)
     ab_smooth = moving_average(ab, 20)
+    amp_smooth = moving_average(amp, 20)
+    freq_smooth = moving_average(freq, 20)
+    pw_smooth = moving_average(pw, 20)
 
     fig, axes = plt.subplots(2, 1, figsize=(8.8, 7.5), sharex=True)
 
@@ -508,9 +511,17 @@ def plot_fig6(series: dict[str, Any], out_path: Path, title_suffix: str = "") ->
 
     ax_pw.spines["right"].set_position(("axes", 1.14))
 
-    ax_freq.plot(episodes, freq, color=_paper_overlay.NGUYEN_FREQ, linewidth=1.2, label="Frequency")
-    ax_amp.plot(episodes, amp, color=_paper_overlay.NGUYEN_AMP, linewidth=1.2, label="Amplitude")
-    ax_pw.plot(episodes, pw, color=_paper_overlay.NGUYEN_PW, linewidth=1.2, label="Pulse width")
+    # Frequency: raw + rolling average
+    ax_freq.plot(episodes, freq, color="#9ecae1", linewidth=0.8, alpha=0.55, label="_freq_raw")
+    ax_freq.plot(episodes, freq_smooth, color=_paper_overlay.NGUYEN_FREQ, linewidth=2.0, label="Frequency")
+
+    # Amplitude: raw + rolling average
+    ax_amp.plot(episodes, amp, color="#fb9a99", linewidth=0.8, alpha=0.55, label="_amp_raw")
+    ax_amp.plot(episodes, amp_smooth, color=_paper_overlay.NGUYEN_AMP, linewidth=2.0, label="Amplitude")
+
+    # Pulse width: raw + rolling average
+    ax_pw.plot(episodes, pw, color="#a1d99b", linewidth=0.8, alpha=0.55, label="_pw_raw")
+    ax_pw.plot(episodes, pw_smooth, color=_paper_overlay.NGUYEN_PW, linewidth=2.0, label="Pulse width")
 
     _paper_overlay.overlay_nguyen_fig6(ax0, ax_freq, ax_amp, ax_pw)
 
