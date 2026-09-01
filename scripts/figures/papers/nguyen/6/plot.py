@@ -223,7 +223,7 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
     p_raw = pw_curves.get("Raw", ([], []))[1]
     p_sy = pw_curves.get("Smoothed", ([], []))[1]
 
-    ax_freq.set_ylim(data_ylim(freq, f_raw, f_sy, pad_frac=0.06, pad_top=0.25))
+    ax_freq.set_ylim(0.0, 125.0)
     ax_amp.set_ylim(data_ylim(amp, a_raw, a_sy, pad_frac=0.06, pad_top=0.25))
     ax_pw.set_ylim(data_ylim(pw, p_raw, p_sy, pad_frac=0.06, pad_top=0.25))
 
