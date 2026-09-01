@@ -306,7 +306,7 @@ class DSQNTrainer:
             # (same steps as episode_lengths); reset() initial integrate is not counted.
             episode_spikes = 0
             episode_energy = 0.0
-            alpha_betas: list[float] = [float(reset_info.get("alpha_beta", float("nan")))]
+            alpha_betas: list[float] = []
             end_dbs = reset_info.get("dbs")
             step_info: dict[str, Any] | None = reset_info
             steps = 0
@@ -362,7 +362,17 @@ class DSQNTrainer:
             result.episode_lengths.append(steps)
             result.episode_spike_totals.append(nominal_spikes)
             result.episode_energies.append(nominal_energy)
-            result.episode_alpha_beta_means.append(float(np.nanmean(alpha_betas)))
+            if alpha_betas:
+                if terminated_early and steps < cfg.max_episode_steps:
+                    nominal_ab = float(
+                        (sum(alpha_betas) + (cfg.max_episode_steps - steps) * alpha_betas[-1])
+                        / cfg.max_episode_steps
+                    )
+                else:
+                    nominal_ab = float(np.nanmean(alpha_betas))
+            else:
+                nominal_ab = float(reset_info.get("alpha_beta", float("nan")))
+            result.episode_alpha_beta_means.append(nominal_ab)
             result.episode_early_stops.append(terminated_early)
             completed = episode + 1
             if checkpoint_path is not None and checkpoint_interval > 0:

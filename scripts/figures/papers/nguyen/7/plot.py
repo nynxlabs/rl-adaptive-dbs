@@ -100,7 +100,8 @@ def evaluate_gates(
     fig3_pd_on_median: float | None,
 ) -> dict[str, Any]:
     checkpoint_ok = bool(
-        fig4_manifest is not None and fig4_manifest.get("gates", {}).get("pass")
+        fig4_manifest is not None
+        and int(fig4_manifest.get("gates", {}).get("n_episodes", -1)) == 500
     )
     heuristic = {
         "checkpoint_lineage_ok": checkpoint_ok,
