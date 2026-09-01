@@ -646,7 +646,9 @@ def overlay_nguyen_fig5(
 
 def overlay_nguyen_fig6(
     ax_power,
-    ax_params,
+    ax_params_or_freq,
+    ax_amp=None,
+    ax_pw=None,
     *,
     show_paper_raw: bool = True,
 ) -> dict[str, tuple[np.ndarray, np.ndarray]]:
@@ -656,23 +658,80 @@ def overlay_nguyen_fig6(
         show_raw=show_paper_raw,
         outline_color=NGUYEN_POWER,
     )
-    param_specs = (
-        ("curves_fig6_amp.json", "Amplitude", NGUYEN_AMP, ("Raw", "Smoothed")),
-        ("curves_fig6_freq.json", "Frequency", NGUYEN_FREQ, ("Raw", "Smoothed")),
-        ("curves_fig6_pw.json", "Pulse width", NGUYEN_PW, ("Raw", "Smoothed")),
-    )
-    param_ys: list[np.ndarray] = []
-    for stem, label, outline, names in param_specs:
-        curves = load_panel_curves(NGUYEN_DIG / stem)
-        px, py = pick_series(curves, *names)
-        overlay_on_axis(
-            ax_params,
-            px,
-            py,
-            label=f"Paper {label} (digitized)",
-            outline_color=outline,
+    if ax_amp is not None and ax_pw is not None:
+        ax_map = {
+            "curves_fig6_freq.json": (ax_params_or_freq, "Frequency", NGUYEN_FREQ),
+            "curves_fig6_amp.json": (ax_amp, "Amplitude", NGUYEN_AMP),
+            "curves_fig6_pw.json": (ax_pw, "Pulse width", NGUYEN_PW),
+        }
+        param_ys: list[np.ndarray] = []
+        for stem, (target_ax, label, outline) in ax_map.items():
+            curves = load_panel_curves(NGUYEN_DIG / stem)
+            px, py = pick_series(curves, "Smoothed", "Raw")
+            overlay_on_axis(
+                target_ax,
+                px,
+                py,
+                label=f"Paper {label} (digitized)",
+                outline_color=outline,
+            )
+            param_ys.append(py)
+    elif isinstance(ax_params_or_freq, dict):
+        ax_map = {
+            "curves_fig6_freq.json": (ax_params_or_freq.get("freq", ax_params_or_freq), "Frequency", NGUYEN_FREQ),
+            "curves_fig6_amp.json": (ax_params_or_freq.get("amp", ax_params_or_freq), "Amplitude", NGUYEN_AMP),
+            "curves_fig6_pw.json": (ax_params_or_freq.get("pw", ax_params_or_freq), "Pulse width", NGUYEN_PW),
+        }
+        param_ys = []
+        for stem, (target_ax, label, outline) in ax_map.items():
+            curves = load_panel_curves(NGUYEN_DIG / stem)
+            px, py = pick_series(curves, "Smoothed", "Raw")
+            overlay_on_axis(
+                target_ax,
+                px,
+                py,
+                label=f"Paper {label} (digitized)",
+                outline_color=outline,
+            )
+            param_ys.append(py)
+    elif isinstance(ax_params_or_freq, (tuple, list)) and len(ax_params_or_freq) == 3:
+        ax_f, ax_a, ax_p = ax_params_or_freq
+        ax_map = {
+            "curves_fig6_freq.json": (ax_f, "Frequency", NGUYEN_FREQ),
+            "curves_fig6_amp.json": (ax_a, "Amplitude", NGUYEN_AMP),
+            "curves_fig6_pw.json": (ax_p, "Pulse width", NGUYEN_PW),
+        }
+        param_ys = []
+        for stem, (target_ax, label, outline) in ax_map.items():
+            curves = load_panel_curves(NGUYEN_DIG / stem)
+            px, py = pick_series(curves, "Smoothed", "Raw")
+            overlay_on_axis(
+                target_ax,
+                px,
+                py,
+                label=f"Paper {label} (digitized)",
+                outline_color=outline,
+            )
+            param_ys.append(py)
+    else:
+        ax_params = ax_params_or_freq
+        param_specs = (
+            ("curves_fig6_amp.json", "Amplitude", NGUYEN_AMP, ("Raw", "Smoothed")),
+            ("curves_fig6_freq.json", "Frequency", NGUYEN_FREQ, ("Raw", "Smoothed")),
+            ("curves_fig6_pw.json", "Pulse width", NGUYEN_PW, ("Raw", "Smoothed")),
         )
-        param_ys.append(py)
+        param_ys = []
+        for stem, label, outline, names in param_specs:
+            curves = load_panel_curves(NGUYEN_DIG / stem)
+            px, py = pick_series(curves, *names)
+            overlay_on_axis(
+                ax_params,
+                px,
+                py,
+                label=f"Paper {label} (digitized)",
+                outline_color=outline,
+            )
+            param_ys.append(py)
     power_curves = load_panel_curves(NGUYEN_DIG / "curves_fig6_power.json")
     if "threshold" in power_curves:
         tx, ty = power_curves["threshold"]
