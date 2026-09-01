@@ -544,17 +544,20 @@ def plot_fig6(series: dict[str, Any], out_path: Path, title_suffix: str = "") ->
 
     ax_freq.set_title("DBS Parameters")
 
-    # Limits with data_ylim to include replication + paper curves
+    # Limits with data_ylim to include replication + paper curves with headroom for legend
     freq_curves = _paper_overlay.load_panel_curves(_paper_overlay.NGUYEN_DIG / "curves_fig6_freq.json")
-    _, py_f = _paper_overlay.pick_series(freq_curves, "Smoothed", "Raw")
+    f_raw = freq_curves.get("Raw", ([], []))[1]
+    f_sy = freq_curves.get("Smoothed", ([], []))[1]
     amp_curves = _paper_overlay.load_panel_curves(_paper_overlay.NGUYEN_DIG / "curves_fig6_amp.json")
-    _, py_a = _paper_overlay.pick_series(amp_curves, "Smoothed", "Raw")
+    a_raw = amp_curves.get("Raw", ([], []))[1]
+    a_sy = amp_curves.get("Smoothed", ([], []))[1]
     pw_curves = _paper_overlay.load_panel_curves(_paper_overlay.NGUYEN_DIG / "curves_fig6_pw.json")
-    _, py_p = _paper_overlay.pick_series(pw_curves, "Smoothed", "Raw")
+    p_raw = pw_curves.get("Raw", ([], []))[1]
+    p_sy = pw_curves.get("Smoothed", ([], []))[1]
 
-    ax_freq.set_ylim(data_ylim(freq, py_f, pad_frac=0.08))
-    ax_amp.set_ylim(data_ylim(amp, py_a, pad_frac=0.08))
-    ax_pw.set_ylim(data_ylim(pw, py_p, pad_frac=0.08))
+    ax_freq.set_ylim(data_ylim(freq, f_raw, f_sy, pad_frac=0.06, pad_top=0.25))
+    ax_amp.set_ylim(data_ylim(amp, a_raw, a_sy, pad_frac=0.06, pad_top=0.25))
+    ax_pw.set_ylim(data_ylim(pw, p_raw, p_sy, pad_frac=0.06, pad_top=0.25))
 
     _paper_overlay.place_legend(ax0, fontsize=8)
 
