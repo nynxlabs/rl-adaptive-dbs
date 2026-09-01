@@ -667,15 +667,37 @@ def overlay_nguyen_fig6(
         param_ys: list[np.ndarray] = []
         for stem, (target_ax, label, outline) in ax_map.items():
             curves = load_panel_curves(NGUYEN_DIG / stem)
-            px, py = pick_series(curves, "Smoothed", "Raw")
-            overlay_on_axis(
-                target_ax,
-                px,
-                py,
-                label=f"Paper {label} (digitized)",
-                outline_color=outline,
-            )
-            param_ys.append(py)
+            if show_paper_raw and "Raw" in curves:
+                rx, ry = curves["Raw"]
+                overlay_on_axis(
+                    target_ax,
+                    rx,
+                    ry,
+                    label=f"_Paper_{label}_raw",
+                    outline_color=outline,
+                    raw=True,
+                )
+                param_ys.append(ry)
+            if "Smoothed" in curves:
+                sx, sy = curves["Smoothed"]
+                overlay_on_axis(
+                    target_ax,
+                    sx,
+                    sy,
+                    label=f"Paper {label} (digitized)",
+                    outline_color=outline,
+                )
+                param_ys.append(sy)
+            elif "Raw" in curves:
+                rx, ry = curves["Raw"]
+                overlay_on_axis(
+                    target_ax,
+                    rx,
+                    ry,
+                    label=f"Paper {label} (digitized)",
+                    outline_color=outline,
+                )
+                param_ys.append(ry)
     elif isinstance(ax_params_or_freq, dict):
         ax_map = {
             "curves_fig6_freq.json": (ax_params_or_freq.get("freq", ax_params_or_freq), "Frequency", NGUYEN_FREQ),
@@ -685,15 +707,37 @@ def overlay_nguyen_fig6(
         param_ys = []
         for stem, (target_ax, label, outline) in ax_map.items():
             curves = load_panel_curves(NGUYEN_DIG / stem)
-            px, py = pick_series(curves, "Smoothed", "Raw")
-            overlay_on_axis(
-                target_ax,
-                px,
-                py,
-                label=f"Paper {label} (digitized)",
-                outline_color=outline,
-            )
-            param_ys.append(py)
+            if show_paper_raw and "Raw" in curves:
+                rx, ry = curves["Raw"]
+                overlay_on_axis(
+                    target_ax,
+                    rx,
+                    ry,
+                    label=f"_Paper_{label}_raw",
+                    outline_color=outline,
+                    raw=True,
+                )
+                param_ys.append(ry)
+            if "Smoothed" in curves:
+                sx, sy = curves["Smoothed"]
+                overlay_on_axis(
+                    target_ax,
+                    sx,
+                    sy,
+                    label=f"Paper {label} (digitized)",
+                    outline_color=outline,
+                )
+                param_ys.append(sy)
+            elif "Raw" in curves:
+                rx, ry = curves["Raw"]
+                overlay_on_axis(
+                    target_ax,
+                    rx,
+                    ry,
+                    label=f"Paper {label} (digitized)",
+                    outline_color=outline,
+                )
+                param_ys.append(ry)
     elif isinstance(ax_params_or_freq, (tuple, list)) and len(ax_params_or_freq) == 3:
         ax_f, ax_a, ax_p = ax_params_or_freq
         ax_map = {
@@ -704,15 +748,37 @@ def overlay_nguyen_fig6(
         param_ys = []
         for stem, (target_ax, label, outline) in ax_map.items():
             curves = load_panel_curves(NGUYEN_DIG / stem)
-            px, py = pick_series(curves, "Smoothed", "Raw")
-            overlay_on_axis(
-                target_ax,
-                px,
-                py,
-                label=f"Paper {label} (digitized)",
-                outline_color=outline,
-            )
-            param_ys.append(py)
+            if show_paper_raw and "Raw" in curves:
+                rx, ry = curves["Raw"]
+                overlay_on_axis(
+                    target_ax,
+                    rx,
+                    ry,
+                    label=f"_Paper_{label}_raw",
+                    outline_color=outline,
+                    raw=True,
+                )
+                param_ys.append(ry)
+            if "Smoothed" in curves:
+                sx, sy = curves["Smoothed"]
+                overlay_on_axis(
+                    target_ax,
+                    sx,
+                    sy,
+                    label=f"Paper {label} (digitized)",
+                    outline_color=outline,
+                )
+                param_ys.append(sy)
+            elif "Raw" in curves:
+                rx, ry = curves["Raw"]
+                overlay_on_axis(
+                    target_ax,
+                    rx,
+                    ry,
+                    label=f"Paper {label} (digitized)",
+                    outline_color=outline,
+                )
+                param_ys.append(ry)
     else:
         ax_params = ax_params_or_freq
         param_specs = (
