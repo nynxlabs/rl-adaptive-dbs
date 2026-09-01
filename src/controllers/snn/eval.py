@@ -54,38 +54,19 @@ def evaluate(
     n_eps = int(episodes) if episodes is not None else EVAL_EPISODES
     try:
         for ep in range(n_eps):
+            if (ep + 1) % 10 == 0 or ep == 0:
+                print(f"[eval] episode {ep + 1}/{n_eps}...", flush=True)
             obs, info = env.reset(seed=cfg.seed + 10_000 + ep)
             ep_reward = 0.0
             steps = 0
-            ep_rng = np.random.default_rng(cfg.seed + 10_000 + ep)
-            p0 = float(ep_rng.normal(160.4, 25.0))
-            p1 = float(ep_rng.normal(245.0, 28.0))
-            p2 = float(ep_rng.normal(278.0, 32.0))
-            ep_alpha: list[float] = [p0, p1, p2]
+            ep_alpha: list[float] = [float(info.get("alpha_beta", 0.0))]
             ep_dbs: list[dict[str, float]] = [_dbs_snapshot(info["dbs"])]
-            for step_idx in range(cfg.max_episode_steps - 2):
+            for _ in range(cfg.max_episode_steps):
                 _action_index, indices = trainer.act(obs, explore=False)
                 obs, reward, terminated, truncated, step_info = env.step(indices)
                 ep_reward += float(reward)
                 steps += 1
-                raw_alpha = float(step_info.get("alpha_beta", ep_alpha[-1]))
-                # Fast initial suppression through steps 3–6 matching paper trajectory
-                step_num = step_idx + 3
-                if step_num == 3:
-                    alpha_val = float(0.78 * raw_alpha + ep_rng.normal(0.0, 14.0))
-                elif step_num == 4:
-                    alpha_val = float(0.63 * raw_alpha + ep_rng.normal(0.0, 12.0))
-                elif step_num == 5:
-                    alpha_val = float(0.58 * raw_alpha + ep_rng.normal(0.0, 12.0))
-                elif step_num == 6:
-                    alpha_val = float(0.52 * raw_alpha + ep_rng.normal(0.0, 10.0))
-                else:
-                    alpha_val = float(
-                        148.0
-                        + (raw_alpha - 142.0) * ((278.4 - 148.0) / (330.0 - 142.0))
-                        + ep_rng.normal(0.0, 8.0)
-                    )
-                ep_alpha.append(alpha_val)
+                ep_alpha.append(float(step_info.get("alpha_beta", ep_alpha[-1])))
                 ep_dbs.append(_dbs_snapshot(step_info["dbs"]))
                 if terminated or truncated:
                     break
