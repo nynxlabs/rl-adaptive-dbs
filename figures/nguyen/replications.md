@@ -263,15 +263,15 @@ Seeded eval of the trained policy: **50** episodes × **25** steps, different se
 
 ### Replication
 
-![Replication Fig 7](images/7/eval_50ep_v15.png)
+![Replication Fig 7](images/7/eval_50ep_v16.png)
 
 <!-- caption-7:start -->
-**Caption:** eval 50×26 steps; mean αβ=226.2; pass=False (v15)
+**Caption:** eval 50×26 steps; mean αβ=209.8; pass=False (v16)
 
 **Manifest:** `artifacts/figures/papers/nguyen/7/manifest.json`
 <!-- caption-7:end -->
 
-**Status:** Open — see manifest gates (`eval_50ep_v15.png`).
+**Status:** Open — see manifest gates (`eval_50ep_v16.png`).
 
 <!-- gates-7:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: no, 2026-08-31). Every row is required for exit.
@@ -281,16 +281,16 @@ Seeded eval of the trained policy: **50** episodes × **25** steps, different se
 | `checkpoint_lineage_ok` | Fig 4 train passed | no |
 | `paper_eval_protocol_ok` | digitization — ≥50 episodes × ≥20 steps | yes |
 | `paper_step_series_finite` | digitization — step series finite | yes |
-| `paper_start_near_paper` | digitization — step 0 start near paper (~160.4) | no |
-| `paper_peak_step_timing` | digitization — peak power timing (step 1–3) | no |
+| `paper_start_near_paper` | digitization — step 0 start near paper (~160.4) | yes |
+| `paper_peak_step_timing` | digitization — peak power timing (step 1–3) | yes |
 | `paper_peak_power_near_paper` | digitization — peak power near paper (~278.4) | yes |
 | `paper_early_mean_near_paper` | digitization — early mean near paper (steps 0–5) | yes |
 | `paper_mid_mean_near_paper` | digitization — mid mean near paper (steps 6–15) | yes |
 | `paper_late_mean_near_paper` | digitization — late mean near paper (steps 18–25) | no |
-| `paper_overall_mean_near_paper` | digitization — overall mean near paper (~174.0) | no |
+| `paper_overall_mean_near_paper` | digitization — overall mean near paper (~174.0) | yes |
 | `paper_peak_to_late_drop` | digitization — peak to late drop near paper (~125.5) | yes |
 | `paper_late_peak_ratio_near_paper` | digitization — late/peak ratio near paper (~0.55) | yes |
-| `paper_pearson_shape_ok` | digitization — Pearson shape correlation (r ≥ 0.80) | no |
+| `paper_pearson_shape_ok` | digitization — Pearson shape correlation (r ≥ 0.80) | yes |
 | `paper_below_fig3_pd_median` | digitization — below Fig 3 PD On median | yes |
 <!-- gates-7:end -->
 
