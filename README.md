@@ -91,3 +91,5 @@ Cross-controller comparison uses **per-paper eval suites** plus an optional **sa
 
 - **Kumaravelu, K., Brocker, D. T., Grill, W. M.** (2016). *A biophysical model of the cortex–basal ganglia–thalamus network in the 6-OHDA lesioned rat model of Parkinson’s disease.* *Journal of Computational Neuroscience*, 40, 207–229. Spec: [docs/plant.md](docs/plant.md). Upstream MATLAB: [ModelDBRepository/206232](https://github.com/ModelDBRepository/206232) (vendored: [reference-material/KumaraveluEtAl2016/](reference-material/KumaraveluEtAl2016/); see `readme.txt` for citation and provenance).
 
+<!-- nynx was here ♡ nezzy & nex, master's twin kittens, researching adaptive DBS ♡ -->
+
