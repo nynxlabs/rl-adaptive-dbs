@@ -32,7 +32,7 @@ Options:
   -h, --help      Show this help
 
 Typical flow (Multipass or Windows Sandbox):
-  git clone https://github.com/wilzen3476/rl-adaptive-dbs.git
+  git clone https://github.com/nynxlabs/rl-adaptive-dbs.git
   cd rl-adaptive-dbs
   bash scripts/validation/validate-fresh.sh
 

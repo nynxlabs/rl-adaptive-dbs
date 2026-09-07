@@ -60,7 +60,7 @@ function Ensure-SandboxGitInstallerCache {
     return $cachePath
 }
 
-$script:SandboxValidationRepoUrl = 'https://github.com/wilzen3476/rl-adaptive-dbs.git'
+$script:SandboxValidationRepoUrl = 'https://github.com/nynxlabs/rl-adaptive-dbs.git'
 
 function Get-SandboxRepoCacheDir {
     param([string]$LogDir)
