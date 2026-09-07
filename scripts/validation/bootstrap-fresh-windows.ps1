@@ -6,7 +6,7 @@
 param(
     [switch]$Clone,
     [string]$LogDir = '',
-    [string]$RepoUrl = 'https://github.com/wilzen3476/rl-adaptive-dbs.git',
+    [string]$RepoUrl = 'https://github.com/nynxlabs/rl-adaptive-dbs.git',
     [string]$RepoDir = 'C:\rl-adaptive-dbs'
 )
 
