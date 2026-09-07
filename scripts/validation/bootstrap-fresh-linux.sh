@@ -3,7 +3,7 @@
 # Used by scripts/validation/run-multipass-linux-validation.ps1 (always clone from GitHub).
 set -euo pipefail
 
-REPO_URL="${RL_ADAPTIVE_DBS_REPO_URL:-https://github.com/wilzen3476/rl-adaptive-dbs.git}"
+REPO_URL="${RL_ADAPTIVE_DBS_REPO_URL:-https://github.com/nynxlabs/rl-adaptive-dbs.git}"
 REPO_DIR="${RL_ADAPTIVE_DBS_REPO_DIR:-$HOME/rl-adaptive-dbs}"
 
 say() { printf '%s\n' "$*"; }
