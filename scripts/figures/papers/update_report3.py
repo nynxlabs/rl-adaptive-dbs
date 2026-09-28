@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Refresh replication image paths in knowledge-base ``reports/3.md``.
+"""Refresh replication image paths in ``<notes_dir>/reports/3.md``.
 
 Report 3 gallery embeds use **co-located copies** under
 ``reports/images/gallery/`` (``./images/gallery/rep_*.png``) so Obsidian
@@ -443,22 +443,12 @@ def sync_report3_paper_captions(*, dry_run: bool = False, verbose: bool = True) 
 
 
 def report3_path() -> Path:
-    for base in (
-        Path.home() / "knowledge-base",
-        Path.home() / "Insync" / "knowledge-base",
-    ):
-        candidate = (
-            base
-            / "bme"
-            / "brain-stimulation"
-            / "rl-adaptive-dbs"
-            / "reports"
-            / "3.md"
-        )
-        if candidate.is_file():
-            return candidate
-    msg = "could not locate knowledge-base reports/3.md"
-    raise FileNotFoundError(msg)
+    """``<notes_dir>/reports/3.md`` (see ``rl_adaptive_dbs.notes_export``)."""
+    candidate = _promote.require_notes_dir() / "reports" / "3.md"
+    if not candidate.is_file():
+        msg = f"Report 3 not found at {candidate}"
+        raise FileNotFoundError(msg)
+    return candidate
 
 
 def _tracker_link(tracker_text: str, alt_substring: str) -> str | None:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export markdown outreach reports (vault ``reports/*.md``) to PDF.
+"""Export markdown outreach reports (notes-folder ``reports/*.md``) to PDF.
 
 Pipeline: preprocess Markdown (math, optional page breaks) → HTML → WeasyPrint.
 
@@ -7,8 +7,8 @@ Usage::
 
     uv sync --group reports
     uv run python -m rl_adaptive_dbs.run scripts/reports/export_pdf.py \\
-        ~/knowledge-base/bme/brain-stimulation/rl-adaptive-dbs/reports/3.md \\
-        -o ~/knowledge-base/bme/brain-stimulation/rl-adaptive-dbs/reports/3.pdf
+        "$RL_DBS_NOTES_DIR"/reports/3.md \\
+        -o "$RL_DBS_NOTES_DIR"/reports/3.pdf
 
     # One long scroll (no forced page breaks):
     uv run python -m rl_adaptive_dbs.run scripts/reports/export_pdf.py reports/3.md --continuous

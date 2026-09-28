@@ -52,7 +52,7 @@ Plant, environment, and global CLI defaults merge in this order (later wins):
 
 1. Built-in dataclass defaults (`envs/plant/config.py`, `envs/mehregan/config.py`).
 2. User file **`.rl-dbs.yaml`** (or `.rl-dbs.yml`): walk from the current working directory up to the git root. Template: **`.rl-dbs.example.yaml`** at the repo root (`cp .rl-dbs.example.yaml .rl-dbs.yaml`).
-3. Environment variables: `RL_DBS_CONFIG` (explicit file path), `RL_DBS_SEED`, `RL_DBS_RESULTS_DIR`, `RL_DBS_MAX_THREADS` (thread-pool cap for Numba/OpenBLAS when no `--max-threads` flag).
+3. Environment variables: `RL_DBS_CONFIG` (explicit file path), `RL_DBS_SEED`, `RL_DBS_RESULTS_DIR`, `RL_DBS_MAX_THREADS` (thread-pool cap for Numba/OpenBLAS when no `--max-threads` flag), `RL_DBS_NOTES_DIR` (notes folder for figure/report export; see §5.6 `export.notes_dir`).
 4. Explicit CLI flags (`--config`, `--seed`, `--results-dir`, `--max-threads`, etc.).
 
 `train`, `eval`, and `benchmark` construct `MehreganEnv` from the merged file settings when present. Copy **`.rl-dbs.example.yaml`** to **`.rl-dbs.yaml`** to customize (the latter is gitignored by default).
@@ -321,6 +321,7 @@ rl-dbs config set KEY VALUE [--persist]
 | `defaults.seed` | this document §4 | `42` |
 | `defaults.results_dir` | [benchmarking.md](benchmarking.md) | `results` |
 | `defaults.checkpoint_dir` | this document §5.1 | `artifacts/ddpg` (optional) |
+| `export.notes_dir` | [development/conventions.md](development/conventions.md) | `~/notes/rl-adaptive-dbs` (optional). Notes folder that `--push-kb` / `--update-report` write to (`figures/<paper>/…`, `reports/3.md`). When unset, inferred from paper tracker docs that are symlinks into an outside folder; otherwise those flags fail with a hint. Env: `RL_DBS_NOTES_DIR`. |
 
 **File format:** YAML (`.rl-dbs.yaml`). See **`.rl-dbs.example.yaml`**. `config show` prints the **effective** merged values and the discovered `config_file` path when present. `config set` without `--persist` previews one key; `--persist` writes or updates `.rl-dbs.yaml` (project root when no file is discovered).
 

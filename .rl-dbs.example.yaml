@@ -36,3 +36,9 @@ defaults:
   results_dir: results
   # Optional default checkpoint root (train still uses artifacts/<controller>/).
   # checkpoint_dir: artifacts/ddpg
+
+export:
+  # Optional notes folder for plot --push-kb / --update-report
+  # (writes <notes_dir>/figures/<paper>/... and <notes_dir>/reports/3.md).
+  # Unset: inferred from tracker docs symlinked into an outside folder.
+  # notes_dir: ~/notes/rl-adaptive-dbs

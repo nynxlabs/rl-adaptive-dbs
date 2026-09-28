@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Materialize replication figure PNGs into the knowledge-base vault.
+"""Materialize replication figure PNGs into the notes folder.
 
 Scans ``figures/<paper>/replications.md`` for ``![...](images/...)`` links and
-copies bytes into the vault-backed ``figures/`` tree (``~/knowledge-base/...``).
+copies bytes into ``<notes_dir>/figures/`` (``RL_DBS_NOTES_DIR`` /
+``export.notes_dir``, or detected from symlinked trackers — see
+``rl_adaptive_dbs.notes_export``).
 
 Plot scripts call this via ``promote.py`` when you pass ``--push-kb``; run manually anytime:
 
@@ -39,18 +41,8 @@ _SKIP_REPO_GLOB = ("paper.png", "/_full/")
 
 
 def kb_figures_root() -> Path:
-    """Vault ``figures/`` directory (resolve through tracker symlinks)."""
-    for doc in PAPER_TRACKERS:
-        if doc.exists():
-            return doc.resolve().parent.parent
-    # Fallback: Insync vault layout on nynxbox.
-    home = Path.home()
-    for base in (home / "knowledge-base", home / "Insync" / "knowledge-base"):
-        candidate = base / "bme" / "brain-stimulation" / "rl-adaptive-dbs" / "figures"
-        if candidate.is_dir():
-            return candidate
-    msg = "could not locate vault figures/ root"
-    raise FileNotFoundError(msg)
+    """Notes-folder ``figures/`` directory."""
+    return _promote.require_notes_dir() / "figures"
 
 
 def _add_link(
@@ -89,7 +81,7 @@ def iter_tracker_image_links() -> list[tuple[str, str]]:
 
 
 def iter_report3_image_links() -> list[tuple[str, str]]:
-    """Gallery embeds from knowledge-base ``reports/3.md``."""
+    """Gallery embeds from ``<notes_dir>/reports/3.md``."""
     out: list[tuple[str, str]] = []
     seen: set[tuple[str, str]] = set()
     try:

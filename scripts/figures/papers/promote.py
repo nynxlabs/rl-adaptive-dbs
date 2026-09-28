@@ -1091,7 +1091,7 @@ def _push_kb_images_after_promote(
     *png_paths: Path,
     update_docs: bool = True,
 ) -> None:
-    """Copy replication PNGs into the vault (``~/knowledge-base/.../figures``)."""
+    """Copy replication PNGs into the notes folder (``<notes_dir>/figures``)."""
     if not push_kb_images_enabled():
         return
     if not update_docs and not png_paths:
@@ -1921,6 +1921,14 @@ def resolve_ravivarapu_doc(checkout: Path | None = None) -> Path:
 
 
 PAPER_RAVIVARAPU_DOC = resolve_ravivarapu_doc()
+
+
+def require_notes_dir() -> Path:
+    """Notes folder for ``--push-kb`` / ``--update-report`` (``rl_adaptive_dbs.notes_export``)."""
+    from rl_adaptive_dbs.notes_export import require_notes_dir as _require_notes_dir
+
+    trackers = (resolve_paper_1_doc(), resolve_nguyen_doc(), resolve_ravivarapu_doc())
+    return _require_notes_dir(trackers, repo_root=REPO_ROOT)
 PAPER_RAVIVARAPU_4A_PNG = "figures/ravivarapu/images/4a/training_psd.png"
 
 
