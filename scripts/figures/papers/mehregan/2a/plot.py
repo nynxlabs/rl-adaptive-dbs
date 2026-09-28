@@ -613,12 +613,12 @@ def main() -> int:
     parser.add_argument(
         "--push-kb",
         action="store_true",
-        help="After promote, copy replication PNGs to the knowledge-base vault",
+        help="After promote, copy replication PNGs into the notes folder (RL_DBS_NOTES_DIR / export.notes_dir)",
     )
     parser.add_argument(
         "--update-report",
         action="store_true",
-        help="After promote, refresh Report 3 gallery image links in the knowledge-base",
+        help="After promote, refresh Report 3 gallery image links in the notes folder",
     )
     args = parser.parse_args()
     _figure_promote.set_push_kb_images(args.push_kb)

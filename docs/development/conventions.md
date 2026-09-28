@@ -16,7 +16,7 @@ Panel work is organized around **paper panels**, not roadmap phase numbers. Ship
 
 1. **Exit criteria first** — list qualitative gates in the panel tracker (or [docs/figures/](../figures/) lab notebook) before large sweeps.
 2. **Ship surface** — committed train+plot entry points live under `scripts/figures/papers/<paper>/<panel>/plot.py`. Shared helpers: `scripts/figures/papers/promote.py` (versioned PNGs + tracker captions), `paper_overlay.py` (digitized paper curves on axes), `push_kb_images.py` (`--push-kb`), `update_report3.py` (`--update-report`), and `scripts/lib/` when imported by panel scripts.
-3. **Always version + promote** — every train / eval / `--plot-only` (including cosmetics) allocates `{stem}_vN.png`, refreshes the tracker link/gates, and should pass `--push-kb --update-report` so vault + Report 3 stay current.
+3. **Always version + promote** — every train / eval / `--plot-only` (including cosmetics) allocates `{stem}_vN.png`, refreshes the tracker link/gates, and should pass `--push-kb --update-report` so the notes folder (`export.notes_dir`, [cli.md](../cli.md) §5.6) and Report 3 stay current.
 4. **Promote, don’t thrash** — `scripts/probes/` is diagnostic-only (currently alphabet-diversity extension probes). Fold stable panel findings into the panel `plot.py` and `docs/figures/`, then delete the one-off probe.
 5. **Specs follow panels** — plant/training/convention changes that unblock a panel update [plant.md](../plant.md), [environment.md](../environment.md), or the relevant [controllers/](../controllers/) spec and [replication-fidelity.md](replication-fidelity.md).
 
