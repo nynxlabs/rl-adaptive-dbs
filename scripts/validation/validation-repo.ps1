@@ -10,16 +10,17 @@ function Resolve-ValidationRepoPath {
         return (Get-Item -LiteralPath $RepoPath).FullName
     }
 
-    # Preferred: WSL checkout (nynxbox default; override with -RepoPath on other machines).
-    $wslUnc = '\\wsl.localhost\Ubuntu\home\nynxbox\bme\rl-adaptive-dbs'
-    if (Test-Path -LiteralPath $wslUnc) {
-        return (Get-Item -LiteralPath $wslUnc).FullName
+    # Optional: a WSL checkout, e.g. RL_DBS_WSL_REPO=\\wsl.localhost\Ubuntu\home\<user>\rl-adaptive-dbs
+    $wslRepo = $env:RL_DBS_WSL_REPO
+    if ($wslRepo -and (Test-Path -LiteralPath $wslRepo)) {
+        return (Get-Item -LiteralPath $wslRepo).FullName
     }
 
     if (-not $CallerScriptDir) {
         throw 'Resolve-ValidationRepoPath: set CallerScriptDir or pass -RepoPath'
     }
-    return (Get-Item (Join-Path $CallerScriptDir '..')).FullName
+    # Callers live in scripts/validation/.
+    return (Get-Item (Join-Path $CallerScriptDir '..\..')).FullName
 }
 
 function Get-ValidationLogDir {
