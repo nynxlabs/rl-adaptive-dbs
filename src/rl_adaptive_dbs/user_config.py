@@ -36,6 +36,7 @@ DOT_KEY_PATHS: dict[str, tuple[str, ...]] = {
     "defaults.seed": ("defaults", "seed"),
     "defaults.results_dir": ("defaults", "results_dir"),
     "defaults.checkpoint_dir": ("defaults", "checkpoint_dir"),
+    "export.notes_dir": ("export", "notes_dir"),
 }
 
 DEFAULT_BIOMARKER_BAND_HZ: tuple[float, float] = (13.0, 35.0)
@@ -63,6 +64,7 @@ class ResolvedConfig:
     results_dir: Path
     checkpoint_dir: Path | None
     config_path: Path | None
+    notes_dir: Path | None = None
 
 
 def find_config_file(
@@ -233,6 +235,10 @@ def resolve_config(
     checkpoint_raw = defaults.get("checkpoint_dir")
     checkpoint_dir = Path(str(checkpoint_raw)) if checkpoint_raw else None
 
+    export = data.get("export") if isinstance(data.get("export"), dict) else {}
+    notes_raw = os.environ.get("RL_DBS_NOTES_DIR") or export.get("notes_dir")
+    notes_dir = Path(str(notes_raw)).expanduser() if notes_raw else None
+
     return ResolvedConfig(
         plant=plant,
         plant_backend=plant_backend,
@@ -242,6 +248,7 @@ def resolve_config(
         results_dir=results_dir,
         checkpoint_dir=checkpoint_dir,
         config_path=path,
+        notes_dir=notes_dir,
     )
 
 
@@ -289,6 +296,8 @@ def config_show_payload(
             out["defaults.checkpoint_dir"] = (
                 str(resolved.checkpoint_dir) if resolved.checkpoint_dir else None
             )
+        elif key == "export.notes_dir":
+            out["export.notes_dir"] = str(resolved.notes_dir) if resolved.notes_dir else None
     return out
 
 
