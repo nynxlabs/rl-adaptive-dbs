@@ -50,7 +50,10 @@ if ip link show bond0 >/dev/null 2>&1; then
 fi
 
 if ! ip link show bond0 >/dev/null 2>&1; then
-  ip link add bond0 address "$_mac" type bond
+  # Loading the bonding module can auto-create bond0 and make this add fail with
+  # "File exists"; fall back to setting the MAC on the interface it created.
+  ip link add bond0 address "$_mac" type bond 2>/dev/null \
+    || ip link set dev bond0 address "$_mac"
 fi
 
 _current="$(_bond_mac)"
