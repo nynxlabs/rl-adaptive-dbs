@@ -15,7 +15,7 @@ Replication of published **adaptive DBS** reinforcement-learning work on one sha
 | Ravivarapu et al. panel tracker | [figures/ravivarapu/replications.md](figures/ravivarapu/replications.md) | `scripts/figures/papers/ravivarapu/<panel>/plot.py` |
 | What matches / diverges from the paper | [docs/development/replication-fidelity.md](docs/development/replication-fidelity.md) | Specs under `docs/plant.md`, `docs/environment.md`, `docs/controllers/` |
 
-**Mehregan:** Figs 1b–6b Pass (Fig 5b uses `BurstPatternAlphabet`). **Open panels:** Nguyen Fig 4–7; Ravivarapu Figs 5–7 (4a/4b Pass).
+**Mehregan:** Figs 1b–6b Pass (Fig 5b uses `BurstPatternAlphabet`). **Ravivarapu:** Figs 4–7 Pass. **Nguyen:** Figs 3 and 7 Pass; **open panels:** Nguyen Figs 4–6.
 
 The **phase roadmap** ([docs/development/roadmap.md](docs/development/roadmap.md)) still describes long-term architecture — environment, controllers, benchmarking, fusion — but day-to-day priorities follow **figure gates** first. Suite runs (`mehregan_eval`), CLI/TUI, and fresh-VM validation support replication; they are not the main exit criterion on their own.
 
