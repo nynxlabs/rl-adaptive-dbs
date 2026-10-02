@@ -86,7 +86,7 @@ cp "/mnt/c/Users/<you>/Downloads/license.lic" ~/MATLAB/licenses/
 
 **Manual activation (License Center):** OS = **Linux**; **Host ID** = `cat /sys/class/net/eth0/address`; **login name** = `whoami`.
 
-**WSL Host ID:** `source scripts/matlab/env.sh` on WSL runs `ensure-wsl-hostid.sh` when the licensed MAC drifts (see §7). For a one-time fix: `sudo bash scripts/matlab/ensure-wsl-hostid.sh`. To persist across reboots: `sudo bash scripts/matlab/install-wsl-hostid-persist.sh`.
+**WSL Host ID:** set it up once with `sudo bash scripts/matlab/install-wsl-hostid-persist.sh`. It reads the licensed MAC from your newest node-locked license file (`MATLAB_HOSTID=` in `*.lic`; pass `--mac XX:XX:XX:XX:XX:XX` to choose one), saves it to `/etc/default/matlab-wsl-hostid`, and installs a boot-time fix. After that, `source scripts/matlab/env.sh` re-applies the MAC whenever it drifts (see §7); for a one-off fix run `sudo bash scripts/matlab/ensure-wsl-hostid.sh`. Without a saved MAC (or `MATLAB_WSL_BOND_MAC` in the environment) the Host ID step does nothing.
 
 **Headless WSL:** `matlab-env.sh` wraps `xvfb-run` when `DISPLAY` is unset. Install §3.1 packages if batch mode fails.
 
@@ -362,7 +362,7 @@ Requires **Statistics** (upstream `randsample`, patched here) and **Signal Proce
 |---------|------------|
 | `matlab-env: MATLAB not found` | Set `MATLAB_ROOT` (§2.1–§2.3) |
 | `Licensing Error 1` | §4; existing install: §2.4 |
-| **Linux/WSL** `Licensing Error 9` / Host ID mismatch | WSL2 often changes `eth0` MAC on restart; license binds to the MAC at activation. Run `sudo bash scripts/matlab/ensure-wsl-hostid.sh` (creates `bond0` with the licensed MAC), or reactivate at [License Center](https://www.mathworks.com/licensecenter) with `cat /sys/class/net/eth0/address`. **Persist (recommended with `systemd=true`):** `sudo bash scripts/matlab/install-wsl-hostid-persist.sh` — installs a `matlab-wsl-hostid` oneshot + passwordless sudo for login fallback. Legacy: `/etc/wsl.conf` `[boot] command=` alone is unreliable when systemd is PID 1. |
+| **Linux/WSL** `Licensing Error 9` / Host ID mismatch | WSL2 often changes `eth0` MAC on restart; license binds to the MAC at activation. Run `sudo bash scripts/matlab/install-wsl-hostid-persist.sh` once (saves the licensed MAC and creates `bond0` with it), then `sudo bash scripts/matlab/ensure-wsl-hostid.sh` for one-off fixes, or reactivate at [License Center](https://www.mathworks.com/licensecenter) with `cat /sys/class/net/eth0/address`. **Persist (recommended with `systemd=true`):** `sudo bash scripts/matlab/install-wsl-hostid-persist.sh` — installs a `matlab-wsl-hostid` oneshot + passwordless sudo for login fallback. Legacy: `/etc/wsl.conf` `[boot] command=` alone is unreliable when systemd is PID 1. |
 | **Linux/WSL** segfault on first launch | `source matlab-env.sh`; writable `~/.matlab/<RELEASE>` |
 | **Linux/WSL** `Unable to launch MVM server` | Install `xvfb` (§3.1); use `matlab` from `matlab-env.sh` |
 | **Linux/WSL** `libstdc++` / GLIBCXX on Ubuntu 24.04 | [MathWorks Ubuntu 24.04 guidance](https://www.mathworks.com/matlabcentral/answers/2150489); `matlab-env.sh` sets `LD_PRELOAD` when needed |

@@ -321,7 +321,7 @@ rl-dbs config set KEY VALUE [--persist]
 | `defaults.seed` | this document §4 | `42` |
 | `defaults.results_dir` | [benchmarking.md](benchmarking.md) | `results` |
 | `defaults.checkpoint_dir` | this document §5.1 | `artifacts/ddpg` (optional) |
-| `export.notes_dir` | [development/conventions.md](development/conventions.md) | `~/notes/rl-adaptive-dbs` (optional). Notes folder that `--push-kb` / `--update-report` write to (`figures/<paper>/…`, `reports/3.md`). When unset, inferred from paper tracker docs that are symlinks into an outside folder; otherwise those flags fail with a hint. Env: `RL_DBS_NOTES_DIR`. |
+| `export.notes_dir` | [development/conventions.md](development/conventions.md) | `~/notes/rl-adaptive-dbs` (optional). Notes folder that `--export-notes` / `--update-report` write to (`figures/<paper>/…`, `reports/3.md`). When unset, inferred from paper tracker docs that are symlinks into an outside folder; otherwise those flags fail with a hint. Env: `RL_DBS_NOTES_DIR`. |
 
 **File format:** YAML (`.rl-dbs.yaml`). See **`.rl-dbs.example.yaml`**. `config show` prints the **effective** merged values and the discovered `config_file` path when present. `config set` without `--persist` previews one key; `--persist` writes or updates `.rl-dbs.yaml` (project root when no file is discovered).
 
