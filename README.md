@@ -1,6 +1,6 @@
 # rl-adaptive-dbs
 
-[![tests](https://github.com/nynxlabs/rl-adaptive-dbs/actions/workflows/tests.yml/badge.svg)](https://github.com/nynxlabs/rl-adaptive-dbs/actions/workflows/tests.yml)
+[![tests](https://github.com/nynxlabs/rl-adaptive-dbs/actions/workflows/tests.yml/badge.svg)](https://github.com/nynxlabs/rl-adaptive-dbs/actions/workflows/tests.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Independent replications of three reinforcement-learning papers on **adaptive deep brain stimulation (DBS)** for Parkinson's disease. All three controllers run on one shared simulated cortex–basal ganglia–thalamus circuit (Kumaravelu et al., 2016), rebuilt from the paper text and figures.
 
@@ -122,6 +122,10 @@ Cross-controller comparison uses **per-paper eval suites** plus an optional **sa
 ### Biophysical plant model
 
 - **Kumaravelu, K., Brocker, D. T., Grill, W. M.** (2016). *A biophysical model of the cortex–basal ganglia–thalamus network in the 6-OHDA lesioned rat model of Parkinson’s disease.* *Journal of Computational Neuroscience*, 40, 207–229. Spec: [docs/plant.md](docs/plant.md). Upstream MATLAB: [ModelDBRepository/206232](https://github.com/ModelDBRepository/206232) (vendored: [reference-material/KumaraveluEtAl2016/](reference-material/KumaraveluEtAl2016/); see `readme.txt` for citation and provenance).
+
+## License
+
+Code is released under the [MIT License](LICENSE). If you use it, please cite it using [CITATION.cff](CITATION.cff). The vendored Kumaravelu et al. (2016) model under `reference-material/` keeps its original terms; see its `readme.txt`.
 
 <!-- nynx was here ♡ nezzy & nex, master's twin kittens, researching adaptive DBS ♡ -->
 
