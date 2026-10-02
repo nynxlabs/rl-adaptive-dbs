@@ -73,20 +73,20 @@ STYLE = {
 }
 
 
-def _vault_backed_png(path: Path) -> Path:
+def _linked_png(path: Path) -> Path:
     path = Path(path)
     paper = path.parent / "paper.png"
     if not paper.is_symlink():
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
-    vault_dir = paper.resolve().parent
-    vault_target = vault_dir / path.name
+    linked_dir = paper.resolve().parent
+    linked_target = linked_dir / path.name
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists() or path.is_symlink():
         return path
-    if not vault_target.exists():
-        vault_target.touch()
-    path.symlink_to(vault_target)
+    if not linked_target.exists():
+        linked_target.touch()
+    path.symlink_to(linked_target)
     return path
 
 
@@ -284,17 +284,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--no-update-docs", action="store_true")
     parser.add_argument(
-        "--push-kb",
+        "--export-notes",
         action="store_true",
         help="After promote, copy replication PNGs into the notes folder (RL_DBS_NOTES_DIR / export.notes_dir)",
     )
+    # Former name, kept so existing commands keep working.
+    parser.add_argument("--push-kb", dest="export_notes", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "--update-report",
         action="store_true",
         help="After promote, refresh Report 3 gallery image links in the notes folder",
     )
     args = parser.parse_args(argv)
-    _figure_promote.set_push_kb_images(args.push_kb)
+    _figure_promote.set_export_notes_images(args.export_notes)
     _figure_promote.set_update_report3(args.update_report)
 
     if args.refresh_train:
@@ -312,7 +314,7 @@ def main(argv: list[str] | None = None) -> int:
         args.out, png_version = _figure_promote.next_versioned_png(FIGURES_DIR, OUT_STEM)
     else:
         png_version = _figure_promote.parse_png_version(args.out)
-    args.out = _vault_backed_png(args.out)
+    args.out = _linked_png(args.out)
 
     t0 = time.perf_counter()
     series = load_series(args.series)

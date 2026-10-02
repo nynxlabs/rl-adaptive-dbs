@@ -129,12 +129,12 @@ SERIES = {
 }
 
 
-def _vault_backed_png(path: Path) -> Path:
-    """Ensure replication PNGs land in the vault via ``paper.png``'s target dir.
+def _linked_png(path: Path) -> Path:
+    """Ensure replication PNGs land in ``paper.png``'s linked target dir.
 
     Worktrees often materialize ``paper.png`` as a real file (not a symlink). In that
     case, fall back to the main checkout's ``paper.png`` symlink so we still write
-    the vault path and leave a worktree symlink for local viewing.
+    the linked path and leave a worktree symlink for local viewing.
     """
     path = Path(path)
     paper = path.parent / "paper.png"
@@ -146,31 +146,31 @@ def _vault_backed_png(path: Path) -> Path:
         else:
             path.parent.mkdir(parents=True, exist_ok=True)
             return path
-    vault_dir = paper.resolve().parent
-    vault_target = vault_dir / path.name
+    linked_dir = paper.resolve().parent
+    linked_target = linked_dir / path.name
     path.parent.mkdir(parents=True, exist_ok=True)
-    if path.is_symlink() and path.resolve() == vault_target.resolve():
+    if path.is_symlink() and path.resolve() == linked_target.resolve():
         return path
     if path.exists() or path.is_symlink():
-        # Real file in a worktree from an earlier run — replace with vault symlink.
+        # Real file in a worktree from an earlier run — replace with a symlink to the linked file.
         if path.is_file() and not path.is_symlink():
-            if not vault_target.exists():
+            if not linked_target.exists():
                 import shutil
 
-                shutil.copy2(path, vault_target)
+                shutil.copy2(path, linked_target)
             path.unlink()
-            path.symlink_to(vault_target)
+            path.symlink_to(linked_target)
             return path
         return path
-    if not vault_target.exists():
-        vault_target.touch()
-    path.symlink_to(vault_target)
+    if not linked_target.exists():
+        linked_target.touch()
+    path.symlink_to(linked_target)
     # Also expose on main checkout figures/ when plotting from a worktree.
     main = _figure_promote.main_checkout_root(_REPO_ROOT)
     main_link = main / "figures" / "papers" / "1" / "5b" / path.name
     if main_link.parent.is_dir() and not main_link.exists():
         try:
-            main_link.symlink_to(vault_target)
+            main_link.symlink_to(linked_target)
         except OSError:
             pass
     return path
@@ -851,7 +851,7 @@ def main() -> int:
             sampling=args.sampling,
         )
 
-    args.out = _vault_backed_png(args.out)
+    args.out = _linked_png(args.out)
     panel = plot_fig5b(payload, out_path=args.out, y_min=args.y_min, y_max=args.y_max)
     gates = panel["gates"]
 

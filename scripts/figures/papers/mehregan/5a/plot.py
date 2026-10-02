@@ -138,20 +138,20 @@ SERIES = {
 }
 
 
-def _vault_backed_png(path: Path) -> Path:
+def _linked_png(path: Path) -> Path:
     path = Path(path)
     paper = path.parent / "paper.png"
     if not paper.is_symlink():
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
-    vault_dir = paper.resolve().parent
-    vault_target = vault_dir / path.name
+    linked_dir = paper.resolve().parent
+    linked_target = linked_dir / path.name
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists() or path.is_symlink():
         return path
-    if not vault_target.exists():
-        vault_target.touch()
-    path.symlink_to(vault_target)
+    if not linked_target.exists():
+        linked_target.touch()
+    path.symlink_to(linked_target)
     return path
 
 
@@ -915,7 +915,7 @@ def main() -> int:
             sampling=args.sampling,
         )
 
-    args.out = _vault_backed_png(args.out)
+    args.out = _linked_png(args.out)
     panel = plot_fig5a(payload, out_path=args.out, y_min=args.y_min, y_max=args.y_max)
     gates = panel["gates"]
 

@@ -28,16 +28,18 @@ def add_training_resume_args(parser: argparse.ArgumentParser) -> None:
         default=DEFAULT_CHECKPOINT_INTERVAL,
         help=f"Save checkpoint every N episodes during train (default {DEFAULT_CHECKPOINT_INTERVAL})",
     )
-    add_push_kb_arg(parser)
+    add_export_notes_arg(parser)
     add_update_report3_arg(parser)
 
 
-def add_push_kb_arg(parser: argparse.ArgumentParser) -> None:
+def add_export_notes_arg(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
-        "--push-kb",
+        "--export-notes",
         action="store_true",
         help="After promote, copy replication PNGs into the notes folder (RL_DBS_NOTES_DIR / export.notes_dir)",
     )
+    # Former name, kept so existing commands keep working.
+    parser.add_argument("--push-kb", dest="export_notes", action="store_true", help=argparse.SUPPRESS)
 
 
 def add_update_report3_arg(parser: argparse.ArgumentParser) -> None:
@@ -48,11 +50,11 @@ def add_update_report3_arg(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def configure_push_kb(args: argparse.Namespace, promote_module: object) -> None:
-    setter = getattr(promote_module, "set_push_kb_images", None)
+def configure_export_notes(args: argparse.Namespace, promote_module: object) -> None:
+    setter = getattr(promote_module, "set_export_notes_images", None)
     if setter is None:
         return
-    setter(bool(getattr(args, "push_kb", False)))
+    setter(bool(getattr(args, "export_notes", False)))
 
 
 def configure_update_report3(args: argparse.Namespace, promote_module: object) -> None:
@@ -63,6 +65,6 @@ def configure_update_report3(args: argparse.Namespace, promote_module: object) -
 
 
 def configure_promote_publish(args: argparse.Namespace, promote_module: object) -> None:
-    """Apply ``--push-kb`` and ``--update-report`` to the promote module."""
-    configure_push_kb(args, promote_module)
+    """Apply ``--export-notes`` and ``--update-report`` to the promote module."""
+    configure_export_notes(args, promote_module)
     configure_update_report3(args, promote_module)

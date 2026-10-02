@@ -30,7 +30,7 @@ fi
 if [[ -n "$hooks" && -f "${hooks}/restore-vault-md-symlinks.sh" ]]; then
   VAULT_MD_REPO_ROOT="$REPO_ROOT" bash "${hooks}/restore-vault-md-symlinks.sh"
 else
-  uv run python -m rl_adaptive_dbs.run scripts/figures/papers/push_kb_images.py
+  uv run python -m rl_adaptive_dbs.run scripts/figures/papers/export_notes_images.py
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/update_report3.py
 fi
 

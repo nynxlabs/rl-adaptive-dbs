@@ -239,7 +239,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "input_md",
         type=Path,
-        help="Markdown report (e.g. vault reports/3.md)",
+        help="Markdown report (e.g. reports/3.md)",
     )
     parser.add_argument(
         "-o",
