@@ -42,6 +42,7 @@ from rl_adaptive_dbs.panel import load_script_module
 from rl_adaptive_dbs import panel as _panel
 
 import argparse
+import functools
 import json
 import sys
 import time
@@ -255,7 +256,7 @@ def _make_eval_env(*, skip_regular: bool = SKIP_REGULAR) -> MehreganEnv:
 
 
 def _fp32_config(*, seed: int) -> DDPGConfig:
-    # Match scripts/retrain_45hz_fig6a_burst.py (soft-fp32 for PTQ-splittable logits).
+    # Soft-fp32 recipe for PTQ-splittable logits.
     cfg = fig4a_ddpg_config(
         seed=seed,
         num_episodes=FP32_NUM_EPISODES,
@@ -362,6 +363,10 @@ def _train_qat_only(
         "init_from_fp32": str(fp32_path),
     }
     print(f"qat checkpoint -> {qat_path} ({meta['training']['qat']['elapsed_s']}s)", flush=True)
+    qat_path.with_suffix(".fingerprint").write_text(
+        _qat_fingerprint(seed=seed, skip_regular=skip_regular, fp32_path=fp32_path) + "\n",
+        encoding="utf-8",
+    )
     return meta
 
 
@@ -720,6 +725,61 @@ def _segment_eval_worker(job: _SegmentEvalJob) -> _SegmentEvalResult:
         )
 
 
+_EVAL_CACHE_DIR = CACHE_DIR / "eval_cache"
+_REPO_SRC = Path(__file__).resolve().parents[5] / "src"
+
+
+@functools.lru_cache(maxsize=1)
+def _eval_source_fingerprint() -> str:
+    """Code that shapes a trailing eval: this script, the Fig 2a protocol, plant, controllers."""
+    return _panel.source_fingerprint(
+        Path(__file__).resolve(),
+        _FIG2A_PATH,
+        _REPO_SRC / "envs",
+        _REPO_SRC / "controllers",
+    )
+
+
+def _cached_trailing_eval_worker(job: _TrailingEvalJob) -> _TrailingEvalResult:
+    """Reuse a variant's trailing eval when checkpoint bytes, job, and code are unchanged."""
+    key = _panel.fingerprint(job, _panel.file_sha256(job.checkpoint), _eval_source_fingerprint())
+    path = _EVAL_CACHE_DIR / f"{job.key}-{key[:16]}.json"
+    if path.is_file():
+        cached = json.loads(path.read_text(encoding="utf-8"))
+        print(f"  {job.key}: cached eval {path.name}", flush=True)
+        return _TrailingEvalResult(job.key, cached["variant_payload"], cached["trace"])
+    result = _trailing_eval_worker(job)
+    if "error" not in result.variant_payload:
+        _EVAL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps({"variant_payload": result.variant_payload, "trace": result.trace}) + "\n",
+            encoding="utf-8",
+        )
+    return result
+
+
+def _qat_fingerprint(*, seed: int, skip_regular: bool, fp32_path: Path) -> str:
+    return _panel.fingerprint(
+        _qat_config(seed=seed),
+        QAT_NUM_EPISODES,
+        skip_regular,
+        TRAIN_STEP_DURATION_S,
+        _panel.file_sha256(fp32_path),
+    )
+
+
+def _qat_is_current(qat_path: Path, *, seed: int, skip_regular: bool, fp32_path: Path) -> bool:
+    """QAT checkpoint exists and was trained with today's QAT config (fingerprint sidecar)."""
+    stamp = qat_path.with_suffix(".fingerprint")
+    if not qat_path.exists():
+        return False
+    expected = _qat_fingerprint(seed=seed, skip_regular=skip_regular, fp32_path=fp32_path)
+    if not stamp.is_file() or stamp.read_text(encoding="utf-8").strip() != expected:
+        print(f"QAT checkpoint {qat_path} is stale for the current QAT config; retraining", flush=True)
+        return False
+    return True
+
+
 def _run_trailing_variant_evals(
     *,
     fp32_checkpoint: Path,
@@ -767,7 +827,7 @@ def _run_trailing_variant_evals(
         payload["variants"]["fp32"] = {"error": f"missing checkpoint: {fp32_ckpt}"}
     else:
         print("eval fp32 (paper)...", flush=True)
-        fp32_res = _trailing_eval_worker(
+        fp32_res = _cached_trailing_eval_worker(
             _TrailingEvalJob(
                 key="fp32",
                 variant_slug="paper",
@@ -808,7 +868,7 @@ def _run_trailing_variant_evals(
         try:
             results = _parallel_series.run_series_parallel(
                 tail_jobs,
-                _trailing_eval_worker,
+                _cached_trailing_eval_worker,
                 parallel_series,
             )
             for res in results:
@@ -1306,7 +1366,9 @@ def main() -> int:
                     file=sys.stderr,
                 )
                 return 2
-            if not qat_ckpt.exists():
+            if not _qat_is_current(
+                qat_ckpt, seed=args.seed, skip_regular=skip_regular, fp32_path=fp32_ckpt
+            ):
                 qat_meta = _train_qat_only(
                     seed=args.seed,
                     qat_path=qat_ckpt,
@@ -1349,6 +1411,15 @@ def main() -> int:
         args.eval_json.parent.mkdir(parents=True, exist_ok=True)
         args.eval_json.write_text(json.dumps(payload, indent=2) + "\n")
         print(f"wrote {args.eval_json}", flush=True)
+        eval_errors = {
+            key: meta["error"]
+            for key, meta in (payload.get("variants") or {}).items()
+            if isinstance(meta, dict) and "error" in meta
+        }
+        if eval_errors:
+            for key, err in eval_errors.items():
+                print(f"eval FAILED for {key}: {err}", file=sys.stderr)
+            return _panel.EXIT_MISSING_INPUT
     else:
         if not args.eval_json.exists():
             print(f"missing eval JSON: {args.eval_json}", file=sys.stderr)

@@ -148,3 +148,39 @@ def exit_code(manifest: Mapping[str, Any] | None, *, smoke: bool = False) -> int
     if smoke:
         return EXIT_PASS
     return EXIT_PASS if gates_pass(manifest) else EXIT_GATE_FAIL
+
+
+def fingerprint(*parts: Any) -> str:
+    """Stable sha256 of JSON-serializable parts (dataclasses and paths are converted)."""
+    import dataclasses
+    import json
+
+    def _plain(obj: Any) -> Any:
+        if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+            return {f.name: _plain(getattr(obj, f.name)) for f in dataclasses.fields(obj)}
+        if isinstance(obj, Mapping):
+            return {str(k): _plain(v) for k, v in sorted(obj.items(), key=lambda kv: str(kv[0]))}
+        if isinstance(obj, (list, tuple)):
+            return [_plain(v) for v in obj]
+        if isinstance(obj, Path):
+            return obj.as_posix()
+        if isinstance(obj, (str, int, float, bool)) or obj is None:
+            return obj
+        return repr(obj)
+
+    blob = json.dumps([_plain(p) for p in parts], sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(blob.encode()).hexdigest()
+
+
+def source_fingerprint(*paths: Path | str) -> str:
+    """sha256 over the ``.py`` sources under ``paths`` (files or directories), path-ordered."""
+    digest = hashlib.sha256()
+    files: list[Path] = []
+    for raw in paths:
+        p = Path(raw)
+        files.extend(sorted(p.rglob("*.py")) if p.is_dir() else [p])
+    for f in files:
+        if f.is_file():
+            digest.update(f.as_posix().encode())
+            digest.update(f.read_bytes())
+    return digest.hexdigest()
