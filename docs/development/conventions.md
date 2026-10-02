@@ -83,6 +83,15 @@ Training panels under `scripts/figures/papers/<paper>/<panel>/plot.py` accept:
 
 Checkpoints store network weights, optimizer state, replay buffer contents, exploration schedule counters (`total_steps` / `env_step`), target networks, and per-episode series in `extra`. Resume **fails with a clear error** when material config fields disagree (variant, seed, reward-shaping knobs, alphabet-related settings). The target `num_episodes` may **increase** on resume (e.g. extend 180→300); lowering it is rejected. Plant-only panels (no RL train) do not implement `--resume`; they document that in the script docstring.
 
+## Panel manifests, provenance, and exit codes
+
+Panel scripts share `rl_adaptive_dbs.panel`:
+
+- **Provenance.** Every manifest gets a `provenance` block (`run_id`, timestamp, git `commit` / `dirty` / `diff_sha256`, `argv`, Python version, and sha256 of named inputs) plus a normalized top-level `gates_pass`. Downstream panels hash what they consume (Nguyen Fig 5–7 record the Fig 4 series / checkpoint / manifest hashes), so lineage can be verified instead of assumed. Training panels also record the resolved controller `config`.
+- **One verdict reader.** Use `panel.gates_pass(manifest)` rather than reaching into `gates.pass`, `gates.all_pass`, `summary.gates_pass`, or `panel.gates.all_pass` directly.
+- **Exit codes.** `0` gates pass, `1` gate fail (or no verdict), `2` missing input, `3` aborted early. A `--smoke` run exits `0` but always reports `pass=False` and writes only to a temp directory.
+- **Loading sibling scripts.** Use `panel.load_script_module(name, path)`; it registers the module in `sys.modules` before executing it, which dataclasses require on Python 3.12.
+
 ## Version control
 
 Do **not** commit:

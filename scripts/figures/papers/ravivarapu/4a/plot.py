@@ -8,8 +8,11 @@ Run:
 """
 from __future__ import annotations
 
+from rl_adaptive_dbs.panel import load_script_module
+
+from rl_adaptive_dbs import panel as _panel
+
 import argparse
-import importlib.util
 import json
 import os
 import sys
@@ -39,32 +42,16 @@ from ravivarapu_gates import (  # noqa: E402
 )
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
-_spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
-assert _spec and _spec.loader
-_figure_promote = importlib.util.module_from_spec(_spec)
-sys.modules["figure_promote"] = _figure_promote
-_spec.loader.exec_module(_figure_promote)
+_figure_promote = load_script_module("figure_promote", _PROMOTE)
 
 _RESUME_CLI = Path(__file__).resolve().parents[2] / "resume_cli.py"
-_resume_spec = importlib.util.spec_from_file_location("figure_resume_cli", _RESUME_CLI)
-assert _resume_spec and _resume_spec.loader
-_resume_cli = importlib.util.module_from_spec(_resume_spec)
-sys.modules["figure_resume_cli"] = _resume_cli
-_resume_spec.loader.exec_module(_resume_cli)
+_resume_cli = load_script_module("figure_resume_cli", _RESUME_CLI)
 
 _PARALLEL_SERIES = Path(__file__).resolve().parents[2] / "parallel_series.py"
-_parallel_spec = importlib.util.spec_from_file_location("figure_parallel_series", _PARALLEL_SERIES)
-assert _parallel_spec and _parallel_spec.loader
-_parallel_series = importlib.util.module_from_spec(_parallel_spec)
-sys.modules["figure_parallel_series"] = _parallel_series
-_parallel_spec.loader.exec_module(_parallel_series)
+_parallel_series = load_script_module("figure_parallel_series", _PARALLEL_SERIES)
 
 _OVERLAY = Path(__file__).resolve().parents[2] / "paper_overlay.py"
-_overlay_spec = importlib.util.spec_from_file_location("figure_paper_overlay", _OVERLAY)
-assert _overlay_spec and _overlay_spec.loader
-_paper_overlay = importlib.util.module_from_spec(_overlay_spec)
-sys.modules["figure_paper_overlay"] = _paper_overlay
-_overlay_spec.loader.exec_module(_paper_overlay)
+_paper_overlay = load_script_module("figure_paper_overlay", _OVERLAY)
 
 FIGURES_DIR = Path("figures/ravivarapu/images/4a")
 CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/4")
@@ -331,7 +318,7 @@ def plot_series(series: dict[str, Any], png_path: Path) -> None:
     plt.close(fig)
 
 
-def main() -> None:
+def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--plot-only", action="store_true")
     parser.add_argument("--smoke", action="store_true")
@@ -390,12 +377,14 @@ def main() -> None:
         "display_roll_window": DISPLAY_ROLL_WINDOW,
         "train_config": "fig4_ravivarapu_config_v109",
     }
+    manifest = _panel.stamp_manifest(manifest)
     DEFAULT_MANIFEST.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     if hasattr(_figure_promote, "promote_ravivarapu_4a"):
         _figure_promote.promote_ravivarapu_4a(manifest=manifest, png_path=png_path)
     print(json.dumps(manifest, indent=2))
     print(f"wrote {png_path}")
 
+    return _panel.exit_code(manifest, smoke=bool(getattr(args, "smoke", False)))
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -2,8 +2,11 @@
 """Ravivarapu Fig 7 — ablation PSD over 10 stimulation steps."""
 from __future__ import annotations
 
+from rl_adaptive_dbs.panel import load_script_module
+
+from rl_adaptive_dbs import panel as _panel
+
 import argparse
-import importlib.util
 import json
 import os
 import sys
@@ -20,25 +23,13 @@ from controllers.sea_dbs.config import ABLATION_EVAL_STEPS, SEADBSConfig
 from rl_adaptive_dbs.parallel_workers import TrainSeedJob, train_seed_worker
 
 _RESUME_CLI = Path(__file__).resolve().parents[2] / "resume_cli.py"
-_resume_spec = importlib.util.spec_from_file_location("figure_resume_cli", _RESUME_CLI)
-assert _resume_spec and _resume_spec.loader
-_resume_cli = importlib.util.module_from_spec(_resume_spec)
-sys.modules["figure_resume_cli"] = _resume_cli
-_resume_spec.loader.exec_module(_resume_cli)
+_resume_cli = load_script_module("figure_resume_cli", _RESUME_CLI)
 
 _PARALLEL_SERIES = Path(__file__).resolve().parents[2] / "parallel_series.py"
-_parallel_spec = importlib.util.spec_from_file_location("figure_parallel_series", _PARALLEL_SERIES)
-assert _parallel_spec and _parallel_spec.loader
-_parallel_series = importlib.util.module_from_spec(_parallel_spec)
-sys.modules["figure_parallel_series"] = _parallel_series
-_parallel_spec.loader.exec_module(_parallel_series)
+_parallel_series = load_script_module("figure_parallel_series", _PARALLEL_SERIES)
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
-_spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
-assert _spec and _spec.loader
-_figure_promote = importlib.util.module_from_spec(_spec)
-sys.modules["figure_promote"] = _figure_promote
-_spec.loader.exec_module(_figure_promote)
+_figure_promote = load_script_module("figure_promote", _PROMOTE)
 
 _DIG = Path(__file__).resolve().parents[4] / "digitization"
 if str(_DIG) not in sys.path:
@@ -46,11 +37,7 @@ if str(_DIG) not in sys.path:
 from ravivarapu_gates import merge_gate_report, ravivarapu_fig7_gates  # noqa: E402
 
 _OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
-_overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
-assert _overlay_spec and _overlay_spec.loader
-_overlay_import = importlib.util.module_from_spec(_overlay_spec)
-sys.modules["figure_overlay_import"] = _overlay_import
-_overlay_spec.loader.exec_module(_overlay_import)
+_overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
 CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/7")
@@ -149,7 +136,7 @@ def evaluate_gates(traces: dict[str, list[float]]) -> dict[str, Any]:
     return merge_gate_report(dig, {"n_steps": n})
 
 
-def main() -> None:
+def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--smoke", action="store_true")
@@ -172,7 +159,6 @@ def main() -> None:
     _resume_cli.configure_promote_publish(args, _figure_promote)
     steps = 5 if args.smoke else ABLATION_EVAL_STEPS
     series_path = CACHE_DIR / "series.json"
-    actions: dict[str, list[int]] = {}
     if args.plot_only:
         if not series_path.is_file():
             raise SystemExit(f"missing series cache: {series_path}")
@@ -254,12 +240,14 @@ def main() -> None:
         "caption": caption,
         "series_cache": series_path.as_posix(),
     }
+    manifest = _panel.stamp_manifest(manifest)
     (CACHE_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     if hasattr(_figure_promote, "promote_ravivarapu_7"):
         _figure_promote.promote_ravivarapu_7(manifest=manifest, png_path=png_path)
     print(json.dumps(manifest, indent=2))
     print(f"wrote {png_path}")
 
+    return _panel.exit_code(manifest, smoke=bool(getattr(args, "smoke", False)))
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

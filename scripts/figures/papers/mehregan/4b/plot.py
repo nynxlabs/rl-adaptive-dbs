@@ -18,8 +18,11 @@ Run:
 """
 from __future__ import annotations
 
+from rl_adaptive_dbs.panel import load_script_module
+
+from rl_adaptive_dbs import panel as _panel
+
 import argparse
-import importlib.util
 import json
 import sys
 from pathlib import Path
@@ -29,10 +32,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
-_spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
-assert _spec and _spec.loader
-_figure_promote = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_figure_promote)
+_figure_promote = load_script_module("figure_promote", _PROMOTE)
 
 _DIG = Path(__file__).resolve().parents[4] / "digitization"
 if str(_DIG) not in sys.path:
@@ -40,10 +40,7 @@ if str(_DIG) not in sys.path:
 from paper_gates import fig4b_gates  # noqa: E402
 
 _OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
-_overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
-assert _overlay_spec and _overlay_spec.loader
-_overlay_import = importlib.util.module_from_spec(_overlay_spec)
-_overlay_spec.loader.exec_module(_overlay_import)
+_overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
 FIGURES_DIR = Path("figures/mehregan/images/4b")
@@ -663,6 +660,7 @@ def main() -> int:
         + "\n"
     )
     args.manifest.parent.mkdir(parents=True, exist_ok=True)
+    manifest = _panel.stamp_manifest(manifest)
     args.manifest.write_text(json.dumps(manifest, indent=2) + "\n")
 
     print(f"wrote {combined_path}", flush=True)

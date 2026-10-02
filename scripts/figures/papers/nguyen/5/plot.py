@@ -10,8 +10,11 @@ Run:
 """
 from __future__ import annotations
 
+from rl_adaptive_dbs.panel import load_script_module
+
+from rl_adaptive_dbs import panel as _panel
+
 import argparse
-import importlib.util
 import json
 import os
 import sys
@@ -27,22 +30,13 @@ if str(_DIG) not in sys.path:
 from nguyen_gates import attach_digitization, fig5_spikes_energy_gates  # noqa: E402
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
-_spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
-assert _spec and _spec.loader
-_figure_promote = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_figure_promote)
+_figure_promote = load_script_module("figure_promote", _PROMOTE)
 
 _RESUME_CLI = Path(__file__).resolve().parents[2] / "resume_cli.py"
-_resume_spec = importlib.util.spec_from_file_location("figure_resume_cli", _RESUME_CLI)
-assert _resume_spec and _resume_spec.loader
-_resume_cli = importlib.util.module_from_spec(_resume_spec)
-_resume_spec.loader.exec_module(_resume_cli)
+_resume_cli = load_script_module("figure_resume_cli", _RESUME_CLI)
 
 _OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
-_overlay_import_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
-assert _overlay_import_spec and _overlay_import_spec.loader
-_overlay_import = importlib.util.module_from_spec(_overlay_import_spec)
-_overlay_import_spec.loader.exec_module(_overlay_import)
+_overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
 import matplotlib.pyplot as plt
@@ -266,10 +260,7 @@ def main(argv: list[str] | None = None) -> int:
             fig4_argv.extend(["--start-episode", str(args.start_episode)])
         fig4_argv.extend(["--checkpoint-interval", str(args.checkpoint_interval)])
         fig4_path = Path(__file__).resolve().parent.parent / "4" / "plot.py"
-        spec = importlib.util.spec_from_file_location("nguyen_fig4_plot", fig4_path)
-        assert spec and spec.loader
-        fig4_mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(fig4_mod)
+        fig4_mod = load_script_module("nguyen_fig4_plot", fig4_path)
         rc = int(fig4_mod.main(fig4_argv))
         if rc != 0:
             return rc
@@ -307,6 +298,10 @@ def main(argv: list[str] | None = None) -> int:
         "caption": caption,
         "smoke": bool(series.get("smoke")),
     }
+    manifest = _panel.stamp_manifest(
+        manifest,
+        inputs={"fig4_series": args.series, "fig4_manifest": args.fig4_manifest},
+    )
     write_json(args.manifest, manifest)
 
     if not args.no_update_docs:

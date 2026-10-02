@@ -10,8 +10,11 @@ Run:
 """
 from __future__ import annotations
 
+from rl_adaptive_dbs.panel import load_script_module
+
+from rl_adaptive_dbs import panel as _panel
+
 import argparse
-import importlib.util
 import json
 import os
 import sys
@@ -27,23 +30,14 @@ if str(_DIG) not in sys.path:
 from nguyen_gates import attach_digitization, fig6_training_gates  # noqa: E402
 
 _OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
-_overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
-assert _overlay_spec and _overlay_spec.loader
-_overlay_import = importlib.util.module_from_spec(_overlay_spec)
-_overlay_spec.loader.exec_module(_overlay_import)
+_overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
-_spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
-assert _spec and _spec.loader
-_figure_promote = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_figure_promote)
+_figure_promote = load_script_module("figure_promote", _PROMOTE)
 
 _PLOT_AXES = Path(__file__).resolve().parents[2] / "plot_axes.py"
-_pa_spec = importlib.util.spec_from_file_location("figure_plot_axes", _PLOT_AXES)
-assert _pa_spec and _pa_spec.loader
-_figure_plot_axes = importlib.util.module_from_spec(_pa_spec)
-_pa_spec.loader.exec_module(_figure_plot_axes)
+_figure_plot_axes = load_script_module("figure_plot_axes", _PLOT_AXES)
 data_ylim = _figure_plot_axes.data_ylim
 
 import matplotlib.pyplot as plt
@@ -212,9 +206,6 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
     ax_freq.set_title("DBS Parameters")
 
     # Set y limits incorporating both replication and digitized paper ranges with headroom for legend
-    freq_curves = _paper_overlay.load_panel_curves(_paper_overlay.NGUYEN_DIG / "curves_fig6_freq.json")
-    f_raw = freq_curves.get("Raw", ([], []))[1]
-    f_sy = freq_curves.get("Smoothed", ([], []))[1]
     amp_curves = _paper_overlay.load_panel_curves(_paper_overlay.NGUYEN_DIG / "curves_fig6_amp.json")
     a_raw = amp_curves.get("Raw", ([], []))[1]
     a_sy = amp_curves.get("Smoothed", ([], []))[1]
@@ -301,10 +292,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.refresh_train:
         fig4_path = Path(__file__).resolve().parent.parent / "4" / "plot.py"
-        spec = importlib.util.spec_from_file_location("nguyen_fig4_plot", fig4_path)
-        assert spec and spec.loader
-        fig4_mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(fig4_mod)
+        fig4_mod = load_script_module("nguyen_fig4_plot", fig4_path)
         rc = int(fig4_mod.main())
         if rc != 0:
             return rc
@@ -341,6 +329,10 @@ def main(argv: list[str] | None = None) -> int:
         "png_version": png_version,
         "caption": caption,
     }
+    manifest = _panel.stamp_manifest(
+        manifest,
+        inputs={"fig4_series": args.series, "fig4_manifest": args.fig4_manifest},
+    )
     write_json(args.manifest, manifest)
 
     if not args.no_update_docs:
