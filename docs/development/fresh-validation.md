@@ -144,7 +144,7 @@ sudo apt update && sudo apt install -y git curl ca-certificates
 curl -LsSf https://astral.sh/uv/install.sh | sh
 source ~/.bashrc
 
-git clone https://github.com/wilzen3476/rl-adaptive-dbs.git
+git clone https://github.com/nynxlabs/rl-adaptive-dbs.git
 cd rl-adaptive-dbs
 bash scripts/validation/validate-fresh.sh
 ```
