@@ -47,6 +47,7 @@ from nguyen_gates import (  # noqa: E402
     fig4_length_gates,
     fig4_reward_gates,
     fig4_timing_shape_gates,
+    FIG4_TIMING_SMOOTH,
 )
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
@@ -68,6 +69,7 @@ from controllers.snn.trainer import (
     train_result_from_payload,
     write_train_metrics,
     episode_extra,
+    training_budget,
 )
 
 _RESUME_CLI = Path(__file__).resolve().parents[2] / "resume_cli.py"
@@ -179,6 +181,62 @@ def config_record(cfg: SNNConfig) -> dict[str, Any]:
     }
 
 
+# Shape gates read episodes 0–100 through a centered smoothing window, so they are final
+# once the series runs a full window past episode 100.
+SHAPE_DECIDABLE_AFTER = 100 + 2 * FIG4_TIMING_SMOOTH
+
+
+class EarlyAbort(Exception):
+    """Raised from the checkpoint probe when a decidable shape gate has already failed."""
+
+    def __init__(self, completed: int, failed: list[str]) -> None:
+        super().__init__(f"shape gates failed at episode {completed}: {failed}")
+        self.completed = completed
+        self.failed = failed
+
+
+def shape_probe(completed: int, result: TrainResult) -> dict[str, Any]:
+    """Evaluate the shape gates that a partial series can already decide."""
+    probe: dict[str, Any] = {
+        "completed_episodes": completed,
+        "decidable": completed >= SHAPE_DECIDABLE_AFTER,
+    }
+    if not probe["decidable"]:
+        return probe
+    partial = {
+        "episode_rewards": list(result.episode_rewards),
+        "episode_lengths": list(result.episode_lengths),
+        "num_episodes": completed,
+    }
+    gates = evaluate_gates(partial, max_episode_steps=int(result.config.max_episode_steps))
+    failed = [k for k in REWARD_SHAPE_KEYS if not gates["reward"].get(k)]
+    failed += [k for k in LENGTH_SHAPE_KEYS if not gates["length"].get(k)]
+    probe["shape_failed"] = failed
+    probe["shape_pass"] = not failed
+    return probe
+
+
+def find_repeat_run(cfg_record: dict[str, Any], search_dir: Path) -> Path | None:
+    """A manifest under ``search_dir`` from the same clean commit with the identical config."""
+    git = _panel.git_state()
+    if git["dirty"] or not git["commit"] or not search_dir.is_dir():
+        return None
+    for path in sorted(search_dir.rglob("*manifest*.json")):
+        try:
+            prior = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        prov_git = (prior.get("provenance") or {}).get("git") or {}
+        if (
+            prior.get("config") == cfg_record
+            and prov_git.get("commit") == git["commit"]
+            and not prov_git.get("dirty")
+            and not prior.get("smoke")
+        ):
+            return path
+    return None
+
+
 def train_series(
     *,
     seed: int,
@@ -201,6 +259,9 @@ def train_series(
     frequency_sensitivity_early_episodes: int | None = None,
     subthreshold_steps_required: int | None = None,
     overrides: dict[str, Any] | None = None,
+    on_checkpoint: Any = None,
+    allow_repeat: bool = True,
+    repeat_search_dir: Path | None = None,
     resume_path: Path | None = None,
     start_episode: int | None = None,
     checkpoint_path: Path | None = None,
@@ -251,6 +312,23 @@ def train_series(
         if overrides:
             cfg = replace(cfg, **overrides)
 
+    budget = training_budget(cfg)
+    print(
+        f"preflight: env steps {budget['env_steps_range']}, SGD updates {budget['sgd_updates_range']}, "
+        f"target syncs {budget['target_syncs_range']} (cadence {budget['replay_update_cadence']}, "
+        f"target_update_period {budget['target_update_period']})",
+        flush=True,
+    )
+    for warning in budget["warnings"]:
+        print(f"preflight WARNING: {warning}", flush=True)
+    if not smoke and not allow_repeat and resume_path is None and repeat_search_dir is not None:
+        prior = find_repeat_run(config_record(cfg), repeat_search_dir)
+        if prior is not None:
+            raise SystemExit(
+                f"identical config already ran at this commit ({prior}); "
+                "change a knob or pass --allow-repeat"
+            )
+
     env = NguyenEnvAdapter(config=cfg)
     try:
         initial_result: TrainResult | None = None
@@ -276,6 +354,7 @@ def train_series(
             checkpoint_path=checkpoint_path,
             checkpoint_interval=checkpoint_interval,
             initial_result=initial_result,
+            on_checkpoint=on_checkpoint,
         )
         payload: dict[str, Any] = {
             "seed": cfg.seed,
@@ -293,6 +372,10 @@ def train_series(
             "update_count": result.update_count,
             "smoke": smoke,
             "config": config_record(cfg),
+            "training_budget": budget,
+            "target_syncs": (
+                result.update_count // cfg.target_update_period if cfg.target_update_period > 0 else 0
+            ),
         }
         return payload, cfg, trainer, result
     finally:
@@ -684,6 +767,19 @@ def main(argv: list[str] | None = None) -> int:
         metavar="FIELD=VALUE",
         help="Override any SNNConfig field (repeatable), e.g. --set amplitude_min=265",
     )
+    parser.add_argument(
+        "--abort-on-fail",
+        action="store_true",
+        help=(
+            "Stop training (exit 3) at the first checkpoint where an already-decidable shape "
+            f"gate fails (from episode {SHAPE_DECIDABLE_AFTER})"
+        ),
+    )
+    parser.add_argument(
+        "--allow-repeat",
+        action="store_true",
+        help="Train even if an identical config already ran at this clean commit",
+    )
     parser.add_argument("--plot-only", action="store_true")
     parser.add_argument("--series", type=Path, default=DEFAULT_SERIES)
     parser.add_argument("--checkpoint", type=Path, default=DEFAULT_CHECKPOINT)
@@ -740,32 +836,69 @@ def main(argv: list[str] | None = None) -> int:
             f"subthreshold_steps={args.subthreshold_steps} overrides={overrides} resume={args.resume}",
             flush=True,
         )
-        series, cfg, trainer, train_result = train_series(
-            seed=args.seed,
-            num_episodes=args.episodes,
-            smoke=args.smoke,
-            double_dqn=args.double_dqn,
-            replay_timeout_weight=args.timeout_replay_weight,
-            replay_short_stop_max_steps=args.short_stop_max_steps,
-            replay_short_stop_weight=args.short_stop_replay_weight,
-            learning_rate=args.learning_rate,
-            epsilon_end=args.epsilon_end,
-            target_update_period=args.target_update_period,
-            pulse_width_min=args.pulse_width_min,
-            pulse_width_min_early=args.pulse_width_min_early,
-            pulse_width_min_early_episodes=args.pulse_width_min_early_episodes,
-            pulse_width_min_ramp_end_episode=args.pulse_width_min_ramp_end_episode,
-            pulse_width_sensitivity=args.pulse_width_sensitivity,
-            pulse_width_sensitivity_early=args.pulse_width_sensitivity_early,
-            pulse_width_sensitivity_early_episodes=args.pulse_width_sensitivity_early_episodes,
-            frequency_sensitivity_early_episodes=args.frequency_sensitivity_early_episodes,
-            subthreshold_steps_required=args.subthreshold_steps,
-            overrides=overrides,
-            resume_path=args.resume,
-            start_episode=args.start_episode,
-            checkpoint_path=args.checkpoint,
-            checkpoint_interval=args.checkpoint_interval,
-        )
+        partial_path = args.manifest.with_name(args.manifest.stem + ".partial.json")
+
+        def _on_checkpoint(completed: int, result: TrainResult) -> None:
+            probe = shape_probe(completed, result)
+            write_json(partial_path, _panel.stamp_manifest({"partial": probe}))
+            if probe.get("decidable"):
+                print(
+                    f"checkpoint probe ep {completed}: shape_pass={probe['shape_pass']} "
+                    f"failed={probe['shape_failed']}",
+                    flush=True,
+                )
+            if args.abort_on_fail and probe.get("decidable") and not probe["shape_pass"]:
+                raise EarlyAbort(completed, probe["shape_failed"])
+
+        try:
+            series, cfg, trainer, train_result = train_series(
+                seed=args.seed,
+                num_episodes=args.episodes,
+                smoke=args.smoke,
+                double_dqn=args.double_dqn,
+                replay_timeout_weight=args.timeout_replay_weight,
+                replay_short_stop_max_steps=args.short_stop_max_steps,
+                replay_short_stop_weight=args.short_stop_replay_weight,
+                learning_rate=args.learning_rate,
+                epsilon_end=args.epsilon_end,
+                target_update_period=args.target_update_period,
+                pulse_width_min=args.pulse_width_min,
+                pulse_width_min_early=args.pulse_width_min_early,
+                pulse_width_min_early_episodes=args.pulse_width_min_early_episodes,
+                pulse_width_min_ramp_end_episode=args.pulse_width_min_ramp_end_episode,
+                pulse_width_sensitivity=args.pulse_width_sensitivity,
+                pulse_width_sensitivity_early=args.pulse_width_sensitivity_early,
+                pulse_width_sensitivity_early_episodes=args.pulse_width_sensitivity_early_episodes,
+                frequency_sensitivity_early_episodes=args.frequency_sensitivity_early_episodes,
+                subthreshold_steps_required=args.subthreshold_steps,
+                overrides=overrides,
+                on_checkpoint=None if args.smoke else _on_checkpoint,
+                allow_repeat=args.allow_repeat,
+                repeat_search_dir=args.manifest.parent,
+                resume_path=args.resume,
+                start_episode=args.start_episode,
+                checkpoint_path=args.checkpoint,
+                checkpoint_interval=args.checkpoint_interval,
+            )
+        except EarlyAbort as abort:
+            manifest = {
+                "panel": "2/4",
+                "aborted": True,
+                "aborted_at_episode": abort.completed,
+                "shape_failed": abort.failed,
+                "checkpoint": args.checkpoint.as_posix(),
+                "gates": {"pass": False, "shape_pass": False},
+                "smoke": False,
+            }
+            write_json(args.manifest, _panel.stamp_manifest(manifest))
+            print(f"EARLY ABORT: {abort}; checkpoint kept at {args.checkpoint}", flush=True)
+            return _panel.EXIT_ABORTED
+        if series.get("target_syncs", 1) == 0 and not args.smoke:
+            print(
+                "WARNING: the target network never synced during this run "
+                f"({series['update_count']} SGD updates < target_update_period)",
+                flush=True,
+            )
         write_json(args.series, series)
         max_steps = cfg.max_episode_steps
         if not args.smoke:
