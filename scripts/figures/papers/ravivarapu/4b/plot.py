@@ -11,8 +11,11 @@ Run:
 """
 from __future__ import annotations
 
+from rl_adaptive_dbs.panel import load_script_module
+
+from rl_adaptive_dbs import panel as _panel
+
 import argparse
-import importlib.util
 import json
 import os
 import subprocess
@@ -27,10 +30,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
-_spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
-assert _spec and _spec.loader
-_figure_promote = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_figure_promote)
+_figure_promote = load_script_module("figure_promote", _PROMOTE)
 
 _DIG = Path(__file__).resolve().parents[4] / "digitization"
 if str(_DIG) not in sys.path:
@@ -42,10 +42,7 @@ from ravivarapu_gates import (  # noqa: E402
 )
 
 _OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
-_overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
-assert _overlay_spec and _overlay_spec.loader
-_overlay_import = importlib.util.module_from_spec(_overlay_spec)
-_overlay_spec.loader.exec_module(_overlay_import)
+_overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
 FIGURES_DIR = Path("figures/ravivarapu/images/4b")
@@ -126,7 +123,7 @@ def plot_series(series: dict[str, Any], png_path: Path) -> None:
     plt.close(fig)
 
 
-def main() -> None:
+def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--plot-only", action="store_true")
     parser.add_argument("--smoke", action="store_true")
@@ -190,12 +187,14 @@ def main() -> None:
         "series_cache": SHARED_SERIES.as_posix(),
         "display_roll_window": DISPLAY_ROLL_WINDOW,
     }
+    manifest = _panel.stamp_manifest(manifest)
     DEFAULT_MANIFEST.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     if hasattr(_figure_promote, "promote_ravivarapu_4b"):
         _figure_promote.promote_ravivarapu_4b(manifest=manifest, png_path=png_path)
     print(json.dumps(manifest, indent=2))
     print(f"wrote {png_path}")
 
+    return _panel.exit_code(manifest, smoke=bool(getattr(args, "smoke", False)))
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

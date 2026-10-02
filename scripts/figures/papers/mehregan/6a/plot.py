@@ -37,8 +37,11 @@ QAT train only (~30–60 min). Prefer tmux (cap plant threads):
 """
 from __future__ import annotations
 
+from rl_adaptive_dbs.panel import load_script_module
+
+from rl_adaptive_dbs import panel as _panel
+
 import argparse
-import importlib.util
 import json
 import sys
 import time
@@ -73,36 +76,20 @@ if str(_DIG) not in sys.path:
 from paper_gates import fig6_quant_gates  # noqa: E402
 
 _OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
-_overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
-assert _overlay_spec and _overlay_spec.loader
-_overlay_import = importlib.util.module_from_spec(_overlay_spec)
-_overlay_spec.loader.exec_module(_overlay_import)
+_overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
 _FIG2A_PATH = Path(__file__).resolve().parents[1] / "2a" / "plot.py"
-_fig2a_spec = importlib.util.spec_from_file_location("fig2a_plot_for_6a", _FIG2A_PATH)
-assert _fig2a_spec and _fig2a_spec.loader
-_fig2a = importlib.util.module_from_spec(_fig2a_spec)
-_fig2a_spec.loader.exec_module(_fig2a)
+_fig2a = load_script_module("fig2a_plot_for_6a", _FIG2A_PATH)
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
-_spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
-assert _spec and _spec.loader
-_figure_promote = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_figure_promote)
+_figure_promote = load_script_module("figure_promote", _PROMOTE)
 
 _RESUME_CLI = Path(__file__).resolve().parents[2] / "resume_cli.py"
-_resume_spec = importlib.util.spec_from_file_location("figure_resume_cli", _RESUME_CLI)
-assert _resume_spec and _resume_spec.loader
-_resume_cli = importlib.util.module_from_spec(_resume_spec)
-_resume_spec.loader.exec_module(_resume_cli)
+_resume_cli = load_script_module("figure_resume_cli", _RESUME_CLI)
 
 _PARALLEL_SERIES = Path(__file__).resolve().parents[2] / "parallel_series.py"
-_parallel_spec = importlib.util.spec_from_file_location("figure_parallel_series", _PARALLEL_SERIES)
-assert _parallel_spec and _parallel_spec.loader
-_parallel_series = importlib.util.module_from_spec(_parallel_spec)
-sys.modules["figure_parallel_series"] = _parallel_series
-_parallel_spec.loader.exec_module(_parallel_series)
+_parallel_series = load_script_module("figure_parallel_series", _PARALLEL_SERIES)
 
 FIGURES_DIR = Path("figures/mehregan/images/6a")
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/6a")
@@ -1396,6 +1383,7 @@ def main() -> int:
         "panel": panel,
     }
     args.manifest.parent.mkdir(parents=True, exist_ok=True)
+    manifest = _panel.stamp_manifest(manifest)
     args.manifest.write_text(json.dumps(manifest, indent=2) + "\n")
 
     if not args.no_promote and hasattr(_figure_promote, "promote_6a"):
@@ -1430,7 +1418,7 @@ def main() -> int:
         f"fp32_stim={div.get('fp32_stim_actions')}",
         flush=True,
     )
-    return 0
+    return _panel.exit_code(manifest, smoke=bool(getattr(args, "smoke", False)))
 
 
 if __name__ == "__main__":

@@ -24,8 +24,11 @@ Plant EI simulation only — no RL training; checkpoint resume is not applicable
 """
 from __future__ import annotations
 
+from rl_adaptive_dbs.panel import load_script_module
+
+from rl_adaptive_dbs import panel as _panel
+
 import argparse
-import importlib.util
 import json
 import sys
 import time
@@ -33,10 +36,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
-_spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
-assert _spec and _spec.loader
-_figure_promote = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_figure_promote)
+_figure_promote = load_script_module("figure_promote", _PROMOTE)
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -56,10 +56,7 @@ if str(_DIG) not in sys.path:
 from paper_gates import fig2_time_gates  # noqa: E402
 
 _OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
-_overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
-assert _overlay_spec and _overlay_spec.loader
-_overlay_import = importlib.util.module_from_spec(_overlay_spec)
-_overlay_spec.loader.exec_module(_overlay_import)
+_overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
 FIGURES_DIR = Path("figures/mehregan/images/2b")
@@ -301,7 +298,7 @@ def simulate_trace(
         stim_note = "no DBS"
     smc_note = (
         f"SMC {smc_hz:g} Hz periodic Iappco"
-        if smc_schedule == "periodic" and use_cortical
+        if smc_schedule == "periodic" and smc_site == "cortical"
         else f"SMC {smc_hz:g} Hz periodic Iappth"
         if smc_schedule == "periodic"
         else f"SMC {smc_schedule} BoC inv-gamma {smc_site} ({smc_pulse_source})"
@@ -735,6 +732,7 @@ def main() -> int:
         "output_png": _figure_promote.repo_rel_posix(args.out),
     }
     args.manifest.parent.mkdir(parents=True, exist_ok=True)
+    manifest = _panel.stamp_manifest(manifest)
     args.manifest.write_text(json.dumps(manifest, indent=2) + "\n")
     _log(f"gates_pass={paper_gates['pass']} gates={paper_gates['gates']}", verbose=True)
 

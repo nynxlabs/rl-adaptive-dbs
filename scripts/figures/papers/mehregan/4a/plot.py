@@ -25,12 +25,15 @@ Long run (~30–60 min). Prefer tmux:
 """
 from __future__ import annotations
 
+from rl_adaptive_dbs.panel import load_script_module
+
+from rl_adaptive_dbs import panel as _panel
+
 import os
 
 os.environ.setdefault("MPLBACKEND", "Agg")
 
 import argparse
-import importlib.util
 import json
 import sys
 import time
@@ -64,22 +67,13 @@ if str(_DIG) not in sys.path:
 from paper_gates import fig4a_gates  # noqa: E402
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
-_spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
-assert _spec and _spec.loader
-_figure_promote = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_figure_promote)
+_figure_promote = load_script_module("figure_promote", _PROMOTE)
 
 _RESUME_CLI = Path(__file__).resolve().parents[2] / "resume_cli.py"
-_resume_spec = importlib.util.spec_from_file_location("figure_resume_cli", _RESUME_CLI)
-assert _resume_spec and _resume_spec.loader
-_resume_cli = importlib.util.module_from_spec(_resume_spec)
-_resume_spec.loader.exec_module(_resume_cli)
+_resume_cli = load_script_module("figure_resume_cli", _RESUME_CLI)
 
 _OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
-_overlay_import_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
-assert _overlay_import_spec and _overlay_import_spec.loader
-_overlay_import = importlib.util.module_from_spec(_overlay_import_spec)
-_overlay_import_spec.loader.exec_module(_overlay_import)
+_overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
 FIGURES_DIR = Path("figures/mehregan/images/4a")
@@ -477,7 +471,7 @@ def _checklist_rows(gates: dict[str, Any], summary: dict[str, Any]) -> list[tupl
         (
             "**Late/early ratio**",
             "Near digitized paper late/early ratio",
-            f"ours late/early; gate late_early_ratio_near_paper",
+            "ours late/early; gate late_early_ratio_near_paper",
             "✓" if gates.get("late_early_ratio_near_paper") else "✗",
         ),
         (
@@ -828,6 +822,7 @@ def main() -> int:
         ),
     }
     args.manifest.parent.mkdir(parents=True, exist_ok=True)
+    manifest = _panel.stamp_manifest(manifest)
     args.manifest.write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"wrote {args.manifest}", flush=True)
 
@@ -845,7 +840,7 @@ def main() -> int:
         update_checklist_in_doc(_checklist_rows(gates, summary))
         print("updated docs checklist", flush=True)
 
-    return 0
+    return _panel.exit_code(manifest, smoke=bool(getattr(args, "smoke", False)))
 
 
 if __name__ == "__main__":

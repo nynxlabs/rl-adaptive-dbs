@@ -27,8 +27,11 @@ Each run writes ``figures/mehregan/images/5b/efficacy_30hz_vN.png`` (N auto-incr
 """
 from __future__ import annotations
 
+from rl_adaptive_dbs.panel import load_script_module
+
+from rl_adaptive_dbs import panel as _panel
+
 import argparse
-import importlib.util
 import json
 import sys
 import time
@@ -54,29 +57,17 @@ if str(_DIG) not in sys.path:
 from paper_gates import fig5_efficacy_gates  # noqa: E402
 
 _OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
-_overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
-assert _overlay_spec and _overlay_spec.loader
-_overlay_import = importlib.util.module_from_spec(_overlay_spec)
-_overlay_spec.loader.exec_module(_overlay_import)
+_overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
 _FIG2A_PATH = Path(__file__).resolve().parents[1] / "2a" / "plot.py"
-_fig2a_spec = importlib.util.spec_from_file_location("fig2a_plot", _FIG2A_PATH)
-assert _fig2a_spec and _fig2a_spec.loader
-_fig2a = importlib.util.module_from_spec(_fig2a_spec)
-_fig2a_spec.loader.exec_module(_fig2a)
+_fig2a = load_script_module("fig2a_plot", _FIG2A_PATH)
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
-_spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
-assert _spec and _spec.loader
-_figure_promote = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_figure_promote)
+_figure_promote = load_script_module("figure_promote", _PROMOTE)
 
 _RESUME_CLI = Path(__file__).resolve().parents[2] / "resume_cli.py"
-_resume_spec = importlib.util.spec_from_file_location("figure_resume_cli", _RESUME_CLI)
-assert _resume_spec and _resume_spec.loader
-_resume_cli = importlib.util.module_from_spec(_resume_spec)
-_resume_spec.loader.exec_module(_resume_cli)
+_resume_cli = load_script_module("figure_resume_cli", _RESUME_CLI)
 
 FIGURES_DIR = Path("figures/mehregan/images/5b")
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/5b")
@@ -813,14 +804,13 @@ def main() -> int:
     else:
         png_version = _figure_promote.parse_png_version(args.out)
 
-    train_meta: dict[str, Any] | None = None
     if args.plot_only:
         if not args.eval_json.exists():
             print(f"missing eval JSON: {args.eval_json}", file=sys.stderr)
             return 2
         payload = json.loads(args.eval_json.read_text())
     elif args.train:
-        train_meta = _train_checkpoint(
+        _train_checkpoint(
             seed=args.seed,
             checkpoint_path=args.checkpoint,
             resume_path=args.resume,
@@ -870,6 +860,7 @@ def main() -> int:
         "gates": gates,
     }
     args.manifest.parent.mkdir(parents=True, exist_ok=True)
+    manifest = _panel.stamp_manifest(manifest)
     args.manifest.write_text(json.dumps(manifest, indent=2) + "\n")
 
     print(f"wrote {args.out}", flush=True)

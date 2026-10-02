@@ -22,8 +22,11 @@ First-100 trains are ~15–20 min. Prefer tmux:
 """
 from __future__ import annotations
 
+from rl_adaptive_dbs.panel import load_script_module
+
+from rl_adaptive_dbs import panel as _panel
+
 import argparse
-import importlib.util
 import json
 import os
 import sys
@@ -47,10 +50,7 @@ from nguyen_gates import (  # noqa: E402
 )
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
-_spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
-assert _spec and _spec.loader
-_figure_promote = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_figure_promote)
+_figure_promote = load_script_module("figure_promote", _PROMOTE)
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -71,23 +71,14 @@ from controllers.snn.trainer import (
 )
 
 _RESUME_CLI = Path(__file__).resolve().parents[2] / "resume_cli.py"
-_resume_spec = importlib.util.spec_from_file_location("figure_resume_cli", _RESUME_CLI)
-assert _resume_spec and _resume_spec.loader
-_resume_cli = importlib.util.module_from_spec(_resume_spec)
-_resume_spec.loader.exec_module(_resume_cli)
+_resume_cli = load_script_module("figure_resume_cli", _RESUME_CLI)
 
 _AXES = Path(__file__).resolve().parents[2] / "plot_axes.py"
-_axes_spec = importlib.util.spec_from_file_location("figure_plot_axes", _AXES)
-assert _axes_spec and _axes_spec.loader
-_plot_axes = importlib.util.module_from_spec(_axes_spec)
-_axes_spec.loader.exec_module(_plot_axes)
+_plot_axes = load_script_module("figure_plot_axes", _AXES)
 data_ylim = _plot_axes.data_ylim
 
 _OVERLAY = Path(__file__).resolve().parents[2] / "paper_overlay.py"
-_overlay_spec = importlib.util.spec_from_file_location("figure_paper_overlay", _OVERLAY)
-assert _overlay_spec and _overlay_spec.loader
-_paper_overlay = importlib.util.module_from_spec(_overlay_spec)
-_overlay_spec.loader.exec_module(_paper_overlay)
+_paper_overlay = load_script_module("figure_paper_overlay", _OVERLAY)
 
 FIGURES_DIR = Path("figures/nguyen/images/4")
 CACHE_DIR = Path("artifacts/figures/papers/nguyen/4")
@@ -815,8 +806,11 @@ def main(argv: list[str] | None = None) -> int:
         "caption": caption,
         "smoke": bool(series.get("smoke")),
         "config": series.get("config"),
-        "argv": list(sys.argv[1:] if argv is None else argv),
     }
+    manifest = _panel.stamp_manifest(
+        manifest,
+        inputs={"series": args.series, "checkpoint": args.checkpoint},
+    )
     write_json(args.manifest, manifest)
 
     if not args.no_update_docs:

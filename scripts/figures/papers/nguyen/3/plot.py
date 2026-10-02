@@ -19,8 +19,11 @@ auto-increments) and updates the replication image link in
 """
 from __future__ import annotations
 
+from rl_adaptive_dbs.panel import load_script_module
+
+from rl_adaptive_dbs import panel as _panel
+
 import argparse
-import importlib.util
 import json
 import sys
 import time
@@ -33,16 +36,10 @@ if str(_DIG) not in sys.path:
 from nguyen_gates import attach_digitization, fig3_gates  # noqa: E402
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
-_spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
-assert _spec and _spec.loader
-_figure_promote = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_figure_promote)
+_figure_promote = load_script_module("figure_promote", _PROMOTE)
 
 _OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
-_overlay_spec = importlib.util.spec_from_file_location("figure_overlay_import", _OVERLAY_IMPORT)
-assert _overlay_spec and _overlay_spec.loader
-_overlay_import = importlib.util.module_from_spec(_overlay_spec)
-_overlay_spec.loader.exec_module(_overlay_import)
+_overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
 import matplotlib.pyplot as plt
@@ -406,6 +403,7 @@ def main(argv: list[str] | None = None) -> int:
         "png_version": png_version,
         "caption": caption,
     }
+    manifest = _panel.stamp_manifest(manifest)
     write_json(args.manifest, manifest)
 
     if not args.no_update_docs:
