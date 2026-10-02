@@ -58,7 +58,7 @@ Single source of truth for **what we have replicated**, **what diverges**, and *
 
 ### 2.2 Paper-silent choices (implementation hypotheses)
 
-These are **deliberate conventions**, not verified against released code (none available per [AGENTS.md](../../AGENTS.md)):
+These are **deliberate conventions**, not verified against released code (none of the papers released any):
 
 | Topic | Our choice | Rationale | Risk |
 |-------|------------|-----------|------|
