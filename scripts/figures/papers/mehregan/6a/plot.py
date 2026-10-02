@@ -212,20 +212,20 @@ SERIES = {
 VARIANT_KEYS = ("fp32", "ptq-int8", "ptq-fp16", "qat")
 
 
-def _vault_backed_png(path: Path) -> Path:
+def _linked_png(path: Path) -> Path:
     path = Path(path)
     paper = path.parent / "paper.png"
     if not paper.is_symlink():
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
-    vault_dir = paper.resolve().parent
-    vault_target = vault_dir / path.name
+    linked_dir = paper.resolve().parent
+    linked_target = linked_dir / path.name
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists() or path.is_symlink():
         return path
-    if not vault_target.exists():
-        vault_target.touch()
-    path.symlink_to(vault_target)
+    if not linked_target.exists():
+        linked_target.touch()
+    path.symlink_to(linked_target)
     return path
 
 
@@ -1569,7 +1569,7 @@ def main() -> int:
         out_path, png_version = _figure_promote.next_versioned_png(FIGURES_DIR, OUT_STEM)
     else:
         png_version = _figure_promote.parse_png_version(out_path)
-    out_path = _vault_backed_png(out_path)
+    out_path = _linked_png(out_path)
 
     panel = plot_fig6a(payload, out_path=out_path)
 

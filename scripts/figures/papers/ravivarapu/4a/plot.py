@@ -96,12 +96,12 @@ def _rolling_mean(values: list[float] | np.ndarray, window: int) -> np.ndarray:
     return out
 
 
-def _vault_backed_png(path: Path) -> Path:
-    """Write versioned PNGs into the vault-backed main figures tree when possible.
+def _linked_png(path: Path) -> Path:
+    """Write versioned PNGs into the symlink-backed main figures tree when possible.
 
     Worktree checkouts often materialize ``paper.png`` as a real file, so the local
-    ``figures/...`` tree is not a vault symlink. Prefer the main-checkout
-    ``paper.png`` symlink (via ``promote.REPO_ROOT``) so ``savefig`` + ``--push-kb``
+    ``figures/...`` tree is not a symlink. Prefer the main-checkout
+    ``paper.png`` symlink (via ``promote.REPO_ROOT``) so ``savefig`` + ``--export-notes``
     land bytes where the tracker and Report 3 expect them.
     """
     path = Path(path)
@@ -114,22 +114,22 @@ def _vault_backed_png(path: Path) -> Path:
         paper = root / path.parent / "paper.png"
         if not paper.is_symlink():
             continue
-        vault_dir = paper.resolve().parent
-        vault_target = vault_dir / path.name
+        linked_dir = paper.resolve().parent
+        linked_target = linked_dir / path.name
         local = path if path.is_absolute() else Path.cwd() / path
         local.parent.mkdir(parents=True, exist_ok=True)
-        if not vault_target.exists():
-            vault_target.parent.mkdir(parents=True, exist_ok=True)
-            vault_target.touch()
+        if not linked_target.exists():
+            linked_target.parent.mkdir(parents=True, exist_ok=True)
+            linked_target.touch()
         if local.exists() or local.is_symlink():
-            if local.resolve() != vault_target.resolve():
-                # Prefer vault target for the actual write.
-                return vault_target
+            if local.resolve() != linked_target.resolve():
+                # Prefer the linked target for the actual write.
+                return linked_target
             return local
         try:
-            local.symlink_to(vault_target)
+            local.symlink_to(linked_target)
         except OSError:
-            return vault_target
+            return linked_target
         return local
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
@@ -329,7 +329,7 @@ def plot_series(series: dict[str, Any], png_path: Path) -> None:
     _paper_overlay.place_legend(ax, fontsize=8)
     fig.tight_layout()
     png_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(_vault_backed_png(png_path), dpi=150)
+    fig.savefig(_linked_png(png_path), dpi=150)
     plt.close(fig)
 
 

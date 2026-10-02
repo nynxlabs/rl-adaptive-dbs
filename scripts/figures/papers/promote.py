@@ -5,7 +5,7 @@ Plot scripts write replication PNGs under ``figures/<paper>/images/`` and JSON c
 links in the comparison doc.
 
 When run from a git worktree under ``.worktrees/``, shared doc/figure paths resolve to
-the **main checkout** (vault symlink for ``figures/<paper>/replications.md``) so promote does not leave a
+the **main checkout** (which may symlink ``figures/<paper>/replications.md`` to a notes folder) so promote does not leave a
 detached worktree copy of the index.
 """
 
@@ -39,8 +39,8 @@ REPO_ROOT = main_checkout_root(CHECKOUT_ROOT)
 def resolve_paper_1_doc(checkout: Path | None = None) -> Path:
     """Path to ``figures/mehregan/replications.md`` that plot/promote should update.
 
-    Prefers the main checkout path (usually a vault symlink) so worktree runs update
-    the shared doc the main branch and Obsidian see.
+    Prefers the main checkout path (possibly a symlink into a notes folder) so worktree runs update
+    the shared doc the main branch and any notes app see.
     """
     root = main_checkout_root(checkout or CHECKOUT_ROOT)
     return root / "figures" / "mehregan" / "replications.md"
@@ -323,10 +323,10 @@ def repo_rel_posix(path: Path) -> str:
 
 
 def materialize_ship_png(source: Path, ship_repo_rel: str) -> Path:
-    """Copy a versioned replication PNG to a stable ship path (repo + vault).
+    """Copy a versioned replication PNG to a stable ship path (repo + linked notes folder).
 
     Report 3 and other gallery embeds use unversioned ship names (e.g.
-  ``training_beta.png``) so Obsidian/Syncthing paths stay valid after each
+  ``training_beta.png``) so links from notes apps stay valid after each
     ``_vN`` promote.
     """
     source = Path(source).resolve()
@@ -338,8 +338,8 @@ def materialize_ship_png(source: Path, ship_repo_rel: str) -> Path:
     repo_dest.parent.mkdir(parents=True, exist_ok=True)
     if source.resolve() == repo_dest.resolve():
         try:
-            push_path = Path(__file__).resolve().parent / "push_kb_images.py"
-            spec = importlib.util.spec_from_file_location("push_kb_images", push_path)
+            push_path = Path(__file__).resolve().parent / "export_notes_images.py"
+            spec = importlib.util.spec_from_file_location("export_notes_images", push_path)
             if spec is not None and spec.loader is not None:
                 mod = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(mod)
@@ -354,8 +354,8 @@ def materialize_ship_png(source: Path, ship_repo_rel: str) -> Path:
         repo_dest.unlink()
     shutil.copy2(source, repo_dest)
     try:
-        push_path = Path(__file__).resolve().parent / "push_kb_images.py"
-        spec = importlib.util.spec_from_file_location("push_kb_images", push_path)
+        push_path = Path(__file__).resolve().parent / "export_notes_images.py"
+        spec = importlib.util.spec_from_file_location("export_notes_images", push_path)
         if spec is not None and spec.loader is not None:
             mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mod)
@@ -378,7 +378,7 @@ def _doc_figure_link(repo_rel: str) -> str:
     return repo_rel
 
 
-# Mirror PNGs into the main checkout (vault-backed) even when plotting from a worktree.
+# Mirror PNGs into the main checkout (symlink-backed) even when plotting from a worktree.
 DOCS_FIGURE_PAPERS = REPO_ROOT / "docs" / "figures" / "papers"
 CANONICAL_FIGURE_PAPERS = REPO_ROOT / "figures" / "papers"
 
@@ -445,7 +445,7 @@ def papers_tracker_image_link(png_path: Path, *, doc: Path | None = None) -> str
     try:
         tracker.relative_to(REPO_ROOT.resolve())
     except ValueError:
-        # Vault-backed tracker symlink (outside REPO_ROOT): use repo-relative
+        # Tracker symlinked outside the repo (outside REPO_ROOT): use repo-relative
         # ``figures/<paper>/images/...`` → ``images/...`` under that tracker.
         for prefix in ("figures/nguyen/", "figures/mehregan/", "figures/ravivarapu/"):
             if repo_rel.startswith(prefix):
@@ -1074,31 +1074,31 @@ def _ensure_paper_1_doc_4b(*, caption_4b: str) -> None:
     PAPER_1_DOC.write_text(text)
 
 
-_PUSH_KB_IMAGES = False
+_EXPORT_NOTES_IMAGES = False
 
 
-def set_push_kb_images(enabled: bool) -> None:
-    """Enable/disable vault copy after promote (panel scripts: ``--push-kb``)."""
-    global _PUSH_KB_IMAGES
-    _PUSH_KB_IMAGES = bool(enabled)
+def set_export_notes_images(enabled: bool) -> None:
+    """Enable/disable notes-folder copy after promote (panel scripts: ``--export-notes``)."""
+    global _EXPORT_NOTES_IMAGES
+    _EXPORT_NOTES_IMAGES = bool(enabled)
 
 
-def push_kb_images_enabled() -> bool:
-    return _PUSH_KB_IMAGES
+def export_notes_images_enabled() -> bool:
+    return _EXPORT_NOTES_IMAGES
 
 
-def _push_kb_images_after_promote(
+def _export_notes_images_after_promote(
     *png_paths: Path,
     update_docs: bool = True,
 ) -> None:
     """Copy replication PNGs into the notes folder (``<notes_dir>/figures``)."""
-    if not push_kb_images_enabled():
+    if not export_notes_images_enabled():
         return
     if not update_docs and not png_paths:
         return
     try:
-        push_path = Path(__file__).resolve().parent / "push_kb_images.py"
-        spec = importlib.util.spec_from_file_location("push_kb_images", push_path)
+        push_path = Path(__file__).resolve().parent / "export_notes_images.py"
+        spec = importlib.util.spec_from_file_location("export_notes_images", push_path)
         if spec is None or spec.loader is None:
             return
         mod = importlib.util.module_from_spec(spec)
@@ -1108,7 +1108,7 @@ def _push_kb_images_after_promote(
         if update_docs and not png_paths:
             mod.push_all(verbose=False)
     except Exception as exc:
-        print(f"warning: push_kb_images failed: {exc}", file=sys.stderr)
+        print(f"warning: export_notes_images failed: {exc}", file=sys.stderr)
 
 
 _UPDATE_REPORT3 = False
@@ -1142,7 +1142,7 @@ def _update_report3_after_promote(*, update_docs: bool = True) -> None:
 
 
 def _after_promote_publish(*png_paths: Path, update_docs: bool = True) -> None:
-    _push_kb_images_after_promote(*png_paths, update_docs=update_docs)
+    _export_notes_images_after_promote(*png_paths, update_docs=update_docs)
     _update_report3_after_promote(update_docs=update_docs)
 
 
@@ -1924,7 +1924,7 @@ PAPER_RAVIVARAPU_DOC = resolve_ravivarapu_doc()
 
 
 def require_notes_dir() -> Path:
-    """Notes folder for ``--push-kb`` / ``--update-report`` (``rl_adaptive_dbs.notes_export``)."""
+    """Notes folder for ``--export-notes`` / ``--update-report`` (``rl_adaptive_dbs.notes_export``)."""
     from rl_adaptive_dbs.notes_export import require_notes_dir as _require_notes_dir
 
     trackers = (resolve_paper_1_doc(), resolve_nguyen_doc(), resolve_ravivarapu_doc())

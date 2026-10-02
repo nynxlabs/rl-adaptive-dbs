@@ -114,10 +114,10 @@ STYLE = {
 }
 
 
-def _vault_backed_png(path: Path) -> Path:
-    """Ensure ``path`` is a symlink into the vault figure dir when ``paper.png`` is.
+def _linked_png(path: Path) -> Path:
+    """Ensure ``path`` is a symlink into the linked figure dir when ``paper.png`` is.
 
-    Fig assets under ``figures/<paper>/images/`` are usually vault symlinks. New
+    Fig assets under ``figures/<paper>/images/`` may be symlinks into an external notes folder. New
     versioned PNGs must follow the same pattern so the main checkout and docs see them.
     """
     path = Path(path)
@@ -125,15 +125,15 @@ def _vault_backed_png(path: Path) -> Path:
     if not paper.is_symlink():
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
-    vault_dir = paper.resolve().parent
-    vault_target = vault_dir / path.name
+    linked_dir = paper.resolve().parent
+    linked_target = linked_dir / path.name
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists() or path.is_symlink():
         return path
-    # Create/overwrite vault file on savefig through this symlink.
-    if not vault_target.exists():
-        vault_target.touch()
-    path.symlink_to(vault_target)
+    # Create/overwrite the linked file on savefig through this symlink.
+    if not linked_target.exists():
+        linked_target.touch()
+    path.symlink_to(linked_target)
     return path
 
 
@@ -652,7 +652,7 @@ def main() -> int:
         args.out, png_version = _figure_promote.next_versioned_png(FIGURES_DIR, OUT_STEM)
     else:
         png_version = _figure_promote.parse_png_version(args.out)
-    args.out = _vault_backed_png(args.out)
+    args.out = _linked_png(args.out)
 
     if args.plot_only:
         if not args.series.exists():
