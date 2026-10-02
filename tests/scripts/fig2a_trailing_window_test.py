@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-import importlib.util
+from rl_adaptive_dbs.panel import load_script_module
+
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 _PLOT_PATH = ROOT / "scripts/figures/papers/mehregan/2a/plot.py"
-_spec = importlib.util.spec_from_file_location("fig2a_plot", _PLOT_PATH)
-assert _spec and _spec.loader
-fig2a = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(fig2a)
+fig2a = load_script_module("fig2a_plot", _PLOT_PATH)
 
 
 def test_trailing_window_uses_preroll_at_display_zero() -> None:

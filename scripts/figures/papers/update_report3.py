@@ -19,17 +19,15 @@ Panel ``plot.py`` runs enable gallery refresh with ``--update-report`` (see
 
 from __future__ import annotations
 
+from rl_adaptive_dbs.panel import load_script_module
+
 import argparse
-import importlib.util
 import re
 import shutil
 from pathlib import Path
 
 _PROMOTE = Path(__file__).resolve().parent / "promote.py"
-_spec = importlib.util.spec_from_file_location("figure_promote", _PROMOTE)
-assert _spec and _spec.loader
-_promote = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_promote)
+_promote = load_script_module("figure_promote", _PROMOTE)
 
 REPO_ROOT = _promote.REPO_ROOT
 
