@@ -27,6 +27,7 @@ import importlib.util
 import json
 import os
 import sys
+import tempfile
 import time
 import dataclasses
 from dataclasses import replace
@@ -66,6 +67,7 @@ from controllers.snn.trainer import (
     save_checkpoint,
     train_result_from_payload,
     write_train_metrics,
+    episode_extra,
 )
 
 _RESUME_CLI = Path(__file__).resolve().parents[2] / "resume_cli.py"
@@ -705,6 +707,18 @@ def main(argv: list[str] | None = None) -> int:
     _resume_cli.add_training_resume_args(parser)
     args = parser.parse_args(argv)
     overrides = parse_config_overrides(args.config_overrides)
+    if args.smoke:
+        # Smoke is a plumbing check: never touch the panel's real series/checkpoint/manifest
+        # (Fig 5–7 read them) or allocate a tracked PNG version.
+        smoke_dir = Path(tempfile.mkdtemp(prefix="nguyen4-smoke-"))
+        args.series = smoke_dir / "series.json"
+        args.checkpoint = smoke_dir / "checkpoint.pt"
+        args.manifest = smoke_dir / "manifest.json"
+        args.out = smoke_dir / f"{OUT_STEM}_v1.png"
+        args.no_update_docs = True
+        args.export_notes = False
+        args.update_report = False
+        print(f"smoke outputs -> {smoke_dir}", flush=True)
     _resume_cli.configure_promote_publish(args, _figure_promote)
 
     if args.out is None:
@@ -770,14 +784,11 @@ def main(argv: list[str] | None = None) -> int:
                 config=cfg,
                 optimizer=trainer.optimizer,
                 trainer=trainer,
-                extra={
-                    "completed_episodes": len(series["episode_rewards"]),
-                    "episode_rewards": series["episode_rewards"],
-                    "episode_lengths": series["episode_lengths"],
-                    "episode_spike_totals": series.get("episode_spike_totals", []),
-                    "episode_energies": series.get("episode_energies", []),
-                    "update_count": series["update_count"],
-                },
+                extra=episode_extra(
+                    train_result,
+                    completed_episodes=len(train_result.episode_rewards),
+                    update_count=trainer.update_count,
+                ),
             )
             write_train_metrics(train_result, args.checkpoint.with_suffix(".metrics.json"))
 
