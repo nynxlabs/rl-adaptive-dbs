@@ -196,8 +196,8 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 **Run:**
 
 ```bash
-uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5a/plot.py --push-kb --update-report
-uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5a/plot.py --plot-only --push-kb --update-report
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5a/plot.py --export-notes --update-report
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5a/plot.py --plot-only --export-notes --update-report
 ```
 
 **Defaults:** seed `0`; carrier **50 Hz**; binary pulse policy from trained SEA-DBS / Baseline.
@@ -254,8 +254,8 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 **Run:**
 
 ```bash
-uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5b/plot.py --push-kb --update-report
-uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5b/plot.py --plot-only --push-kb --update-report
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5b/plot.py --export-notes --update-report
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5b/plot.py --plot-only --export-notes --update-report
 ```
 
 **Defaults:** seed `0`; carrier **30 Hz**; same checkpoints as Fig 5a where possible.
@@ -355,9 +355,9 @@ Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper` ([se
 **Run:**
 
 ```bash
-uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/7/plot.py --eval-only --push-kb --update-report
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/7/plot.py --eval-only --export-notes --update-report
 uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/7/plot.py --train-only --train-variants baseline-pm baseline-gs
-uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/7/plot.py --plot-only --push-kb --update-report
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/7/plot.py --plot-only --export-notes --update-report
 ```
 
 **Defaults:** seed `0`; baseline/paper checkpoints from Fig 4a; +PM/+GS train 150 ep into panel cache; Fig 5a-style 50 Hz Gumbel eval (11 PSD samples).
