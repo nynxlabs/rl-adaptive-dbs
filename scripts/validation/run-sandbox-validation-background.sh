@@ -12,6 +12,17 @@ repo_root="$(cd "$_script_dir/../.." && pwd)"
 log_dir="$repo_root/.validation-logs"
 launcher_log="$log_dir/sandbox-launcher.log"
 
+# Windows %LOCALAPPDATA% as a WSL path (override with RL_DBS_WIN_LOCALAPPDATA).
+win_localappdata() {
+  if [[ -n "${RL_DBS_WIN_LOCALAPPDATA:-}" ]]; then
+    printf '%s\n' "$RL_DBS_WIN_LOCALAPPDATA"
+    return
+  fi
+  local win
+  win="$(/mnt/c/Windows/System32/cmd.exe /c 'echo %LOCALAPPDATA%' 2>/dev/null | tr -d '\r')"
+  wslpath -u "$win"
+}
+
 clone_flag='-Clone'
 repo_path_arg=''
 if [[ "${1:-}" == '--mapped' ]]; then
@@ -19,11 +30,7 @@ if [[ "${1:-}" == '--mapped' ]]; then
 elif [[ "${1:-}" == '--no-stage' ]]; then
   : # use WSL UNC paths (legacy)
 else
-  stage_root="${LOCALAPPDATA:-/mnt/c/Users/Devat/AppData/Local}/rl-adaptive-dbs-validation"
-  # LOCALAPPDATA is unset in WSL; use desktop profile path.
-  if [[ "$stage_root" == /mnt/* ]]; then
-    stage_root="/mnt/c/Users/Devat/AppData/Local/rl-adaptive-dbs-validation"
-  fi
+  stage_root="$(win_localappdata)/rl-adaptive-dbs-validation"
   mkdir -p "$stage_root/.validation-logs/cache" "$stage_root/scripts"
   rsync -a --delete "$repo_root/scripts/" "$stage_root/scripts/"
   # Git installer only — repo shallow clone + uv cache are built on NTFS by the launcher.
