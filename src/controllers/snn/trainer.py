@@ -383,7 +383,11 @@ class DSQNTrainer:
                         config=cfg,
                         optimizer=self.optimizer,
                         trainer=self,
-                        extra=_episode_extra(result, completed_episodes=completed),
+                        extra=episode_extra(
+                            result,
+                            completed_episodes=completed,
+                            update_count=self._update_count,
+                        ),
                     )
                     if on_checkpoint is not None:
                         on_checkpoint(completed, result)
@@ -401,31 +405,38 @@ class DSQNTrainer:
         return result
 
 
-def _episode_extra(result: TrainResult, *, completed_episodes: int) -> dict[str, Any]:
-    return {
-        "completed_episodes": int(completed_episodes),
-        "episode_rewards": list(result.episode_rewards),
-        "episode_lengths": list(result.episode_lengths),
-        "episode_spike_totals": list(result.episode_spike_totals),
-        "episode_energies": list(result.episode_energies),
-        "episode_alpha_beta_means": list(result.episode_alpha_beta_means),
-        "episode_early_stops": list(result.episode_early_stops),
-        "update_count": result.update_count,
-    }
+EPISODE_SERIES_KEYS: tuple[str, ...] = (
+    "episode_rewards",
+    "episode_lengths",
+    "episode_spike_totals",
+    "episode_energies",
+    "episode_alpha_beta_means",
+    "episode_early_stops",
+    "episode_amplitudes",
+    "episode_frequencies",
+    "episode_pulse_widths",
+)
+
+
+def episode_extra(
+    result: TrainResult,
+    *,
+    completed_episodes: int,
+    update_count: int | None = None,
+) -> dict[str, Any]:
+    """Per-episode series + counters for checkpoints (single source for resume and series.json)."""
+    extra: dict[str, Any] = {"completed_episodes": int(completed_episodes)}
+    for key in EPISODE_SERIES_KEYS:
+        extra[key] = list(getattr(result, key))
+    extra["update_count"] = int(result.update_count if update_count is None else update_count)
+    return extra
 
 
 def _series_from_payload(payload: dict[str, Any]) -> dict[str, list[Any]]:
     extra = payload.get("extra")
     if not isinstance(extra, dict):
         extra = payload
-    return {
-        "episode_rewards": list(extra.get("episode_rewards", [])),
-        "episode_lengths": list(extra.get("episode_lengths", [])),
-        "episode_spike_totals": list(extra.get("episode_spike_totals", [])),
-        "episode_energies": list(extra.get("episode_energies", [])),
-        "episode_alpha_beta_means": list(extra.get("episode_alpha_beta_means", [])),
-        "episode_early_stops": list(extra.get("episode_early_stops", [])),
-    }
+    return {key: list(extra.get(key, [])) for key in EPISODE_SERIES_KEYS}
 
 
 def train_result_from_payload(
@@ -442,6 +453,9 @@ def train_result_from_payload(
     result.episode_energies = series["episode_energies"]
     result.episode_alpha_beta_means = series["episode_alpha_beta_means"]
     result.episode_early_stops = series["episode_early_stops"]
+    result.episode_amplitudes = series["episode_amplitudes"]
+    result.episode_frequencies = series["episode_frequencies"]
+    result.episode_pulse_widths = series["episode_pulse_widths"]
     extra = payload.get("extra")
     if not isinstance(extra, dict):
         extra = payload
@@ -640,7 +654,7 @@ def train_dsqn(
                 config=cfg,
                 optimizer=trainer.optimizer,
                 trainer=trainer,
-                extra=_episode_extra(result, completed_episodes=completed),
+                extra=episode_extra(result, completed_episodes=completed),
             )
             metrics_path = Path(checkpoint_path).with_suffix(".metrics.json")
             write_train_metrics(result, metrics_path)

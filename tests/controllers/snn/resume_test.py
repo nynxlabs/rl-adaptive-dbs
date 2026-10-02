@@ -45,3 +45,27 @@ def test_snn_resume_config_mismatch(tmp_path: Path) -> None:
     bad_cfg = SNNConfig(seed=0).for_smoke(episodes=2, max_steps=8)
     with pytest.raises(ConfigMismatchError):
         resume_dsqn_trainer(payload, config=bad_cfg)
+
+
+@pytest.mark.slow
+def test_snn_resume_keeps_every_episode_series(tmp_path: Path) -> None:
+    from controllers.snn.trainer import EPISODE_SERIES_KEYS
+
+    ckpt = tmp_path / "series.pt"
+    train_dsqn(
+        config=SNNConfig(seed=0).for_smoke(episodes=2, max_steps=5),
+        checkpoint_path=ckpt,
+        checkpoint_interval=2,
+    )
+    resumed = train_dsqn(
+        config=SNNConfig(seed=0).for_smoke(episodes=4, max_steps=5),
+        checkpoint_path=ckpt,
+        resume_path=ckpt,
+        checkpoint_interval=2,
+    )
+    for key in EPISODE_SERIES_KEYS:
+        assert len(getattr(resumed, key)) == 4, key
+    extra = load_checkpoint(ckpt)["extra"]
+    for key in EPISODE_SERIES_KEYS:
+        assert len(extra[key]) == 4, key
+    assert extra["update_count"] == resumed.update_count
