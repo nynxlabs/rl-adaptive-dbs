@@ -1,14 +1,25 @@
 #!/usr/bin/env bash
 # WSL2 gives eth0 a new MAC on many restarts; node-locked MATLAB licenses bind to a
 # fixed Host ID. Create bond0 with the MAC from the active license so batch mode works.
-# See docs/matlab.md §8 (Licensing Error 9) and matlab-license.md on this machine.
+# The licensed MAC comes from MATLAB_WSL_BOND_MAC, or from the config file written by
+# install-wsl-hostid-persist.sh. With neither set there is nothing to enforce.
+# See docs/matlab.md §8 (Licensing Error 9).
 set -euo pipefail
 
 if [ "$(uname -s)" != "Linux" ] || ! grep -qi microsoft /proc/version 2>/dev/null; then
   exit 0
 fi
 
-_mac="${MATLAB_WSL_BOND_MAC:-00:15:5d:49:c1:7b}"
+_config="${MATLAB_WSL_HOSTID_CONFIG:-/etc/default/matlab-wsl-hostid}"
+if [ -z "${MATLAB_WSL_BOND_MAC:-}" ] && [ -r "$_config" ]; then
+  # shellcheck source=/dev/null
+  . "$_config"
+fi
+_mac="$(printf '%s' "${MATLAB_WSL_BOND_MAC:-}" | tr '[:upper:]' '[:lower:]')"
+if [ -z "$_mac" ]; then
+  # No licensed MAC configured on this machine: nothing to enforce.
+  exit 0
+fi
 _log="${MATLAB_WSL_HOSTID_LOG:-/var/log/matlab-wsl-hostid.log}"
 
 _bond_mac() {
