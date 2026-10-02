@@ -54,7 +54,7 @@ Panel work is organized around **paper panels**, not roadmap phase numbers. Ship
 ## Documentation
 
 - Cite papers by author/title in prose—not opaque ids like `paper_1`.
-- Math in markdown: `$...$` inline, `$$...$$` display ([AGENTS.md](../../AGENTS.md)).
+- Math in markdown: `$...$` inline, `$$...$$` display.
 
 ## Controllers vs environment
 
