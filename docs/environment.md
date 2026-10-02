@@ -144,7 +144,7 @@ From **§IV.A.1** (for replication / defaults):
 
 ## 9. Optional extensions (same publication)
 
-- **Quantization:** PTQ / QAT on actor–critic networks affects **inference-time** policy outputs; the **environment interface** (plant, $P_\beta$, timing, reward) is unchanged. Implementation: [controllers/ddpg/replication.md](controllers/ddpg/replication.md) §6, [controllers/ddpg/quantization.py](../../controllers/ddpg/quantization.py).
+- **Quantization:** PTQ / QAT on actor–critic networks affects **inference-time** policy outputs; the **environment interface** (plant, $P_\beta$, timing, reward) is unchanged. Implementation: [controllers/ddpg/replication.md](controllers/ddpg/replication.md) §6, [controllers/ddpg/quantization.py](../src/controllers/ddpg/quantization.py).
 - **Animal validation:** Not part of the computational `Env` API; documented separately if this repo later adds experiment logs or replay buffers for **in vivo** trials.
 
 ---
