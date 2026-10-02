@@ -226,7 +226,7 @@ def main() -> None:
     png_path, png_version = _figure_promote.next_versioned_png(FIGURES_DIR, OUT_STEM)
     fig.savefig(_linked_png(png_path), dpi=150)
     plt.close(fig)
-    gates = {"pass": True, "smoke_override": True} if args.smoke else evaluate_gates(traces)
+    gates = {"pass": False, "smoke_override": True} if args.smoke else evaluate_gates(traces)
     if not args.plot_only:
         series_path.write_text(
             json.dumps(

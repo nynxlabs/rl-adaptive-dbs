@@ -37,7 +37,6 @@ from controllers.sea_dbs.config import (
     FIG5A_UNTREATED_WINDOW_S,
     INFERENCE_CARRIER_50HZ,
     INFERENCE_PSD_SAMPLES,
-    SEADBSConfig,
 )
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
@@ -206,7 +205,7 @@ def main() -> None:
     fig.savefig(_linked_png(png_path), dpi=150)
     plt.close(fig)
 
-    gates = {"pass": True, "smoke_override": True} if args.smoke else evaluate_gates(
+    gates = {"pass": False, "smoke_override": True} if args.smoke else evaluate_gates(
         traces, n_expected=n_expected
     )
     CACHE_DIR.mkdir(parents=True, exist_ok=True)

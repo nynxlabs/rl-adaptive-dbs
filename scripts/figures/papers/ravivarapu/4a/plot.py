@@ -33,10 +33,8 @@ _DIG = Path(__file__).resolve().parents[4] / "digitization"
 if str(_DIG) not in sys.path:
     sys.path.insert(0, str(_DIG))
 from ravivarapu_gates import (  # noqa: E402
-    attach_digitization,
     merge_gate_report,
     ravivarapu_fig4a_attach_tiered_pass,
-    ravivarapu_fig4a_digitization_gates,
     ravivarapu_fig4a_gates,
 )
 
@@ -295,7 +293,7 @@ def train_all(
 
 def evaluate_gates(series: dict[str, Any]) -> dict[str, Any]:
     if series.get("smoke"):
-        return {"pass": True, "shape_pass": True, "smoke_override": True}
+        return {"pass": False, "shape_pass": False, "smoke_override": True}
     baseline = series["variants"]["baseline"]["episode_psd"]
     sea = series["variants"]["paper"]["episode_psd"]
     report = ravivarapu_fig4a_gates(baseline, sea, n_expected=DEFAULT_TRAIN_EPISODES)
