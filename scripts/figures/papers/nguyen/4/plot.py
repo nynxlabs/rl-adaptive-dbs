@@ -28,6 +28,7 @@ import json
 import os
 import sys
 import time
+import dataclasses
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -152,6 +153,39 @@ def moving_average(y: np.ndarray, window: int) -> np.ndarray:
     return smoothed[: y.size]
 
 
+def parse_config_overrides(items: list[str] | None) -> dict[str, Any]:
+    """Parse repeatable ``--set field=value`` into typed ``SNNConfig`` overrides."""
+    fields = {f.name: f for f in dataclasses.fields(SNNConfig)}
+    defaults = SNNConfig()
+    out: dict[str, Any] = {}
+    for item in items or []:
+        name, sep, raw = item.partition("=")
+        name = name.strip().replace("-", "_")
+        if not sep or name not in fields:
+            raise SystemExit(f"--set expects FIELD=VALUE with an SNNConfig field, got {item!r}")
+        current = getattr(defaults, name)
+        if isinstance(current, bool):
+            if raw.lower() not in {"true", "false", "1", "0"}:
+                raise SystemExit(f"--set {name}: expected true/false, got {raw!r}")
+            out[name] = raw.lower() in {"true", "1"}
+        elif isinstance(current, int):
+            out[name] = int(raw)
+        elif isinstance(current, float) or current is None:
+            out[name] = float(raw)
+        else:
+            out[name] = raw
+    return out
+
+
+def config_record(cfg: SNNConfig) -> dict[str, Any]:
+    """JSON-safe dump of every scalar ``SNNConfig`` field, so a run can be reproduced."""
+    return {
+        f.name: getattr(cfg, f.name)
+        for f in dataclasses.fields(cfg)
+        if isinstance(getattr(cfg, f.name), (bool, int, float, str, type(None)))
+    }
+
+
 def train_series(
     *,
     seed: int,
@@ -173,6 +207,7 @@ def train_series(
     pulse_width_sensitivity_early_episodes: int | None = None,
     frequency_sensitivity_early_episodes: int | None = None,
     subthreshold_steps_required: int | None = None,
+    overrides: dict[str, Any] | None = None,
     resume_path: Path | None = None,
     start_episode: int | None = None,
     checkpoint_path: Path | None = None,
@@ -220,6 +255,8 @@ def train_series(
             )
         if subthreshold_steps_required is not None:
             cfg = replace(cfg, subthreshold_steps_required=subthreshold_steps_required)
+        if overrides:
+            cfg = replace(cfg, **overrides)
 
     env = NguyenEnvAdapter(config=cfg)
     try:
@@ -262,14 +299,7 @@ def train_series(
             "episode_pulse_widths": result.episode_pulse_widths,
             "update_count": result.update_count,
             "smoke": smoke,
-            "config": {
-                "epsilon_decay_steps": cfg.epsilon_decay_steps,
-                "epsilon_decay_delay_steps": cfg.epsilon_decay_delay_steps,
-                "epsilon_accelerate_after_steps": cfg.epsilon_accelerate_after_steps,
-                "epsilon_accelerate_decay_steps": cfg.epsilon_accelerate_decay_steps,
-                "subthreshold_steps_required": cfg.subthreshold_steps_required,
-                "alpha_beta_threshold": cfg.alpha_beta_threshold,
-            },
+            "config": config_record(cfg),
         }
         return payload, cfg, trainer, result
     finally:
@@ -359,13 +389,7 @@ def evaluate_gates(
             "length": length,
         }
         if series.get("smoke"):
-            gates["pass"] = True
-            gates["shape_pass"] = True
             gates["smoke_override"] = True
-            reward["pass"] = True
-            reward["shape_pass"] = True
-            length["pass"] = True
-            length["shape_pass"] = True
         return gates
 
     early_end = min(EARLY_END, n // 2)
@@ -422,13 +446,9 @@ def evaluate_gates(
     length_heur["pass"] = _group_pass(length_heur, LENGTH_HEURISTIC_KEYS)
 
     if series.get("smoke"):
-        reward_heur["pass"] = True
-        reward_heur["shape_pass"] = True
-        length_heur["pass"] = True
-        length_heur["shape_pass"] = True
         return {
-            "pass": True,
-            "shape_pass": True,
+            "pass": False,
+            "shape_pass": False,
             "n_episodes": n,
             "reward": reward_heur,
             "length": length_heur,
@@ -663,6 +683,14 @@ def main(argv: list[str] | None = None) -> int:
         metavar="TU",
         help="Consecutive sub-threshold steps for early stop (t_u); default from fig4_nguyen_config",
     )
+    parser.add_argument(
+        "--set",
+        dest="config_overrides",
+        action="append",
+        default=None,
+        metavar="FIELD=VALUE",
+        help="Override any SNNConfig field (repeatable), e.g. --set amplitude_min=265",
+    )
     parser.add_argument("--plot-only", action="store_true")
     parser.add_argument("--series", type=Path, default=DEFAULT_SERIES)
     parser.add_argument("--checkpoint", type=Path, default=DEFAULT_CHECKPOINT)
@@ -676,6 +704,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-update-docs", action="store_true")
     _resume_cli.add_training_resume_args(parser)
     args = parser.parse_args(argv)
+    overrides = parse_config_overrides(args.config_overrides)
     _resume_cli.configure_promote_publish(args, _figure_promote)
 
     if args.out is None:
@@ -703,7 +732,7 @@ def main(argv: list[str] | None = None) -> int:
             f"pulse_width_min={args.pulse_width_min} "
             f"pulse_width_sensitivity={args.pulse_width_sensitivity} "
             f"freq_sens_early_ep={args.frequency_sensitivity_early_episodes} "
-            f"subthreshold_steps={args.subthreshold_steps} resume={args.resume}",
+            f"subthreshold_steps={args.subthreshold_steps} overrides={overrides} resume={args.resume}",
             flush=True,
         )
         series, cfg, trainer, train_result = train_series(
@@ -726,6 +755,7 @@ def main(argv: list[str] | None = None) -> int:
             pulse_width_sensitivity_early_episodes=args.pulse_width_sensitivity_early_episodes,
             frequency_sensitivity_early_episodes=args.frequency_sensitivity_early_episodes,
             subthreshold_steps_required=args.subthreshold_steps,
+            overrides=overrides,
             resume_path=args.resume,
             start_episode=args.start_episode,
             checkpoint_path=args.checkpoint,
@@ -773,6 +803,8 @@ def main(argv: list[str] | None = None) -> int:
         "png_version": png_version,
         "caption": caption,
         "smoke": bool(series.get("smoke")),
+        "config": series.get("config"),
+        "argv": list(sys.argv[1:] if argv is None else argv),
     }
     write_json(args.manifest, manifest)
 
@@ -787,7 +819,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"wrote {args.out}")
     if png_version is not None:
         print(f"output PNG version={png_version}", flush=True)
-    return 0 if gates["pass"] else 1
+    return 0 if gates["pass"] or manifest["smoke"] else 1
 
 
 if __name__ == "__main__":
