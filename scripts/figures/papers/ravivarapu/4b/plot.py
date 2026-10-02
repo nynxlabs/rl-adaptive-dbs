@@ -87,7 +87,7 @@ def _linked_png(path: Path) -> Path:
 
 def evaluate_gates(series: dict[str, Any]) -> dict[str, Any]:
     if series.get("smoke"):
-        return {"pass": True, "shape_pass": True, "smoke_override": True}
+        return {"pass": False, "shape_pass": False, "smoke_override": True}
     baseline = series["variants"]["baseline"]["episode_rewards"]
     sea = series["variants"]["paper"]["episode_rewards"]
     dig = ravivarapu_fig4b_gates(baseline, sea, n_expected=150)

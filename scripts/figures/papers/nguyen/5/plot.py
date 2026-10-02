@@ -163,7 +163,7 @@ def evaluate_gates(series: dict[str, Any], *, fig4_manifest: dict[str, Any] | No
         and energy_in_paper_band
     )
     if series.get("smoke"):
-        gates["pass"] = True
+        gates["pass"] = False
         gates["smoke_override"] = True
         return gates
 
@@ -320,7 +320,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"wrote {args.out}")
     if png_version is not None:
         print(f"output PNG version={png_version}", flush=True)
-    return 0 if gates["pass"] else 1
+    return 0 if gates["pass"] or series.get("smoke") else 1
 
 
 if __name__ == "__main__":

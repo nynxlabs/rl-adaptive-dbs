@@ -39,7 +39,6 @@ from controllers.sea_dbs.config import (
     ABLATION_EVAL_STEPS,
     BIOMARKER_WINDOW_S,
     FIG5A_GUMBEL_SEED_OFFSET,
-    FIG5A_INFERENCE_BURST_MS,
     INFERENCE_CARRIER_50HZ,
     INFERENCE_PSD_SAMPLES,
     SEADBSConfig,
@@ -363,7 +362,7 @@ def main() -> None:
     fig.savefig(_linked_png(png_path), dpi=150)
     plt.close(fig)
 
-    gates = {"pass": True, "smoke_override": True} if args.smoke else evaluate_gates(traces)
+    gates = {"pass": False, "smoke_override": True} if args.smoke else evaluate_gates(traces)
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     if not args.plot_only:
         series_path.write_text(

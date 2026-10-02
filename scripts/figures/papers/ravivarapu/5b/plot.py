@@ -39,7 +39,6 @@ from controllers.sea_dbs.config import (
     INFERENCE_CARRIER_30HZ,
     INFERENCE_CARRIER_50HZ,
     INFERENCE_PSD_SAMPLES,
-    SEADBSConfig,
 )
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
@@ -232,7 +231,7 @@ def main() -> None:
     plt.close(fig)
 
     if args.smoke:
-        gates = {"pass": True, "smoke_override": True}
+        gates = {"pass": False, "smoke_override": True}
     else:
         gates = evaluate_gates(traces, traces_50=traces_50, n_expected=n_expected)
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
