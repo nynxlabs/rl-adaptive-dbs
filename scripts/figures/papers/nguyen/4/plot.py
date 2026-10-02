@@ -324,10 +324,12 @@ def train_series(
     if not smoke and not allow_repeat and resume_path is None and repeat_search_dir is not None:
         prior = find_repeat_run(config_record(cfg), repeat_search_dir)
         if prior is not None:
-            raise SystemExit(
+            print(
                 f"identical config already ran at this commit ({prior}); "
-                "change a knob or pass --allow-repeat"
+                "change a knob or pass --allow-repeat",
+                file=sys.stderr,
             )
+            raise SystemExit(_panel.EXIT_MISSING_INPUT)
 
     env = NguyenEnvAdapter(config=cfg)
     try:
