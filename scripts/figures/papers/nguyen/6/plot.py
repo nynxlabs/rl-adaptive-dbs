@@ -128,6 +128,7 @@ def evaluate_gates(series: dict[str, Any], *, fig4_manifest: dict[str, Any] | No
     n = int(series.get("num_episodes", 0))
     shared_train = bool(
         fig4_manifest is not None
+        and bool(fig4_manifest.get("gates", {}).get("pass"))
         and n == int(fig4_manifest.get("gates", {}).get("n_episodes", -1))
     )
     heuristic = {

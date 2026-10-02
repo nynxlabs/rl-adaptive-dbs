@@ -101,6 +101,7 @@ def evaluate_gates(
 ) -> dict[str, Any]:
     checkpoint_ok = bool(
         fig4_manifest is not None
+        and bool(fig4_manifest.get("gates", {}).get("pass"))
         and int(fig4_manifest.get("gates", {}).get("n_episodes", -1)) == 500
     )
     heuristic = {
