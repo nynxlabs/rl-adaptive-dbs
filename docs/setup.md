@@ -167,7 +167,7 @@ uv run rl-dbs summary --suite-name mehregan_eval
 uv run python scripts/check_mehregan_replication.py artifacts/ddpg/paper_train0_summary.json
 ```
 
-PTQ variants load **`paper_train{seed}.pt`** automatically ([controllers/ddpg/quantization.py](controllers/ddpg/quantization.py)). The checklist encodes qualitative §IV claims (DDPG lowers beta vs unstimulated; PTQ tracks FP).
+PTQ variants load **`paper_train{seed}.pt`** automatically ([controllers/ddpg/quantization.py](../src/controllers/ddpg/quantization.py)). The checklist encodes qualitative §IV claims (DDPG lowers beta vs unstimulated; PTQ tracks FP).
 
 With MATLAB set up ([matlab.md](matlab.md)):
 
