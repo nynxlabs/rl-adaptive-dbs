@@ -4,6 +4,16 @@ set -euo pipefail
 _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$_script_dir/../.." && pwd)"
 distro="${WSL_DISTRO_NAME:-Ubuntu}"
+# Windows %LOCALAPPDATA% as a WSL path (override with RL_DBS_WIN_LOCALAPPDATA).
+win_localappdata() {
+  if [[ -n "${RL_DBS_WIN_LOCALAPPDATA:-}" ]]; then
+    printf '%s\n' "$RL_DBS_WIN_LOCALAPPDATA"
+    return
+  fi
+  local win
+  win="$(/mnt/c/Windows/System32/cmd.exe /c 'echo %LOCALAPPDATA%' 2>/dev/null | tr -d '\r')"
+  wslpath -u "$win"
+}
 repair_ps1="\\\\wsl.localhost\\${distro}${repo_root//\//\\}\\scripts\\validation\\repair-multipass.ps1"
 
 echo "=== repair-multipass.sh ==="
@@ -19,7 +29,7 @@ echo ""
 "
 
 echo ""
-log_win="/mnt/c/Users/Devat/AppData/Local/Temp/rl-adaptive-dbs-multipass-repair/repair.log"
+log_win="$(win_localappdata)/Temp/rl-adaptive-dbs-multipass-repair/repair.log"
 if [[ -f "$log_win" ]]; then
   echo "=== repair.log ==="
   tail -30 "$log_win"
