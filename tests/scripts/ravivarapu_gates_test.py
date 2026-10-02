@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 _DIG = Path(__file__).resolve().parents[2] / "scripts" / "digitization"
 sys.path.insert(0, str(_DIG))
@@ -19,7 +20,22 @@ from ravivarapu_gates import (  # noqa: E402
     ravivarapu_inference_gates,
 )
 
+_PAPER_CURVES = (
+    Path(__file__).resolve().parents[2]
+    / "artifacts/figures/papers/ravivarapu/paper_digitization"
+)
+# Digitized paper curves are local artifacts (not committed); skip paper-relative
+# tests when they are absent, e.g. on a fresh clone or in CI.
+needs_paper_curves = pytest.mark.skipif(
+    not all(
+        (_PAPER_CURVES / f"curves_{fig}.json").exists()
+        for fig in ("fig4a", "fig4b", "fig5a", "fig5b")
+    ),
+    reason="no Ravivarapu paper digitization",
+)
 
+
+@needs_paper_curves
 def test_fig4a_paper_self_passes_full_shape_gates():
     paper = load_curves("fig4a")
     x_b, y_b = paper["Baseline"]
@@ -39,6 +55,7 @@ def test_fig4a_paper_self_passes_full_shape_gates():
     assert report["gates"]["pearson_sea_min"]
 
 
+@needs_paper_curves
 def test_fig4a_rejects_baseline_mid_plateau():
     episodes = np.arange(150, dtype=float)
     # Baseline flat from ep 40 onward (mid == late)
@@ -53,6 +70,7 @@ def test_fig4a_rejects_baseline_mid_plateau():
     assert not report["gates"]["gradual_decline_baseline"]
 
 
+@needs_paper_curves
 def test_fig4a_paper_self_passes_endpoint_separation_gates():
     paper = load_curves("fig4a")
     x_b, y_b = paper["Baseline"]
@@ -67,6 +85,7 @@ def test_fig4a_paper_self_passes_endpoint_separation_gates():
     assert np.isfinite(report["metrics"]["late_gap"])
 
 
+@needs_paper_curves
 def test_fig4a_requires_substantial_late_gap():
     episodes = np.arange(150, dtype=float)
     baseline = np.linspace(0.48, 0.40, episodes.size)
@@ -78,6 +97,7 @@ def test_fig4a_requires_substantial_late_gap():
     assert report["metrics"]["late_gap"] >= 0.02
 
 
+@needs_paper_curves
 def test_fig4a_rejects_barely_separated_final_means():
     episodes = np.arange(150, dtype=float)
     baseline = np.linspace(0.48, 0.36, episodes.size)
@@ -106,6 +126,7 @@ def test_fig4a_tiered_shape_pass_without_full_polish():
     assert not tiered["pass"]
 
 
+@needs_paper_curves
 def test_fig4b_paper_self_passes_full_gates():
     paper = load_curves("fig4b")
     x_b, y_b = paper["Baseline Reward"]
@@ -126,6 +147,7 @@ def test_fig4b_paper_self_passes_full_gates():
     assert report["gates"]["shared_start_near_paper"]
 
 
+@needs_paper_curves
 def test_fig4b_rejects_non_rising_baseline():
     episodes = np.arange(150, dtype=float)
     baseline = np.full(150, -40.0)
@@ -135,6 +157,7 @@ def test_fig4b_rejects_non_rising_baseline():
     assert not report["pass"]
 
 
+@needs_paper_curves
 def test_fig4b_rejects_inverted_late_order():
     episodes = np.arange(150, dtype=float)
     baseline = np.linspace(-40.0, 15.0, 150)
@@ -163,6 +186,7 @@ def test_fig4b_tiered_shape_pass_without_full_polish():
     assert not tiered["pass"]
 
 
+@needs_paper_curves
 def test_inference_shape_gates_pass_on_split_decline():
     # 150 ms / n_obs=6 with 100 ms untreated start: SEA reaches the last-window floor at step 6.
     baseline = [0.4606, 0.4606, 0.4164, 0.4274, 0.4075, 0.3943, 0.3721, 0.3500, 0.3500, 0.3500, 0.3500]
@@ -199,6 +223,7 @@ def test_inference_shape_gates_reject_rise():
     assert not report["pass"]
 
 
+@needs_paper_curves
 def test_inference_5b_weaker_than_50hz():
     b30 = [0.461, 0.466, 0.468, 0.460, 0.452, 0.445, 0.438, 0.430, 0.424, 0.418, 0.412]
     s30 = [0.461, 0.455, 0.448, 0.441, 0.434, 0.427, 0.420, 0.413, 0.406, 0.400, 0.393]
@@ -221,6 +246,7 @@ def test_inference_5b_weaker_than_50hz():
     assert report["gates"]["pearson_sea_min"]
 
 
+@needs_paper_curves
 def test_inference_5b_rejects_premature_sea_plunge():
     # If SEA drops by 0.035 on step 1, early_sea_plateau fails
     b30 = [0.461, 0.466, 0.468, 0.460, 0.452, 0.445, 0.438, 0.430, 0.424, 0.418, 0.412]
@@ -238,6 +264,7 @@ def test_inference_5b_rejects_premature_sea_plunge():
     assert not report["pass"]
 
 
+@needs_paper_curves
 def test_inference_5b_rejects_baseline_early_drop():
     # If Baseline drops on step 1 instead of rising/plateauing, early_baseline_rises fails
     b30_drop = [0.461, 0.440, 0.435, 0.430, 0.425, 0.420, 0.415, 0.410, 0.405, 0.402, 0.400]
@@ -360,6 +387,7 @@ def test_inference_late_window_rejects_n_obs_floor():
     assert not report["pass"]
 
 
+@needs_paper_curves
 def test_inference_mid_window_rejects_onset_fill():
     """n_obs=10 leftover untreated holds SEA ~0.35 on steps 5–9."""
     sea = [
