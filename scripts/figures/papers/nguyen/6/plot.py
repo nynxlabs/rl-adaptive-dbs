@@ -138,7 +138,6 @@ def evaluate_gates(series: dict[str, Any], *, fig4_manifest: dict[str, Any] | No
     }
     if not shared_train:
         heuristic["reason"] = "fig4_train_not_passing"
-        return heuristic
 
     dig = fig6_training_gates(
         series["episode_alpha_beta_means"],
