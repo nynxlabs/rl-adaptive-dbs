@@ -13,9 +13,9 @@ Figs **1–2** are schematics — **not** replication targets.
 |-------|-------------|--------|
 | Fig 3 | GPi α–β distribution (PD Off vs PD On) | Pass (rep v22) |
 | Fig 4 | Training reward + episode length | Fail (`length shape:length_by_100_near_paper`) |
-| Fig 5 | CBGT spikes + DBS energy over training | Fail (`paper_energy_mid_ramp_near_paper`) |
-| Fig 6 | α–β + DBS parameters over training | Fail (`paper_alpha_beta_post100_near_paper`) |
-| Fig 7 | 50-episode eval (25 steps) | Pass (rep v22) |
+| Fig 5 | CBGT spikes + DBS energy over training | Fail (`shared_train`) |
+| Fig 6 | α–β + DBS parameters over training | Fail (`shared_train`) |
+| Fig 7 | 50-episode eval (25 steps) | Fail (`checkpoint_lineage_ok`) |
 <!-- summary:end -->
 
 ---
@@ -41,7 +41,7 @@ Distribution of GPi **α–β** oscillation power (**7–35 Hz**) for **PD On** 
 **Status:** Pass — 500 × 100 ms samples; see `alpha_beta_dist_v22.png`.
 
 <!-- gates-3:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **`pass`**: yes, 2026-09-01). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **`pass`**: yes, 2026-10-02). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -97,7 +97,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 **Status:** Timing shape open — latest **v158** (`late_len=9.0`, `shape_pass=False`); see manifest gates.
 
 <!-- gates-4:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: no, **`pass`**: no, 2026-09-01). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
+**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: no, **`pass`**: no, 2026-10-02). Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). Both subplot groups required.
 
 ### Reward (panel a) (`shape_pass`: yes | `pass`: no)
 
@@ -156,22 +156,22 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 
 ### Replication
 
-![Replication Fig 5](images/5/spikes_energy_v53.png)
+![Replication Fig 5](images/5/spikes_energy_v54.png)
 
 <!-- caption-5:start -->
-**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=835, energy_mean=1928.9; pass=False (v53)
+**Caption:** Fig 4 shared train 500 ep, seed=0; spike_mean=835, energy_mean=1928.9; pass=False (v54)
 
 **Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json`
 <!-- caption-5:end -->
 
-**Status:** Open — see manifest gates (`spikes_energy_v53.png`).
+**Status:** Open — see manifest gates (`spikes_energy_v54.png`).
 
 <!-- gates-5:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-09-01). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-10-02). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
-| `shared_train` | Fig 4 passed + same n_episodes | yes |
+| `shared_train` | Fig 4 passed + same n_episodes | no |
 | `spike_series_has_variance` | spike series has variance | yes |
 | `energy_series_has_variance` | energy series has variance | yes |
 | `energy_not_constant` | energy not constant | yes |
@@ -209,22 +209,22 @@ GPi **α–β** (a) and DBS amplitude / frequency / pulse width (b) over **500**
 
 ### Replication
 
-![Replication Fig 6](images/6/alpha_beta_params_v13.png)
+![Replication Fig 6](images/6/alpha_beta_params_v15.png)
 
 <!-- caption-6:start -->
-**Caption:** Fig 4 shared train 500 ep; αβ_late=163.0, amp=265; pass=False (v13)
+**Caption:** Fig 4 shared train 500 ep; αβ_late=163.0, amp=265; pass=False (v15)
 
 **Manifest:** `artifacts/figures/papers/nguyen/6/manifest.json`
 <!-- caption-6:end -->
 
-**Status:** Open — see manifest gates (`alpha_beta_params_v13.png`).
+**Status:** Open — see manifest gates (`alpha_beta_params_v15.png`).
 
 <!-- gates-6:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: no, 2026-09-01). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: no, 2026-10-02). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
-| `shared_train` | Fig 4 passed + shared train | yes |
+| `shared_train` | Fig 4 passed + shared train | no |
 | `paper_alpha_beta_series_has_variance` | digitization — α–β series has variance | yes |
 | `paper_alpha_beta_early_above_theta` | digitization — early α–β > θ=150 (ep 0–50) | yes |
 | `paper_alpha_beta_early_near_paper` | digitization — early α–β near paper (ep 0–50) | yes |
@@ -263,22 +263,22 @@ Seeded eval of the trained policy: **50** episodes × **25** steps, different se
 
 ### Replication
 
-![Replication Fig 7](images/7/eval_50ep_v22.png)
+![Replication Fig 7](images/7/eval_50ep_v23.png)
 
 <!-- caption-7:start -->
-**Caption:** eval 50×26 steps; mean αβ=199.6; pass=True (v22)
+**Caption:** eval 50×26 steps; mean αβ=199.6; pass=False (v23)
 
 **Manifest:** `artifacts/figures/papers/nguyen/7/manifest.json`
 <!-- caption-7:end -->
 
-**Status:** Pass — see manifest gates (`eval_50ep_v22.png`).
+**Status:** Open — see manifest gates (`eval_50ep_v23.png`).
 
 <!-- gates-7:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: yes, 2026-09-01). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: no, 2026-10-02). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
-| `checkpoint_lineage_ok` | Fig 4 train passed | yes |
+| `checkpoint_lineage_ok` | Fig 4 train passed | no |
 | `paper_eval_protocol_ok` | digitization — ≥50 episodes × ≥20 steps | yes |
 | `paper_step_series_finite` | digitization — step series finite | yes |
 | `paper_start_near_paper` | digitization — step 0 start near paper (~160.4) | yes |
