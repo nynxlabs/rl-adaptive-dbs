@@ -68,20 +68,20 @@ def _rolling_mean(values: list[float] | np.ndarray, window: int) -> np.ndarray:
     return out
 
 
-def _vault_backed_png(path: Path) -> Path:
+def _linked_png(path: Path) -> Path:
     path = Path(path)
     paper = path.parent / "paper.png"
     if not paper.is_symlink():
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
-    vault_dir = paper.resolve().parent
-    vault_target = vault_dir / path.name
+    linked_dir = paper.resolve().parent
+    linked_target = linked_dir / path.name
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists() or path.is_symlink():
         return path
-    if not vault_target.exists():
-        vault_target.touch()
-    path.symlink_to(vault_target)
+    if not linked_target.exists():
+        linked_target.touch()
+    path.symlink_to(linked_target)
     return path
 
 
@@ -122,7 +122,7 @@ def plot_series(series: dict[str, Any], png_path: Path) -> None:
     _paper_overlay.place_legend(ax, loc="lower right", fontsize=8)
     fig.tight_layout()
     png_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(_vault_backed_png(png_path), dpi=150)
+    fig.savefig(_linked_png(png_path), dpi=150)
     plt.close(fig)
 
 
@@ -133,17 +133,19 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--episodes", type=int, default=None)
     parser.add_argument(
-        "--push-kb",
+        "--export-notes",
         action="store_true",
         help="After promote, copy replication PNGs into the notes folder (RL_DBS_NOTES_DIR / export.notes_dir)",
     )
+    # Former name, kept so existing commands keep working.
+    parser.add_argument("--push-kb", dest="export_notes", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "--update-report",
         action="store_true",
         help="After promote, refresh Report 3 gallery image links in the notes folder",
     )
     args = parser.parse_args()
-    _figure_promote.set_push_kb_images(args.push_kb)
+    _figure_promote.set_export_notes_images(args.export_notes)
     _figure_promote.set_update_report3(args.update_report)
 
     t0 = time.time()

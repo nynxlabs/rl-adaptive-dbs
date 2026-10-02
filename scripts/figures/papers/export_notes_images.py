@@ -6,9 +6,9 @@ copies bytes into ``<notes_dir>/figures/`` (``RL_DBS_NOTES_DIR`` /
 ``export.notes_dir``, or detected from symlinked trackers — see
 ``rl_adaptive_dbs.notes_export``).
 
-Plot scripts call this via ``promote.py`` when you pass ``--push-kb``; run manually anytime:
+Plot scripts call this via ``promote.py`` when you pass ``--export-notes``; run manually anytime:
 
-  uv run python -m rl_adaptive_dbs.run scripts/figures/papers/push_kb_images.py
+  uv run python -m rl_adaptive_dbs.run scripts/figures/papers/export_notes_images.py
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ _PAPERS = ("mehregan", "nguyen", "ravivarapu")
 _SKIP_REPO_GLOB = ("paper.png", "/_full/")
 
 
-def kb_figures_root() -> Path:
+def notes_figures_root() -> Path:
     """Notes-folder ``figures/`` directory."""
     return _promote.require_notes_dir() / "figures"
 
@@ -135,7 +135,7 @@ def iter_all_push_targets(*, include_repo_materialized: bool = True) -> list[tup
 
 
 def _resolve_source(paper: str, rel: str) -> Path | None:
-    """Prefer materialized bytes in the active checkout, then main, then vault.
+    """Prefer materialized bytes in the active checkout, then main, then the notes folder.
 
     Panel plots often run from a ``.worktrees/`` checkout where ``REPO_ROOT`` is the
     main tree (for tracker promote) but the new ``_vN.png`` was written under the
@@ -151,9 +151,9 @@ def _resolve_source(paper: str, rel: str) -> Path | None:
             return repo_path
         if repo_path.is_symlink() and repo_path.is_file():
             return repo_path.resolve()
-    vault_path = kb_figures_root() / paper / rel
-    if vault_path.is_file():
-        return vault_path.resolve()
+    notes_path = notes_figures_root() / paper / rel
+    if notes_path.is_file():
+        return notes_path.resolve()
     for repo_path in candidates:
         resolved = repo_path.resolve()
         if resolved.is_file():
@@ -165,12 +165,12 @@ def push_image(
     paper: str,
     rel: str,
     *,
-    vault_root: Path | None = None,
+    notes_root: Path | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
-    """Copy one replication PNG into the vault if source bytes differ."""
-    vault_root = vault_root or kb_figures_root()
-    dest = vault_root / paper / rel
+    """Copy one replication PNG into the notes folder if source bytes differ."""
+    notes_root = notes_root or notes_figures_root()
+    dest = notes_root / paper / rel
     src = _resolve_source(paper, rel)
     result: dict[str, Any] = {
         "paper": paper,
@@ -210,14 +210,14 @@ def push_all(
     include_repo_materialized: bool = True,
     tracker_only: bool = False,
 ) -> dict[str, Any]:
-    vault_root = kb_figures_root()
+    notes_root = notes_figures_root()
     results: list[dict[str, Any]] = []
     if tracker_only:
         targets = iter_tracker_image_links()
     else:
         targets = iter_all_push_targets(include_repo_materialized=include_repo_materialized)
     for paper, rel in targets:
-        row = push_image(paper, rel, vault_root=vault_root, dry_run=dry_run)
+        row = push_image(paper, rel, notes_root=notes_root, dry_run=dry_run)
         results.append(row)
         if verbose and row["action"] in {"copied", "would_copy", "missing"}:
             print(f"{row['action']}: {paper}/{rel}", flush=True)
@@ -225,12 +225,12 @@ def push_all(
     missing = sum(1 for r in results if r["action"] == "missing")
     if verbose:
         print(
-            f"push_kb: vault={vault_root} targets={len(targets)} "
+            f"export_notes: notes={notes_root} targets={len(targets)} "
             f"copied={copied} missing={missing}",
             flush=True,
         )
     return {
-        "vault_root": str(vault_root),
+        "notes_root": str(notes_root),
         "n_links": len(results),
         "copied": copied,
         "missing": missing,

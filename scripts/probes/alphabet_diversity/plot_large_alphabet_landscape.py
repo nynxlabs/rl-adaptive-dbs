@@ -58,11 +58,11 @@ def main() -> int:
     fig.suptitle("45 Hz skip_regular open-loop landscape (large alphabet probe)", fontsize=11)
     fig.tight_layout()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    # version manually: overwrite stem with _preview for vault eyeball
+    # version manually: overwrite stem with _preview for a quick look
     out = OUT_DIR / f"{OUT_STEM}.png"
     fig.savefig(out, facecolor="white")
     plt.close(fig)
-    # also land in vault if repo path is symlink dir of files
+    # also land in the linked folder if repo path is symlink dir of files
     print(f"wrote {out}", flush=True)
     print(f"no_stim Pβ={no_stim:.1f}", flush=True)
     return 0

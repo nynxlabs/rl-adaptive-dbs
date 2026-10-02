@@ -1,6 +1,6 @@
 """Locate the optional notes folder that figure promotion mirrors into.
 
-``--push-kb`` / ``--update-report`` copy replication PNGs and refresh the
+``--export-notes`` / ``--update-report`` copy replication PNGs and refresh the
 Report 3 gallery in a notes folder outside the repo, laid out as
 ``<notes_dir>/figures/<paper>/...`` and ``<notes_dir>/reports/3.md``.
 

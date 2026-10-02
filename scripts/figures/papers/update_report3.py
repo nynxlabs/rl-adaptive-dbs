@@ -2,8 +2,8 @@
 """Refresh replication image paths in ``<notes_dir>/reports/3.md``.
 
 Report 3 gallery embeds use **co-located copies** under
-``reports/images/gallery/`` (``./images/gallery/rep_*.png``) so Obsidian
-resolves them from the note folder regardless of vault root. Ship PNGs under
+``reports/images/gallery/`` (``./images/gallery/rep_*.png``) so notes apps
+resolve them from the note folder regardless of its root. Ship PNGs under
 ``figures/<paper>/images/`` are still refreshed for trackers.
 
 ``sync_report3_gallery_ships()`` copies tracker versioned PNGs into ship paths.

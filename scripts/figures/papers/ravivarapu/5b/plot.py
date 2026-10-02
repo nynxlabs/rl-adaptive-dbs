@@ -80,7 +80,7 @@ OUT_STEM = "inference_30hz"
 VARIANTS = ("baseline", "paper")
 
 
-def _vault_backed_png(path: Path) -> Path:
+def _linked_png(path: Path) -> Path:
     path = Path(path)
     roots: list[Path] = []
     main_root = getattr(_figure_promote, "REPO_ROOT", None)
@@ -91,21 +91,21 @@ def _vault_backed_png(path: Path) -> Path:
         paper = root / path.parent / "paper.png"
         if not paper.is_symlink():
             continue
-        vault_dir = paper.resolve().parent
-        vault_target = vault_dir / path.name
+        linked_dir = paper.resolve().parent
+        linked_target = linked_dir / path.name
         local = path if path.is_absolute() else Path.cwd() / path
         local.parent.mkdir(parents=True, exist_ok=True)
-        if not vault_target.exists():
-            vault_target.parent.mkdir(parents=True, exist_ok=True)
-            vault_target.touch()
+        if not linked_target.exists():
+            linked_target.parent.mkdir(parents=True, exist_ok=True)
+            linked_target.touch()
         if local.exists() or local.is_symlink():
-            if local.resolve() != vault_target.resolve():
-                return vault_target
+            if local.resolve() != linked_target.resolve():
+                return linked_target
             return local
         try:
-            local.symlink_to(vault_target)
+            local.symlink_to(linked_target)
         except OSError:
-            return vault_target
+            return linked_target
         return local
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
@@ -146,7 +146,7 @@ def main() -> None:
         action="store_true",
         help="Replot from cached series.json (no eval)",
     )
-    _resume_cli.add_push_kb_arg(parser)
+    _resume_cli.add_export_notes_arg(parser)
     _resume_cli.add_update_report3_arg(parser)
     _parallel_series.add_parallel_series_argument(parser)
     args = parser.parse_args()
@@ -228,7 +228,7 @@ def main() -> None:
     ax.grid(True, alpha=0.3)
     _paper_overlay.place_legend(ax, fontsize=8)
     png_path, png_version = _figure_promote.next_versioned_png(FIGURES_DIR, OUT_STEM)
-    fig.savefig(_vault_backed_png(png_path), dpi=150)
+    fig.savefig(_linked_png(png_path), dpi=150)
     plt.close(fig)
 
     if args.smoke:
