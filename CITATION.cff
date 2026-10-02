@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "rl-adaptive-dbs: replications of reinforcement-learning controllers for adaptive deep brain stimulation"
+type: software
+authors:
+  - given-names: Devin
+    family-names: Auch
+repository-code: "https://github.com/nynxlabs/rl-adaptive-dbs"
+license: MIT
+version: 0.1.0
+keywords:
+  - deep brain stimulation
+  - reinforcement learning
+  - Parkinson's disease
+  - replication
