@@ -1,8 +1,42 @@
 # rl-adaptive-dbs
 
-> **Work in progress.** This repository is under active development. Substantial **refinement** is still needed across docs, scripts, and code paths, and there is **redundant** content that still needs to be consolidated or removed.
+[![tests](https://github.com/nynxlabs/rl-adaptive-dbs/actions/workflows/tests.yml/badge.svg)](https://github.com/nynxlabs/rl-adaptive-dbs/actions/workflows/tests.yml)
 
-Replication of published **adaptive DBS** reinforcement-learning work on one shared **parkinsonian plant** (Kumaravelu et al., 2016): a Mehregan et al. Gymnasium-style environment in `envs/`, then **separate controller implementations** from each source paper (with adapters where a paper’s RL interface differs), benchmarking, cross-controller comparison, and later fusion and modularity.
+Independent replications of three reinforcement-learning papers on **adaptive deep brain stimulation (DBS)** for Parkinson's disease. All three controllers run on one shared simulated cortex–basal ganglia–thalamus circuit (Kumaravelu et al., 2016), rebuilt from the paper text and figures.
+
+**17 of 20 replicated paper panels pass** their automated qualitative gates. **[See the side-by-side showcase →](docs/figures/replication_showcase.md)**
+
+| Paper | Controller | Panels passing | Tracker |
+|-------|------------|:--------------:|---------|
+| Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning* | DDPG actor–critic, plus PTQ / QAT quantization | 9 / 9 | [mehregan](figures/mehregan/replications.md) |
+| Ravivarapu et al., *Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson's Disease* (SEA-DBS) | Sample-efficient actor–critic | 6 / 6 | [ravivarapu](figures/ravivarapu/replications.md) |
+| Nguyen et al., *Closed-Loop Neuromorphic Deep Brain Stimulation using Deep Spiking Q-Networks* | Deep spiking Q-network | 2 / 5 (Figs 4–6 open) | [nguyen](figures/nguyen/replications.md) |
+
+| Mehregan Fig. 4a: beta power during training | Ravivarapu Fig. 4a: SEA-DBS vs baseline | Nguyen Fig. 7: 50-episode evaluation |
+|:---:|:---:|:---:|
+| <img src="figures/mehregan/images/4a/training_beta_v40.png" width="280" alt="Mehregan Fig. 4a replication"> | <img src="figures/ravivarapu/images/4a/training_psd_v70.png" width="280" alt="Ravivarapu Fig. 4a replication"> | <img src="figures/nguyen/images/7/eval_50ep_v22.png" width="280" alt="Nguyen Fig. 7 replication"> |
+
+> **Status:** active research code. Docs and scripts are still being consolidated, so expect some redundancy.
+
+## Quick start
+
+Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/). MATLAB is optional; it's only needed for the reference-equivalence checks against the original Kumaravelu model.
+
+```bash
+git clone https://github.com/nynxlabs/rl-adaptive-dbs.git
+cd rl-adaptive-dbs
+uv sync --group dev --group figures
+
+uv run pytest -m "not slow and not matlab"   # fast test tier, under a minute
+
+# Regenerate Mehregan Fig. 1b from scratch with one seed (a few minutes).
+# Drop --seeds to average all 10 seeds like the published replication.
+uv run python scripts/figures/papers/mehregan/1b/plot.py --seeds 0
+```
+
+Each panel has its own `scripts/figures/papers/<paper>/<panel>/plot.py`; the trackers list the exact command for each.
+
+Full install, verification, and day-to-day use: **[docs/setup.md](docs/setup.md)**.
 
 ## Current goals
 
@@ -14,8 +48,6 @@ Replication of published **adaptive DBS** reinforcement-learning work on one sha
 | Nguyen et al. panel tracker | [figures/nguyen/replications.md](figures/nguyen/replications.md) | `scripts/figures/papers/nguyen/<panel>/plot.py` |
 | Ravivarapu et al. panel tracker | [figures/ravivarapu/replications.md](figures/ravivarapu/replications.md) | `scripts/figures/papers/ravivarapu/<panel>/plot.py` |
 | What matches / diverges from the paper | [docs/development/replication-fidelity.md](docs/development/replication-fidelity.md) | Specs under `docs/plant.md`, `docs/environment.md`, `docs/controllers/` |
-
-**Mehregan:** Figs 1b–6b Pass (Fig 5b uses `BurstPatternAlphabet`). **Ravivarapu:** Figs 4–7 Pass. **Nguyen:** Figs 3 and 7 Pass; **open panels:** Nguyen Figs 4–6.
 
 The **phase roadmap** ([docs/development/roadmap.md](docs/development/roadmap.md)) still describes long-term architecture — environment, controllers, benchmarking, fusion — but day-to-day priorities follow **figure gates** first. Suite runs (`mehregan_eval`), CLI/TUI, and fresh-VM validation support replication; they are not the main exit criterion on their own.
 
