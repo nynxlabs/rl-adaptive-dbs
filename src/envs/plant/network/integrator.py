@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import functools
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
@@ -110,6 +112,12 @@ _IAPPGPI: float = 3.0
 _STN_TD2: float = 130.0
 _STN_TR2: float = 2.0
 _GPE_TR: float = 30.0
+
+
+@functools.lru_cache(maxsize=8)
+def _synaptic_kernels(dt_ms: float) -> dict[str, np.ndarray]:
+    """Synaptic kernels depend only on ``dt_ms``; build once per process (read-only use)."""
+    return build_synaptic_kernels(dt_ms)
 
 
 @dataclass
@@ -766,7 +774,7 @@ def integrate_network(
     Z1a = np.zeros(n, dtype=np.float64)
     Z1b = np.zeros(n, dtype=np.float64)
 
-    kernels = build_synaptic_kernels(dt_ms)
+    kernels = _synaptic_kernels(float(dt_ms))
     conv_th = SpikeConvolver(n, dt_ms)
     conv_stn = SpikeConvolver(n, dt_ms)
     conv_gpe = SpikeConvolver(n, dt_ms)

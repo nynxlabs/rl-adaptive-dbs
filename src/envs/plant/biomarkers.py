@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import dataclass
+from functools import lru_cache
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -58,6 +60,34 @@ def _time_grid(
     return np.arange(mintime - dt, maxtime + dt + dt / 2.0, dt)
 
 
+@lru_cache(maxsize=64)
+def _taper_bank(
+    n_samples: int,
+    nfft: int,
+    fs: float,
+    time_bandwidth: float,
+    n_tapers: int,
+    f_low: float,
+    f_high: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """DPSS tapers, their band-limited FFT, and band frequencies (cached: identical per segment)."""
+    freqs_full = np.arange(nfft, dtype=float) * (fs / nfft)
+    findx = np.where((freqs_full >= f_low) & (freqs_full <= f_high))[0]
+    freqs = freqs_full[findx]
+    # MATLAB: dpss(N, TW, K) * sqrt(Fs), shape N×K
+    tapers = dpss(n_samples, time_bandwidth, n_tapers, sym=False).T * np.sqrt(fs)
+    taper_fft = np.fft.fft(tapers, n=nfft, axis=0)[findx, :]
+    for arr in (tapers, taper_fft, freqs):
+        arr.setflags(write=False)
+    return tapers, taper_fft, freqs
+
+
+# Same spike train + settings → same PSD; p_beta for several bands (e.g. 13–35 Hz in the
+# plant step and 7–35 Hz in the Nguyen adapter) then shares one spectrum per neuron.
+_PSD_MEMO: OrderedDict[tuple, tuple[np.ndarray, np.ndarray]] = OrderedDict()
+_PSD_MEMO_MAX = 256
+
+
 def multitaper_psd_point_process(
     spike_times: np.ndarray,
     params: SpectrumParams,
@@ -65,26 +95,37 @@ def multitaper_psd_point_process(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Point-process multitaper PSD (Chronux ``mtspectrumpt``-style, single neuron)."""
     spike_times = np.asarray(spike_times, dtype=float).reshape(-1)
+    key = (spike_times.tobytes(), params, segment_duration_s)
+    hit = _PSD_MEMO.get(key)
+    if hit is not None:
+        _PSD_MEMO.move_to_end(key)
+        return hit[0].copy(), hit[1].copy()
+    psd, freqs = _multitaper_psd_uncached(spike_times, params, segment_duration_s)
+    _PSD_MEMO[key] = (psd, freqs)
+    if len(_PSD_MEMO) > _PSD_MEMO_MAX:
+        _PSD_MEMO.popitem(last=False)
+    return psd.copy(), freqs.copy()
+
+
+def _multitaper_psd_uncached(
+    spike_times: np.ndarray,
+    params: SpectrumParams,
+    segment_duration_s: float | None,
+) -> tuple[np.ndarray, np.ndarray]:
     fs = params.fs
     t = _time_grid(spike_times, fs, segment_duration_s)
     n_samples = len(t)
     nfft = _nfft(n_samples, params.pad)
-
-    freqs_full = np.arange(nfft, dtype=float) * (fs / nfft)
-    band = params.fpass
-    findx = np.where((freqs_full >= band[0]) & (freqs_full <= band[1]))[0]
-    freqs = freqs_full[findx]
-
-    # MATLAB: dpss(N, TW, K) * sqrt(Fs), shape N×K
-    tapers = dpss(
+    tapers, taper_fft, freqs = _taper_bank(
         n_samples,
-        params.time_bandwidth,
-        params.n_tapers,
-        sym=False,
-    ).T * np.sqrt(fs)
+        nfft,
+        fs,
+        float(params.time_bandwidth),
+        int(params.n_tapers),
+        float(params.fpass[0]),
+        float(params.fpass[1]),
+    )
     n_tapers = tapers.shape[1]
-
-    taper_fft = np.fft.fft(tapers, n=nfft, axis=0)[findx, :]
     angular = 2.0 * np.pi * freqs
 
     if spike_times.size > 0:
@@ -95,7 +136,7 @@ def multitaper_psd_point_process(
 
     mean_rate = len(times) / n_samples if n_samples else 0.0
     if mean_rate == 0.0:
-        return np.zeros_like(freqs), freqs
+        return np.zeros_like(freqs), freqs.copy()
 
     projections = np.column_stack(
         [
@@ -106,7 +147,7 @@ def multitaper_psd_point_process(
     exponential = np.exp(-1j * angular[:, None] * (times[None, :] - t[0]))
     spectrum_coeffs = exponential @ projections - taper_fft * mean_rate
     psd = np.mean(np.abs(spectrum_coeffs) ** 2, axis=1)
-    return psd, freqs
+    return psd, freqs.copy()
 
 
 def band_power(
