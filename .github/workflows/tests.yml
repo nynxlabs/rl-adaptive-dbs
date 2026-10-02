@@ -1,0 +1,40 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fast:
+    name: Fast tests (no MATLAB)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      # uv.lock resolves torch to the CUDA build (~3 GB of NVIDIA wheels). CI has
+      # no GPU, so install the CPU build of the locked version first; the project
+      # install below then treats torch as already satisfied.
+      - name: Install CPU-only torch
+        run: |
+          uv venv
+          torch_version="$(awk '/^name = "torch"$/ { getline; gsub(/"/, "", $3); print $3; exit }' uv.lock)"
+          echo "torch ${torch_version}"
+          uv pip install "torch==${torch_version}" --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install project and test dependencies
+        run: uv pip install -e . --group dev --group figures --group reports
+
+      - name: Run tests
+        run: uv run --no-sync pytest -m "not slow and not matlab"
