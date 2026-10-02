@@ -2,7 +2,7 @@
 
 MATLAB is required for **Phase 2** plant work: running the bundled Kumaravelu et al. (2016) network (`reference-material/KumaraveluEtAl2016/`) and validating the Python bridge. CI and day-to-day Python-only work do **not** need MATLAB ([development/testing.md](development/testing.md)).
 
-**Platforms:** **Windows, macOS, and Linux** (including WSL) — same repo contract everywhere ([AGENTS.md](../AGENTS.md)). Shell helpers (`scripts/matlab/env.sh`, `scripts/matlab/verify.sh`) are **bash**; on Windows use **Git Bash**, **WSL**, or the manual steps in §2.3 / §5.
+**Platforms:** **Windows, macOS, and Linux** (including WSL) — same repo contract everywhere ([platform support](../README.md#platform-support)). Shell helpers (`scripts/matlab/env.sh`, `scripts/matlab/verify.sh`) are **bash**; on Windows use **Git Bash**, **WSL**, or the manual steps in §2.3 / §5.
 
 **Quick start (interactive):** from the repo root,
 
@@ -386,7 +386,7 @@ uv run pytest -m matlab          # requires licensed MATLAB
 
 ## 10. Related docs
 
-- Cross-platform policy: [AGENTS.md](../AGENTS.md)
+- Cross-platform policy: [README § Platform support](../README.md#platform-support)
 - Plant spec and bridge API: [plant.md](plant.md)
 - Equivalence testing: [development/testing.md](development/testing.md)
 - Day-to-day Python setup: [setup.md](setup.md), [development/venv.md](development/venv.md)
