@@ -10,12 +10,12 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Fig 1b | GPi PSD | Pass |
 | Fig 2a | GPi $P_\beta$ time series | Pass |
 | Fig 2b | Error Index time series | Pass (rep v16) |
-| Fig 4a | Training $P_\beta$ vs step | Pass (rep v40; paired to series_v33, moving average w=8) |
-| Fig 4b | Training reward vs episode | Pass (rep v47; paired to series_v33, reward -80.6 -> +10.8, PSD 0.505 -> 0.310) |
+| Fig 4a | Training $P_\beta$ vs step | Pass (τ 3→1.0, locked train v18, rep v40) |
+| Fig 4b | Training reward vs episode | Fail (`late_beta_above_threshold`, paired train v18, v14, rep v47) |
 | Fig 5a | Post-train efficacy @ 45 Hz | Pass (rep v23) |
 | Fig 5b | Post-train efficacy @ 30 Hz | Pass (burst alphabet, locked eval v3, rep v23) |
-| Fig 6a | PTQ / QAT @ 45 Hz | Pass (honest trailing eval, rep v61) |
-| Fig 6b | PTQ / QAT @ 30 Hz | Pass (tier PTQ, rep v40) |
+| Fig 6a | PTQ / QAT @ 45 Hz | Fail (`paper_not_open_loop_override` — cached v61 eval replayed open-loop actions; needs honest re-eval, rep v62) |
+| Fig 6b | PTQ / QAT @ 30 Hz | Fail (`paper_not_open_loop_override` — cached v40 eval replayed open-loop actions; needs 10-ep QAT + re-eval, rep v41) |
 <!-- summary:end -->
 
 Replication PNGs: `figures/mehregan/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/mehregan/images/<panel>/paper.png` (from paper-note embeds; composite Figs 1/2/4/5/6 split into panels). Full composites under `figures/mehregan/images/_full/`.
@@ -43,7 +43,7 @@ Mean GPi multitaper power spectral density (1–50 Hz) for three conditions: **h
 **Status:** Pass — condition ordering and beta-peak shape match the paper panel (seeds `0–9` mean).
 
 <!-- gates-1b:start -->
-**Gates set** (`fig1b_gates` → manifest `gates` / `gates_pass`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/1b/curves.json`, 2026-09-01). Every row is required for exit.
+**Gates set** (`fig1b_gates` → manifest `gates` / `gates_pass`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/1b/curves.json`, 2026-10-02). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -86,7 +86,7 @@ GPi beta-band power ($P_\beta$, Eq. 1, 13–35 Hz) over **12 s**: **PD no treatm
 **Status:** Pass — blue-below-red after $t=2$, shared 0–2 s baseline, dense trailing protocol. Protocol: trailing windows end at sim **14 s** (display $t=12$ → `[12, 14]`); enlarged Numba GPI spike buffer (904) so recording is not truncated. Remaining polish: blue floor slightly below paper at $t=12$; single seed (0). Legend lower left with condensed paper overlay. **Ship image:** unversioned `beta_power.png` (Report 3 gallery).
 
 <!-- gates-2a:start -->
-**Gates set** (`fig2_time_gates`, panel `2a`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/2a/series.json`, 2026-09-01). Every row is required for exit.
+**Gates set** (`fig2_time_gates`, panel `2a`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/2a/series.json`, 2026-10-02). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -129,7 +129,7 @@ Windowed Error Index (EI, Eq. 2) over **12 s** with **So-style SMC pulses into T
 **Status:** Pass — blue-below-red after $t=2$, shared baseline, blue floor ~0.12 near paper. Remaining polish: red $t=12$ slightly low (~0.24 vs ~0.30); single seed.
 
 <!-- gates-2b:start -->
-**Gates set** (`fig2_time_gates`, panel `2b`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/2b/series.json`, 2026-09-01). Every row is required for exit.
+**Gates set** (`fig2_time_gates`, panel `2b`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/2b/series.json`, 2026-10-02). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -177,7 +177,7 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** mean-frequenc
 **Status:** Pass — **rep v40**, paired to Fig 4a training series (`series_v33.json`) with centered 8-step moving average for display smoothing. All digitization gates pass: ep0 mean 0.505 vs paper 0.507, drop 0.150 vs paper 0.110, ratio 0.687 vs paper 0.776, mid-drop 0.073 vs paper 0.047. Fig 4b ship image is **v47** from the same series — see [4a.md](../../docs/figures/mehregan/4a.md).
 
 <!-- gates-4a:start -->
-**Gates set** (`fig4a_gates` → live `series.json` (digitization revisit; was locked `series_v18.json`)). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4a/series.json`, 2026-09-01). Every row is required for exit.
+**Gates set** (`fig4a_gates` → live `series.json` (digitization revisit; was locked `series_v18.json`)). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4a/series.json`, 2026-10-02). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -238,7 +238,7 @@ Episode **total reward** and **episode-mean PSD(x10³)** during the same **45 Hz
 **Status:** Pass — **rep v46**, paired to Fig 4a training series (`series.json`). Reward rises from ep0 **−79.4** to ep8 **+10.8** (crossing positive at ep6); episode-mean PSD decreases inversely from **0.500** to **0.310**. All trajectory dynamics and rise timing gates pass.
 
 <!-- gates-4b:start -->
-**Gates set** (`fig4b_gates` + legacy `_fig4b_pass` → manifest `summary.gates`). Overall **`gates_pass`**: no (from `artifacts/figures/papers/mehregan/4b/manifest.json`, 2026-09-01). Every row is required for exit.
+**Gates set** (`fig4b_gates` + legacy `_fig4b_pass` → manifest `summary.gates`). Overall **`gates_pass`**: no (from `artifacts/figures/papers/mehregan/4b/manifest.json`, 2026-10-02). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -298,7 +298,7 @@ Dashed vertical at **2 s** (stimulation onset). Paper claims: trained stimulatio
 **Status:** Pass — four-series panel with **skip_regular** action space (40 irregular patterns; pattern 0 excluded from training). **0.2 s trailing / 2 s window** biomarker sampling (same protocol as Fig 2a). Seed 0; greedy action 7 → pattern 8. Fig 4a training curves still use the 41-pattern space; Fig 5a eval uses a separate skip_regular checkpoint (`checkpoint_skip_regular_02s.pt`).
 
 <!-- gates-5a:start -->
-**Gates set** (`fig5a_pass` / `fig5_efficacy_gates` → manifest `gates`). Overall **`pass`**: yes (from `artifacts/figures/papers/mehregan/5a/manifest.json`, 2026-09-01). Every row is required for exit.
+**Gates set** (`fig5a_pass` / `fig5_efficacy_gates` → manifest `gates`). Overall **`pass`**: yes (from `artifacts/figures/papers/mehregan/5a/manifest.json`, 2026-10-02). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -360,7 +360,7 @@ Key paper claim: **periodic 30 Hz elevates** beta (stimulation rate inside the b
 **Status:** Pass — burst-alphabet retrain (seed 0) + trailing eval **v3** (trained≈367, no-stim≈488, periodic≈639). Policy collapses to constant action **5** (a strong open-loop beater); acceptable for Fig 5b efficacy panel. Y-limits auto-fit from traces (override with `--y-min` / `--y-max`).
 
 <!-- gates-5b:start -->
-**Gates set** (`fig5b_pass` / `fig5_efficacy_gates` → manifest `gates`). Overall **`pass`**: yes (from `artifacts/figures/papers/mehregan/5b/manifest.json`, 2026-09-01). Every row is required for exit.
+**Gates set** (`fig5b_pass` / `fig5_efficacy_gates` → manifest `gates`). Overall **`pass`**: yes (from `artifacts/figures/papers/mehregan/5b/manifest.json`, 2026-10-02). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -405,20 +405,20 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 
 ### Replication
 
-![Replication Fig 6a](images/6a/ptq_qat_45hz_v61.png)
+![Replication Fig 6a](images/6a/ptq_qat_45hz_v62.png)
 
 <!-- caption-6a:start -->
-**Caption:** 45 Hz paper-protocol eval, seed 0, fp32_post=336, qat_post=525, PTQ tracks fp32, QAT elevated, 2026-08-09
+**Caption:** 45 Hz paper-protocol eval, seed 0, fp32_post=336, qat_post=525, PTQ tracks fp32, QAT elevated, v62, 2026-10-02
 
 **Manifest:** `artifacts/figures/papers/mehregan/6a/manifest.json`
 <!-- caption-6a:end -->
 
-**Status:** Pass — **v61** (`ptq_qat_45hz_v61.png`). Honest trailing eval with weak QAT open-loop lock action **31** (~525 post mean); fp32_post≈336, PTQ fp16≈360 (tier action **19**), int8≈345 (tier action **28**, fp32 suppressor — faster drop than closed-loop action 9). `non_qat_traces_distinct=true`. Digitization gates including `paper_qat_level_ratio_near_paper` pass. Y-axis **250–575** PSD: 50-step majors through 550 plus single **575** half-step on top. `PAPER_DISPLAY_SHORTCUTS=False`.
+**Status:** Fail — **v62** re-gates the cached v61 eval with the fixed open-loop gate. That eval was **not** closed-loop: PTQ fp16/int8 and QAT replayed fixed open-loop actions (see below), so the former Pass was a shortcut. Needs a fresh eval with the current script (open-loop paths removed Oct 2 2026). Former v61 note: trailing eval with weak QAT open-loop lock action **31** (~525 post mean); fp32_post≈336, PTQ fp16≈360 (tier action **19**), int8≈345 (tier action **28**, fp32 suppressor — faster drop than closed-loop action 9). `non_qat_traces_distinct=true`. Digitization gates including `paper_qat_level_ratio_near_paper` pass. Y-axis **250–575** PSD: 50-step majors through 550 plus single **575** half-step on top. `PAPER_DISPLAY_SHORTCUTS=False`.
 
-**Convention (burst + weak QAT lock, 2026-08-03):** `QAT_NUM_EPISODES=0`, `QAT_OPEN_LOOP_LOCK=True`, `QAT_WEAK_ACTION=31` at 45 Hz. fp32 `checkpoint_burst_skip_regular_02s.pt`. PTQ tier open-loop when quant locks on non-fp32 actions (fp16 **19**, int8 **28**). Prior **v36** retired int8 closed-loop action 9 (slow transient).
+**Retired Oct 2 2026 (shortcut — removed from code):** ~~Convention (burst + weak QAT lock, 2026-08-03):~~ `QAT_NUM_EPISODES=0`, `QAT_OPEN_LOOP_LOCK=True`, `QAT_WEAK_ACTION=31` at 45 Hz. fp32 `checkpoint_burst_skip_regular_02s.pt`. PTQ tier open-loop when quant locks on non-fp32 actions (fp16 **19**, int8 **28**). Prior **v36** retired int8 closed-loop action 9 (slow transient).
 
 <!-- gates-6a:start -->
-**Gates set** (`_gate_summary` → manifest `gates`). Overall **`all_pass`**: yes (from `artifacts/figures/papers/mehregan/6a/manifest.json`, 2026-09-01). Every row is required for exit.
+**Gates set** (`_gate_summary` → manifest `gates`). Overall **`all_pass`**: no (from `artifacts/figures/papers/mehregan/6a/manifest.json`, 2026-10-02). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -438,7 +438,7 @@ Paper claim: **PTQ** (fp16 and int8) tracks full-precision beta suppression afte
 | `paper_qat_level_ratio_near_paper` | QAT post level ratio vs digitized paper | yes |
 | `paper_ptq_fp16_near_fp32` | PTQ fp16 post mean within 15% of fp32 | yes |
 | `paper_ptq_int8_near_fp32` | PTQ int8 post mean within 20% of fp32 | yes |
-| `paper_not_open_loop_override` | eval uses trained/quantized policy, not open-loop lock | yes |
+| `paper_not_open_loop_override` | eval uses trained/quantized policy, not open-loop lock | no |
 | `paper_not_shared_constant_action_lock` | fp32+PTQ lack shared identical constant action | yes |
 | `paper_qat_late_sustained` | QAT stays elevated late (no end crash) | yes |
 <!-- gates-6a:end -->
@@ -465,7 +465,7 @@ tmux new-session -d -s fig6a-train \
    >> logs/fig6a-train.log 2>&1 < /dev/null"
 ```
 
-**Defaults:** fp32 `checkpoint_burst_skip_regular_02s.pt`; QAT weak-lock checkpoint `qat_paper_10ep_skip_regular.pt`; seed `0`; raw PSD y-axis **250–575** (50-step ticks through 550, half-step **575** on top); alphabet **burst** + **skip_regular**.
+**Defaults:** fp32 `checkpoint_burst_skip_regular_02s.pt`; QAT checkpoint `qat_paper_10ep_skip_regular.pt` (10-ep paper QAT from scratch); seed `0`; raw PSD y-axis **250–575** (50-step ticks through 550, half-step **575** on top); alphabet **burst** + **skip_regular**.
 
 ---
 
@@ -479,20 +479,20 @@ Same quantization panel layout as Fig 6a for the **30 Hz** trained model (§IV.A
 
 ### Replication
 
-![Replication Fig 6b](images/6b/ptq_qat_30hz_v40.png)
+![Replication Fig 6b](images/6b/ptq_qat_30hz_v41.png)
 
 <!-- caption-6b:start -->
-**Caption:** 30 Hz paper-protocol eval, seed 0, fp32_post=367, qat_post=499, PTQ tracks fp32, QAT elevated, 2026-08-09
+**Caption:** 30 Hz paper-protocol eval, seed 0, fp32_post=367, qat_post=499, PTQ tracks fp32, QAT elevated, v41, 2026-10-02
 
 **Manifest:** `artifacts/figures/papers/mehregan/6b/manifest.json`
 <!-- caption-6b:end -->
 
-**Status:** Pass — **v40** (`ptq_qat_30hz_v40.png`, manifest `gates.all_pass=true`). Tier PTQ: fp16 action **10** (~390 post), int8 action **15** (~396 post, faster drop than prior tier **20** ~420). fp32_post≈367 (action 5 lock); QAT weak-lock action **8** (~499). Y-axis **300–550** (50-step majors, no ymin half-step). `PAPER_DISPLAY_SHORTCUTS=False`.
+**Status:** Fail — **v41** re-gates the cached v40 eval with the fixed open-loop gate. v40 PTQ fp16/int8 and QAT were open-loop action replays, not quantized/trained closed-loop policies; the former Pass was a shortcut. Needs 10-ep QAT from fp32 + fresh eval with the current script. Former v40 note: tier PTQ: fp16 action **10** (~390 post), int8 action **15** (~396 post, faster drop than prior tier **20** ~420). fp32_post≈367 (action 5 lock); QAT weak-lock action **8** (~499). Y-axis **300–550** (50-step majors, no ymin half-step). `PAPER_DISPLAY_SHORTCUTS=False`.
 
 **Convention (tier PTQ + overlap fix, 2026-08-03):** Burst trailing sweep (`artifacts/ddpg/fig6b_burst_trailing_sweep_30hz.json`) picks tier actions; int8 tier **15** replaces **20** for faster post-onset suppression while staying distinct from fp16 **10**. Prior **v18** used int8 tier 20 (~420). int8 σ=0.10 weight noise during closed-loop rollout.
 
 <!-- gates-6b:start -->
-**Gates set** (`_gate_summary` → manifest `gates`). Overall **`all_pass`**: yes (from `artifacts/figures/papers/mehregan/6b/manifest.json`, 2026-09-01). Every row is required for exit.
+**Gates set** (`_gate_summary` → manifest `gates`). Overall **`all_pass`**: no (from `artifacts/figures/papers/mehregan/6b/manifest.json`, 2026-10-02). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -512,7 +512,7 @@ Same quantization panel layout as Fig 6a for the **30 Hz** trained model (§IV.A
 | `paper_qat_level_ratio_near_paper` | QAT post level ratio vs digitized paper | yes |
 | `paper_ptq_fp16_near_fp32` | PTQ fp16 post mean within 15% of fp32 | yes |
 | `paper_ptq_int8_near_fp32` | PTQ int8 post mean within 20% of fp32 | yes |
-| `paper_not_open_loop_override` | eval uses trained/quantized policy, not open-loop lock | yes |
+| `paper_not_open_loop_override` | eval uses trained/quantized policy, not open-loop lock | no |
 <!-- gates-6b:end -->
 
 **Run:**
