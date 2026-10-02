@@ -75,6 +75,7 @@ rl-dbs [--verbose | --quiet] [--config PATH] [--seed SEED] [--max-threads N] <su
 | `summary` | 4 | Print comparison table (and optional CSV) from existing `results/`. |
 | `info` | 4 | Print available controllers, variants, suites, env summary. |
 | `config` | 4 (`show`, `set --persist`) | Show or persist plant/env defaults. |
+| `panel` | figure work | Launch (`run`), compare, and promote paper-figure panel runs. |
 
 Global flags apply before the subcommand and affect logging only unless noted.
 
@@ -334,6 +335,26 @@ uv run rl-dbs config set env.beta_t 0.42 --persist
 ```
 
 ---
+
+### 5.7 `panel`
+
+Launch, compare, and promote paper-figure panel runs (`scripts/figures/papers/<paper>/<panel>/plot.py`). Panel ids are `<paper>/<panel>`, e.g. `nguyen/4`. Arguments for `plot.py` go after a literal `--`.
+
+| Subcommand | What it does |
+|------------|--------------|
+| `run <panel> [--candidate NAME] [--no-abort] [--foreground] [--dry-run] -- <plot.py args>` | Starts the panel detached: its own `systemd-run --user --scope` (Linux), a private `tmux -L <session>` server, `setsid nohup nice -n 10`, one math thread, a log under `logs/<session>.log` with run-meta header and `# rl-dbs-run-exit:` footer, and a check that the run's cgroup is outside agent services. Prints a ready-to-use watch prompt. With `--candidate`, every output flag the script supports (`--series`, `--checkpoint`, `--manifest`, `--eval-json`, `--qat-checkpoint`, `--out`) points into `artifacts/figures/papers/<panel>/candidates/NAME/`, promote is skipped, and `--abort-on-fail` is added when supported. Without `--candidate`, `--export-notes --update-report` are added. `--parallel-series 1` is the default where supported. |
+| `compare <panel>` | Table of the promoted run and every candidate: done/aborted, `gates_pass`, failed gate keys, and each candidate's config diff against the promoted config. |
+| `promote <panel> <candidate>` | Copies the candidate's `series.json` / `checkpoint.pt` / `checkpoint.metrics.json` into the panel's artifact directory, replots with `--plot-only --export-notes --update-report`, and records `promoted_from` (candidate manifest + provenance) in the panel manifest. Refuses aborted or smoke candidates; eval-only panels without a series print the winning command to re-run instead. |
+
+```bash
+# Two Nguyen Fig 4 candidates side by side, then compare and promote the winner
+uv run rl-dbs panel run nguyen/4 --candidate amp260 -- --episodes 500 --set amplitude_min=260
+uv run rl-dbs panel run nguyen/4 --candidate amp270 -- --episodes 500 --set amplitude_min=270
+uv run rl-dbs panel compare nguyen/4
+uv run rl-dbs panel promote nguyen/4 amp260
+```
+
+Exit codes follow the panel convention (`docs/development/conventions.md`): `0` pass, `1` gate fail, `2` missing input or refused run, `3` early abort.
 
 ## 6. Controllers, variants, and adapters
 

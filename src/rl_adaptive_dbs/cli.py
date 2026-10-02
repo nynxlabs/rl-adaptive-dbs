@@ -96,6 +96,10 @@ def _build_parser() -> argparse.ArgumentParser:
     info.add_argument("--json", action="store_true")
     info.add_argument("--controller", help="Filter variants topic")
 
+    from rl_adaptive_dbs import panel_cli
+
+    panel_cli.build_parser(sub)
+
     config = sub.add_parser("config", help="Show configuration defaults")
     config_sub = config.add_subparsers(dest="config_command", required=True)
     config_set = config_sub.add_parser("set", help="Set a config key (use --persist to save)")
@@ -356,9 +360,23 @@ def _cmd_config(args: argparse.Namespace) -> int:
     return 2
 
 
+def _cmd_panel(args: argparse.Namespace) -> int:
+    from rl_adaptive_dbs import panel_cli
+
+    return panel_cli.dispatch(args)
+
+
 def main(argv: list[str] | None = None) -> int:
+    from rl_adaptive_dbs.panel_cli import split_script_args
+
     parser = _build_parser()
+    argv = list(sys.argv[1:] if argv is None else argv)
+    tail: list[str] = []
+    if argv[:1] == ["panel"]:
+        argv, tail = split_script_args(argv)
     args = parser.parse_args(argv)
+    if tail:
+        args.script_args = tail
     code = _check_global_flags(args)
     if code is not None:
         return code
@@ -373,6 +391,7 @@ def main(argv: list[str] | None = None) -> int:
         "summary": _cmd_summary,
         "info": _cmd_info,
         "config": _cmd_config,
+        "panel": _cmd_panel,
     }
     handler = handlers.get(args.command)
     if handler is None:
