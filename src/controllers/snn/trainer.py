@@ -405,6 +405,47 @@ class DSQNTrainer:
         return result
 
 
+def training_budget(config: SNNConfig) -> dict[str, Any]:
+    """Expected SGD updates and target-network syncs for a run (preflight sanity check).
+
+    Updates happen once every ``replay_update_cadence`` env steps after the buffer holds a
+    batch; the target network hard-syncs every ``target_update_period`` updates. A run whose
+    budget allows zero syncs trains against its random initial target for the whole run, so
+    ``target_update_period`` (and anything that only acts through syncs) has no effect.
+    """
+    cfg = config.with_variant_defaults()
+    max_steps = int(cfg.num_episodes) * int(cfg.max_episode_steps)
+    min_steps = int(cfg.num_episodes) * max(1, int(cfg.subthreshold_steps_required))
+    cadence = max(1, int(cfg.replay_update_cadence))
+
+    def _updates(steps: int) -> int:
+        return max(0, (steps - int(cfg.batch_size)) // cadence + 1) if steps >= cfg.batch_size else 0
+
+    period = int(cfg.target_update_period)
+    updates_max = _updates(max_steps)
+    updates_min = _updates(min_steps)
+    syncs_max = updates_max // period if period > 0 else 0
+    syncs_min = updates_min // period if period > 0 else 0
+    warnings: list[str] = []
+    if period > 0 and syncs_max == 0:
+        warnings.append(
+            f"target network never syncs: at most {updates_max} updates < target_update_period={period}"
+        )
+    elif period > 0 and syncs_min == 0:
+        warnings.append(
+            f"target network may never sync if episodes stop early (min {updates_min} updates "
+            f"< target_update_period={period})"
+        )
+    return {
+        "env_steps_range": [min_steps, max_steps],
+        "sgd_updates_range": [updates_min, updates_max],
+        "target_syncs_range": [syncs_min, syncs_max],
+        "replay_update_cadence": cadence,
+        "target_update_period": period,
+        "warnings": warnings,
+    }
+
+
 EPISODE_SERIES_KEYS: tuple[str, ...] = (
     "episode_rewards",
     "episode_lengths",
