@@ -30,6 +30,7 @@ _DIG = Path(__file__).resolve().parents[2] / "digitization"
 if str(_DIG) not in sys.path:
     sys.path.insert(0, str(_DIG))
 from paper_gates import load_refined  # noqa: E402
+import nguyen_gates as _nguyen_gates  # noqa: E402
 
 MEHREGAN_DIG = Path("artifacts/figures/papers/mehregan")
 NGUYEN_DIG = Path("artifacts/figures/papers/nguyen/paper_digitization")
@@ -581,30 +582,34 @@ def overlay_nguyen_fig4(
         "lighten": False,
         "mark_endpoints": False,
     }
-    if show_paper_raw and "Raw" in reward_curves:
-        rx, ry = reward_curves["Raw"]
-        overlay_on_axis(
-            ax_reward,
-            rx,
-            ry,
-            label="Paper raw (digitized)",
-            color=NGUYEN_REWARD,
-            alpha=0.55,
-            raw=True,
-            **paper_raw_style,
-        )
-    if show_paper_raw and "Raw" in length_curves:
-        lx, ly = length_curves["Raw"]
-        overlay_on_axis(
-            ax_length,
-            lx,
-            ly,
-            label="Paper raw (digitized)",
-            color=NGUYEN_LENGTH,
-            alpha=0.55,
-            raw=True,
-            **paper_raw_style,
-        )
+    # ``Raw`` is a traced outline of the noisy band (out along one edge, back along
+    # the other); draw its two edges separately instead of the interleaved sort.
+    raw_edges: dict[str, dict[str, tuple[np.ndarray, np.ndarray]]] = {}
+    for name, curves, stem in (
+        ("reward", reward_curves, "fig4_reward"),
+        ("length", length_curves, "fig4_length"),
+    ):
+        if "Raw" in curves:
+            raw_edges[name] = _nguyen_gates.raw_outline_edges(stem)
+    if show_paper_raw:
+        for name, ax, color in (
+            ("reward", ax_reward, NGUYEN_REWARD),
+            ("length", ax_length, NGUYEN_LENGTH),
+        ):
+            if name not in raw_edges:
+                continue
+            for i, edge in enumerate(("lower", "upper")):
+                ex, ey = raw_edges[name][edge]
+                overlay_on_axis(
+                    ax,
+                    ex,
+                    ey,
+                    label="Paper raw band (digitized)" if i == 0 else "_nolegend_",
+                    color=color,
+                    alpha=0.55,
+                    raw=True,
+                    **paper_raw_style,
+                )
     overlay_on_axis(
         ax_reward,
         prx,
@@ -621,8 +626,13 @@ def overlay_nguyen_fig4(
         color=NGUYEN_LENGTH,
         **paper_smooth_style,
     )
-    r_raw_y = reward_curves["Raw"][1] if "Raw" in reward_curves else pry
-    l_raw_y = length_curves["Raw"][1] if "Raw" in length_curves else ply
+    def _edge_y(name: str, fallback: np.ndarray) -> np.ndarray:
+        if name not in raw_edges:
+            return fallback
+        return np.concatenate([raw_edges[name]["lower"][1], raw_edges[name]["upper"][1]])
+
+    r_raw_y = _edge_y("reward", pry)
+    l_raw_y = _edge_y("length", ply)
     return {"reward": (pry, r_raw_y), "length": (ply, l_raw_y)}
 
 

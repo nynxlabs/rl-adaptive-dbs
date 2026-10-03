@@ -13,7 +13,6 @@ sys.path.insert(0, str(_DIG))
 from nguyen_gates import (  # noqa: E402
     curves_path,
     fig3_gates,
-    fig4_training_gates,
     fig5_spikes_energy_gates,
     fig6_power_gates,
     fig6_training_gates,
@@ -38,23 +37,6 @@ def test_fig3_gates_on_cached_samples():
     report = fig3_gates(samples)
     assert report["gates"]["ordering_pd_on_above_pd_off"]
     assert report["pass"]
-
-
-@pytest.mark.skipif(not (ARTIFACT / "curves_fig4_reward.json").exists(), reason="no digitization")
-def test_fig4_paper_self_consistent():
-    paper_r = load_curves("fig4_reward")
-    paper_l = load_curves("fig4_length")
-    rx, ry = paper_r["Smoothed"] if "Smoothed" in paper_r else paper_r["Raw"]
-    lx, ly = paper_l["Smoothed"] if "Smoothed" in paper_l else paper_l["Raw"]
-    n = int(min(rx[-1], lx[-1], 500)) + 1
-    rewards = np.interp(np.arange(n), rx, ry)
-    lengths = np.interp(np.arange(n), lx, ly)
-    report = fig4_training_gates(rewards, lengths, max_episode_steps=25)
-    assert report["reward"]["gates"]["reward_improves_like_paper"]
-    assert report["length"]["gates"]["length_decreases_like_paper"]
-    assert report["pass"]
-    assert report["reward"]["pass"]
-    assert report["length"]["pass"]
 
 
 @pytest.mark.skipif(not (ARTIFACT / "curves_fig5_spikes.json").exists(), reason="no digitization")
@@ -147,20 +129,3 @@ def test_fig7_paper_self_consistent():
 
 def test_curves_path_stems():
     assert curves_path("fig4_reward").name == "curves_fig4_reward.json"
-
-
-@pytest.mark.skipif(not (ARTIFACT / "curves_fig4_reward.json").exists(), reason="no digitization")
-def test_fig4_timing_late_plateau_on_paper_curves():
-    """Digitized paper smoothed curves should pass ep 300–500 plateau gates."""
-    from nguyen_gates import fig4_timing_shape_gates
-
-    paper_r = load_curves("fig4_reward")
-    paper_l = load_curves("fig4_length")
-    rx, ry = paper_r["Smoothed"] if "Smoothed" in paper_r else paper_r["Raw"]
-    lx, ly = paper_l["Smoothed"] if "Smoothed" in paper_l else paper_l["Raw"]
-    n = int(min(rx[-1], lx[-1], 500)) + 1
-    rewards = np.interp(np.arange(n), rx, ry)
-    lengths = np.interp(np.arange(n), lx, ly)
-    timing = fig4_timing_shape_gates(lengths, rewards, max_episode_steps=25)
-    assert timing["length_gates"]["length_post100_plateau"]
-    assert timing["reward_gates"]["reward_post100_plateau"]

@@ -9,6 +9,8 @@ documented paper readouts (~215 / ~295 means) until ``curves_fig3`` exists.
 """
 from __future__ import annotations
 
+import functools
+import json
 from pathlib import Path
 from typing import Any
 
@@ -125,369 +127,467 @@ def fig3_gates(
     )
 
 
-def fig4_reward_gates(
-    episode_rewards: list[float] | np.ndarray,
-    *,
-    early_hi: float = 50.0,
-    late_lo: float = 350.0,
-    ratio_tol: float = DEFAULT_RATIO_TOL,
-    rel_tol: float = DEFAULT_REL_TOL,
-) -> dict[str, Any]:
-    """Fig 4 panel (a) reward vs digitized paper training curve."""
-    rewards = np.asarray(episode_rewards, dtype=float)
-    n = int(rewards.size)
-    if n < 10:
-        return _gate_pack(
-            {"enough_episodes": False},
-            {"n_episodes": n},
-            paper_ref={"reward": str(curves_path("fig4_reward")), "early_hi": early_hi, "late_lo": late_lo},
-        )
+# ---------------------------------------------------------------------------
+# Fig 4 — DSQN training reward (panel a) and episode length (panel b)
+# ---------------------------------------------------------------------------
+#
+# Anchors come from the digitized paper ``Smoothed`` series interpolated onto a
+# whole-episode grid (0..499). Our series is smoothed with a centred 20-episode
+# moving average on the same grid. Reward gates are scale-free (progress,
+# timing milestones, Pearson r, relative gain) because Eq. (7) leaves δ, τ and
+# the normalization of d unstated; the one absolute-scale check
+# (``reward_scale_raw_d``) is tier 2 / logged only.
+#
+# Paper reference values quoted in comments below are what
+# ``fig4_paper_reference()`` computes from the digitization (oct 3 2026).
 
-    x = np.arange(n, dtype=float)
-    late_r = window_mean(x, rewards, lo=late_lo)
-    first50_r = window_mean(x, rewards, hi=min(50.0, float(n - 1)))
+FIG4_EPISODES = 500  # paper Fig 4 x-axis: 500 training episodes
+FIG4_SMOOTH = 20  # centred moving-average window (episodes) for our curves
+FIG4_START_WINDOW = (0, 50)  # "start" level window; paper len 24.91, reward −487.5k
+FIG4_PLATEAU_START = 150  # plateau / late window start; paper progress ≥0.96 (reward) from here
+FIG4_LATE_LEVEL_LO = 350  # second late window; paper len 8.19 over ep 350–500
+FIG4_PEARSON_EARLY_HI = 200  # transition-focused Pearson window (ep 0–200)
 
-    paper_r = load_curves("fig4_reward")
-    prx, pry = _pick_series(paper_r, "Smoothed", "Raw")
-    p_late_r = window_mean(prx, pry, lo=late_lo)
-    p_first50_r = window_mean(prx, pry, hi=50.0)
-
-    # Ship dig gate: direction only. Magnitude / late-early ratio vs paper assume
-    # the paper's negative-million reward band; locked progress shaping yields
-    # positive rewards, so those checks are diagnostic (logged, not required).
-    gates = {
-        "reward_improves_like_paper": bool(
-            late_r > first50_r and p_late_r > p_first50_r
-        ),
-    }
-    diagnostics = {
-        "early_reward_mag_near_paper": rel_close(
-            abs(first50_r), abs(p_first50_r), tol=rel_tol
-        ),
-        "late_reward_ratio_near_paper": ratio_close(
-            late_r, first50_r, p_late_r, p_first50_r, tol=ratio_tol
-        ),
-    }
-    shape_r = pearson_on_ref_x(prx, pry, x, rewards)
-
-    pack = _gate_pack(
-        gates,
-        {
-            "early_reward": first50_r,
-            "late_reward": late_r,
-            "paper_early_reward": p_first50_r,
-            "paper_late_reward": p_late_r,
-            "pearson_reward": shape_r,
-            "early_reward_mag_near_paper": diagnostics["early_reward_mag_near_paper"],
-            "late_reward_ratio_near_paper": diagnostics["late_reward_ratio_near_paper"],
-        },
-        paper_ref={
-            "reward": str(curves_path("fig4_reward")),
-            "early_hi": early_hi,
-            "late_lo": late_lo,
-        },
-        notes=[
-            "Pearson r is diagnostic only; seeds change wiggles.",
-            "early_reward_mag_near_paper and late_reward_ratio_near_paper are "
-            "diagnostic under positive reward shaping (paper band is negative-million).",
-        ],
-    )
-    pack["gates"].update(diagnostics)
-    return pack
-
-
-def fig4_length_gates(
-    episode_lengths: list[int] | np.ndarray,
-    *,
-    max_episode_steps: int = 25,
-    late_lo: float = 350.0,
-    rel_tol: float = DEFAULT_REL_TOL,
-) -> dict[str, Any]:
-    """Fig 4 panel (b) episode length vs digitized paper training curve."""
-    lengths = np.asarray(episode_lengths, dtype=float)
-    n = int(lengths.size)
-    if n < 10:
-        return _gate_pack(
-            {"enough_episodes": False},
-            {"n_episodes": n},
-            paper_ref={"length": str(curves_path("fig4_length")), "late_lo": late_lo},
-        )
-
-    x = np.arange(n, dtype=float)
-    early_len = window_mean(x, lengths, hi=75.0)
-    late_len = window_mean(x, lengths, lo=late_lo)
-
-    paper_l = load_curves("fig4_length")
-    plx, ply = _pick_series(paper_l, "Smoothed", "Raw")
-    p_early_len = window_mean(plx, ply, hi=75.0)
-    p_late_len = window_mean(plx, ply, lo=late_lo)
-
-    gates = {
-        "length_decreases_like_paper": bool(late_len < early_len and p_late_len < p_early_len),
-        "late_length_near_paper": rel_close(late_len, p_late_len, tol=rel_tol),
-        "early_near_max_length": float(np.median(lengths[: min(50, n)])) >= max_episode_steps - 2,
-    }
-    shape_l = pearson_on_ref_x(plx, ply, x, lengths.astype(float))
-
-    return _gate_pack(
-        gates,
-        {
-            "early_length": early_len,
-            "late_length": late_len,
-            "paper_early_length": p_early_len,
-            "paper_late_length": p_late_len,
-            "pearson_length": shape_l,
-        },
-        paper_ref={
-            "length": str(curves_path("fig4_length")),
-            "late_lo": late_lo,
-        },
-        notes=["Pearson r is diagnostic only; seeds change wiggles."],
-    )
-
-
-# Fig 4 training-curve timing (explore wiggle → mid glide → post-100 plateau).
-FIG4_TIMING_SMOOTH = 20
-FIG4_MID_GLIDE = (50.0, 100.0)
-FIG4_BY_100 = (80.0, 100.0)
-FIG4_EARLY_SMOOTHED_MIN = 23.0
-FIG4_REWARD_BY_100_FLOOR = -2.0e5
-FIG4_POST_PLATEAU_LEVEL = (100.0, 150.0)
-FIG4_POST_PLATEAU_SLOPE = (100.0, 250.0)
-FIG4_POST_PLATEAU_RANGE = (100.0, 200.0)
-FIG4_REWARD_PLATEAU_LEVEL = (175.0, 325.0)
-FIG4_REWARD_PLATEAU_RANGE = (100.0, 250.0)
-FIG4_REWARD_PLATEAU_SLOPE = (100.0, 450.0)
-FIG4_TIMING_REL_TOL = 0.35
-FIG4_LATE_LEVEL = (350.0, 500.0)
-FIG4_LATE_SLOPE = (350.0, 490.0)
-FIG4_LATE_LENGTH_LEVEL_MAX = 14.0
+# Length starts at the 25-step horizon: paper smoothed ep 0–50 = 24.9 of 25.
+FIG4_HORIZON_SLACK = 2.0
+# 50%-progress milestone window. Paper t50: length ep 76, reward ep 71. Early side:
+# paper t50 − 15 (a 15-ep shift of the paper curve keeps Pearson r ≥ 0.94).
+# Late side: the paper text puts the exploration→exploitation transition at ~ep 100.
+FIG4_T50_EARLY_SLACK = 15
+FIG4_T50_LATEST = 100
+# 90%-progress milestone: paper t90 length ep 89, reward ep 86; allow paper + 25.
+FIG4_T90_LATE_SLACK = 25
+# Pearson r vs the paper smoothed curve. The paper against itself shifted 20 ep
+# gives r(0–200) = 0.90 (length) / 0.93 (reward) and r(0–500) = 0.935 / 0.947.
+FIG4_PEARSON_0_200_MIN = 0.90
+FIG4_PEARSON_0_500_MIN = 0.93
+# Late length level and late/early length ratio: ±25 % of the paper value
+# (paper len ep 150–500 = 8.57, ep 350–500 = 8.19, ratio 0.344; raw band 7.1–11.5).
+FIG4_LEVEL_REL_TOL = 0.25
+# Reward relative gain (R̄150–500 − R̄0–50) / |R̄0–50|: paper 0.974.
+FIG4_REWARD_GAIN_MIN = 0.85
+# Lowest smoothed progress over ep 150–500: paper 0.96 (reward) / 0.92 (length).
+FIG4_PLATEAU_HOLD_MIN = 0.80
+# Timeouts (length = horizon) after ep 150: paper 0 — raw upper edge peaks at 23.3.
+FIG4_LATE_TIMEOUT_MAX = 0.05
+# Late smoothed-length slope ep 350–490: paper −0.007 / episode.
+FIG4_LATE_SLOPE_WINDOW = (350, 490)
 FIG4_LATE_LENGTH_SLOPE_MAX = 0.02
-FIG4_LATE_TIMEOUT_MAX = 0.25
+# Tier 2: first-50 reward vs paper −487.5k, meaningful only if d = (αβ − θ)² unnormalized.
+FIG4_SCALE_RAW_D_REL_TOL = 0.35
+
+# Early abort (doomed-run check only): progress over ep 120–150 toward the paper's
+# late level, scale-free. Paper: length 0.93, reward 0.95 in that window.
+FIG4_ABORT_WINDOW = (120, 150)
+FIG4_ABORT_EPISODE = FIG4_ABORT_WINDOW[1]
+FIG4_ABORT_PROGRESS_MIN = 0.5
+
+# Gate keys, ordered by importance. ``shape`` = transition timing / ep 0–200 shape
+# (progress milestones still normalize by the run's own ep 150–500 level);
+# ``full`` (ship ``pass``) = all required; ``tier2`` = logged only.
+FIG4_LENGTH_SHAPE_KEYS: tuple[str, ...] = (
+    "length_t50_timing",
+    "length_pearson_0_200",
+    "length_start_at_horizon",
+)
+FIG4_LENGTH_REQUIRED_KEYS: tuple[str, ...] = (
+    "length_late_level",
+    *FIG4_LENGTH_SHAPE_KEYS,
+    "length_pearson_0_500",
+    "length_ratio",
+    "length_late_plateau_hold",
+    "late_timeouts",
+    "late_length_no_regression",
+)
+FIG4_REWARD_SHAPE_KEYS: tuple[str, ...] = (
+    "reward_t50_timing",
+    "reward_pearson_0_200",
+)
+FIG4_REWARD_REQUIRED_KEYS: tuple[str, ...] = (
+    *FIG4_REWARD_SHAPE_KEYS,
+    "reward_pearson_0_500",
+    "reward_relative_gain",
+    "reward_late_plateau_hold",
+)
+FIG4_REWARD_TIER2_KEYS: tuple[str, ...] = ("reward_leads_length", "reward_scale_raw_d")
+FIG4_LENGTH_TIER2_KEYS: tuple[str, ...] = ()
+
+FIG4_SHAPE_KEYS: dict[str, tuple[str, ...]] = {
+    "reward": FIG4_REWARD_SHAPE_KEYS,
+    "length": FIG4_LENGTH_SHAPE_KEYS,
+}
+FIG4_REQUIRED_KEYS: dict[str, tuple[str, ...]] = {
+    "reward": FIG4_REWARD_REQUIRED_KEYS,
+    "length": FIG4_LENGTH_REQUIRED_KEYS,
+}
+FIG4_TIER2_KEYS: dict[str, tuple[str, ...]] = {
+    "reward": FIG4_REWARD_TIER2_KEYS,
+    "length": FIG4_LENGTH_TIER2_KEYS,
+}
 
 
-def _episode_smoothed(
-    y: np.ndarray | list[float],
-    *,
-    smooth_window: int = FIG4_TIMING_SMOOTH,
-) -> tuple[np.ndarray, np.ndarray]:
-    """Episode-indexed moving average (matches panel ``smooth_window`` default)."""
+class Fig4GateKeyError(KeyError):
+    """A required Fig 4 gate key was not computed (never treat a missing key as a fail)."""
+
+
+def require_gate_keys(gates: dict[str, Any], keys: tuple[str, ...], *, group: str) -> None:
+    """Raise if any ``keys`` is absent from ``gates`` or not a bool."""
+    missing = [k for k in keys if not isinstance(gates.get(k), bool)]
+    if missing:
+        msg = f"Fig 4 {group} gates not computed: {missing}"
+        raise Fig4GateKeyError(msg)
+
+
+def gate_group_pass(gates: dict[str, Any], keys: tuple[str, ...], *, group: str) -> bool:
+    """All ``keys`` true; raises :class:`Fig4GateKeyError` when a key is missing."""
+    require_gate_keys(gates, keys, group=group)
+    return all(bool(gates[k]) for k in keys)
+
+
+def centered_smooth(y: list[float] | np.ndarray, window: int = FIG4_SMOOTH) -> np.ndarray:
+    """Centred moving average (samples ``i − w//2 … i − w//2 + w − 1``), shrinking at the edges."""
     arr = np.asarray(y, dtype=float)
     n = int(arr.size)
-    if n < smooth_window:
-        return np.arange(n, dtype=float), arr
-    kernel = np.ones(smooth_window, dtype=float) / float(smooth_window)
-    sm = np.convolve(arr, kernel, mode="valid")
-    xs = np.arange(smooth_window - 1, n, dtype=float)
-    return xs, sm
+    if n == 0 or window <= 1:
+        return arr.copy()
+    half = int(window) // 2
+    csum = np.concatenate([[0.0], np.cumsum(arr)])
+    idx = np.arange(n)
+    lo = np.clip(idx - half, 0, n)
+    hi = np.clip(idx - half + int(window), 0, n)
+    return (csum[hi] - csum[lo]) / (hi - lo)
 
 
-def _median_in_window(xs: np.ndarray, ys: np.ndarray, lo: float, hi: float) -> float:
-    mask = (xs >= lo) & (xs < hi)
-    if not np.any(mask):
+def raw_outline_edges(stem: str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """Split a digitized ``Raw`` outline into its ``lower`` and ``upper`` edges.
+
+    Fig 4 ``Raw`` was traced as a closed outline of the noisy band: one pass out
+    to the right edge, then back. Sorting the points together (``load_refined``)
+    interleaves both edges, so split at the rightmost point and sort each pass.
+    """
+    payload = json.loads(curves_path(stem).read_text(encoding="utf-8"))
+    xy = payload["series"]["Raw"]["xy"]
+    x = np.asarray(xy["x"], dtype=float)
+    y = np.asarray(xy["y"], dtype=float)
+    k = int(np.argmax(x))
+    passes = []
+    for px, py in ((x[: k + 1], y[: k + 1]), (x[k:], y[k:])):
+        order = np.argsort(px, kind="mergesort")
+        passes.append((px[order], py[order]))
+    lower, upper = sorted(passes, key=lambda p: float(np.mean(p[1])))
+    return {"lower": lower, "upper": upper}
+
+
+def _on_grid(x: np.ndarray, y: np.ndarray, n: int) -> np.ndarray:
+    order = np.argsort(x, kind="mergesort")
+    return np.interp(np.arange(n, dtype=float), x[order], y[order])
+
+
+def _on_grid_traced(x: np.ndarray, y: np.ndarray, n: int) -> np.ndarray:
+    grid = _on_grid(x, y, n)
+    episodes = np.arange(n, dtype=float)
+    grid[(episodes < float(np.min(x))) | (episodes > float(np.max(x)))] = np.nan
+    return grid
+
+
+def _nanmean(seg: np.ndarray) -> float:
+    return float(np.nanmean(seg)) if np.any(np.isfinite(seg)) else float("nan")
+
+
+def _wmean(arr: np.ndarray, lo: int, hi: int | None = None) -> float:
+    seg = arr[lo : (arr.size if hi is None else min(hi, arr.size))]
+    return float(np.mean(seg)) if seg.size else float("nan")
+
+
+def _progress(smooth: np.ndarray, start: float, end: float) -> np.ndarray:
+    denom = end - start
+    if not (np.isfinite(start) and np.isfinite(end)) or abs(denom) <= 1e-9 * max(abs(start), 1.0):
+        return np.full(smooth.shape, np.nan)
+    return (smooth - start) / denom
+
+
+def _first_reach(progress: np.ndarray, level: float) -> int | None:
+    idx = np.flatnonzero(progress >= level)
+    return int(idx[0]) if idx.size else None
+
+
+def _pearson(a: np.ndarray, b: np.ndarray) -> float:
+    if a.size < 4 or a.size != b.size or np.std(a) < 1e-12 or np.std(b) < 1e-12:
         return float("nan")
-    return float(np.median(ys[mask]))
+    return float(np.corrcoef(a, b)[0, 1])
 
 
-def _ptp_in_window(xs: np.ndarray, ys: np.ndarray, lo: float, hi: float) -> float:
-    mask = (xs >= lo) & (xs < hi)
-    if not np.any(mask):
+def _slope(y: np.ndarray, lo: int, hi: int) -> float:
+    seg = y[lo : min(hi, y.size)]
+    if seg.size < 2:
         return float("nan")
-    return float(np.ptp(ys[mask]))
+    return float(np.polyfit(np.arange(lo, lo + seg.size, dtype=float), seg, 1)[0])
 
 
-def _slope_in_window(xs: np.ndarray, ys: np.ndarray, lo: float, hi: float) -> float:
-    mask = (xs >= lo) & (xs < hi)
-    if int(mask.sum()) < 2:
+def _curve_stats(raw: np.ndarray, smooth: np.ndarray) -> dict[str, Any]:
+    """Shared stats for our series and the paper grid (``raw`` = per-episode values)."""
+    s0, s1 = FIG4_START_WINDOW
+    start = _wmean(smooth, s0, s1)
+    end = _wmean(smooth, FIG4_PLATEAU_START)
+    prog = _progress(smooth, start, end)
+    late = prog[FIG4_PLATEAU_START:]
+    raw_start = _wmean(raw, s0, s1)
+    raw_late = _wmean(raw, FIG4_PLATEAU_START)
+    return {
+        "progress": prog,
+        "start_smoothed": start,
+        "end_smoothed": end,
+        "t10": _first_reach(prog, 0.10),
+        "t50": _first_reach(prog, 0.50),
+        "t90": _first_reach(prog, 0.90),
+        "plateau_min_progress": float(np.nanmin(late)) if late.size and np.any(np.isfinite(late)) else float("nan"),
+        "mean_0_50": raw_start,
+        "mean_150_end": raw_late,
+        "mean_350_end": _wmean(raw, FIG4_LATE_LEVEL_LO),
+        "late_ratio": raw_late / raw_start if abs(raw_start) > 1e-12 else float("nan"),
+        "relative_gain": (raw_late - raw_start) / abs(raw_start) if abs(raw_start) > 1e-12 else float("nan"),
+    }
+
+
+def _abort_progress(raw: np.ndarray, *, target_ratio: float) -> float:
+    """Progress over the abort window toward ``start × target_ratio`` (scale-free)."""
+    s0, s1 = FIG4_START_WINDOW
+    lo, hi = FIG4_ABORT_WINDOW
+    start = _wmean(raw, s0, s1)
+    window = _wmean(raw, lo, hi)
+    target = start * target_ratio
+    denom = target - start
+    if not (np.isfinite(start) and np.isfinite(window)) or abs(denom) <= 1e-9 * max(abs(start), 1.0):
         return float("nan")
-    return float(np.polyfit(xs[mask], ys[mask], 1)[0])
+    return float((window - start) / denom)
 
 
-def fig4_timing_shape_gates(
-    episode_lengths: list[int] | np.ndarray,
-    episode_rewards: list[float] | np.ndarray,
-    *,
-    smooth_window: int = FIG4_TIMING_SMOOTH,
-    rel_tol: float = FIG4_TIMING_REL_TOL,
-    max_episode_steps: int = 25,
-) -> dict[str, Any]:
-    """Mid glide (ep 50–100) and post-100 plateau vs digitized paper smoothed curves."""
-    lengths = np.asarray(episode_lengths, dtype=float)
-    rewards = np.asarray(episode_rewards, dtype=float)
-    n = int(lengths.size)
-    if n < 100:
-        return {
-            "length_gates": {
-                "length_early_smoothed_near_horizon": False,
-                "length_mid_glide_like_paper": False,
-                "length_by_100_near_paper": False,
-                "length_post100_plateau": False,
-                "late_length_no_regression": False,
-                "late_timeout_fraction": False,
-                "late_length_level": False,
-            },
-            "reward_gates": {
-                "reward_improves_by_100": False,
-                "reward_by_100_near_zero": False,
-                "reward_post100_plateau": False,
-            },
-            "metrics": {"n_episodes": n, "reason": "too_few_episodes_for_timing"},
+@functools.lru_cache(maxsize=1)
+def _fig4_paper_cached() -> dict[str, Any]:
+    n = FIG4_EPISODES
+    rx, ry = _pick_series(load_curves("fig4_reward"), "Smoothed")
+    lx, ly = _pick_series(load_curves("fig4_length"), "Smoothed")
+    rs = _on_grid(rx, ry, n)
+    ls = _on_grid(lx, ly, n)
+    ref: dict[str, Any] = {"reward_grid": rs, "length_grid": ls}
+    ref["reward"] = _curve_stats(rs, rs)
+    ref["length"] = _curve_stats(ls, ls)
+    ref["length"]["slope_350_490"] = _slope(ls, *FIG4_LATE_SLOPE_WINDOW)
+    ref["reward"]["abort_progress"] = _abort_progress(rs, target_ratio=ref["reward"]["late_ratio"])
+    ref["length"]["abort_progress"] = _abort_progress(ls, target_ratio=ref["length"]["late_ratio"])
+    band: dict[str, Any] = {}
+    for name, stem in (("reward", "fig4_reward"), ("length", "fig4_length")):
+        edges = raw_outline_edges(stem)
+        # NaN outside each edge's traced x-range (no flat extrapolation).
+        lo_g = _on_grid_traced(*edges["lower"], n)
+        hi_g = _on_grid_traced(*edges["upper"], n)
+        band[name] = {
+            f"{a}_{b}": [_nanmean(lo_g[a:b]), _nanmean(hi_g[a:b])]
+            for a, b in ((0, 50), (50, 100), (80, 100), (100, 150), (150, 500), (350, 500))
         }
+        band[name]["upper_max_150_500"] = float(np.nanmax(hi_g[FIG4_PLATEAU_START:]))
+    ref["raw_band"] = band
+    return ref
 
-    lx, ls = _episode_smoothed(lengths, smooth_window=smooth_window)
-    rx, rs = _episode_smoothed(rewards, smooth_window=smooth_window)
 
-    paper_l = load_curves("fig4_length")
-    plx, ply = _pick_series(paper_l, "Smoothed", "Raw")
-    paper_r = load_curves("fig4_reward")
-    prx, pry = _pick_series(paper_r, "Smoothed", "Raw")
+def fig4_paper_reference() -> dict[str, Any]:
+    """Digitized paper Fig 4 stats on a whole-episode grid (cached; arrays included)."""
+    return _fig4_paper_cached()
 
-    mid_lo, mid_hi = FIG4_MID_GLIDE
-    lvl_lo, lvl_hi = FIG4_POST_PLATEAU_LEVEL
-    slope_lo, slope_hi = FIG4_POST_PLATEAU_SLOPE
-    range_lo, range_hi = FIG4_POST_PLATEAU_RANGE
 
-    len_early_0_50 = _median_in_window(lx, ls, 0.0, 50.0)
-    len_mid_50_100 = _median_in_window(lx, ls, mid_lo, mid_hi)
-    by100_lo, by100_hi = FIG4_BY_100
-    len_80_100 = _median_in_window(lx, ls, by100_lo, by100_hi)
-    len_lvl_100_150 = _median_in_window(lx, ls, lvl_lo, lvl_hi)
-    len_slope_100_250 = _slope_in_window(lx, ls, slope_lo, slope_hi)
-    len_ptp_100_200 = _ptp_in_window(lx, ls, range_lo, range_hi)
+def _jsonable_stats(stats: dict[str, Any]) -> dict[str, Any]:
+    return {k: v for k, v in stats.items() if not isinstance(v, np.ndarray)}
 
-    p_len_early = _median_in_window(plx, ply, 0.0, 50.0)
-    p_len_mid = _median_in_window(plx, ply, mid_lo, mid_hi)
-    p_len_80_100 = _median_in_window(plx, ply, by100_lo, by100_hi)
-    p_len_lvl = _median_in_window(plx, ply, lvl_lo, lvl_hi)
 
-    length_early_smoothed = bool(len_early_0_50 >= FIG4_EARLY_SMOOTHED_MIN)
-    length_mid_glide = bool(
-        len_mid_50_100 < len_early_0_50 - 1.5
-        and rel_close(len_mid_50_100, p_len_mid, tol=rel_tol)
-    )
-    length_by_100 = bool(rel_close(len_80_100, p_len_80_100, tol=rel_tol))
-    length_post100 = bool(
-        abs(len_slope_100_250) <= 0.055
-        and len_ptp_100_200 <= 4.5
-        and rel_close(len_lvl_100_150, p_len_lvl, tol=rel_tol)
-    )
-
-    rw_lo, rw_hi = FIG4_REWARD_PLATEAU_LEVEL
-    rw_rng_lo, rw_rng_hi = FIG4_REWARD_PLATEAU_RANGE
-    rw_slope_lo, rw_slope_hi = FIG4_REWARD_PLATEAU_SLOPE
-    rew_med_late = _median_in_window(rx, rs, rw_lo, rw_hi)
-    rew_0_50 = _median_in_window(rx, rs, 0.0, 50.0)
-    rew_80_100 = _median_in_window(rx, rs, by100_lo, by100_hi)
-    rew_ptp_100_250 = _ptp_in_window(rx, rs, rw_rng_lo, rw_rng_hi)
-    rew_slope_100_450 = _slope_in_window(rx, rs, rw_slope_lo, rw_slope_hi)
-    scale = max(abs(rew_med_late), 1.0e5)
-    reward_post100 = bool(
-        rew_ptp_100_250 <= max(0.30 * scale, 5.0e4)
-        and abs(rew_slope_100_450) <= max(0.00015 * scale, 150.0)
-    )
-    reward_improves_by_100 = bool(rew_80_100 > rew_0_50)
-    reward_by_100_near_zero = bool(rew_80_100 > FIG4_REWARD_BY_100_FLOOR)
-
-    late_lo, late_hi = FIG4_LATE_LEVEL
-    slope_lo, slope_hi = FIG4_LATE_SLOPE
-    late_len_mean = _median_in_window(lx, ls, late_lo, late_hi)
-    late_len_slope = _slope_in_window(lx, ls, slope_lo, slope_hi)
-    late_start = int(late_lo)
-    late_end = min(int(late_hi), n)
-    raw_late = lengths[late_start:late_end]
-    late_timeout_rate = (
-        float(np.mean(raw_late >= float(max_episode_steps) - 0.5)) if raw_late.size else 1.0
-    )
-    late_length_level = bool(
-        np.isfinite(late_len_mean) and late_len_mean <= FIG4_LATE_LENGTH_LEVEL_MAX
-    )
-    late_length_no_regression = bool(
-        np.isfinite(late_len_slope) and late_len_slope <= FIG4_LATE_LENGTH_SLOPE_MAX
-    )
-    late_timeout_fraction = bool(late_timeout_rate <= FIG4_LATE_TIMEOUT_MAX)
-
+def fig4_paper_summary() -> dict[str, Any]:
+    """JSON-safe paper anchors for manifests."""
+    ref = fig4_paper_reference()
     return {
-        "length_gates": {
-            "length_early_smoothed_near_horizon": length_early_smoothed,
-            "length_mid_glide_like_paper": length_mid_glide,
-            "length_by_100_near_paper": length_by_100,
-            "length_post100_plateau": length_post100,
-            "late_length_no_regression": late_length_no_regression,
-            "late_timeout_fraction": late_timeout_fraction,
-            "late_length_level": late_length_level,
-        },
-        "reward_gates": {
-            "reward_improves_by_100": reward_improves_by_100,
-            "reward_by_100_near_zero": reward_by_100_near_zero,
-            "reward_post100_plateau": reward_post100,
-        },
-        "metrics": {
-            "len_early_0_50": len_early_0_50,
-            "len_mid_50_100": len_mid_50_100,
-            "len_80_100": len_80_100,
-            "len_lvl_100_150": len_lvl_100_150,
-            "len_slope_100_250": len_slope_100_250,
-            "len_ptp_100_200": len_ptp_100_200,
-            "paper_len_early_0_50": p_len_early,
-            "paper_len_mid_50_100": p_len_mid,
-            "paper_len_80_100": p_len_80_100,
-            "paper_len_lvl_100_150": p_len_lvl,
-            "rew_0_50": rew_0_50,
-            "rew_80_100": rew_80_100,
-            "rew_med_175_325": rew_med_late,
-            "rew_ptp_100_250": rew_ptp_100_250,
-            "rew_slope_100_450": rew_slope_100_450,
-            "late_len_mean_350_500": late_len_mean,
-            "late_len_slope_350_490": late_len_slope,
-            "late_timeout_rate_350_500": late_timeout_rate,
-        },
+        "reward_curves": str(curves_path("fig4_reward")),
+        "length_curves": str(curves_path("fig4_length")),
+        "grid_episodes": FIG4_EPISODES,
+        "reward": _jsonable_stats(ref["reward"]),
+        "length": _jsonable_stats(ref["length"]),
+        "raw_band": ref["raw_band"],
     }
 
 
-def fig4_training_gates(
+def _t_milestone_ok(ours: dict[str, Any], paper: dict[str, Any], *, direction_ok: bool) -> bool:
+    t50, t90 = ours["t50"], ours["t90"]
+    p50, p90 = paper["t50"], paper["t90"]
+    if not direction_ok or t50 is None or t90 is None or p50 is None or p90 is None:
+        return False
+    return bool(p50 - FIG4_T50_EARLY_SLACK <= t50 <= FIG4_T50_LATEST and t90 <= p90 + FIG4_T90_LATE_SLACK)
+
+
+def _finite_ge(value: float, floor: float) -> bool:
+    return bool(np.isfinite(value) and value >= floor)
+
+
+def fig4_gates(
     episode_rewards: list[float] | np.ndarray,
     episode_lengths: list[int] | np.ndarray,
     *,
     max_episode_steps: int = 25,
-    early_hi: float = 50.0,
-    late_lo: float = 350.0,
-    ratio_tol: float = DEFAULT_RATIO_TOL,
-    rel_tol: float = DEFAULT_REL_TOL,
+    smooth_window: int = FIG4_SMOOTH,
 ) -> dict[str, Any]:
-    """Fig 4 reward + length vs digitized paper training curves (grouped)."""
-    reward = fig4_reward_gates(
-        episode_rewards,
-        early_hi=early_hi,
-        late_lo=late_lo,
-        ratio_tol=ratio_tol,
-        rel_tol=rel_tol,
+    """Fig 4 reward + length gates vs the digitized paper curves.
+
+    Returns ``{"reward": {...}, "length": {...}, "shape_pass", "pass", ...}``.
+    Each group holds its required gate bools at top level, ``tier2`` (logged only)
+    and ``metrics``. Every required key is always computed — short series fail
+    with ``False`` rather than dropping keys.
+    """
+    rewards = np.asarray(episode_rewards, dtype=float)
+    lengths = np.asarray(episode_lengths, dtype=float)
+    n = int(min(rewards.size, lengths.size))
+    rewards = rewards[:n]
+    lengths = lengths[:n]
+    ref = fig4_paper_reference()
+    p_r, p_l = ref["reward"], ref["length"]
+
+    rs = centered_smooth(rewards, smooth_window)
+    ls = centered_smooth(lengths, smooth_window)
+    our_r = _curve_stats(rewards, rs)
+    our_l = _curve_stats(lengths, ls)
+
+    def pearson(ours_s: np.ndarray, paper_s: np.ndarray, hi: int) -> float:
+        if n < hi:
+            return float("nan")
+        return _pearson(ours_s[:hi], paper_s[:hi])
+
+    r_len_200 = pearson(ls, ref["length_grid"], FIG4_PEARSON_EARLY_HI)
+    r_len_500 = pearson(ls, ref["length_grid"], FIG4_EPISODES)
+    r_rew_200 = pearson(rs, ref["reward_grid"], FIG4_PEARSON_EARLY_HI)
+    r_rew_500 = pearson(rs, ref["reward_grid"], FIG4_EPISODES)
+
+    late_raw = lengths[FIG4_PLATEAU_START:]
+    timeout_rate = (
+        float(np.mean(late_raw >= float(max_episode_steps) - 0.5)) if late_raw.size else float("nan")
     )
-    length = fig4_length_gates(
-        episode_lengths,
-        max_episode_steps=max_episode_steps,
-        late_lo=late_lo,
-        rel_tol=rel_tol,
+    len_slope = _slope(ls, *FIG4_LATE_SLOPE_WINDOW)
+    start_median = float(np.median(lengths[: FIG4_START_WINDOW[1]])) if n else float("nan")
+
+    length_gates = {
+        "length_late_level": bool(
+            rel_close(our_l["mean_150_end"], p_l["mean_150_end"], tol=FIG4_LEVEL_REL_TOL)
+            and rel_close(our_l["mean_350_end"], p_l["mean_350_end"], tol=FIG4_LEVEL_REL_TOL)
+        ),
+        "length_t50_timing": _t_milestone_ok(
+            our_l, p_l, direction_ok=bool(our_l["end_smoothed"] < our_l["start_smoothed"])
+        ),
+        "length_pearson_0_200": _finite_ge(r_len_200, FIG4_PEARSON_0_200_MIN),
+        "length_start_at_horizon": _finite_ge(start_median, float(max_episode_steps) - FIG4_HORIZON_SLACK),
+        "length_pearson_0_500": _finite_ge(r_len_500, FIG4_PEARSON_0_500_MIN),
+        "length_ratio": rel_close(our_l["late_ratio"], p_l["late_ratio"], tol=FIG4_LEVEL_REL_TOL),
+        "length_late_plateau_hold": _finite_ge(our_l["plateau_min_progress"], FIG4_PLATEAU_HOLD_MIN),
+        "late_timeouts": bool(np.isfinite(timeout_rate) and timeout_rate <= FIG4_LATE_TIMEOUT_MAX),
+        "late_length_no_regression": bool(np.isfinite(len_slope) and len_slope <= FIG4_LATE_LENGTH_SLOPE_MAX),
+    }
+    reward_gates = {
+        "reward_t50_timing": _t_milestone_ok(
+            our_r, p_r, direction_ok=bool(our_r["end_smoothed"] > our_r["start_smoothed"])
+        ),
+        "reward_pearson_0_200": _finite_ge(r_rew_200, FIG4_PEARSON_0_200_MIN),
+        "reward_pearson_0_500": _finite_ge(r_rew_500, FIG4_PEARSON_0_500_MIN),
+        "reward_relative_gain": bool(
+            np.isfinite(our_r["mean_0_50"])
+            and our_r["mean_0_50"] < 0.0
+            and _finite_ge(our_r["relative_gain"], FIG4_REWARD_GAIN_MIN)
+        ),
+        "reward_late_plateau_hold": _finite_ge(our_r["plateau_min_progress"], FIG4_PLATEAU_HOLD_MIN),
+    }
+    reward_tier2 = {
+        "reward_leads_length": bool(
+            our_r["t10"] is not None and our_l["t10"] is not None and our_r["t10"] < our_l["t10"]
+        ),
+        "reward_scale_raw_d": rel_close(our_r["mean_0_50"], p_r["mean_0_50"], tol=FIG4_SCALE_RAW_D_REL_TOL),
+    }
+    length_tier2: dict[str, bool] = {}
+
+    reward_metrics = {
+        **_jsonable_stats(our_r),
+        "pearson_0_200": r_rew_200,
+        "pearson_0_500": r_rew_500,
+    }
+    length_metrics = {
+        **_jsonable_stats(our_l),
+        "pearson_0_200": r_len_200,
+        "pearson_0_500": r_len_500,
+        "start_median_0_50": start_median,
+        "timeout_rate_150_end": timeout_rate,
+        "slope_350_490": len_slope,
+    }
+
+    out: dict[str, Any] = {"n_episodes": n}
+    for name, gates, tier2, metrics in (
+        ("reward", reward_gates, reward_tier2, reward_metrics),
+        ("length", length_gates, length_tier2, length_metrics),
+    ):
+        require_gate_keys(gates, FIG4_REQUIRED_KEYS[name], group=name)
+        require_gate_keys(tier2, FIG4_TIER2_KEYS[name], group=f"{name} tier2")
+        group = dict(gates)
+        group["shape_pass"] = gate_group_pass(gates, FIG4_SHAPE_KEYS[name], group=name)
+        group["pass"] = gate_group_pass(gates, FIG4_REQUIRED_KEYS[name], group=name)
+        group["failed"] = [k for k in FIG4_REQUIRED_KEYS[name] if not gates[k]]
+        group["tier2"] = tier2
+        group["metrics"] = metrics
+        out[name] = group
+    out["shape_pass"] = bool(out["reward"]["shape_pass"] and out["length"]["shape_pass"])
+    out["pass"] = bool(out["reward"]["pass"] and out["length"]["pass"])
+    out["required_keys"] = {k: list(v) for k, v in FIG4_REQUIRED_KEYS.items()}
+    out["shape_keys"] = {k: list(v) for k, v in FIG4_SHAPE_KEYS.items()}
+    out["tier2_keys"] = {k: list(v) for k, v in FIG4_TIER2_KEYS.items()}
+    out["smooth_window"] = int(smooth_window)
+    out["paper_ref"] = fig4_paper_summary()
+    return out
+
+
+def fig4_abort_check(
+    episode_rewards: list[float] | np.ndarray,
+    episode_lengths: list[int] | np.ndarray,
+) -> dict[str, Any]:
+    """Doomed-run check for the early abort (only this — never the full gate set).
+
+    Once ep 120–150 exist: abort when progress from the ep 0–50 level toward the
+    paper's late level (length ratio 0.344, reward gain 0.974 — scale-free) is
+    below ``FIG4_ABORT_PROGRESS_MIN`` for length or reward. The paper is at ~0.93
+    (length) / ~0.95 (reward) in that window. A non-finite reward progress (e.g.
+    non-negative early reward) is reported but does not abort.
+    """
+    rewards = np.asarray(episode_rewards, dtype=float)
+    lengths = np.asarray(episode_lengths, dtype=float)
+    n = int(min(rewards.size, lengths.size))
+    lo, hi = FIG4_ABORT_WINDOW
+    probe: dict[str, Any] = {
+        "completed_episodes": n,
+        "abort_window": [lo, hi],
+        "decidable": n >= hi,
+        "abort": False,
+        "failed": [],
+    }
+    if not probe["decidable"]:
+        return probe
+    ref = fig4_paper_reference()
+    p_len = _abort_progress(lengths, target_ratio=ref["length"]["late_ratio"])
+    p_rew = _abort_progress(rewards, target_ratio=ref["reward"]["late_ratio"])
+    failed: list[str] = []
+    if not _finite_ge(p_len, FIG4_ABORT_PROGRESS_MIN):
+        failed.append("abort_length_progress_120_150")
+    if np.isfinite(p_rew) and p_rew < FIG4_ABORT_PROGRESS_MIN:
+        failed.append("abort_reward_progress_120_150")
+    probe.update(
+        {
+            "length_progress_120_150": p_len,
+            "reward_progress_120_150": p_rew,
+            "paper_length_progress_120_150": ref["length"]["abort_progress"],
+            "paper_reward_progress_120_150": ref["reward"]["abort_progress"],
+            "progress_min": FIG4_ABORT_PROGRESS_MIN,
+            "failed": failed,
+            "abort": bool(failed),
+        }
     )
-    reward_gates = {f"paper_{k}": v for k, v in reward["gates"].items()}
-    length_gates = {f"paper_{k}": v for k, v in length["gates"].items()}
-    metrics = {
-        **reward.get("metrics", {}),
-        **length.get("metrics", {}),
-    }
-    return {
-        "reward": reward,
-        "length": length,
-        "pass": bool(reward["pass"] and length["pass"]),
-        "gates": {**reward_gates, **length_gates},
-        "metrics": metrics,
-        "paper_ref": {
-            "reward": str(curves_path("fig4_reward")),
-            "length": str(curves_path("fig4_length")),
-            "early_hi": early_hi,
-            "late_lo": late_lo,
-        },
-        "notes": list(reward.get("notes", [])),
-    }
+    return probe
 
 
 def fig5_spikes_energy_gates(
