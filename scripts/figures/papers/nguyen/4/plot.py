@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Nguyen et al.  Figure 4 — training episode rewards and lengths.
 
-Paper §IV / Fig. 4: **500** DSQN training episodes in the paper; this panel
-currently scores **shape_pass** on the first 100 and **pass** (ship) through ep 500.
+Paper §IV / Fig. 4: **500** DSQN training episodes in the paper. Gates
+(``nguyen_gates.fig4_gates``) are scale-free and anchored to the digitized
+curves: **shape_pass** = transition timing and ep 0–200 shape, **pass** (ship) =
+all required gates through ep 500.
 Default train horizon is **500** episodes (paper figure length).
 
 Run:
@@ -43,11 +45,13 @@ _DIG = Path(__file__).resolve().parents[4] / "digitization"
 if str(_DIG) not in sys.path:
     sys.path.insert(0, str(_DIG))
 from nguyen_gates import (  # noqa: E402
-    attach_digitization,
-    fig4_length_gates,
-    fig4_reward_gates,
-    fig4_timing_shape_gates,
-    FIG4_TIMING_SMOOTH,
+    FIG4_ABORT_EPISODE,
+    FIG4_REQUIRED_KEYS,
+    FIG4_SMOOTH,
+    FIG4_TIER2_KEYS,
+    centered_smooth,
+    fig4_abort_check,
+    fig4_gates,
 )
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
@@ -91,13 +95,7 @@ OUT_STEM = "training_reward_length"
 
 DEFAULT_SEED = 0
 DEFAULT_EPISODES = 500  # paper Fig 4 horizon; shape_pass uses first 100
-SMOOTH_WINDOW = 20
-EARLY_END = 100
-LATE_START = 150
-# Paper Fig. 4 panel (a): rewards in millions, converging toward 0 from below.
-PAPER_REWARD_EARLY_MAG = 5e4
-PAPER_REWARD_LATE_FLOOR = -2e5
-PAPER_LENGTH_LATE_MAX = 12.0
+SMOOTH_WINDOW = FIG4_SMOOTH  # centred moving average, same as the gates
 
 STYLE = {
     "figure.facecolor": "white",
@@ -135,17 +133,8 @@ def _linked_png(path: Path) -> Path:
 
 
 def moving_average(y: np.ndarray, window: int) -> np.ndarray:
-    """Centered moving average; edges use available samples."""
-    if y.size == 0:
-        return y.copy()
-    window = max(1, int(window))
-    if window == 1 or y.size == 1:
-        return y.astype(float, copy=True)
-    kernel = np.ones(window, dtype=float) / float(window)
-    pad = window // 2
-    padded = np.pad(y.astype(float), (pad, pad), mode="edge")
-    smoothed = np.convolve(padded, kernel, mode="valid")
-    return smoothed[: y.size]
+    """Centred moving average, shrinking at the edges (same smoother as the gates)."""
+    return centered_smooth(np.asarray(y, dtype=float), window)
 
 
 def parse_config_overrides(items: list[str] | None) -> dict[str, Any]:
@@ -181,38 +170,25 @@ def config_record(cfg: SNNConfig) -> dict[str, Any]:
     }
 
 
-# Shape gates read episodes 0–100 through a centered smoothing window, so they are final
-# once the series runs a full window past episode 100.
-SHAPE_DECIDABLE_AFTER = 100 + 2 * FIG4_TIMING_SMOOTH
-
-
 class EarlyAbort(Exception):
-    """Raised from the checkpoint probe when a decidable shape gate has already failed."""
+    """Raised from the checkpoint probe when the doomed-run check fails."""
 
-    def __init__(self, completed: int, failed: list[str]) -> None:
-        super().__init__(f"shape gates failed at episode {completed}: {failed}")
+    def __init__(self, completed: int, failed: list[str], probe: dict[str, Any] | None = None) -> None:
+        super().__init__(f"doomed-run check failed at episode {completed}: {failed}")
         self.completed = completed
         self.failed = failed
+        self.probe = probe
 
 
-def shape_probe(completed: int, result: TrainResult) -> dict[str, Any]:
-    """Evaluate the shape gates that a partial series can already decide."""
-    probe: dict[str, Any] = {
-        "completed_episodes": completed,
-        "decidable": completed >= SHAPE_DECIDABLE_AFTER,
-    }
-    if not probe["decidable"]:
-        return probe
-    partial = {
-        "episode_rewards": list(result.episode_rewards),
-        "episode_lengths": list(result.episode_lengths),
-        "num_episodes": completed,
-    }
-    gates = evaluate_gates(partial, max_episode_steps=int(result.config.max_episode_steps))
-    failed = [k for k in REWARD_SHAPE_KEYS if not gates["reward"].get(k)]
-    failed += [k for k in LENGTH_SHAPE_KEYS if not gates["length"].get(k)]
-    probe["shape_failed"] = failed
-    probe["shape_pass"] = not failed
+def abort_probe(completed: int, result: TrainResult) -> dict[str, Any]:
+    """Doomed-run check on the partial series (``nguyen_gates.fig4_abort_check``).
+
+    Decidable from episode 150: abort only when length or reward progress over
+    ep 120–150 (toward the paper's late level, scale-free) is below 0.5. The
+    full gate set is never used to abort.
+    """
+    probe = fig4_abort_check(result.episode_rewards[:completed], result.episode_lengths[:completed])
+    probe["completed_episodes"] = completed
     return probe
 
 
@@ -385,171 +361,32 @@ def train_series(
         env.close()
 
 
-# Required: first 100 episodes only (how far / how fast by ep 100).
-# Late and post-100 keys stay logged as diagnostics.
-REWARD_LEVEL_TIMING_KEYS = (
-    "reward_scale_paper",  # early |mean| — started far from the plateau
-    "reward_improves_by_100",  # 80–100 better than 0–50
-    "reward_by_100_near_zero",  # 80–100 median toward ~0
-)
-REWARD_LEVEL_FULL_KEYS = (
-    *REWARD_LEVEL_TIMING_KEYS,
-    "reward_post100_plateau",
-    "reward_late_plateau",
-)
-LENGTH_LEVEL_TIMING_KEYS = (
-    "early_near_max_length",  # raw median first 50 at horizon
-    "length_early_smoothed_near_horizon",  # smoothed 0–50 still ~25
-    "length_mid_glide_like_paper",  # drop during ep 50–100
-    "length_by_100_near_paper",  # 80–100 near digitized ~10
-)
-LENGTH_LEVEL_FULL_KEYS = (
-    *LENGTH_LEVEL_TIMING_KEYS,
-    "length_post100_plateau",
-    "length_late_plateau",
-    "late_length_no_regression",
-    "late_timeout_fraction",
-    "late_timeout_fraction_300_500",
-    "late_length_level",
-)
-REWARD_HEURISTIC_KEYS = REWARD_LEVEL_FULL_KEYS
-REWARD_SHAPE_KEYS = REWARD_LEVEL_TIMING_KEYS
-REWARD_SHAPE_PAPER_KEYS: tuple[str, ...] = ()
-REWARD_FULL_KEYS = REWARD_LEVEL_FULL_KEYS
-LENGTH_HEURISTIC_KEYS = (
-    "early_near_max_length",
-    "length_early_smoothed_near_horizon",
-    "length_mid_glide_like_paper",
-    "length_by_100_near_paper",
-    "length_post100_plateau",
-    "length_late_plateau",
-    "late_length_no_regression",
-    "late_timeout_fraction",
-    "late_timeout_fraction_300_500",
-    "late_length_level",
-)
-LENGTH_SHAPE_KEYS = LENGTH_LEVEL_TIMING_KEYS
-LENGTH_SHAPE_PAPER_KEYS: tuple[str, ...] = ()
-LENGTH_FULL_KEYS = LENGTH_LEVEL_FULL_KEYS
-
-
-def _group_pass(group: dict[str, Any], keys: tuple[str, ...]) -> bool:
-    return all(bool(group.get(key)) for key in keys)
-
-
 def evaluate_gates(
     series: dict[str, Any],
     *,
     max_episode_steps: int,
 ) -> dict[str, Any]:
+    """Fig 4 gates for a saved or in-memory series (``nguyen_gates.fig4_gates``).
+
+    ``fig4_gates`` raises ``Fig4GateKeyError`` if a required key is not computed,
+    so a deleted gate can never silently read as a fail (or a pass).
+    """
     rewards = np.asarray(series["episode_rewards"], dtype=float)
     lengths = np.asarray(series["episode_lengths"], dtype=float)
-    n = int(rewards.size)
-    if n < 10:
-        reward = {
-            "pass": False,
-            "shape_pass": False,
-            "reason": "too_few_episodes",
-            "early_reward_mean": float(np.mean(rewards)) if n else float("nan"),
-            "late_reward_mean": float(np.mean(rewards)) if n else float("nan"),
-        }
-        length = {
-            "pass": False,
-            "shape_pass": False,
-            "reason": "too_few_episodes",
-            "early_length_mean": float(np.mean(lengths)) if n else float("nan"),
-            "late_length_mean": float(np.mean(lengths)) if n else float("nan"),
-        }
-        gates = {
-            "pass": False,
-            "shape_pass": False,
-            "n_episodes": n,
-            "reward": reward,
-            "length": length,
-        }
-        if series.get("smoke"):
-            gates["smoke_override"] = True
-        return gates
-
-    early_end = min(EARLY_END, n // 2)
-    late_start = min(LATE_START, max(early_end + 1, n - 50))
-
-    early_rewards = rewards[:early_end]
-    late_rewards = rewards[late_start:]
-    early_lengths = lengths[: min(75, n)]
-    late_lengths = lengths[late_start:]
-
-    early_std = float(np.std(early_rewards))
-    early_mean = float(np.mean(early_rewards))
-    late_mean_reward = float(np.mean(late_rewards))
-    first50_mean = float(np.mean(rewards[: min(50, n)]))
-    early_length_mean = float(np.mean(early_lengths))
-    late_length_mean = float(np.mean(late_lengths))
-
-    reward_heur = {
-        "reward_scale_paper": abs(first50_mean) >= PAPER_REWARD_EARLY_MAG,
-        "late_reward_above_early": late_mean_reward > first50_mean,
-        "late_reward_near_zero": late_mean_reward > PAPER_REWARD_LATE_FLOOR,
-        "early_high_variance": early_std > 0.05 * max(abs(early_mean), 1.0),
-        "early_reward_mean": early_mean,
-        "late_reward_mean": late_mean_reward,
-        "first50_reward_mean": first50_mean,
-        "pass": False,
-        "shape_pass": False,
-    }
-
-    length_heur = {
-        "length_decreases": late_length_mean < early_length_mean - 1.0,
-        "late_length_paper_band": late_length_mean <= PAPER_LENGTH_LATE_MAX,
-        "early_near_max_length": float(np.median(early_lengths[: min(50, n)])) >= max_episode_steps - 2,
-        "early_length_mean": early_length_mean,
-        "late_length_mean": late_length_mean,
-        "pass": False,
-        "shape_pass": False,
-    }
-
-    timing = fig4_timing_shape_gates(
-        lengths,
-        rewards,
-        max_episode_steps=max_episode_steps,
-    )
-    for key, value in timing["length_gates"].items():
-        length_heur[key] = bool(value)
-    for key, value in timing["reward_gates"].items():
-        reward_heur[key] = bool(value)
-    length_heur["timing_metrics"] = timing.get("metrics", {})
-    reward_heur["timing_metrics"] = timing.get("metrics", {})
-    reward_heur["shape_pass"] = _group_pass(reward_heur, REWARD_SHAPE_KEYS)
-    reward_heur["pass"] = _group_pass(reward_heur, REWARD_HEURISTIC_KEYS)
-    length_heur["shape_pass"] = _group_pass(length_heur, LENGTH_SHAPE_KEYS)
-    length_heur["pass"] = _group_pass(length_heur, LENGTH_HEURISTIC_KEYS)
-
+    gates = fig4_gates(rewards, lengths, max_episode_steps=max_episode_steps)
+    for group in ("reward", "length"):
+        missing = [k for k in (*FIG4_REQUIRED_KEYS[group], "shape_pass", "pass") if k not in gates[group]]
+        missing += [k for k in FIG4_TIER2_KEYS[group] if k not in gates[group]["tier2"]]
+        if missing:
+            msg = f"Fig 4 {group} gate output missing keys: {missing}"
+            raise KeyError(msg)
+    gates["reward"]["late_reward_mean"] = gates["reward"]["metrics"]["mean_150_end"]
+    gates["length"]["late_length_mean"] = gates["length"]["metrics"]["mean_150_end"]
     if series.get("smoke"):
-        return {
-            "pass": False,
-            "shape_pass": False,
-            "n_episodes": n,
-            "reward": reward_heur,
-            "length": length_heur,
-            "smoke_override": True,
-        }
-
-    dig_reward = fig4_reward_gates(rewards)
-    dig_length = fig4_length_gates(lengths, max_episode_steps=max_episode_steps)
-    reward = attach_digitization(reward_heur, dig_reward)
-    length = attach_digitization(length_heur, dig_length)
-    reward["shape_pass"] = _group_pass(reward, REWARD_SHAPE_KEYS)
-    reward["pass"] = _group_pass(reward, REWARD_FULL_KEYS)
-    length["shape_pass"] = _group_pass(length, LENGTH_SHAPE_KEYS)
-    length["pass"] = _group_pass(length, LENGTH_FULL_KEYS)
-
-    return {
-        "pass": bool(reward["pass"] and length["pass"]),
-        "shape_pass": bool(reward["shape_pass"] and length["shape_pass"]),
-        "n_episodes": n,
-        "reward": reward,
-        "length": length,
-    }
+        gates["pass"] = False
+        gates["shape_pass"] = False
+        gates["smoke_override"] = True
+    return gates
 
 
 def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -> dict[str, Any]:
@@ -774,8 +611,9 @@ def main(argv: list[str] | None = None) -> int:
         "--abort-on-fail",
         action="store_true",
         help=(
-            "Stop training (exit 3) at the first checkpoint where an already-decidable shape "
-            f"gate fails (from episode {SHAPE_DECIDABLE_AFTER})"
+            "Stop training (exit 3) at the first checkpoint from episode "
+            f"{FIG4_ABORT_EPISODE} where length or reward progress over ep 120–150 is below 0.5 "
+            "(doomed-run check only)"
         ),
     )
     parser.add_argument(
@@ -842,16 +680,18 @@ def main(argv: list[str] | None = None) -> int:
         partial_path = args.manifest.with_name(args.manifest.stem + ".partial.json")
 
         def _on_checkpoint(completed: int, result: TrainResult) -> None:
-            probe = shape_probe(completed, result)
+            probe = abort_probe(completed, result)
             write_json(partial_path, _panel.stamp_manifest({"partial": probe}))
             if probe.get("decidable"):
                 print(
-                    f"checkpoint probe ep {completed}: shape_pass={probe['shape_pass']} "
-                    f"failed={probe['shape_failed']}",
+                    f"checkpoint probe ep {completed}: abort={probe['abort']} "
+                    f"len_progress={probe['length_progress_120_150']:.2f} "
+                    f"reward_progress={probe['reward_progress_120_150']:.2f} "
+                    f"failed={probe['failed']}",
                     flush=True,
                 )
-            if args.abort_on_fail and probe.get("decidable") and not probe["shape_pass"]:
-                raise EarlyAbort(completed, probe["shape_failed"])
+            if args.abort_on_fail and probe.get("decidable") and probe["abort"]:
+                raise EarlyAbort(completed, probe["failed"], probe)
 
         try:
             series, cfg, trainer, train_result = train_series(
@@ -889,6 +729,7 @@ def main(argv: list[str] | None = None) -> int:
                 "aborted": True,
                 "aborted_at_episode": abort.completed,
                 "shape_failed": abort.failed,
+                "abort_probe": abort.probe,
                 "checkpoint": args.checkpoint.as_posix(),
                 "gates": {"pass": False, "shape_pass": False},
                 "smoke": False,
@@ -924,8 +765,8 @@ def main(argv: list[str] | None = None) -> int:
 
     caption = (
         f"DSQN train {series['num_episodes']} ep, seed={series['seed']}; "
-        f"late_reward={gates['reward']['late_reward_mean']:.0f}, "
-        f"late_len={gates['length']['late_length_mean']:.1f}; "
+        f"reward ep150+={gates['reward']['late_reward_mean']:.0f}, "
+        f"len ep150+={gates['length']['late_length_mean']:.1f}; "
         f"shape_pass={gates['shape_pass']} pass={gates['pass']} "
         f"(reward shape={gates['reward']['shape_pass']} full={gates['reward']['pass']}, "
         f"length shape={gates['length']['shape_pass']} full={gates['length']['pass']})"

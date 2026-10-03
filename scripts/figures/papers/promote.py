@@ -95,34 +95,29 @@ PAPER_NGUYEN_6_REPLICATION_ALT = "Replication Fig 6"
 PAPER_NGUYEN_7_MANIFEST = "artifacts/figures/papers/nguyen/7/manifest.json"
 PAPER_NGUYEN_7_REPLICATION_ALT = "Replication Fig 7"
 
-# Nguyen Fig 4 gate tiers: shape = phase-1 curve features; full = digitization polish too.
+# Nguyen Fig 4 gate tiers (must match ``nguyen_gates.FIG4_*_KEYS``; a test checks it):
+# shape = transition timing / ep 0–200 shape; full = rest of the required set;
+# info = tier 2, logged only (values live under ``gates[group]["tier2"]``).
 NGUYEN_FIG4_GATE_TIER: dict[str, dict[str, str]] = {
     "reward": {
-        "reward_scale_paper": "shape",
-        "reward_improves_by_100": "shape",
-        "reward_by_100_near_zero": "shape",
-        "late_reward_near_zero": "info",
-        "reward_post100_plateau": "full",
-        "late_reward_above_early": "info",
-        "early_high_variance": "info",
-        "paper_early_reward_mag_near_paper": "info",
-        "paper_reward_improves_like_paper": "info",
-        "paper_late_reward_ratio_near_paper": "info",
+        "reward_t50_timing": "shape",
+        "reward_pearson_0_200": "shape",
+        "reward_pearson_0_500": "full",
+        "reward_relative_gain": "full",
+        "reward_late_plateau_hold": "full",
+        "reward_leads_length": "info",
+        "reward_scale_raw_d": "info",
     },
     "length": {
-        "early_near_max_length": "shape",
-        "length_early_smoothed_near_horizon": "shape",
-        "length_mid_glide_like_paper": "shape",
-        "length_by_100_near_paper": "shape",
-        "late_length_paper_band": "info",
-        "paper_late_length_near_paper": "info",
-        "length_post100_plateau": "full",
+        "length_late_level": "full",
+        "length_t50_timing": "shape",
+        "length_pearson_0_200": "shape",
+        "length_start_at_horizon": "shape",
+        "length_pearson_0_500": "full",
+        "length_ratio": "full",
+        "length_late_plateau_hold": "full",
+        "late_timeouts": "full",
         "late_length_no_regression": "full",
-        "late_timeout_fraction": "full",
-        "late_length_level": "full",
-        "length_decreases": "info",
-        "paper_length_decreases_like_paper": "info",
-        "paper_early_near_max_length": "info",
     },
 }
 
@@ -130,31 +125,24 @@ NGUYEN_FIG4_GATE_TIER: dict[str, dict[str, str]] = {
 NGUYEN_GATE_GROUPS: dict[str, dict[str, list[tuple[str, str]]]] = {
     "4": {
         "reward": [
-            ("reward_scale_paper", "early |mean| large (started far from plateau)"),
-            ("reward_improves_by_100", "smoothed reward 80–100 better than 0–50"),
-            ("reward_by_100_near_zero", "smoothed reward 80–100 toward ~0"),
-            ("late_reward_near_zero", "late mean toward paper ~0 (diagnostic)"),
-            ("reward_post100_plateau", "smoothed reward flat ep 100+ like paper"),
-            ("late_reward_above_early", "late mean > first-50 (diagnostic)"),
-            ("early_high_variance", "early reward variance (logged)"),
-            ("paper_early_reward_mag_near_paper", "digitization — early reward magnitude (diagnostic)"),
-            ("paper_reward_improves_like_paper", "digitization — reward improves (diagnostic)"),
-            ("paper_late_reward_ratio_near_paper", "digitization — late/first-50 reward ratio (diagnostic)"),
+            ("reward_t50_timing", "50% progress ep in [paper 71 − 15, 100]; 90% by paper 86 + 25"),
+            ("reward_pearson_0_200", "smoothed reward vs paper, Pearson r ep 0–200 ≥ 0.90"),
+            ("reward_pearson_0_500", "smoothed reward vs paper, Pearson r ep 0–500 ≥ 0.93"),
+            ("reward_relative_gain", "(R̄150–500 − R̄0–50) / abs(R̄0–50) ≥ 0.85 (paper 0.974)"),
+            ("reward_late_plateau_hold", "min smoothed progress ep 150–500 ≥ 0.80 (paper 0.96)"),
+            ("reward_leads_length", "tier 2: reward 10% progress before length (paper ep 26 vs 62)"),
+            ("reward_scale_raw_d", "tier 2: first-50 mean within ±35% of paper −487.5k (raw d only)"),
         ],
         "length": [
-            ("early_near_max_length", "start at horizon (median first 50 ≥ max−2)"),
-            ("length_early_smoothed_near_horizon", "smoothed length 0–50 still ~25"),
-            ("length_mid_glide_like_paper", "length drop ep 50–100 like paper"),
-            ("length_by_100_near_paper", "smoothed length 80–100 near digitized ~10"),
-            ("late_length_paper_band", "late mean length ≤ 12 (diagnostic)"),
-            ("paper_late_length_near_paper", "late length near digitized ~8 (diagnostic)"),
-            ("length_post100_plateau", "length plateau ep 100+ like paper"),
-            ("late_length_no_regression", "smoothed length slope ep 350–490 ≤ 0.02/ep"),
-            ("late_timeout_fraction", "raw timeout rate ep 350–500 ≤ 25%"),
-            ("late_length_level", "smoothed length median ep 350–500 ≤ 14"),
-            ("length_decreases", "late < early − 1 (diagnostic)"),
-            ("paper_length_decreases_like_paper", "digitization — length decreases (diagnostic)"),
-            ("paper_early_near_max_length", "digitization — early near max (diagnostic)"),
+            ("length_late_level", "raw mean ep 150–500 / 350–500 within ±25% of paper 8.57 / 8.19"),
+            ("length_t50_timing", "50% progress ep in [paper 76 − 15, 100]; 90% by paper 89 + 25"),
+            ("length_pearson_0_200", "smoothed length vs paper, Pearson r ep 0–200 ≥ 0.90"),
+            ("length_start_at_horizon", "raw median ep 0–50 ≥ horizon − 2 (paper 24.9)"),
+            ("length_pearson_0_500", "smoothed length vs paper, Pearson r ep 0–500 ≥ 0.93"),
+            ("length_ratio", "L̄150–500 / L̄0–50 within ±25% of paper 0.344"),
+            ("length_late_plateau_hold", "min smoothed progress ep 150–500 ≥ 0.80 (paper 0.92)"),
+            ("late_timeouts", "timeout share ep 150–500 ≤ 5% (paper 0)"),
+            ("late_length_no_regression", "smoothed length slope ep 350–490 ≤ 0.02/ep (paper −0.007)"),
         ],
     },
 }
@@ -529,19 +517,7 @@ def _fig4_gate_values(gates: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 
 FIG4_INFORMATIONAL_KEYS = frozenset(
-    {
-        "late_reward_near_zero",
-        "late_reward_above_early",
-        "early_high_variance",
-        "paper_early_reward_mag_near_paper",
-        "paper_reward_improves_like_paper",
-        "paper_late_reward_ratio_near_paper",
-        "late_length_paper_band",
-        "paper_late_length_near_paper",
-        "length_decreases",
-        "paper_length_decreases_like_paper",
-        "paper_early_near_max_length",
-    }
+    key for tiers in NGUYEN_FIG4_GATE_TIER.values() for key, tier in tiers.items() if tier == "info"
 )
 
 
@@ -674,8 +650,9 @@ def _format_nguyen_fig4_gates_table(
 
     lines = [
         f"**Gates set** ({source}; **`shape_pass`**: {shape_cell}, **`pass`**: {full_cell}, {_today()}). "
-        "Phase 1: **`shape_pass`** (curve shape). Ship exit: **`pass`** (adds digitization polish). "
-        "Both subplot groups required.",
+        "**`shape_pass`**: transition timing and ep 0–200 shape. Ship exit: **`pass`** "
+        "(all required gates, scale-free, anchored to the digitized paper curves). "
+        "Both subplot groups required; tier-2 rows are logged in the manifest only.",
         "",
     ]
     for group_name, title in (("reward", "Reward (panel a)"), ("length", "Length (panel b)")):
