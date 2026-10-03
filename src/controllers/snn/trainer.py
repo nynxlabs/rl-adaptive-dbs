@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 from typing import Any, Callable
 
@@ -186,19 +186,22 @@ class DSQNTrainer:
     def hard_update_target(self) -> None:
         self.target_dsqn.load_state_dict(self.dsqn.state_dict())
 
+    @property
+    def uses_target_network(self) -> bool:
+        return self.config.target_update_period > 0
+
     def maybe_update(self) -> bool:
-        """Run a gradient step when replay cadence is met."""
+        """Run ``replay_update_steps`` gradient steps when replay cadence is met."""
         if not self.buffer.ready_for_update():
             return False
         if len(self.buffer) < self.config.batch_size:
             return False
-        self.train_step()
+        period = self.config.target_update_period
+        for _ in range(max(1, int(self.config.replay_update_steps))):
+            self.train_step()
+            if period > 0 and self._update_count % period == 0:
+                self.hard_update_target()
         self.buffer.mark_updated()
-        if (
-            self.config.target_update_period > 0
-            and self._update_count % self.config.target_update_period == 0
-        ):
-            self.hard_update_target()
         return True
 
     def train_step(self) -> float:
@@ -218,6 +221,7 @@ class DSQNTrainer:
         q_out = self.dsqn(states)
         q_sa = _q_from_membrane(q_out.membrane, actions, action_scheme=cfg.action_scheme)
 
+        bootstrap = self.target_dsqn if self.uses_target_network else self.dsqn
         with torch.no_grad():
             if cfg.double_dqn:
                 online_next = self.dsqn(next_states)
@@ -225,14 +229,14 @@ class DSQNTrainer:
                     online_next.membrane,
                     action_scheme=cfg.action_scheme,
                 )
-                target_next = self.target_dsqn(next_states)
+                target_next = bootstrap(next_states)
                 next_q = _q_from_membrane(
                     target_next.membrane,
                     next_actions,
                     action_scheme=cfg.action_scheme,
                 )
             else:
-                next_out = self.target_dsqn(next_states)
+                next_out = bootstrap(next_states)
                 next_q = _max_q_from_membrane(
                     next_out.membrane,
                     action_scheme=cfg.action_scheme,
@@ -408,18 +412,21 @@ class DSQNTrainer:
 def training_budget(config: SNNConfig) -> dict[str, Any]:
     """Expected SGD updates and target-network syncs for a run (preflight sanity check).
 
-    Updates happen once every ``replay_update_cadence`` env steps after the buffer holds a
-    batch; the target network hard-syncs every ``target_update_period`` updates. A run whose
-    budget allows zero syncs trains against its random initial target for the whole run, so
-    ``target_update_period`` (and anything that only acts through syncs) has no effect.
+    Every ``replay_update_cadence`` env steps (once the buffer holds a batch) the trainer runs
+    ``replay_update_steps`` gradient updates; a target network, if any, hard-syncs every
+    ``target_update_period`` updates. A run whose budget allows zero syncs trains against its
+    random initial target for the whole run. ``target_update_period=0`` means no target network.
     """
     cfg = config.with_variant_defaults()
     max_steps = int(cfg.num_episodes) * int(cfg.max_episode_steps)
     min_steps = int(cfg.num_episodes) * max(1, int(cfg.subthreshold_steps_required))
     cadence = max(1, int(cfg.replay_update_cadence))
+    steps_per_flush = max(1, int(cfg.replay_update_steps))
 
     def _updates(steps: int) -> int:
-        return max(0, (steps - int(cfg.batch_size)) // cadence + 1) if steps >= cfg.batch_size else 0
+        if steps < cfg.batch_size:
+            return 0
+        return max(0, (steps - int(cfg.batch_size)) // cadence + 1) * steps_per_flush
 
     period = int(cfg.target_update_period)
     updates_max = _updates(max_steps)
@@ -441,6 +448,8 @@ def training_budget(config: SNNConfig) -> dict[str, Any]:
         "sgd_updates_range": [updates_min, updates_max],
         "target_syncs_range": [syncs_min, syncs_max],
         "replay_update_cadence": cadence,
+        "replay_update_steps": steps_per_flush,
+        "target_network": period > 0,
         "target_update_period": period,
         "warnings": warnings,
     }
@@ -600,6 +609,20 @@ def validate_resume_config(
     )
 
 
+# Fields added after checkpoints were already written, with the value those runs actually used.
+LEGACY_CONFIG_DEFAULTS: dict[str, Any] = {"replay_update_steps": 1}
+
+
+def saved_config(raw: SNNConfig | dict[str, Any]) -> SNNConfig:
+    """Checkpoint config as an ``SNNConfig``, filling fields older checkpoints predate."""
+    stored = raw if isinstance(raw, dict) else vars(raw)
+    names = {f.name for f in fields(SNNConfig)}
+    values = {k: v for k, v in stored.items() if k in names}
+    for key, value in LEGACY_CONFIG_DEFAULTS.items():
+        values.setdefault(key, value)
+    return SNNConfig(**values)
+
+
 def resume_dsqn_trainer(
     payload: dict[str, Any],
     *,
@@ -610,9 +633,7 @@ def resume_dsqn_trainer(
     start_episode: int | None = None,
 ) -> tuple[DSQNTrainer, int]:
     """Restore trainer weights, optimizer, replay buffer, and exploration state."""
-    saved_cfg = payload["config"]
-    if not isinstance(saved_cfg, SNNConfig):
-        saved_cfg = SNNConfig(**saved_cfg)
+    saved_cfg = saved_config(payload["config"])
 
     resume_start = infer_completed_episodes(
         payload,

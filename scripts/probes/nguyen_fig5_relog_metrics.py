@@ -19,10 +19,10 @@ from dataclasses import replace
 from pathlib import Path
 
 from controllers.snn.adapter import NguyenEnvAdapter
-from controllers.snn.config import SNNConfig
 from controllers.snn.trainer import (
     load_checkpoint,
     resume_dsqn_trainer,
+    saved_config,
     train_result_from_payload,
     write_train_metrics,
 )
@@ -54,9 +54,7 @@ def main() -> None:
         num_episodes = min(5, num_episodes)
 
     payload = load_checkpoint(args.checkpoint)
-    saved_cfg = payload["config"]
-    if not isinstance(saved_cfg, SNNConfig):
-        saved_cfg = SNNConfig(**saved_cfg)
+    saved_cfg = saved_config(payload["config"])
     cfg = replace(saved_cfg, num_episodes=num_episodes)
 
     trainer, _ = resume_dsqn_trainer(payload, config=cfg, start_episode=0)

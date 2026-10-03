@@ -51,6 +51,9 @@ class SNNConfig:
     learning_rate: float = 1e-3
     replay_capacity: int = 10_000
     replay_update_cadence: int = REPLAY_UPDATE_CADENCE
+    # Gradient minibatches per replay flush (paper silent). 4 × batch 32 = one pass's worth of
+    # samples for the 128 transitions collected since the last flush.
+    replay_update_steps: int = 4
     batch_size: int = 32
     # Bellman TD loss: ``mse`` or ``huber`` (smooth L1 — dampens timeout Q spikes).
     q_loss_fn: str = "mse"
@@ -61,8 +64,9 @@ class SNNConfig:
     # Down-weight early-stop episodes with length <= replay_short_stop_max_steps (0 = off).
     replay_short_stop_max_steps: int = 0
     replay_short_stop_weight: float = 1.0
-    # Hard-copy target network every N gradient updates (paper silent — convention).
-    target_update_period: int = 100
+    # Hard-copy target network every N gradient updates. 0 = no separate target network:
+    # bootstrap from the online weights θ, as in the paper's Q-target (Nguyen et al. §II).
+    target_update_period: int = 0
 
     # Exploration (ε-greedy on spike-count argmax)
     epsilon_start: float = 1.0
@@ -239,6 +243,7 @@ class SNNConfig:
             max_episode_steps=int(max_steps),
             batch_size=8,
             replay_update_cadence=8,
+            replay_update_steps=1,
             replay_capacity=128,
             target_update_period=2,
             epsilon_decay_steps=max(1, int(max_steps) * 10),
@@ -360,6 +365,8 @@ def fig4_nguyen_config(
     v102 at lr=2.49e-4: same reward/length tradeoff as v101; Fig 5 v8 relog shows energy mid-ramp fail
     because late pw collapses to ~0.45 ms (paper Fig 6 ~1 ms). v103+: pulse_width_min=0.5 blocks
     late pw collapse for Fig 5 energy panel (paper-silent floor; init still 0.3 ms).
+    Oct 3 2026: paper-faithful update rule — replay cadence 128 (paper-fixed, was 32) and no
+    target network (paper bootstraps from θ; tu=200 never synced in v158), 4 minibatches/flush.
     """
     return SNNConfig(
         seed=seed,
@@ -375,7 +382,6 @@ def fig4_nguyen_config(
         learning_rate=3e-4,
         batch_size=32,
         q_loss_fn="mse",
-        target_update_period=200,
         frequency_max=98.0,
         frequency_sensitivity=12.0,
         frequency_sensitivity_early=4.0,
@@ -398,7 +404,6 @@ def fig4_nguyen_config(
         warm_zone_upper=220.0,
         warm_zone_bonus_coef=150.0,
         truncation_penalty=250_000.0,
-        replay_update_cadence=32,
         reward_learning_scale=1e-4,
         stimulated_neurons=1,
         log_episodes=True,

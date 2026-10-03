@@ -134,13 +134,15 @@ def test_fig4_init_floors_block_frequency_collapse() -> None:
     assert state.amplitude >= cfg.amplitude_min
 
 
-def test_fig4_v81_train_config() -> None:
+def test_fig4_train_config_uses_paper_update_rule() -> None:
     from controllers.snn.config import fig4_nguyen_config
 
     cfg = fig4_nguyen_config()
     assert cfg.learning_rate == 3e-4
     assert cfg.batch_size == 32
-    assert cfg.replay_update_cadence == 32
+    assert cfg.replay_update_cadence == 128  # paper: update after every 128 transitions
+    assert cfg.target_update_period == 0  # paper bootstraps from the online weights
+    assert cfg.replay_update_steps == 4
 
 
 def test_dsqn_forward_shapes() -> None:
