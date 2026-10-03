@@ -134,7 +134,7 @@ $$
 Q^*(s,a) = \mathbb{E}_{s' \sim \mathcal{E}}\bigl[r + \gamma \max_{a'} Q^*(s', a') \mid s, a\bigr]
 $$
 
-Train $Q(s,a;\theta) \approx Q^*(s,a)$ by minimizing error to a **target** $y = r + \gamma \max_{a'} Q(s', a'; \theta^-)$ (or the spiking analogue using membrane potentials at $s'$). The paper does **not** name **Double DQN**, **dueling**, or **target-network period** — **intentionally open**; use a conventional DQN stabilizer set and document it beside the code.
+Train $Q(s,a;\theta) \approx Q^*(s,a)$ by minimizing error to a **target** $y = r + \gamma \max_{a'} Q(s', a'; \theta)$ (spiking analogue: membrane potentials at $s'$). The paper's target uses the online weights $\theta$, so the default trains **without** a separate target network; see §4 of the decisions below. **Double DQN** and **dueling** are not named — **intentionally open**.
 
 ### 6.2 Interaction schedule (§III.B, §IV)
 
@@ -258,7 +258,7 @@ Nine output LIF units are consistent with three parameters × three choices, but
 
 ### 4. DQN stabilizers and target-network policy
 
-The paper uses DQN bootstrapping but does not name Double DQN, dueling heads, or target-network **update period**. **Fixed:** replay flush every **128** stored transitions; Q-targets from output membrane potentials at $s'$. **Chosen (v1):** $\gamma=0.99$, Adam lr $10^{-3}$, hard target copy every **100** gradient updates (`SNNConfig.target_update_period`).
+The paper uses DQN bootstrapping but does not name Double DQN or dueling heads. Its Q-target $y_i = r + \gamma \max_{a'} Q(s', a'; \theta)$ uses the **online weights** $\theta$ — no separate target network $\theta^-$ (as in the first Atari DQN). **Fixed:** replay flush every **128** stored transitions; Q-targets from output membrane potentials at $s'$, bootstrapped from the online network (`SNNConfig.target_update_period = 0`). **Chosen (v2, Oct 2026):** $\gamma=0.99$, Adam lr $10^{-3}$; **4** minibatches of 32 per flush (`SNNConfig.replay_update_steps` — the paper does not say how many gradient steps a flush runs; 4 × 32 matches the 128 new transitions). A hard-copy target network is still available as an extension (`target_update_period > 0`, synced every N gradient updates). v1 used a target copy every 100 updates and one gradient step per flush.
 
 ### 5. $\epsilon$-greedy exploration schedule
 

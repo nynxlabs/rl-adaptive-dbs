@@ -315,7 +315,8 @@ def train_series(
     budget = training_budget(cfg)
     print(
         f"preflight: env steps {budget['env_steps_range']}, SGD updates {budget['sgd_updates_range']}, "
-        f"target syncs {budget['target_syncs_range']} (cadence {budget['replay_update_cadence']}, "
+        f"target syncs {budget['target_syncs_range'] if budget['target_network'] else 'n/a (no target network)'} "
+        f"(cadence {budget['replay_update_cadence']} x{budget['replay_update_steps']} steps, "
         f"target_update_period {budget['target_update_period']})",
         flush=True,
     )
@@ -895,7 +896,7 @@ def main(argv: list[str] | None = None) -> int:
             write_json(args.manifest, _panel.stamp_manifest(manifest))
             print(f"EARLY ABORT: {abort}; checkpoint kept at {args.checkpoint}", flush=True)
             return _panel.EXIT_ABORTED
-        if series.get("target_syncs", 1) == 0 and not args.smoke:
+        if series.get("target_syncs", 1) == 0 and cfg.target_update_period > 0 and not args.smoke:
             print(
                 "WARNING: the target network never synced during this run "
                 f"({series['update_count']} SGD updates < target_update_period)",
