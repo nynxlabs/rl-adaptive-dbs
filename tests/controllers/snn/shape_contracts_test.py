@@ -123,26 +123,26 @@ def test_frequency_sensitivity_episode_curriculum() -> None:
     assert late.frequency_hz == 60.0
 
 
-def test_fig4_init_floors_block_frequency_collapse() -> None:
+def test_fig4_config_keeps_paper_bounds_open() -> None:
     from controllers.snn.config import fig4_nguyen_config
 
     cfg = fig4_nguyen_config()
     state = DBSParameterState()
     for _ in range(8):
         state.apply_delta([0, -1, 0], cfg, epsilon=0.05, episode=60)
-    assert state.frequency_hz == cfg.frequency_min == 40.0
-    assert state.amplitude >= cfg.amplitude_min
+    assert state.frequency_hz == pytest.approx(40.0 - 8 * 3.75)  # no artificial floors
+    assert (cfg.alpha_beta_progress_coef, cfg.warm_zone_bonus_coef, cfg.truncation_penalty) == (0.0, 0.0, 0.0)
 
 
-def test_fig4_train_config_uses_paper_update_rule() -> None:
+def test_fig4_train_config_uses_published_training_loop() -> None:
     from controllers.snn.config import fig4_nguyen_config
 
     cfg = fig4_nguyen_config()
-    assert cfg.learning_rate == 3e-4
-    assert cfg.batch_size == 32
     assert cfg.replay_update_cadence == 128  # paper: update after every 128 transitions
-    assert cfg.target_update_period == 0  # paper bootstraps from the online weights
-    assert cfg.replay_update_steps == 4
+    assert (cfg.optimizer, cfg.q_loss_fn, cfg.grad_clip_mode) == ("adamw", "huber", "value")
+    assert cfg.target_soft_update_tau == 0.005 and cfg.target_update_period == 0
+    assert cfg.surrogate_gradient == "atan" and cfg.plant_carry and cfg.n_regions == 8
+    assert cfg.replay_warmup_transitions == 1_500
 
 
 def test_dsqn_forward_shapes() -> None:
