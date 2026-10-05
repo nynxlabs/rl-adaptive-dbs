@@ -90,3 +90,67 @@ class DbsSpec:
         if self.pick_dbs_freq <= 1:
             return 0.0
         return float((self.pick_dbs_freq - 1) * 5)
+
+
+class ContinuousPulseTrain:
+    """Phase-continuous STN pulse train across sequential carried segments.
+
+    ``create_dbs_current`` starts every segment with a pulse at t=0, which is
+    right for one-shot integrates but restarts the pulse clock at each segment
+    boundary when plant state is carried. This keeps one global sample clock:
+    the next onset follows the last one by the current ISI, and a pulse that
+    crosses a boundary finishes in the next segment at its own amplitude.
+    Segment grids are ``0:dt_ms:tmax_ms``; the integrator applies samples
+    ``1..N``, so sample 0 of a segment is the previous segment's sample N.
+    """
+
+    def __init__(self, dt_ms: float = 0.01) -> None:
+        self.dt_ms = float(dt_ms)
+        self.reset()
+
+    def reset(self) -> None:
+        self._origin = 0  # global index of this segment's local sample 0
+        self._last_onset: int | None = None
+        self._last_len = 0
+        self._last_amp = 0.0
+
+    def segment(
+        self,
+        *,
+        frequency_hz: float,
+        pulse_width_ms: float,
+        amplitude: float,
+        tmax_ms: float,
+    ) -> tuple[np.ndarray, dict[str, object]]:
+        """Return the segment trace and the state to commit after a successful integrate."""
+        n = int(round(tmax_ms / self.dt_ms))
+        idbs = np.zeros(n + 1, dtype=np.float64)
+        g0 = self._origin
+        last_onset, last_len, last_amp = self._last_onset, self._last_len, self._last_amp
+        if last_onset is not None:
+            lo, hi = max(last_onset, g0) - g0, min(last_onset + last_len, g0 + n + 1) - g0
+            if hi > lo:
+                idbs[lo:hi] = last_amp
+        if frequency_hz > 0.0 and amplitude > 0.0:
+            pulse_len = int(round(pulse_width_ms / self.dt_ms))
+            isi = int(round((1000.0 / frequency_hz) / self.dt_ms))
+            if pulse_len <= 0 or isi <= 0:
+                msg = "pulse_width_ms and frequency_hz must map to positive sample counts"
+                raise ValueError(msg)
+            onset = g0 if last_onset is None else max(last_onset + isi, g0 + 1)
+            while onset <= g0 + n:
+                idbs[onset - g0 : min(onset + pulse_len, g0 + n + 1) - g0] = amplitude
+                last_onset, last_len, last_amp = onset, pulse_len, amplitude
+                onset += isi
+        else:
+            # Stimulator off: no pending onset; a later re-enable starts a fresh train.
+            if last_onset is not None and last_onset + last_len <= g0 + n:
+                last_onset = None
+        state = {"origin": g0 + n, "last_onset": last_onset, "last_len": last_len, "last_amp": last_amp}
+        return idbs, state
+
+    def commit(self, state: dict[str, object]) -> None:
+        self._origin = int(state["origin"])  # type: ignore[arg-type]
+        self._last_onset = state["last_onset"]  # type: ignore[assignment]
+        self._last_len = int(state["last_len"])  # type: ignore[arg-type]
+        self._last_amp = float(state["last_amp"])  # type: ignore[arg-type]

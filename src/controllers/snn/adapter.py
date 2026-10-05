@@ -17,7 +17,7 @@ from controllers.snn.dbs_params import DBSParameterState
 from controllers.snn.encoder import SpikeObservationEncoder
 from controllers.snn.energy import dbs_energy_index
 from controllers.snn.reward import alpha_beta_power, nguyen_reward
-from envs.plant.dbs import DbsSpec
+from envs.plant.dbs import ContinuousPulseTrain, DbsSpec
 from envs.plant.matlab_backend import IntegrateResult
 
 
@@ -30,6 +30,7 @@ class PlantBackend(Protocol):
         dbs_spec: DbsSpec | None = None,
         *,
         record_spikes: bool = True,
+        carry: bool = False,
     ) -> IntegrateResult: ...
 
     def close(self) -> None: ...
@@ -78,6 +79,7 @@ class NguyenEnvAdapter(gym.Env):
         self._prev_alpha_beta: float | None = None
         self._explore_epsilon: float | None = None
         self._episode_index: int | None = None
+        self._pulses = ContinuousPulseTrain()
 
     def set_training_context(self, *, epsilon: float, episode: int) -> None:
         """Set ε and episode index for frequency_sensitivity curriculum."""
@@ -147,13 +149,9 @@ class NguyenEnvAdapter(gym.Env):
         self._explore_epsilon = None
         self._episode_index = None
 
-        result = self._plant.integrate(
-            self.config.step_duration_s,
-            self._dbs.to_dbs_spec(duration_s=self.config.step_duration_s),
-            record_spikes=True,
-            record_th_spikes=True,
-            record_cor_spikes=True,
-        )
+        self._pulses.reset()
+
+        result = self._integrate_current_dbs()
         obs = self._encode_observation(result)
         alpha_beta = alpha_beta_power(
             self._gpi_spike_trains(result),
@@ -174,13 +172,33 @@ class NguyenEnvAdapter(gym.Env):
         return obs, info
 
     def _integrate_current_dbs(self) -> IntegrateResult:
-        return self._plant.integrate(
-            self.config.step_duration_s,
-            self._dbs.to_dbs_spec(duration_s=self.config.step_duration_s),
+        duration_s = self.config.step_duration_s
+        if not self.config.plant_carry:
+            return self._plant.integrate(
+                duration_s,
+                self._dbs.to_dbs_spec(duration_s=duration_s),
+                record_spikes=True,
+                record_th_spikes=True,
+                record_cor_spikes=True,
+            )
+        idbs, pulse_state = self._pulses.segment(
+            frequency_hz=self._dbs.frequency_hz,
+            pulse_width_ms=self._dbs.pulse_width_ms,
+            amplitude=self._dbs.amplitude,
+            tmax_ms=duration_s * 1000.0,
+        )
+        spec = DbsSpec(pick_dbs_freq=2, idbs=idbs, mean_hz=self._dbs.frequency_hz)
+        result = self._plant.integrate(
+            duration_s,
+            spec,
             record_spikes=True,
             record_th_spikes=True,
             record_cor_spikes=True,
+            carry=True,
         )
+        # Advance the pulse clock only after the plant accepted the segment.
+        self._pulses.commit(pulse_state)
+        return result
 
     def step(
         self,
