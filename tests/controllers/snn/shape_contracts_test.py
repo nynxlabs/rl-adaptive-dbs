@@ -295,3 +295,13 @@ def test_trainer_train_step_and_mock_episodes() -> None:
         assert isinstance(loss, float)
     finally:
         env.close()
+
+
+def test_spike_count_ties_break_by_membrane_potential() -> None:
+    cfg = SNNConfig(seed=0)
+    counts = np.array([5, 5, 5, 0, 0, 0, 2, 5, 5], dtype=float)  # saturated, silent, partial tie
+    membrane = np.array([1.0, 3.0, 2.0, -4.0, -1.0, -2.0, 9.0, 0.5, 0.7])
+    _, ternary = select_action(counts, config=cfg, membrane=membrane)
+    assert ternary.tolist() == [0, 0, 1]
+    _, legacy = select_action(counts, config=cfg)
+    assert legacy.tolist() == [-1, -1, 0]

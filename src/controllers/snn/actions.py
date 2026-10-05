@@ -34,17 +34,32 @@ def decode_joint_action(action_index: int) -> np.ndarray:
     return decode_factored_action(np.array(list(reversed(indices)), dtype=np.int64))
 
 
+def _argmax_spikes(counts: np.ndarray, membrane: np.ndarray | None) -> np.ndarray:
+    """Argmax over the last axis of spike counts; ties go to the higher membrane potential.
+
+    The paper fixes spike-count argmax (§III.B) but not tie-breaking. Output units often
+    saturate (fire on every unrolled step) or stay silent, so ties are common; a plain
+    ``np.argmax`` would always pick index 0 (``-1``, decrease) for a tied head.
+    """
+    if membrane is None:
+        return np.argmax(counts, axis=-1)
+    tied = counts == counts.max(axis=-1, keepdims=True)
+    return np.argmax(np.where(tied, membrane, -np.inf), axis=-1)
+
+
 def select_action(
     spike_counts: np.ndarray,
     *,
     config: SNNConfig | None = None,
     epsilon: float = 0.0,
     rng: np.random.Generator | None = None,
+    membrane: np.ndarray | None = None,
 ) -> tuple[int, np.ndarray]:
     """Argmax on spike counts with optional ε-greedy exploration.
 
-    Returns ``(action_index, ternary_deltas)`` where ``action_index`` is the
-    discrete index used for replay (joint: 0–8; factored: flattened group argmax).
+    ``membrane`` (output membrane potentials, same shape as ``spike_counts``) breaks
+    spike-count ties. Returns ``(action_index, ternary_deltas)`` where ``action_index`` is
+    the discrete index used for replay (joint: 0–8; factored: flattened group argmax).
     """
     cfg = (config or SNNConfig()).with_variant_defaults()
     counts = np.asarray(spike_counts, dtype=np.float64).reshape(-1)
@@ -52,17 +67,24 @@ def select_action(
         msg = f"expected {cfg.n_action_outputs} spike counts, got shape {counts.shape}"
         raise ValueError(msg)
 
+    mem = None
+    if membrane is not None:
+        mem = np.asarray(membrane, dtype=np.float64).reshape(-1)
+        if mem.shape != counts.shape:
+            msg = f"membrane shape {mem.shape} != spike counts shape {counts.shape}"
+            raise ValueError(msg)
+
     gen = rng if rng is not None else np.random.default_rng()
     explore = epsilon > 0.0 and gen.random() < epsilon
 
     if cfg.action_scheme == "joint":
-        greedy = int(np.argmax(counts))
+        greedy = int(_argmax_spikes(counts, mem))
         action_index = int(gen.integers(cfg.n_action_outputs)) if explore else greedy
         return action_index, decode_joint_action(action_index)
 
     if cfg.action_scheme == "factored":
         grouped = counts.reshape(3, 3)
-        greedy_indices = np.argmax(grouped, axis=1)
+        greedy_indices = _argmax_spikes(grouped, None if mem is None else mem.reshape(3, 3))
         if explore:
             chosen_indices = gen.integers(0, 3, size=3)
         else:
