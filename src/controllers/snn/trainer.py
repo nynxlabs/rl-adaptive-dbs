@@ -119,6 +119,15 @@ def _max_q_from_membrane(membrane: torch.Tensor, *, action_scheme: str) -> torch
     raise ValueError(msg)
 
 
+def _make_optimizer(dsqn: DSQN, cfg: SNNConfig) -> torch.optim.Optimizer:
+    if cfg.optimizer == "adamw":
+        return torch.optim.AdamW(dsqn.parameters(), lr=cfg.learning_rate)
+    if cfg.optimizer == "adam":
+        return torch.optim.Adam(dsqn.parameters(), lr=cfg.learning_rate)
+    msg = f"unknown optimizer {cfg.optimizer!r} (expected 'adam' or 'adamw')"
+    raise ValueError(msg)
+
+
 class DSQNTrainer:
     """DQN-style trainer: control from spike counts, Q from membrane potentials."""
 
@@ -141,7 +150,7 @@ class DSQNTrainer:
         self.device = torch.device(self.config.device)
         self.dsqn.to(self.device)
         self.target_dsqn.to(self.device)
-        self.optimizer = torch.optim.Adam(self.dsqn.parameters(), lr=self.config.learning_rate)
+        self.optimizer = _make_optimizer(self.dsqn, self.config)
         self._rng = np.random.default_rng(self.config.seed)
         self._total_steps = 0
         self._update_count = 0
@@ -186,9 +195,20 @@ class DSQNTrainer:
     def hard_update_target(self) -> None:
         self.target_dsqn.load_state_dict(self.dsqn.state_dict())
 
+    @torch.no_grad()
+    def soft_update_target(self, tau: float) -> None:
+        for target, online in zip(
+            self.target_dsqn.parameters(), self.dsqn.parameters(), strict=True
+        ):
+            target.lerp_(online, tau)
+
+    @property
+    def uses_soft_target(self) -> bool:
+        return float(self.config.target_soft_update_tau) > 0.0
+
     @property
     def uses_target_network(self) -> bool:
-        return self.config.target_update_period > 0
+        return self.uses_soft_target or self.config.target_update_period > 0
 
     def maybe_update(self) -> bool:
         """Run ``replay_update_steps`` gradient steps when replay cadence is met."""
@@ -197,9 +217,12 @@ class DSQNTrainer:
         if len(self.buffer) < self.config.batch_size:
             return False
         period = self.config.target_update_period
+        tau = float(self.config.target_soft_update_tau)
         for _ in range(max(1, int(self.config.replay_update_steps))):
             self.train_step()
-            if period > 0 and self._update_count % period == 0:
+            if tau > 0.0:
+                self.soft_update_target(tau)
+            elif period > 0 and self._update_count % period == 0:
                 self.hard_update_target()
         self.buffer.mark_updated()
         return True
@@ -249,7 +272,12 @@ class DSQNTrainer:
             loss = F.mse_loss(q_sa, target)
         self.optimizer.zero_grad(set_to_none=True)
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.dsqn.parameters(), 10.0)
+        clip = float(cfg.grad_clip)
+        if clip > 0.0:
+            if cfg.grad_clip_mode == "value":
+                torch.nn.utils.clip_grad_value_(self.dsqn.parameters(), clip)
+            else:
+                torch.nn.utils.clip_grad_norm_(self.dsqn.parameters(), clip)
         self.optimizer.step()
 
         self._update_count += 1
@@ -428,7 +456,8 @@ def training_budget(config: SNNConfig) -> dict[str, Any]:
             return 0
         return max(0, (steps - int(cfg.batch_size)) // cadence + 1) * steps_per_flush
 
-    period = int(cfg.target_update_period)
+    soft_tau = float(cfg.target_soft_update_tau)
+    period = 0 if soft_tau > 0.0 else int(cfg.target_update_period)
     updates_max = _updates(max_steps)
     updates_min = _updates(min_steps)
     syncs_max = updates_max // period if period > 0 else 0
@@ -449,8 +478,9 @@ def training_budget(config: SNNConfig) -> dict[str, Any]:
         "target_syncs_range": [syncs_min, syncs_max],
         "replay_update_cadence": cadence,
         "replay_update_steps": steps_per_flush,
-        "target_network": period > 0,
+        "target_network": period > 0 or soft_tau > 0.0,
         "target_update_period": period,
+        "target_soft_update_tau": soft_tau,
         "warnings": warnings,
     }
 
