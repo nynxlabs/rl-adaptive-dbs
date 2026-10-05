@@ -76,6 +76,12 @@ CONV_COR = 6
 SPIKE_SYN_THRESHOLD = -10.0
 GPI_SPIKE_THRESHOLD = -20.0
 TH_SPIKE_THRESHOLD = -20.0
+BG_SPIKE_THRESHOLD = -20.0
+BG_STN = 0
+BG_GPE = 1
+BG_STR_INDR = 2
+BG_STR_DR = 3
+N_BG_RECORDED = 4
 
 
 @njit(cache=True)
@@ -120,6 +126,23 @@ def _conv_record_spike(
     if c < MAX_SPIKE_SLOTS:
         spike_idx[conv_idx, neuron, c] = 1
         spike_n[conv_idx, neuron] = c + 1
+
+
+@njit(cache=True)
+def _record_bg_spikes(
+    buf: np.ndarray,
+    counts: np.ndarray,
+    row: int,
+    v_prev: np.ndarray,
+    v_curr: np.ndarray,
+    t_s: float,
+) -> None:
+    for i in range(v_curr.size):
+        if v_prev[i] <= BG_SPIKE_THRESHOLD and v_curr[i] > BG_SPIKE_THRESHOLD:
+            cnt = counts[row, i]
+            if cnt < buf.shape[2]:
+                buf[row, i, cnt] = t_s
+                counts[row, i] = cnt + 1
 
 
 @njit(cache=True)
@@ -343,6 +366,10 @@ def run_cbgt_loop(
     cor_spike_buf: np.ndarray,
     cor_spike_n: np.ndarray,
     record_cor_spikes: bool,
+    # STN, GPe, Str D2, Str D1 spike output (rows BG_STN..BG_STR_DR)
+    bg_spike_buf: np.ndarray,
+    bg_spike_n: np.ndarray,
+    record_bg_spikes: bool,
     # scalars
     iappgpe: float,
     uce_scale: float,
@@ -659,6 +686,8 @@ def run_cbgt_loop(
             CAsn2[i] = CAsn2[i] + dt * ((-_ALP * (il2_stn + it2)) - (_KCA_STN * CAsn2[i]))
             if CAsn2[i] < _CA_MIN:
                 CAsn2[i] = _CA_MIN
+        if record_bg_spikes:
+            _record_bg_spikes(bg_spike_buf, bg_spike_n, BG_STN, v2_prev, vsn, t_ms[step - 1] / 1000.0)
         _conv_record_crossings(CONV_STN, spike_idx, spike_n, v2_prev, vsn, SPIKE_SYN_THRESHOLD)
         _conv_eval_all(spike_idx, spike_n, CONV_STN, syn_stn_gpea, S2a)
         _conv_eval_all(spike_idx, spike_n, CONV_STN, syn_stn_gpen, S2an)
@@ -696,6 +725,8 @@ def run_cbgt_loop(
             CA3[i] = CA3[i] + dt * (1e-4 * (-ica3 - it3 - _KCA2 * CA3[i]))
             if CA3[i] < _CA_MIN:
                 CA3[i] = _CA_MIN
+        if record_bg_spikes:
+            _record_bg_spikes(bg_spike_buf, bg_spike_n, BG_GPE, v3_prev, vge, t_ms[step - 1] / 1000.0)
         _conv_record_crossings(CONV_GPE, spike_idx, spike_n, v3_prev, vge, SPIKE_SYN_THRESHOLD)
         _conv_eval_all(spike_idx, spike_n, CONV_GPE, syn_gpe_stn, S3a)
         _conv_eval_all(spike_idx, spike_n, CONV_GPE, syn_gpe_gpi, S3b)
@@ -765,6 +796,8 @@ def run_cbgt_loop(
             p5[i] = p5[i] + dt * (ap5 * (1.0 - p5[i]) - bp5 * p5[i])
             gg5 = 2.0 * (1.0 + np.tanh(V5 / 4.0))
             S1c[i] = S1c[i] + dt * ((gg5 * (1.0 - S1c[i])) - (S1c[i] / _TAU_I))
+        if record_bg_spikes:
+            _record_bg_spikes(bg_spike_buf, bg_spike_n, BG_STR_INDR, v5_prev, vstr_indr, t_ms[step - 1] / 1000.0)
         _conv_record_crossings(CONV_STR_INDR, spike_idx, spike_n, v5_prev, vstr_indr, SPIKE_SYN_THRESHOLD)
         _conv_eval_all(spike_idx, spike_n, CONV_STR_INDR, syn_str_indr, S5)
         _conv_step_one(spike_idx, spike_n, max_index, CONV_STR_INDR, n)
@@ -793,6 +826,8 @@ def run_cbgt_loop(
             p6[i] = p6[i] + dt * (ap6 * (1.0 - p6[i]) - bp6 * p6[i])
             gg6 = 2.0 * (1.0 + np.tanh(V6 / 4.0))
             S8[i] = S8[i] + dt * ((gg6 * (1.0 - S8[i])) - (S8[i] / _TAU_I))
+        if record_bg_spikes:
+            _record_bg_spikes(bg_spike_buf, bg_spike_n, BG_STR_DR, v6_prev, vstr_dr, t_ms[step - 1] / 1000.0)
         _conv_record_crossings(CONV_STR_DR, spike_idx, spike_n, v6_prev, vstr_dr, SPIKE_SYN_THRESHOLD)
         _conv_eval_all(spike_idx, spike_n, CONV_STR_DR, syn_str_dr, S9)
         _conv_step_one(spike_idx, spike_n, max_index, CONV_STR_DR, n)

@@ -345,3 +345,44 @@ def test_restart_mode_keeps_per_step_traces() -> None:
     finally:
         env.close()
     assert [carry for carry, _ in plant.calls] == [False, False]
+
+
+class _CbgtMockPlant(_RecordingPlant):
+    """Adds per-population spike trains: neuron j of population p spikes once at (p + 1) ms."""
+
+    def integrate(self, duration_s: float, dbs_spec: DbsSpec | None = None, **kwargs: Any) -> IntegrateResult:
+        result = super().integrate(duration_s, dbs_spec, **kwargs)
+        assert kwargs.get("record_bg_spikes") is True
+        n = 10
+
+        def pop(p: int) -> list[np.ndarray]:
+            return [np.array([(p + 1) * 0.011]) for _ in range(n)]
+
+        result.info.update(
+            cor_spikes=pop(0) + pop(1),
+            str_dr_spikes=pop(2),
+            str_indr_spikes=pop(3),
+            stn_spikes=pop(4),
+            gpe_spikes=pop(5),
+            th_spikes=pop(7),
+        )
+        return result
+
+
+def test_cbgt_observation_stacks_eight_populations() -> None:
+    cfg = SNNConfig(sequence_steps=10, neurons_per_region=10, n_regions=8, max_episode_steps=3)
+    env = NguyenEnvAdapter(plant=_CbgtMockPlant(), config=cfg)
+    try:
+        obs, _ = env.reset(seed=0)
+    finally:
+        env.close()
+    assert obs.shape == (10, 80)
+    # Population p spikes at (p + 1) * 11 ms → 10 ms bin p + 1; GPi (p = 6) uses the plant's GPi trains.
+    for p in (0, 1, 2, 3, 4, 5, 7):
+        block = obs[:, p * 10 : (p + 1) * 10]
+        assert block[p + 1].all() and block.sum() == 10
+
+
+def test_unsupported_region_count_is_rejected() -> None:
+    with pytest.raises(ValueError, match="n_regions"):
+        NguyenEnvAdapter(plant=_SpikeMockPlant(), config=SNNConfig(n_regions=3))
