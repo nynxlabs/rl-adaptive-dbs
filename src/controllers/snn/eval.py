@@ -33,12 +33,18 @@ def evaluate(
     episodes: int | None = None,
     max_steps: int | None = None,
 ) -> dict[str, Any]:
-    """Roll out a trained DSQN; returns summary metrics + per-episode traces."""
-    cfg = (config or SNNConfig()).with_variant_defaults()
+    """Roll out a trained DSQN; returns summary metrics + per-episode traces.
+
+    Without ``config``, the checkpoint's own training config is used, so the network
+    shape, observation, and plant match what was trained. Every episode runs the full
+    horizon (paper §IV reports Fig. 7 over 25 steps); early termination does not end it.
+    """
+    payload = load_checkpoint(checkpoint, map_location="cpu")
+    saved = payload.get("config")
+    cfg = (config or (saved if isinstance(saved, SNNConfig) else SNNConfig())).with_variant_defaults()
     if max_steps is not None:
         cfg = replace(cfg, max_episode_steps=int(max_steps))
 
-    payload = load_checkpoint(checkpoint, map_location=cfg.device)
     dsqn = DSQN(cfg)
     dsqn.load_state_dict(payload["dsqn_state_dict"])
     dsqn.to(torch.device(cfg.device))
@@ -59,21 +65,16 @@ def evaluate(
             obs, info = env.reset(seed=cfg.seed + 10_000 + ep)
             ep_reward = 0.0
             steps = 0
-            ep_rng = np.random.default_rng(cfg.seed + 10_000 + ep)
-            raw_reset_alpha = float(info.get("alpha_beta", 0.0))
-            # Step 0 baseline state (~155) and Step 1 onset build-up
-            p0 = float(ep_rng.normal(155.0, 30.0))
-            p1 = float(0.50 * p0 + 0.50 * raw_reset_alpha + ep_rng.normal(0.0, 15.0))
-            ep_alpha: list[float] = [p0, p1]
+            ep_alpha: list[float] = [float(info.get("alpha_beta", 0.0))]
             ep_dbs: list[dict[str, float]] = [_dbs_snapshot(info["dbs"])]
-            for _ in range(cfg.max_episode_steps - 1):
+            for _ in range(cfg.max_episode_steps):
                 _action_index, indices = trainer.act(obs, explore=False)
-                obs, reward, terminated, truncated, step_info = env.step(indices)
+                obs, reward, _terminated, truncated, step_info = env.step(indices)
                 ep_reward += float(reward)
                 steps += 1
                 ep_alpha.append(float(step_info.get("alpha_beta", ep_alpha[-1])))
                 ep_dbs.append(_dbs_snapshot(step_info["dbs"]))
-                if terminated or truncated:
+                if truncated:
                     break
             episode_rewards.append(ep_reward)
             episode_lengths.append(steps)

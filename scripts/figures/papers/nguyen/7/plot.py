@@ -39,7 +39,7 @@ _figure_promote = load_script_module("figure_promote", _PROMOTE)
 import matplotlib.pyplot as plt
 import numpy as np
 
-from controllers.snn.config import BIOMARKER_THRESHOLD, EVAL_EPISODES, EVAL_MAX_STEPS, SNNConfig
+from controllers.snn.config import BIOMARKER_THRESHOLD, EVAL_EPISODES, EVAL_MAX_STEPS
 from controllers.snn.eval import evaluate
 
 FIG4_CACHE = Path("artifacts/figures/papers/nguyen/4")
@@ -227,10 +227,9 @@ def main(argv: list[str] | None = None) -> int:
         if not args.checkpoint.is_file():
             print(f"missing checkpoint: {args.checkpoint}", file=sys.stderr)
             return 2
-        cfg = SNNConfig().with_variant_defaults()
+        # The checkpoint's own training config (network shape, observation, plant).
         eval_payload = evaluate(
             args.checkpoint,
-            config=cfg,
             episodes=args.episodes,
             max_steps=args.max_steps,
         )
