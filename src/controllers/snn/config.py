@@ -288,17 +288,18 @@ def fig4_nguyen_config(
     *,
     num_episodes: int = TRAIN_EPISODES,
 ) -> SNNConfig:
-    """Nguyen Fig. 4 training config (docs/figures/nguyen/4.md; passes all Fig 4 gates).
+    """Nguyen Fig. 4–6 training config (docs/figures/nguyen/4.md, 6.md).
 
     Paper-stated: Eq. (7) reward with unnormalized d, θ = 150, init 300 nA/cm² / 40 Hz /
     0.3 ms, 25-step episodes, replay update every 128 transitions, LIF DSQN, binary spikes.
     From the authors' follow-up (arXiv 2606.28600): soft target τ 0.005, AdamW, SmoothL1,
     value clipping 100, γ 0.99, lr 1e-3, buffer 100k, batch 128, ε 0.9 → 0.05 over 2,000
     steps, surrogate-gradient training, per-episode continuous simulation, all eight CBGT
-    populations observed. Paper-silent conventions: t_u = 3, step sizes 10 nA/cm² /
-    3.75 Hz / 0.0375 ms, δ = 1, τ = 330, 32 minibatches per update, 1,500-transition replay
-    warm-up, rewards scaled by 1e-4 for learning only. 13 seeds: 3 pass every gate; the
-    13-seed mean misses length t90 by one episode.
+    populations observed. Step sizes 5 Hz / 0.1 ms read off Fig 6 (40 + 8 × 5 = 80 Hz,
+    0.3 + 8 × 0.1 = 1.1 ms in ~8-step episodes). Paper-silent conventions: t_u = 3,
+    amplitude step 10 nA/cm², δ = 1, τ = 330, 32 minibatches per update, 1,500-transition
+    replay warm-up, rewards scaled by 1e-4 for learning only. 13 seeds: 6 pass every
+    Fig 4 gate and the 13-seed mean passes every gate; the shipped figure is seed 1.
     """
     return SNNConfig(
         seed=seed,
@@ -310,8 +311,8 @@ def fig4_nguyen_config(
         threshold_reward=330.0,
         reward_learning_scale=1e-4,
         amplitude_sensitivity=10.0,
-        frequency_sensitivity=3.75,
-        pulse_width_sensitivity=0.0375,
+        frequency_sensitivity=5.0,
+        pulse_width_sensitivity=0.1,
         plant_carry=True,
         n_regions=8,
         neurons_per_region=10,

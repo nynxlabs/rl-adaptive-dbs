@@ -130,7 +130,7 @@ def test_fig4_config_keeps_paper_bounds_open() -> None:
     state = DBSParameterState()
     for _ in range(8):
         state.apply_delta([0, -1, 0], cfg, epsilon=0.05, episode=60)
-    assert state.frequency_hz == pytest.approx(40.0 - 8 * 3.75)  # no artificial floors
+    assert state.frequency_hz == pytest.approx(0.0)  # 40 Hz − 8 × 5 Hz: no artificial floors
     assert (cfg.alpha_beta_progress_coef, cfg.warm_zone_bonus_coef, cfg.truncation_penalty) == (0.0, 0.0, 0.0)
 
 
