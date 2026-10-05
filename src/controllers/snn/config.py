@@ -49,6 +49,14 @@ class SNNConfig:
     lif_leak: float = LIF_LEAK
     lif_threshold: float = 1.0  # θ_th — open in paper
     internal_unroll_steps: int = 5
+    # Spike nonlinearity gradient. "none": hard threshold with no gradient, so only the
+    # output layer's weights learn. "atan": arctan surrogate (snnTorch default, alpha 2),
+    # the surrogate-gradient training the authors' follow-up (arXiv 2606.28600) cites.
+    surrogate_gradient: str = "none"
+    # "static": the flattened n×N spike matrix drives every layer for internal_unroll_steps,
+    # and each layer passes spike counts on. "sequence": row t of the matrix drives SNN step t
+    # (n steps) and spikes propagate through all layers every step.
+    snn_input_mode: str = "static"
 
     # DQN / replay (open stabilizers documented beside code)
     gamma: float = 0.99
