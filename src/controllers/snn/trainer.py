@@ -292,12 +292,14 @@ class DSQNTrainer:
         with torch.no_grad():
             out = self.dsqn(tensor)
         counts = out.spike_counts.detach().cpu().numpy().reshape(-1)
+        membrane = out.membrane.detach().cpu().numpy().reshape(-1)
         epsilon = self.current_epsilon() if explore else 0.0
         action_index, ternary = select_action(
             counts,
             config=self.config,
             epsilon=epsilon,
             rng=self._rng,
+            membrane=membrane,
         )
         # Adapter MultiDiscrete expects {0,1,2}; ternary is {-1,0,1}.
         indices = (ternary + 1).astype(np.int64)
