@@ -9,6 +9,8 @@ from typing import Any, Callable
 
 import json
 
+import math
+
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -178,6 +180,12 @@ class DSQNTrainer:
         if cfg.epsilon_decay_steps <= 0:
             return cfg.epsilon_end
         start, end = cfg.epsilon_start, cfg.epsilon_end
+        if cfg.epsilon_schedule == "exp":
+            elapsed = self._total_steps - delay
+            return end + (start - end) * math.exp(-elapsed / cfg.epsilon_decay_steps)
+        if cfg.epsilon_schedule != "linear":
+            msg = f"epsilon_schedule must be 'linear' or 'exp', got {cfg.epsilon_schedule!r}"
+            raise ValueError(msg)
         if accel_after > 0 and self._total_steps >= accel_after:
             slow_elapsed = max(0, accel_after - delay)
             slow_p = min(1.0, slow_elapsed / cfg.epsilon_decay_steps)

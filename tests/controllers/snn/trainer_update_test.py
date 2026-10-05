@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import replace
 
 import numpy as np
+import pytest
 import torch
 
 from controllers.snn.buffer import ReplayBuffer, Transition
@@ -95,3 +97,18 @@ def test_saved_config_fills_fields_older_checkpoints_predate() -> None:
     assert saved_config(record).replay_update_steps == 1
     assert saved_config(record).seed == 3
     assert saved_config(SNNConfig(replay_update_steps=4)).replay_update_steps == 4
+
+
+def test_exponential_epsilon_follows_dqn_tutorial_formula() -> None:
+    cfg = replace(
+        SNNConfig().for_smoke(),
+        epsilon_start=0.9,
+        epsilon_end=0.05,
+        epsilon_decay_steps=2000,
+        epsilon_schedule="exp",
+    )
+    trainer = DSQNTrainer(DSQN(cfg), ReplayBuffer(cfg, seed=0), cfg)
+    assert trainer.current_epsilon() == pytest.approx(0.9)
+    for _ in range(2000):
+        trainer.note_step()
+    assert trainer.current_epsilon() == pytest.approx(0.05 + 0.85 * math.exp(-1.0))

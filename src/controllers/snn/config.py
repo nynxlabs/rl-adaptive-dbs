@@ -87,6 +87,10 @@ class SNNConfig:
     epsilon_start: float = 1.0
     epsilon_end: float = 0.05
     epsilon_decay_steps: int = 2_500
+    # "linear": ramp start→end over epsilon_decay_steps. "exp": PyTorch DQN-tutorial
+    # end + (start − end)·exp(−steps / epsilon_decay_steps) — the reading of the
+    # follow-up's "ε decay steps 2,000" (arXiv 2606.28600 Table S3 uses that stack).
+    epsilon_schedule: str = "linear"
     # Hold ε at start for this many env steps, then linear decay (0 = no delay).
     epsilon_decay_delay_steps: int = 0
     # After this many env steps, dump remaining ε to epsilon_end faster (0 = off).
