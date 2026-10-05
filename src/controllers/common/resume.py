@@ -135,6 +135,7 @@ SNN_MATERIAL_FIELDS: tuple[str, ...] = (
     "epsilon_start",
     "epsilon_end",
     "epsilon_decay_steps",
+    "epsilon_schedule",
     "epsilon_decay_delay_steps",
     "epsilon_accelerate_after_steps",
     "epsilon_accelerate_decay_steps",
