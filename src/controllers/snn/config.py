@@ -66,6 +66,9 @@ class SNNConfig:
     # Gradient minibatches per replay flush (paper silent). 4 × batch 32 = one pass's worth of
     # samples for the 128 transitions collected since the last flush.
     replay_update_steps: int = 4
+    # No gradient updates until the buffer holds this many transitions (DQN "learning
+    # starts"); 0 = start as soon as a batch fits. Paper-silent.
+    replay_warmup_transitions: int = 0
     batch_size: int = 32
     # Bellman TD loss: ``mse`` or ``huber`` (smooth L1 — dampens timeout Q spikes).
     q_loss_fn: str = "mse"

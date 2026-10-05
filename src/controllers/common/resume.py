@@ -143,6 +143,7 @@ SNN_MATERIAL_FIELDS: tuple[str, ...] = (
     "epsilon_accelerate_decay_steps",
     "replay_update_cadence",
     "replay_update_steps",
+    "replay_warmup_transitions",
     "q_loss_fn",
     "target_update_period",
     "target_soft_update_tau",
