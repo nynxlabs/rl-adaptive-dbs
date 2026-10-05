@@ -122,6 +122,10 @@ class NguyenEnvAdapter(gym.Env):
         )
         return [np.asarray(t, dtype=float) for t in trains]
 
+    def _spike_events(self, result: IntegrateResult) -> int:
+        """Spike events in this 100 ms step across the observed populations (Fig. 5a)."""
+        return int(sum(np.asarray(t).size for t in self._observed_spike_trains(result)))
+
     def _encode_observation(self, result: IntegrateResult) -> np.ndarray:
         return self.encoder.encode(
             self._observed_spike_trains(result),
@@ -189,6 +193,7 @@ class NguyenEnvAdapter(gym.Env):
             "adapter": True,
             "step_duration_ms": self.config.step_duration_ms,
             "cbgt_spike_count": spike_count,
+            "cbgt_spike_events": self._spike_events(result),
             "step_energy": step_energy,
         }
         return obs, info
@@ -288,6 +293,7 @@ class NguyenEnvAdapter(gym.Env):
             "subthreshold_streak": self._subthreshold_streak,
             "plant_guard": plant_guard,
             "cbgt_spike_count": spike_count,
+            "cbgt_spike_events": self._spike_events(result),
             "step_energy": step_energy,
         }
         return obs, reward, terminated, truncated, info
