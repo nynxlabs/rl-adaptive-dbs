@@ -128,6 +128,8 @@ SNN_MATERIAL_FIELDS: tuple[str, ...] = (
     "sequence_steps",
     "neurons_per_region",
     "n_regions",
+    "surrogate_gradient",
+    "snn_input_mode",
     "gamma",
     "learning_rate",
     "batch_size",

@@ -386,3 +386,35 @@ def test_cbgt_observation_stacks_eight_populations() -> None:
 def test_unsupported_region_count_is_rejected() -> None:
     with pytest.raises(ValueError, match="n_regions"):
         NguyenEnvAdapter(plant=_SpikeMockPlant(), config=SNNConfig(n_regions=3))
+
+
+@pytest.mark.parametrize("mode", ["static", "sequence"])
+def test_atan_surrogate_trains_every_layer(mode: str) -> None:
+    cfg = SNNConfig(n_regions=8, surrogate_gradient="atan", snn_input_mode=mode)
+    net = DSQN(cfg)
+    obs = (torch.rand(4, cfg.flat_observation_dim, generator=torch.Generator().manual_seed(0)) < 0.2).float()
+    out = net(obs)
+    assert out.spike_counts.shape == out.membrane.shape == (4, 9)
+    out.membrane.sum().backward()
+    for layer in (net.input_layer, net.hidden_layer, net.output_layer):
+        assert layer.linear.weight.grad is not None and layer.linear.weight.grad.abs().sum() > 0
+
+
+def test_hard_threshold_only_trains_output_layer() -> None:
+    cfg = SNNConfig(n_regions=8)
+    net = DSQN(cfg)
+    net(torch.ones(2, cfg.flat_observation_dim)).membrane.sum().backward()
+    assert net.input_layer.linear.weight.grad is None
+    assert net.output_layer.linear.weight.grad is not None
+
+
+def test_sequence_mode_reads_one_matrix_row_per_step() -> None:
+    cfg = SNNConfig(n_regions=8, snn_input_mode="sequence")
+    net = DSQN(cfg)
+    assert net.input_layer.linear.in_features == 80
+    early = torch.zeros(1, 10, 80)
+    early[0, :5] = 1.0
+    late = torch.zeros(1, 10, 80)
+    late[0, 5:] = 1.0
+    # Same spikes, different bins: an ordered sequence, not a bag of bins.
+    assert not torch.allclose(net(early.reshape(1, -1)).membrane, net(late.reshape(1, -1)).membrane)
