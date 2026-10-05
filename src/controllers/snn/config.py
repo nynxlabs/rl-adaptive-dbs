@@ -288,153 +288,53 @@ def fig4_nguyen_config(
     *,
     num_episodes: int = TRAIN_EPISODES,
 ) -> SNNConfig:
-    """Nguyen Fig. 4 train defaults (figures/nguyen/replications.md § Fig 4).
+    """Nguyen Fig. 4 training config (docs/figures/nguyen/4.md; passes all Fig 4 gates).
 
-    Paper Eq. (7) + probe-driven shaping (v9): progress/warm-zone bonuses,
-    truncation penalty for 25-step timeouts, faster freq ramp. v11 removed
-    shaping for negative-million digitization band only — regressed to energy
-    collapse (v13); keep v9 shaping for learnable early-stop.
-
-    v10c: subthreshold_steps_required=2 for easier early-stop.
-    v46 FAIL: t_u=3 + 500ep; first-100 length rose (80–100 ≈24.6 vs paper ~10).
-    v48 FAIL: decay=1900 from step 0 locked a weak greedy policy.
-    v49 FAIL: delay=1100 held ε=1 through ep 50. v50 FAIL: delay=500
-    flattened length ~18.5. v51: restore v47's slow slope (decay=3200,
-    no hold) then dump after ~70 ep (accelerate_after=1400, dump=500)
-    so 50–70 can still glide and 80–100 can show greedy length.
-    v51 FAIL: mid-glide true (~17.2) but dump too late (ε=0.46 at ep 80);
-    80–100 stayed ~17. v52 FAIL: after=1000 + freq_sens=15 hit ε floor by
-    ep 70 and greedy timed out (80–100 ≈19.4, lost glide). v53: freq=20
-    again; dump after ~60 ep (1200) over 350 steps so floor by ~ep 80.
-    v53 FAIL: ε floor by ep 80 as intended; 80–100 still ~17 (greedy ~16–17
-    steps, α–β ~220). Shape not ready for 500ep. v54: keep v53 ε schedule;
-    raise alpha_beta_progress_coef 2500→4000 so greedy drives α–β down
-    faster and stops earlier in the episode.
-    v54 FAIL: identical first-100 to v53 (0–50 ≈20). Raw median is already
-    25; 16/50 lucky tu=2 stops pull the smooth start down. v55: keep v53 ε
-    dump; revert prog=2500; frequency_sensitivity=10 so random +freq is
-    less likely to hit 80 Hz in the first 50 episodes.
-    v55: ep1 length=25 but reward ≈−1.40e6 (paper start ≈−0.66e6). The
-    extra million is truncation_penalty on timeout. v56: truncation=0 so
-    a 25-step first episode is Eq. (7) only (~−0.4e6, near paper −0.65e6).
-    v56 ep1: length 25, reward −3.98e5 (too high vs paper −6.6e5). v57:
-    truncation_penalty=250k so ep1 ≈ −0.65e6 with length still 25.
-    v57 FAIL: ep1 matched; greedy timed out after ε floor (80–100 len ≈24).
-    v58 FAIL: cadence=16 made 0–50 length 22.6 (horizon false) and still no
-    glide (80–100 ≈22.6). One ES at ep 59 did not stick.
-    v59 FAIL: ep1 OK; 0–50 len 22.75 (horizon false); 80–100 ≈22.4;
-    greedy still timeouts. v60: frequency_sensitivity=15, same dump@1400 /
-    replay=128 / trunc=250k.
-    v60 FAIL: start collapsed (0–50 len ≈21.4). Do not raise freq. v61:
-    freq_sens=10 (v57 start) + epsilon_end=0.15 (v10 late exploration).
-    v61 FAIL: 80–100 len ≈23.2 (rose). v62: slower dump (decay=800) so ε
-    stays higher through 80–100; keep freq=10 / ε_end=0.15 / trunc=250k.
-    v62 FAIL: 80–100 len=25 (all timeouts). Revert dump=400. v63: ε_end=0.20.
-    v63 FAIL: 80–100 ≈24.1. ε-floor family exhausted. v64: pulse_width_sensitivity=0.2
-    so greedy can reach paper ~1 ms without raising freq.
-    v64 FAIL: start held (~22.3) but 80–100 len=25 (all timeouts). v65:
-    pulse_width_sensitivity=0.3 (still no freq raise).
-    v65 FAIL: pw family exhausted; constant freq=10 starves 80 Hz replay.
-    v66: frequency_sensitivity_explore=20 (schedule vs ε) so high-ε random
-    walks reach ~80 Hz early-stops while ε-floor greedy keeps exploit=10.
-    v66 FAIL: linear schedule at ε≈1 used explore=20 → ep1 len=15 and
-    20/50 lucky stops (smooth 0–50 ≈19). v67: explore only in mid-anneal
-    band (ε≤0.7 and >ε_end); hold exploit=10 at ε>0.7 and at floor.
-    v67 FAIL: ep1 OK but greedy still 30 Hz / α–β 309 at ep 99; exploit=10
-    cannot reach ~80 Hz in one episode. v68: episode curriculum — freq=10 for
-    ep 0–34 (paper start), then freq=20 so greedy can suppress; v53 ε dump
-    (1200/350, ε_end=0.05); replay cadence 32 for ~75 SGD steps / 100 ep.
-    v68 FAIL: bimodal — good eps at 100–120 Hz (len 4–14) vs F=0 collapse
-    timeouts; smoothed 80–100 still 24.     v69: frequency_min=10, amplitude_min=50;
-    early curriculum through ep 39.
-    v69 FAIL (100ep + 500ep): F=10 collapse timeouts drive spikes; 500ep
-    late_len≈13.9, 80–100≈23.     v71 (same knobs as v70 branch): frequency_min
-    at paper init (40 Hz), amplitude_min=200; early curriculum through ep 49
-    so 0–50 keeps freq=10/step but greedy cannot dive below init frequency.
-    v71 FAIL: reward gates pass but ep0 lucky stop (len 8); 0–50 smooth ≈21.2
-    (need ≥23). v72: keep v71 floors; frequency_sensitivity_early=1 so ε≈1
-    random walks stay near paper init 40 Hz (v55 spirit) while exploit=20 after
-    ep 49 for late suppression. v72 FAIL: early gates pass (0–50 len=25) but
-    80–100 len≈20.7 and reward_by_100 fail — 50 eps at early=1 starved mid
-    freq ramp. v73: early=1 for ep 0–24 only, then exploit=20; slower ε
-    (decay=4200, accelerate@2000, prog=2000) for paper mid-glide by ep 80.
-    v73 FAIL: shortening early broke 0–50 smooth (22.0) without fixing 80–100
-    (20.75); ep500 timeout.     v74: v72 early lock (1 Hz, 50 ep) + v22 slower ε
-    only — isolate epsilon from v73's shortened curriculum mistake. v74 FAIL:
-    early OK (0–50=25) but 80–100≈21.3 (worse than v72); slower ε alone no help.
-    v75: early=3 for 50 ep (v71=10 vs v72=1 compromise) + v72 fast ε
-    (decay=3200, accelerate@1200, prog=2500). v75 FAIL length only: reward
-    shape+full PASS; 0–50=25, mid-glide true, but 80–100≈16.0, late_len≈14.9,
-    post100 ptp=8.7 (need ≤4.5). v76: early=5 (toward v71 mid-curve) keeping
-    v75 ε schedule; lock floors and exploit=20 after ep 49. v76 PASS (500ep):
-    shape_pass+pass; early_hz=5, early_eps=50, freq_min=40, amp_min=200.
-    Visual gap: bimodal timeout vs early-stop drives spikier raw/smoothed than
-    paper (length ptp 100–200 ≈7.9 vs paper ≈1.8).     v77: ε_end=0.02 and
-    target_update_period=50 for stabler late greedy policy. v77 PASS gates
-    but smoothness regressed (late timeout 55%); ship v76 not v77.
-    v78: v76 + replay_update_cadence=16 (2× SGD per env step for smoother
-    Q fit) and target_update_period=50 with ε_end=0.05 kept — isolate v77's
-    target-sync knob without starving late exploration. v78 FAIL: collapse
-    to 100% timeouts by ep ~200 (last ES ep 177); cadence=16 over-trains.
-    Ship v76. v80: learning_rate=3e-4 (paper-silent) to cut late Q churn /
-    timeout flips; keep v76 replay cadence 32 and target_update 100. v81:
-    v80 + batch_size=64 — worse late_len; do not ship. v82: v80 +
-    q_loss_fn=huber — FAIL shape (mid-glide too fast: smooth 50–100≈11.4
-    vs paper 17.8); do not retry huber fresh train. v83: v80 mse +
-    target_update_period=200 (slower hard targets; not v77's tu=50+ε_end=0.02).
-    v83 shape_pass, best late (timeout 13% ep350–500); checkpoint_v83.pt.
-    v84: v83 + replay_update_cadence=48 — FAIL late (timeout 40%, late_len≈15.5);
-    do not retry cadence>32. v85: v83 + epsilon_end=0.06 (slightly more late ε vs
-    v77's 0.02 trap; keep tu=200, cadence=32). v85 FAIL vs v83 (late_to 17%,
-    ptp 9.65);     do not retry epsilon_end>0.05. v86: v83 + target_update_period=250 — identical
-    tier-2 metrics to v83 (ptp 6.55); no gain. v87: v83 + truncation_penalty=300k
-    — FAIL vs v83 (ptp 7.85, late_to 15%, late_slope 0.04). **Ship v83**
-    (checkpoint_v83.pt): shape_pass only; Tier-2 blocked by bimodal ptp (~6.5
-    vs paper ~1.6). Q-knob probe budget exhausted v80–v87. v88: v83 +
-    double_dqn=True (paper-silent stabilizer; targets lower timeout flip rate).
-    v102 at lr=2.49e-4: same reward/length tradeoff as v101; Fig 5 v8 relog shows energy mid-ramp fail
-    because late pw collapses to ~0.45 ms (paper Fig 6 ~1 ms). v103+: pulse_width_min=0.5 blocks
-    late pw collapse for Fig 5 energy panel (paper-silent floor; init still 0.3 ms).
-    Oct 3 2026: paper-faithful update rule — replay cadence 128 (paper-fixed, was 32) and no
-    target network (paper bootstraps from θ; tu=200 never synced in v158), 4 minibatches/flush.
+    Paper-stated: Eq. (7) reward with unnormalized d, θ = 150, init 300 nA/cm² / 40 Hz /
+    0.3 ms, 25-step episodes, replay update every 128 transitions, LIF DSQN, binary spikes.
+    From the authors' follow-up (arXiv 2606.28600): soft target τ 0.005, AdamW, SmoothL1,
+    value clipping 100, γ 0.99, lr 1e-3, buffer 100k, batch 128, ε 0.9 → 0.05 over 2,000
+    steps, surrogate-gradient training, per-episode continuous simulation, all eight CBGT
+    populations observed. Paper-silent conventions: t_u = 3, step sizes 10 nA/cm² /
+    3.75 Hz / 0.0375 ms, δ = 1, τ = 330, 32 minibatches per update, 1,500-transition replay
+    warm-up, rewards scaled by 1e-4 for learning only. 13 seeds: 3 pass every gate; the
+    13-seed mean misses length t90 by one episode.
     """
     return SNNConfig(
         seed=seed,
         num_episodes=num_episodes,
         max_episode_steps=EVAL_MAX_STEPS,
         alpha_beta_threshold=BIOMARKER_THRESHOLD,
-        subthreshold_steps_required=2,
-        epsilon_decay_steps=3_200,
-        epsilon_decay_delay_steps=0,
-        epsilon_accelerate_after_steps=750,
-        epsilon_accelerate_decay_steps=280,
-        epsilon_end=0.05,
-        learning_rate=3e-4,
-        batch_size=32,
-        q_loss_fn="mse",
-        frequency_max=98.0,
-        frequency_sensitivity=12.0,
-        frequency_sensitivity_early=4.0,
-        frequency_sensitivity_early_episodes=50,
-        frequency_sensitivity_explore=0.0,
-        frequency_min=INIT_FREQUENCY_HZ,
-        amplitude_min=200.0,
-        pulse_width_max=1.18,
-        pulse_width_sensitivity=0.25,
-        pulse_width_sensitivity_early=0.02,
-        pulse_width_sensitivity_early_episodes=50,
-        pulse_width_min=1.0,
-        pulse_width_min_early=0.05,
-        pulse_width_min_early_episodes=50,
-        pulse_width_min_ramp_end_episode=85,
+        subthreshold_steps_required=3,
+        energy_penalty=1.0,
         threshold_reward=330.0,
-        energy_penalty=0.0,
-        alpha_beta_progress_coef=3200.0,
-        alpha_beta_progress_cap_per_step=10_000.0,
-        warm_zone_upper=220.0,
-        warm_zone_bonus_coef=150.0,
-        truncation_penalty=250_000.0,
         reward_learning_scale=1e-4,
+        amplitude_sensitivity=10.0,
+        frequency_sensitivity=3.75,
+        pulse_width_sensitivity=0.0375,
+        plant_carry=True,
+        n_regions=8,
+        neurons_per_region=10,
+        sequence_steps=10,
+        surrogate_gradient="atan",
+        snn_input_mode="static",
+        replay_update_cadence=128,
+        replay_update_steps=32,
+        replay_warmup_transitions=1_500,
+        replay_capacity=100_000,
+        batch_size=128,
+        q_loss_fn="huber",
+        optimizer="adamw",
+        grad_clip_mode="value",
+        grad_clip=100.0,
+        learning_rate=1e-3,
+        gamma=0.99,
+        target_update_period=0,
+        target_soft_update_tau=0.005,
+        epsilon_start=0.9,
+        epsilon_end=0.05,
+        epsilon_decay_steps=2_000,
+        epsilon_schedule="linear",
         stimulated_neurons=1,
         log_episodes=True,
     )
