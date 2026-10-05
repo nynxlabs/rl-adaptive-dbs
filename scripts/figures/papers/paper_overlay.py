@@ -583,7 +583,8 @@ def overlay_nguyen_fig4(
         "mark_endpoints": False,
     }
     # ``Raw`` is a traced outline of the noisy band (out along one edge, back along
-    # the other); draw its two edges separately instead of the interleaved sort.
+    # the other). Merge both edges and sort by episode so one line bounces between
+    # them like the paper's raw trace; the bounces are edge-to-edge, not per-episode.
     raw_edges: dict[str, dict[str, tuple[np.ndarray, np.ndarray]]] = {}
     for name, curves, stem in (
         ("reward", reward_curves, "fig4_reward"),
@@ -598,18 +599,19 @@ def overlay_nguyen_fig4(
         ):
             if name not in raw_edges:
                 continue
-            for i, edge in enumerate(("lower", "upper")):
-                ex, ey = raw_edges[name][edge]
-                overlay_on_axis(
-                    ax,
-                    ex,
-                    ey,
-                    label="Paper raw band (digitized)" if i == 0 else "_nolegend_",
-                    color=color,
-                    alpha=0.55,
-                    raw=True,
-                    **paper_raw_style,
-                )
+            ex = np.concatenate([raw_edges[name]["lower"][0], raw_edges[name]["upper"][0]])
+            ey = np.concatenate([raw_edges[name]["lower"][1], raw_edges[name]["upper"][1]])
+            order = np.argsort(ex, kind="mergesort")
+            overlay_on_axis(
+                ax,
+                ex[order],
+                ey[order],
+                label="Paper raw (digitized outline)",
+                color=color,
+                alpha=0.55,
+                raw=True,
+                **paper_raw_style,
+            )
     overlay_on_axis(
         ax_reward,
         prx,
