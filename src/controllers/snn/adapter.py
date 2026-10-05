@@ -50,6 +50,9 @@ class NguyenEnvAdapter(gym.Env):
     ) -> None:
         super().__init__()
         self.config = (config or SNNConfig()).with_variant_defaults()
+        if self.config.n_regions not in (1, 8):
+            msg = f"n_regions must be 1 (GPi) or 8 (all CBGT populations), got {self.config.n_regions}"
+            raise ValueError(msg)
         self.encoder = SpikeObservationEncoder(self.config)
         self._owns_plant = plant is None
         if plant is None:
@@ -100,9 +103,28 @@ class NguyenEnvAdapter(gym.Env):
             padded.append(np.array([], dtype=float))
         return padded
 
+    def _observed_spike_trains(self, result: IntegrateResult) -> list[np.ndarray]:
+        """GPi only (``n_regions=1``) or all eight CBGT populations (``n_regions=8``)."""
+        if self.config.n_regions == 1:
+            return self._gpi_spike_trains(result)
+        n = self.config.neurons_per_region
+        info = result.info
+        cor = list(info["cor_spikes"])
+        trains = (
+            cor[:n]  # cortex excitatory
+            + cor[n : 2 * n]  # cortex inhibitory
+            + list(info["str_dr_spikes"])
+            + list(info["str_indr_spikes"])
+            + list(info["stn_spikes"])
+            + list(info["gpe_spikes"])
+            + self._gpi_spike_trains(result)
+            + list(info["th_spikes"])
+        )
+        return [np.asarray(t, dtype=float) for t in trains]
+
     def _encode_observation(self, result: IntegrateResult) -> np.ndarray:
         return self.encoder.encode(
-            self._gpi_spike_trains(result),
+            self._observed_spike_trains(result),
             duration_s=self.config.step_duration_s,
         )
 
@@ -171,6 +193,11 @@ class NguyenEnvAdapter(gym.Env):
         }
         return obs, info
 
+    def _bg_kwargs(self) -> dict[str, bool]:
+        # Only ask the plant for STN/GPe/striatum spikes when they are observed, so
+        # GPi-only runs keep calling plants that predate the flag.
+        return {"record_bg_spikes": True} if self.config.n_regions == 8 else {}
+
     def _integrate_current_dbs(self) -> IntegrateResult:
         duration_s = self.config.step_duration_s
         if not self.config.plant_carry:
@@ -180,6 +207,7 @@ class NguyenEnvAdapter(gym.Env):
                 record_spikes=True,
                 record_th_spikes=True,
                 record_cor_spikes=True,
+                **self._bg_kwargs(),
             )
         idbs, pulse_state = self._pulses.segment(
             frequency_hz=self._dbs.frequency_hz,
@@ -195,6 +223,7 @@ class NguyenEnvAdapter(gym.Env):
             record_th_spikes=True,
             record_cor_spikes=True,
             carry=True,
+            **self._bg_kwargs(),
         )
         # Advance the pulse clock only after the plant accepted the segment.
         self._pulses.commit(pulse_state)

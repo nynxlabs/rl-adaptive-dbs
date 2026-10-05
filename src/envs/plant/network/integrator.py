@@ -26,6 +26,7 @@ from envs.plant.spikes import find_spike_times, spike_counts
 
 try:
     from envs.plant.network.numba_loop import (
+        N_BG_RECORDED,
         N_CONV,
         gpi_spikes_from_buffer,
         numba_loop_available,
@@ -33,6 +34,9 @@ try:
     )
 except ImportError:  # pragma: no cover
     numba_loop_available = lambda: False  # type: ignore[assignment,misc]
+
+# Rows of the Numba ``bg_spike_buf`` (``record_bg_spikes``); info keys are ``<name>_spikes``.
+BG_RECORDED_POPULATIONS = ("stn", "gpe", "str_indr", "str_dr")
 
 POPULATION_NAMES = (
     "ctx_exc",
@@ -533,6 +537,7 @@ def integrate_network(
     cor_spike_buffer_size: int | None = None,
     dyn_state: Mapping[str, np.ndarray] | None = None,
     save_dyn: bool = False,
+    record_bg_spikes: bool = False,
 ) -> IntegrateResult:
     """Advance the CBGT network for one segment (``CTX_BG_TH_network`` port)."""
 
@@ -822,6 +827,9 @@ def integrate_network(
     if (dyn_state is not None or save_dyn) and not use_numba:
         msg = "plant dyn carry requires the Numba loop"
         raise RuntimeError(msg)
+    if record_bg_spikes and not use_numba:
+        msg = "record_bg_spikes requires the Numba loop"
+        raise RuntimeError(msg)
     dyn_out: dict[str, np.ndarray] | None = None
     numba_gpi_buf: np.ndarray | None = None
     numba_gpi_counts: np.ndarray | None = None
@@ -864,6 +872,9 @@ def integrate_network(
         else:
             numba_cor_buf = np.zeros((1, 1), dtype=np.float64)
             numba_cor_counts = np.zeros(1, dtype=np.int32)
+        bg_shape = (N_BG_RECORDED, n, auto_buf) if record_bg_spikes else (N_BG_RECORDED, 1, 1)
+        numba_bg_buf = np.zeros(bg_shape, dtype=np.float64)
+        numba_bg_counts = np.zeros(bg_shape[:2], dtype=np.int32)
         ca3_state = np.full(n, float(CA3), dtype=np.float64)
         ca4_state = np.full(n, float(CA4), dtype=np.float64)
         loc = locals()
@@ -1024,6 +1035,9 @@ def integrate_network(
             numba_cor_buf,
             numba_cor_counts,
             record_cor_spikes,
+            numba_bg_buf,
+            numba_bg_counts,
+            record_bg_spikes,
             iappgpe,
             uce_scale,
         )
@@ -1518,6 +1532,9 @@ def integrate_network(
     if record_cor_spikes:
         info["cor_spike_counts"] = spike_counts(cor_spikes).tolist()
         info["cor_spikes"] = cor_spikes
+    if record_bg_spikes:
+        for row, name in enumerate(BG_RECORDED_POPULATIONS):
+            info[f"{name}_spikes"] = gpi_spikes_from_buffer(numba_bg_buf[row], numba_bg_counts[row])
     if p_beta_val is not None:
         info["p_beta"] = p_beta_val
     if save_dyn:

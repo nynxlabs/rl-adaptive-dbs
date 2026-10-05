@@ -62,6 +62,7 @@ class PythonPlant:
         record_cor_spikes: bool = False,
         cor_spike_buffer_size: int | None = None,
         carry: bool = False,
+        record_bg_spikes: bool = False,
     ) -> IntegrateResult:
         if duration_s <= 0:
             msg = "duration_s must be positive"
@@ -93,6 +94,7 @@ class PythonPlant:
             cor_spike_buffer_size=cor_spike_buffer_size,
             dyn_state=self._dyn if carry else None,
             save_dyn=carry,
+            record_bg_spikes=record_bg_spikes,
         )
         if carry:
             packed = result.info.pop("_dyn_state", None)
