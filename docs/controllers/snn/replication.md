@@ -246,7 +246,7 @@ Hyperparameters with **fixed** values in §IV (episode count, threshold **150**,
 
 ### 1. Spike observation layout ($n \times N$)
 
-Eq. (4) defines a binary spike matrix; §III.B mentions **128** inputs per forward pass (distinct from replay cadence **128**). **Fixed:** binary encoding; **100 ms** RL step. **Chosen (v1):** GPi-only ($N=10$), sequence length $n=10$ (`SNNConfig.n_regions=1`, `sequence_steps=10`). Expand regions when the encoder covers full CBGT.
+Eq. (4) defines a binary spike matrix; §III.B mentions **128** inputs per forward pass (distinct from replay cadence **128**). **Fixed:** binary encoding; **100 ms** RL step. **Chosen:** all eight CBGT populations — cortex exc/inh, striatum D1/D2, STN, GPe, GPi, thalamus — 10 neurons each ($N=80$), sequence length $n=10$ (`n_regions=8`, `sequence_steps=10`); the authors' follow-up (arXiv 2606.28600) observes the same 8 × 10 matrix. `n_regions=1` keeps the earlier GPi-only input.
 
 ### 2. Per-parameter DBS delta sensitivities
 
