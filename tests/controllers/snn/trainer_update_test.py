@@ -62,6 +62,25 @@ def test_target_network_syncs_inside_a_flush() -> None:
         assert torch.equal(value, trainer.dsqn.state_dict()[key])
 
 
+def test_soft_target_tracks_online_weights_by_polyak_average() -> None:
+    trainer = _trainer(
+        target_soft_update_tau=0.5,
+        replay_update_steps=1,
+        optimizer="adamw",
+        grad_clip_mode="value",
+        grad_clip=100.0,
+    )
+    assert trainer.uses_target_network
+    assert isinstance(trainer.optimizer, torch.optim.AdamW)
+    before = {k: v.clone() for k, v in trainer.target_dsqn.state_dict().items()}
+    _fill(trainer, trainer.config.replay_update_cadence)
+    assert trainer.maybe_update()
+    online = trainer.dsqn.state_dict()
+    for key, value in trainer.target_dsqn.state_dict().items():
+        assert torch.allclose(value, 0.5 * before[key] + 0.5 * online[key])
+    assert training_budget(trainer.config)["target_network"] is True
+
+
 def test_training_budget_counts_steps_per_flush_and_skips_sync_warning() -> None:
     cfg = SNNConfig(seed=0, num_episodes=10, max_episode_steps=25)
     budget = training_budget(cfg)

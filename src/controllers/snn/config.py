@@ -67,6 +67,17 @@ class SNNConfig:
     # Hard-copy target network every N gradient updates. 0 = no separate target network:
     # bootstrap from the online weights θ, as in the paper's Q-target (Nguyen et al. §II).
     target_update_period: int = 0
+    # Polyak-average the target network after every gradient update:
+    # θ' ← τ θ + (1 − τ) θ'. 0 = off. The group's published DSQN implementation uses 0.005
+    # (Nguyen et al. 2026, arXiv 2606.28600, Algorithm S1 / Table S3). Overrides
+    # ``target_update_period`` when > 0.
+    target_soft_update_tau: float = 0.0
+    # ``adam`` or ``adamw`` (the group's published implementation uses AdamW, torch defaults).
+    optimizer: str = "adam"
+    # Gradient clipping: ``norm`` (clip_grad_norm_) or ``value`` (clip_grad_value_, per element;
+    # the group's published implementation uses value 100). ``grad_clip <= 0`` disables it.
+    grad_clip_mode: str = "norm"
+    grad_clip: float = 10.0
 
     # Exploration (ε-greedy on spike-count argmax)
     epsilon_start: float = 1.0
