@@ -104,7 +104,7 @@ def load_series(path: Path) -> dict[str, Any]:
     if not path.is_file():
         raise FileNotFoundError(f"missing Fig 4 series cache: {path}")
     series = json.loads(path.read_text(encoding="utf-8"))
-    for key in ("episode_spike_totals", "episode_energies"):
+    for key in ("episode_spikes_per_step", "episode_energies"):
         if key not in series or len(series[key]) != len(series.get("episode_rewards", [])):
             msg = (
                 f"series missing {key!r}; re-run Fig 4 train with spike/energy logging:\n"
@@ -115,7 +115,7 @@ def load_series(path: Path) -> dict[str, Any]:
 
 
 def evaluate_gates(series: dict[str, Any], *, fig4_manifest: dict[str, Any] | None) -> dict[str, Any]:
-    spikes = np.asarray(series["episode_spike_totals"], dtype=float)
+    spikes = np.asarray(series["episode_spikes_per_step"], dtype=float)
     energies = np.asarray(series["episode_energies"], dtype=float)
     n = int(spikes.size)
     shared_train = bool(
@@ -167,7 +167,7 @@ def evaluate_gates(series: dict[str, Any], *, fig4_manifest: dict[str, Any] | No
 
 def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -> dict[str, Any]:
     plt.rcParams.update(STYLE)
-    spikes = np.asarray(series["episode_spike_totals"], dtype=float)
+    spikes = np.asarray(series["episode_spikes_per_step"], dtype=float)
     energies = np.asarray(series["episode_energies"], dtype=float)
     episodes = np.arange(spikes.size, dtype=float)
 

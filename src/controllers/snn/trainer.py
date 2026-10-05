@@ -53,9 +53,12 @@ class TrainResult:
     metrics: list[TrainMetrics] = field(default_factory=list)
     episode_rewards: list[float] = field(default_factory=list)
     episode_lengths: list[int] = field(default_factory=list)
-    episode_spike_totals: list[int] = field(default_factory=list)
+    # Mean CBGT spike events per 100 ms step (all observed populations).
+    episode_spikes_per_step: list[float] = field(default_factory=list)
     episode_energies: list[float] = field(default_factory=list)
     episode_alpha_beta_means: list[float] = field(default_factory=list)
+    # α–β of the episode's last step, the same moment the DBS parameters are read.
+    episode_alpha_beta_finals: list[float] = field(default_factory=list)
     episode_early_stops: list[bool] = field(default_factory=list)
     episode_amplitudes: list[float] = field(default_factory=list)
     episode_frequencies: list[float] = field(default_factory=list)
@@ -344,7 +347,7 @@ class DSQNTrainer:
         for episode in range(start_episode, cfg.num_episodes):
             obs, reset_info = env.reset(seed=cfg.seed + episode)
             episode_reward = 0.0
-            # Fig. 5/6 per-episode spikes and energy sum env.step() transitions only
+            # Fig. 5/6 per-episode spikes and energy use env.step() transitions only
             # (same steps as episode_lengths); reset() initial integrate is not counted.
             episode_spikes = 0
             episode_energy = 0.0
@@ -360,7 +363,7 @@ class DSQNTrainer:
                 action_index, indices = self.act(obs, explore=True)
                 next_obs, reward, terminated, truncated, step_info = env.step(indices)
                 done = bool(terminated or truncated)
-                episode_spikes += int(step_info.get("cbgt_spike_count", 0))
+                episode_spikes += int(step_info.get("cbgt_spike_events", 0))
                 episode_energy += float(step_info.get("step_energy", 0.0))
                 alpha_betas.append(float(step_info.get("alpha_beta", float("nan"))))
                 self.buffer.add(
@@ -397,24 +400,20 @@ class DSQNTrainer:
                 loss=self._last_loss,
             )
             result.metrics.append(metrics)
-            spk_rate = (episode_spikes / max(1, steps)) if steps > 0 else 52.0
-            nominal_spikes = int(round(810.0 + (spk_rate - 52.0) * 4.0))
-            nominal_energy = float((episode_energy / max(1, steps)) * cfg.max_episode_steps) if steps > 0 else episode_energy
+            # Energy: mean Eq. (6) energy per step × the 25-step horizon. At the paper's
+            # init and late triples this gives its Fig 5b scale (~800 early, ~1,800 late).
+            n = max(1, steps)
             result.episode_rewards.append(episode_reward)
             result.episode_lengths.append(steps)
-            result.episode_spike_totals.append(nominal_spikes)
-            result.episode_energies.append(nominal_energy)
+            result.episode_spikes_per_step.append(float(episode_spikes / n))
+            result.episode_energies.append(float(episode_energy / n * cfg.max_episode_steps))
             if alpha_betas:
-                if terminated_early and steps < cfg.max_episode_steps:
-                    nominal_ab = float(
-                        (sum(alpha_betas) + (cfg.max_episode_steps - steps) * alpha_betas[-1])
-                        / cfg.max_episode_steps
-                    )
-                else:
-                    nominal_ab = float(np.nanmean(alpha_betas))
+                result.episode_alpha_beta_means.append(float(np.nanmean(alpha_betas)))
+                result.episode_alpha_beta_finals.append(float(alpha_betas[-1]))
             else:
-                nominal_ab = float(reset_info.get("alpha_beta", float("nan")))
-            result.episode_alpha_beta_means.append(nominal_ab)
+                reset_ab = float(reset_info.get("alpha_beta", float("nan")))
+                result.episode_alpha_beta_means.append(reset_ab)
+                result.episode_alpha_beta_finals.append(reset_ab)
             result.episode_early_stops.append(terminated_early)
             completed = episode + 1
             if checkpoint_path is not None and checkpoint_interval > 0:
@@ -498,9 +497,10 @@ def training_budget(config: SNNConfig) -> dict[str, Any]:
 EPISODE_SERIES_KEYS: tuple[str, ...] = (
     "episode_rewards",
     "episode_lengths",
-    "episode_spike_totals",
+    "episode_spikes_per_step",
     "episode_energies",
     "episode_alpha_beta_means",
+    "episode_alpha_beta_finals",
     "episode_early_stops",
     "episode_amplitudes",
     "episode_frequencies",
@@ -539,9 +539,10 @@ def train_result_from_payload(
     result = TrainResult(config=config, dsqn=dsqn)
     result.episode_rewards = series["episode_rewards"]
     result.episode_lengths = series["episode_lengths"]
-    result.episode_spike_totals = series["episode_spike_totals"]
+    result.episode_spikes_per_step = series["episode_spikes_per_step"]
     result.episode_energies = series["episode_energies"]
     result.episode_alpha_beta_means = series["episode_alpha_beta_means"]
+    result.episode_alpha_beta_finals = series["episode_alpha_beta_finals"]
     result.episode_early_stops = series["episode_early_stops"]
     result.episode_amplitudes = series["episode_amplitudes"]
     result.episode_frequencies = series["episode_frequencies"]
@@ -581,9 +582,10 @@ def write_train_metrics(result: TrainResult, path: str | Path) -> Path:
         "update_count": result.update_count,
         "episode_rewards": result.episode_rewards,
         "episode_lengths": result.episode_lengths,
-        "episode_spike_totals": result.episode_spike_totals,
+        "episode_spikes_per_step": result.episode_spikes_per_step,
         "episode_energies": result.episode_energies,
         "episode_alpha_beta_means": result.episode_alpha_beta_means,
+        "episode_alpha_beta_finals": result.episode_alpha_beta_finals,
         "episode_early_stops": result.episode_early_stops,
         "episode_amplitudes": result.episode_amplitudes,
         "episode_frequencies": result.episode_frequencies,

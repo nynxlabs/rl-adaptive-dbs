@@ -102,7 +102,7 @@ def load_series(path: Path) -> dict[str, Any]:
         raise FileNotFoundError(f"missing Fig 4 series cache: {path}")
     series = json.loads(path.read_text(encoding="utf-8"))
     required = (
-        "episode_alpha_beta_means",
+        "episode_alpha_beta_finals",
         "episode_amplitudes",
         "episode_frequencies",
         "episode_pulse_widths",
@@ -134,7 +134,7 @@ def evaluate_gates(series: dict[str, Any], *, fig4_manifest: dict[str, Any] | No
         heuristic["reason"] = "fig4_train_not_passing"
 
     dig = fig6_training_gates(
-        series["episode_alpha_beta_means"],
+        series["episode_alpha_beta_finals"],
         series["episode_amplitudes"],
         series["episode_frequencies"],
         series["episode_pulse_widths"],
@@ -144,7 +144,7 @@ def evaluate_gates(series: dict[str, Any], *, fig4_manifest: dict[str, Any] | No
 
 def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -> dict[str, Any]:
     plt.rcParams.update(STYLE)
-    ab = np.asarray(series["episode_alpha_beta_means"], dtype=float)
+    ab = np.asarray(series["episode_alpha_beta_finals"], dtype=float)
     amp = np.asarray(series["episode_amplitudes"], dtype=float)
     freq = np.asarray(series["episode_frequencies"], dtype=float)
     pw = np.asarray(series["episode_pulse_widths"], dtype=float)
