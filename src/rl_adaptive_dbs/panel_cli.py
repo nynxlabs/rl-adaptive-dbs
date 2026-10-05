@@ -137,13 +137,26 @@ def _exec_command(log: Path, session: str, pid_file: Path, script: Path, panel_a
     ]
 
 
+def _slice_args() -> list[str]:
+    """Run training in ``heavy.slice`` when the host defines one (shared CPU/RAM caps)."""
+    slice_name = os.environ.get("RL_DBS_SLICE", "heavy.slice")
+    if not slice_name:
+        return []
+    probe = subprocess.run(
+        ["systemctl", "--user", "cat", slice_name],
+        capture_output=True,
+        check=False,
+    )
+    return [f"--slice={slice_name}"] if probe.returncode == 0 else []
+
+
 def _launch_argv(session: str, inner: list[str]) -> list[str]:
     """systemd scope → private tmux server → setsid/nohup/nice; degrade when tools are missing."""
     shell = f"cd {shlex.quote(str(REPO_ROOT))} && setsid nohup nice -n 10 " + shlex.join(inner) + " < /dev/null"
     if shutil.which("tmux"):
         argv = ["tmux", "-L", session, "new-session", "-d", "-s", session, shell]
         if shutil.which("systemd-run") and sys.platform.startswith("linux"):
-            argv = ["systemd-run", "--user", "--scope", "--quiet", f"--unit={session}", "--", *argv]
+            argv = ["systemd-run", "--user", "--scope", "--quiet", f"--unit={session}", *_slice_args(), "--", *argv]
         return argv
     return ["sh", "-c", shell + " &"]
 

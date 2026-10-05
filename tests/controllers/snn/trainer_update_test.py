@@ -112,3 +112,15 @@ def test_exponential_epsilon_follows_dqn_tutorial_formula() -> None:
     for _ in range(2000):
         trainer.note_step()
     assert trainer.current_epsilon() == pytest.approx(0.05 + 0.85 * math.exp(-1.0))
+
+
+def test_replay_warmup_holds_updates_until_buffer_fills() -> None:
+    cfg = replace(SNNConfig().for_smoke(), batch_size=8, replay_update_cadence=8, replay_warmup_transitions=32)
+    trainer = DSQNTrainer(DSQN(cfg), ReplayBuffer(cfg, seed=0), cfg)
+    obs = np.zeros(cfg.flat_observation_dim, dtype=np.float32)
+    updates = []
+    for _ in range(40):
+        trainer.buffer.add(Transition(obs, 0, -1.0, obs, False))
+        updates.append(trainer.maybe_update())
+    assert not any(updates[:31])
+    assert any(updates[31:])

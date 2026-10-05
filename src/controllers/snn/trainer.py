@@ -222,7 +222,7 @@ class DSQNTrainer:
         """Run ``replay_update_steps`` gradient steps when replay cadence is met."""
         if not self.buffer.ready_for_update():
             return False
-        if len(self.buffer) < self.config.batch_size:
+        if len(self.buffer) < max(self.config.batch_size, self.config.replay_warmup_transitions):
             return False
         period = self.config.target_update_period
         tau = float(self.config.target_soft_update_tau)
