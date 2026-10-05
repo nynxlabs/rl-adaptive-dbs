@@ -27,6 +27,10 @@ class SNNConfig:
 
     # RL timing
     step_duration_ms: float = STEP_DURATION_MS
+    # One continuous plant simulation per episode (state + pulse phase carried across
+    # 100 ms steps) vs a fresh integrate from initial conditions every step. The
+    # follow-up paper (arXiv 2606.28600) randomizes initial conditions per episode.
+    plant_carry: bool = False
     max_episode_steps: int = EVAL_MAX_STEPS
     num_episodes: int = TRAIN_EPISODES
 

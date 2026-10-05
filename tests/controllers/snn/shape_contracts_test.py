@@ -305,3 +305,43 @@ def test_spike_count_ties_break_by_membrane_potential() -> None:
     assert ternary.tolist() == [0, 0, 1]
     _, legacy = select_action(counts, config=cfg)
     assert legacy.tolist() == [-1, -1, 0]
+
+
+class _RecordingPlant(_SpikeMockPlant):
+    def __init__(self) -> None:
+        super().__init__()
+        self.calls: list[tuple[bool, np.ndarray | None]] = []
+
+    def integrate(self, duration_s: float, dbs_spec: DbsSpec | None = None, **kwargs: Any) -> IntegrateResult:
+        self.calls.append((bool(kwargs.get("carry", False)), None if dbs_spec is None else dbs_spec.idbs))
+        return super().integrate(duration_s, dbs_spec, **kwargs)
+
+
+def test_plant_carry_integrates_one_continuous_episode() -> None:
+    cfg = SNNConfig(sequence_steps=4, neurons_per_region=10, max_episode_steps=3, plant_carry=True)
+    plant = _RecordingPlant()
+    env = NguyenEnvAdapter(plant=plant, config=cfg)
+    try:
+        env.reset(seed=0)
+        env.step(np.array([1, 1, 1]))
+        env.reset(seed=1)
+    finally:
+        env.close()
+    assert [carry for carry, _ in plant.calls] == [True, True, True]
+    first, second, after_reset = (idbs for _, idbs in plant.calls)
+    # 40 Hz: onsets every 2500 samples, so the 4th (local 7500) ends segment 0 and the
+    # next lands at local 0 of segment 1 — shared boundary sample, not a restart.
+    assert second[0] == first[-1] == 300.0
+    np.testing.assert_array_equal(after_reset, first)
+
+
+def test_restart_mode_keeps_per_step_traces() -> None:
+    cfg = SNNConfig(sequence_steps=4, neurons_per_region=10, max_episode_steps=3)
+    plant = _RecordingPlant()
+    env = NguyenEnvAdapter(plant=plant, config=cfg)
+    try:
+        env.reset(seed=0)
+        env.step(np.array([1, 1, 1]))
+    finally:
+        env.close()
+    assert [carry for carry, _ in plant.calls] == [False, False]
