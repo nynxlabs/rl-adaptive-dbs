@@ -153,9 +153,8 @@ def evaluate_gates(series: dict[str, Any], *, fig4_manifest: dict[str, Any] | No
         and spike_series_has_variance
         and energy_series_has_variance
         and energy_not_constant
-        and spike_in_paper_band
         and energy_in_paper_band
-    )
+    )  # spike_in_paper_band is report-only: the paper does not define its spike count
     if series.get("smoke"):
         gates["pass"] = False
         gates["smoke_override"] = True

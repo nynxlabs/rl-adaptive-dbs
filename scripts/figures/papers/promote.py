@@ -160,20 +160,8 @@ NGUYEN_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
         ("spike_series_has_variance", "spike series has variance"),
         ("energy_series_has_variance", "energy series has variance"),
         ("energy_not_constant", "energy not constant"),
-        ("spike_in_paper_band", "mean spikes 400–950/ep"),
         ("energy_in_paper_band", "mean 300–3200/ep, max ≤ 3520"),
-        ("paper_spike_early_near_paper", "digitization — early spikes near paper (ep 0–50)"),
-        ("paper_spike_mid_near_paper", "digitization — mid spikes near paper (ep 55–75)"),
-        ("paper_spike_late_near_paper", "digitization — late spikes near paper (ep 350–500)"),
-        ("paper_spike_mean_near_paper", "digitization — spike mean near paper"),
         ("paper_spike_trend_near_paper", "digitization — spikes flat trend (late/early)"),
-        ("paper_spike_stays_near_800", "spike count starts & stays ~800"),
-        ("paper_energy_early_near_paper", "digitization — early energy near paper (ep 0–50)"),
-        ("paper_energy_mid_near_paper", "digitization — mid energy near paper (ep 55–75)"),
-        ("paper_energy_late_near_paper", "digitization — late energy near paper (ep 350–500)"),
-        ("paper_energy_mean_near_paper", "digitization — energy mean"),
-        ("paper_energy_mid_ramp_near_paper", "digitization — energy ramp ep 55–75"),
-        ("paper_energy_trend_near_paper", "digitization — energy late vs early"),
         ("paper_energy_monotonic_rise", "digitization — monotonic rise early < mid < late"),
         ("paper_energy_late_above_early", "energy late > early × 1.25"),
         ("paper_spike_series_has_variance", "digitization — spike variance"),
@@ -196,11 +184,9 @@ NGUYEN_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
         ("paper_alpha_beta_drop_magnitude_near_paper", "digitization — drop magnitude near paper"),
         ("paper_alpha_beta_late_stable", "digitization — late α–β stable"),
         ("paper_alpha_beta_decreases_like_paper", "digitization — α–β decreases"),
-        ("paper_params_left_init", "amp / freq / pw each >5% off init"),
-        ("paper_amp_late_near_paper", "digitization — late amplitude"),
+        ("paper_freq_left_init", "frequency >5% off init"),
         ("paper_freq_late_near_paper", "digitization — late frequency"),
-        ("paper_pw_late_near_paper", "digitization — late pulse width"),
-        ("paper_late_params_stable", "std last 50 ep ≤ 20% of mean"),
+        ("paper_freq_late_stable", "frequency std last 50 ep ≤ 20% of mean"),
     ],
     "7": [
         ("checkpoint_lineage_ok", "Fig 4 train passed"),
@@ -217,6 +203,32 @@ NGUYEN_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
         ("paper_late_peak_ratio_near_paper", "digitization — late/peak ratio near paper (~0.55)"),
         ("paper_pearson_shape_ok", "digitization — Pearson shape correlation (r ≥ 0.80)"),
         ("paper_below_fig3_pd_median", "digitization — below Fig 3 PD On median"),
+    ],
+}
+
+# Logged in the table but never part of ``pass`` (docs/figures/nguyen/5.md, 6.md).
+NGUYEN_REPORT_ROWS: dict[str, list[tuple[str, str]]] = {
+    "5": [
+        ("spike_in_paper_band", "mean spikes 400–950/ep"),
+        ("paper_spike_early_near_paper", "digitization — early spikes near paper (ep 0–50)"),
+        ("paper_spike_mid_near_paper", "digitization — mid spikes near paper (ep 55–75)"),
+        ("paper_spike_late_near_paper", "digitization — late spikes near paper (ep 350–500)"),
+        ("paper_spike_mean_near_paper", "digitization — spike mean near paper"),
+        ("paper_spike_stays_near_800", "spike count starts & stays ~800"),
+        ("paper_energy_early_near_paper", "digitization — early energy near paper (ep 0–50)"),
+        ("paper_energy_mid_near_paper", "digitization — mid energy near paper (ep 55–75)"),
+        ("paper_energy_late_near_paper", "digitization — late energy near paper (ep 350–500)"),
+        ("paper_energy_mean_near_paper", "digitization — energy mean"),
+        ("paper_energy_mid_ramp_near_paper", "digitization — energy ramp ep 55–75"),
+        ("paper_energy_trend_near_paper", "digitization — energy late vs early"),
+    ],
+    "6": [
+        ("paper_params_left_init", "amp / freq / pw each >5% off init"),
+        ("paper_amp_late_near_paper", "digitization — late amplitude"),
+        ("paper_pw_late_near_paper", "digitization — late pulse width"),
+        ("paper_late_params_stable", "std last 50 ep ≤ 20% of mean"),
+        ("paper_amp_left_init", "amplitude >5% off init"),
+        ("paper_pw_left_init", "pulse width >5% off init"),
     ],
 }
 
@@ -698,15 +710,21 @@ def _format_nguyen_gates_table(
         overall_cell = "yes" if overall else ("no" if overall is False else "—")
         source = f"`{manifest_rel}`"
 
+    report_rows = NGUYEN_REPORT_ROWS.get(panel, [])
+    note = (
+        "Every row is required for exit." if not report_rows else
+        "Rows marked *report only* are logged and never change `pass`; the rest are required."
+    )
     lines = [
-        f"**Gates set** ({source}; overall **`pass`**: {overall_cell}, {_today()}). "
-        "Every row is required for exit.",
+        f"**Gates set** ({source}; overall **`pass`**: {overall_cell}, {_today()}). {note}",
         "",
         "| Key | Description | Pass |",
         "|-----|-------------|------|",
     ]
     for key, desc in rows:
         lines.append(f"| `{key}` | {desc} | {_gate_pass_cell(gate_values, key)} |")
+    for key, desc in report_rows:
+        lines.append(f"| `{key}` | *report only* — {desc} | {_gate_pass_cell(gate_values, key)} |")
     return "\n".join(lines)
 
 

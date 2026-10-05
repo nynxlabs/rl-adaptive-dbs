@@ -49,6 +49,9 @@ def test_fig5_paper_self_consistent():
     spikes = np.interp(np.arange(n), sx, sy)
     energies = np.interp(np.arange(n), ex, ey)
     report = fig5_spikes_energy_gates(spikes, energies)
+    # The paper's own curves must pass required and report-only rows alike.
+    report["gates"] = {**report["gates"], **report["report"]}
+    assert "spike_mean_near_paper" in report["report"]
     assert report["gates"]["spike_mean_near_paper"]
     assert report["gates"]["spike_stays_near_800"]
     assert report["gates"]["energy_early_near_paper"]
@@ -102,6 +105,9 @@ def test_fig6_paper_self_consistent():
         freq_interp,
         pw_interp,
     )
+    report["gates"] = {**report["gates"], **report["report"]}
+    assert "pw_late_near_paper" in report["report"]
+    assert report["gates"]["freq_late_stable"]
     assert report["gates"]["alpha_beta_decreases_like_paper"]
     assert report["gates"]["alpha_beta_late_below_theta"]
     assert report["gates"]["alpha_beta_late_near_paper"]
