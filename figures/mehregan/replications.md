@@ -362,7 +362,7 @@ Quantization on the **45 Hz** model (§IV.A.3), same closed-loop eval and seed. 
 **Manifest:** `artifacts/figures/papers/mehregan/6a/manifest.json`
 <!-- caption-6a:end -->
 
-**Status:** Pass — fp32 / PTQ fp16 / PTQ int8 all 339 (paper-like); QAT 644 (above the pre-stim level; paper: QAT power "stayed at the same range or increased"). QAT now fake-quantizes to true int8 as the paper states (PyTorch's default was 7-bit). Caveat: 10-episode QAT never converges (its logits saturate at the fake-quant clamp, the paper's failure mechanism), so the deployed action is an `argmax` tie-break — paper-like at seed 0, but in only 3/7 training seeds at 45 Hz. See [4a.md](../../docs/figures/mehregan/4a.md) § QAT tie-break.
+**Status:** Pass — fp32 / PTQ fp16 / PTQ int8 all 339 (paper-like); QAT 644 — higher than the paper: late/pre 1.26 vs digitized 0.99 (the paper text allows "stayed at the same range or increased", so the one-sided gate passes; the paper figure shows "same range"). QAT now fake-quantizes to true int8 as the paper states (PyTorch's default was 7-bit). Caveat: 10-episode QAT never converges (its logits saturate at the fake-quant clamp, the paper's failure mechanism), so the deployed action is an `argmax` tie-break — paper-like at seed 0, but in only 3/7 training seeds at 45 Hz. See [4a.md](../../docs/figures/mehregan/4a.md) § QAT tie-break.
 
 <!-- gates-6a:start -->
 **Gates set** (`fig6_quant_gates` → manifest `gates`). Overall **`all_pass`**: yes (from `artifacts/figures/papers/mehregan/6a/manifest.json`, 2026-10-06). Every row is required for exit.
@@ -412,7 +412,7 @@ Same quantization panel for the **30 Hz** model (§IV.A.3): Fig 5b fp32 checkpoi
 **Manifest:** `artifacts/figures/papers/mehregan/6b/manifest.json`
 <!-- caption-6b:end -->
 
-**Status:** Pass — fp32 / PTQ fp16 / PTQ int8 372; QAT 594 (above the pre-stim level). Same caveat as Fig 6a: the int8 QAT action is a tie-break of saturated logits — paper-like at seed 0, 2/7 training seeds at 30 Hz.
+**Status:** Pass — fp32 / PTQ fp16 / PTQ int8 372; QAT 594 — higher than the paper: late/pre 1.17 vs digitized 0.97 (one-sided gate, as Fig 6a). Same caveat as Fig 6a: the int8 QAT action is a tie-break of saturated logits — paper-like at seed 0, 2/7 training seeds at 30 Hz.
 
 <!-- gates-6b:start -->
 **Gates set** (`fig6_quant_gates` → manifest `gates`). Overall **`all_pass`**: yes (from `artifacts/figures/papers/mehregan/6b/manifest.json`, 2026-10-06). Every row is required for exit.
