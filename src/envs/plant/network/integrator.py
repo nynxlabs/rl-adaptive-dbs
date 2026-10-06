@@ -152,6 +152,28 @@ class NetworkInitDraws:
     gsngi: np.ndarray
 
     @classmethod
+    def draw(cls, rng: np.random.Generator, *, n: int, pd: int) -> NetworkInitDraws:
+        """Random initial voltages, wiring, and conductances in the integrator's draw order."""
+        v1 = rng.normal(DEFAULT_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
+        v2 = rng.normal(DEFAULT_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
+        v3 = rng.normal(DEFAULT_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
+        v4 = rng.normal(DEFAULT_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
+        v5 = rng.normal(STR_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
+        v6 = rng.normal(STR_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
+        perms = tuple(rng.permutation(n) for _ in range(15))
+        gcorsna = 0.3 * rng.random(n)
+        gcorsnn = 0.003 * rng.random(n)
+        gcordrstr = (0.07 - 0.044 * pd) + 0.001 * rng.random(n)
+        ggege = rng.random(n)
+        gsngen = np.zeros(n, dtype=np.float64)
+        gsngen[rng.permutation(n)[:2]] = 0.002 * rng.random(2)
+        gsngea = np.zeros(n, dtype=np.float64)
+        gsngea[rng.permutation(n)[:2]] = 0.3 * rng.random(2)
+        gsngi = np.zeros(n, dtype=np.float64)
+        gsngi[rng.permutation(n)[:5]] = 0.15
+        return cls(v1, v2, v3, v4, v5, v6, perms, gcorsna, gcorsnn, gcordrstr, ggege, gsngen, gsngea, gsngi)
+
+    @classmethod
     def from_npz(cls, path: str | Path) -> NetworkInitDraws:
         data = np.load(path)
         perms = tuple(data[f"perm_{index}"] for index in range(15))
@@ -588,23 +610,19 @@ def integrate_network(
     )
     smc_trace = smc_trace_co if config.smc_site == "cortical" else smc_trace_th
 
-    # --- Initial voltages (MATLAB draw order: v1..v6) ---
-    if init_draws is not None:
-        v1, v2, v3, v4, v5, v6 = (
-            init_draws.v1,
-            init_draws.v2,
-            init_draws.v3,
-            init_draws.v4,
-            init_draws.v5,
-            init_draws.v6,
-        )
-    else:
-        v1 = rng.normal(DEFAULT_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
-        v2 = rng.normal(DEFAULT_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
-        v3 = rng.normal(DEFAULT_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
-        v4 = rng.normal(DEFAULT_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
-        v5 = rng.normal(STR_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
-        v6 = rng.normal(STR_VOLTAGE_MEAN, DEFAULT_VOLTAGE_STD, size=n)
+    # --- Initial voltages (MATLAB draw order: v1..v6), then wiring and conductances ---
+    # Without cached draws, draw the whole network here in the same order the separate
+    # draws used to happen, so non-carried runs are unchanged. Carried runs reuse it.
+    if init_draws is None:
+        init_draws = NetworkInitDraws.draw(rng, n=n, pd=pd)
+    v1, v2, v3, v4, v5, v6 = (
+        init_draws.v1,
+        init_draws.v2,
+        init_draws.v3,
+        init_draws.v4,
+        init_draws.v5,
+        init_draws.v6,
+    )
 
     vth = np.asarray(v1, dtype=np.float64).copy()
     vsn = np.asarray(v2, dtype=np.float64).copy()
@@ -650,10 +668,7 @@ def integrate_network(
         cor_spike_lists = [[] for _ in range(2 * n)]
 
     # --- Wiring permutations (15 randperm draws) ---
-    if init_draws is not None:
-        perm = list(init_draws.perms)
-    else:
-        perm = [rng.permutation(n) for _ in range(15)]
+    perm = list(init_draws.perms)
     (
         all_idx,
         bll,
@@ -673,26 +688,13 @@ def integrate_network(
     ) = perm
 
     # --- Heterogeneous conductances ---
-    if init_draws is not None:
-        gcorsna = init_draws.gcorsna
-        gcorsnn = init_draws.gcorsnn
-        gcordrstr = init_draws.gcordrstr
-        ggege = init_draws.ggege
-        gsngen = init_draws.gsngen
-        gsngea = init_draws.gsngea
-        gsngi = init_draws.gsngi
-    else:
-        gcorsna = 0.3 * rng.random(n)
-        gcorsnn = 0.003 * rng.random(n)
-        gcordrstr = (0.07 - 0.044 * pd) + 0.001 * rng.random(n)
-        ggege = rng.random(n)
-
-        gsngen = np.zeros(n, dtype=np.float64)
-        gsngen[rng.permutation(n)[:2]] = 0.002 * rng.random(2)
-        gsngea = np.zeros(n, dtype=np.float64)
-        gsngea[rng.permutation(n)[:2]] = 0.3 * rng.random(2)
-        gsngi = np.zeros(n, dtype=np.float64)
-        gsngi[rng.permutation(n)[:5]] = 0.15
+    gcorsna = init_draws.gcorsna
+    gcorsnn = init_draws.gcorsnn
+    gcordrstr = init_draws.gcordrstr
+    ggege = init_draws.ggege
+    gsngen = init_draws.gsngen
+    gsngea = init_draws.gsngea
+    gsngi = init_draws.gsngi
 
     # --- Gating / channel state at t=0 ---
     N3 = g.gpe_ninf(vge)
@@ -1542,6 +1544,7 @@ def integrate_network(
             msg = "save_dyn=True but Numba loop did not pack dyn state"
             raise RuntimeError(msg)
         info["_dyn_state"] = dyn_out
+        info["_init_draws"] = init_draws
     if debug_snapshots:
         info["debug_snapshots"] = debug_snapshots
 

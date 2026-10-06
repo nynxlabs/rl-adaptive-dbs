@@ -63,6 +63,7 @@ class PythonPlant:
         cor_spike_buffer_size: int | None = None,
         carry: bool = False,
         record_bg_spikes: bool = False,
+        fixed_network: bool = False,
     ) -> IntegrateResult:
         if duration_s <= 0:
             msg = "duration_s must be positive"
@@ -102,4 +103,9 @@ class PythonPlant:
                 msg = "carry=True but integrate_network did not return _dyn_state"
                 raise RuntimeError(msg)
             self._dyn = packed
+            draws = result.info.pop("_init_draws", None)
+            if fixed_network:
+                # One continuous simulation keeps one network: reuse this segment's wiring
+                # and conductances until reset() instead of redrawing them every segment.
+                self._init_draws = draws
         return result

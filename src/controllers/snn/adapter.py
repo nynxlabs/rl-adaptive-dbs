@@ -257,6 +257,7 @@ class NguyenEnvAdapter(gym.Env):
             record_th_spikes=True,
             record_cor_spikes=True,
             carry=True,
+            fixed_network=self.config.plant_fixed_network,
             **self._bg_kwargs(),
         )
         # Advance the pulse clock only after the plant accepted the segment.

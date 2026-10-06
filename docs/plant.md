@@ -72,6 +72,8 @@ The reference drives DBS as a **current injected in STN** (`Idbs` passed to `CTX
 
 **Episode / IC reset:** A new RL episode draws **new initial conditions** (reference: randomized membrane voltages per population, e.g. `v1 = -62 + randn(n,1)*5`). The plant `reset` (or equivalent) must support reproducible seeds for benchmarking.
 
+**Carried segments:** `PythonPlant.integrate(..., carry=True)` continues voltages, gates, Ca and synapses from the previous segment. Each call still draws the network's wiring permutations and heterogeneous conductances (`gcorsna`, `gsngen`, …) afresh, as a fresh call of the reference script would. Two exceptions: seeds with cached MATLAB init draws (`tests/fixtures/plant_init_seed*.npz`) reuse those draws every call, and `fixed_network=True` keeps the first segment's draws until `reset`. Nguyen uses the redrawing default; `SNNConfig.plant_fixed_network` opts in to one network per episode (why: [figures/nguyen/4.md](figures/nguyen/4.md) § One network per episode). Non-carried calls are unaffected by either option.
+
 ---
 
 ## 6. Biomarkers from GPi spiking
