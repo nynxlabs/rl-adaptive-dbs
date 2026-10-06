@@ -1,11 +1,12 @@
 """Where does 10-episode QAT land across training seeds? (Mehregan Fig 6a/6b)
 
-QAT trains with the paper recipe; its logits saturate at the fake-quant
-clamp, so the deployed argmax often ties and resolves to the lowest tied
-index. This probe trains QAT per seed and records the eval action, the size
-of the tie, and the closed-loop late/pre level against fp32-like suppression.
-Per episode it also logs the logit head's fake-quant clamp, the head's
-pre-quant output range, and the tie at a reference state. Diagnostic only.
+QAT trains with the paper recipe on the Fig 3 actor (one 1 ms slot per
+pulse); its logits can saturate at the fake-quant clamp, so a pulse's argmax
+may tie and resolve to the lowest tied slot. This probe trains QAT per seed
+and records the eval pulse slots, the per-pulse tie size, and the closed-loop
+late/pre level against fp32-like suppression. Per episode it also logs the
+logit head's fake-quant clamp, the head's pre-quant output range, and the
+ties at a reference state. Diagnostic only.
 
 ``--observer`` swaps the activation observer (paper-silent):
 ``ema`` = PyTorch QAT default (moving-average min/max, ``--averaging-constant``
@@ -67,7 +68,8 @@ def _stock_qnnpack_qconfig() -> torch.ao.quantization.QConfig:
 
 
 def _init_from(path: Path):
-    """Trainer hook: load fp32 actor/critic weights (fake-quant state starts fresh)."""
+    """Trainer hook: load fp32 actor (and critic, if saved) weights; fake-quant
+    state starts fresh."""
     payload = torch.load(path, map_location="cpu", weights_only=False)
 
     def hook(trainer: Any) -> None:
@@ -78,16 +80,17 @@ def _init_from(path: Path):
             bad = [k for k in missing if "fake_quant" not in k and "post_process" not in k]
             if bad or unexpected:
                 raise RuntimeError(f"fp32 → QAT load mismatch: {bad} {unexpected}")
-        trainer.critic.load_state_dict(payload["critic_state_dict"])
-        trainer.critic_target.load_state_dict(
-            payload.get("critic_target_state_dict", payload["critic_state_dict"])
-        )
+        if payload.get("critic_state_dict") is not None:
+            trainer.critic.load_state_dict(payload["critic_state_dict"])
+            trainer.critic_target.load_state_dict(
+                payload.get("critic_target_state_dict") or payload["critic_state_dict"]
+            )
 
     return hook
 
 
-def _head_diag(policy: torch.nn.Module) -> dict[str, Any]:
-    """Clamp, pre-quant head output and tie at ``REF_STATE`` (observers off)."""
+def _head_diag(policy: torch.nn.Module, space: Any) -> dict[str, Any]:
+    """Clamp, pre-quant head output and per-pulse ties at ``REF_STATE`` (observers off)."""
     probe = copy.deepcopy(policy)
     probe.apply(torch.ao.quantization.disable_observer)
     head = probe.actor.head
@@ -96,12 +99,13 @@ def _head_diag(policy: torch.nn.Module) -> dict[str, Any]:
     captured: dict[str, torch.Tensor] = {}
     head.register_forward_pre_hook(lambda m, i: captured.__setitem__("x", i[0]))
     with torch.no_grad():
-        q = probe(torch.tensor([[REF_STATE]])).squeeze(0).numpy()
+        q = probe(torch.full((1, _PP.STATE_LENGTH), REF_STATE)).squeeze(0).numpy()
         raw = torch.nn.functional.linear(
             captured["x"], head.weight_fake_quant(head.weight), head.bias
         ).squeeze(0).numpy()
     hi, lo = (fq.quant_max - zp) * scale, (fq.quant_min - zp) * scale
-    tied = np.flatnonzero(np.isclose(q, q.max()))
+    grid = q.reshape(space.n_pulses, space.n_slots)
+    tied = np.array([int(np.sum(np.isclose(r, r.max()))) for r in grid])
     return {
         "clamp_lo": lo,
         "clamp_hi": hi,
@@ -110,9 +114,9 @@ def _head_diag(policy: torch.nn.Module) -> dict[str, Any]:
         "n_raw_above_clamp": int(np.sum(raw > hi)),
         "n_raw_below_clamp": int(np.sum(raw < lo)),
         "n_distinct": int(len(np.unique(np.round(q / scale)))),
-        "n_tied_at_max": int(len(tied)),
-        "argmax": int(q.argmax()),
-        "tied": tied.tolist(),
+        "mean_tied_at_row_max": float(tied.mean()),
+        "max_tied_at_row_max": int(tied.max()),
+        "distinct_slots": int(len(set(grid.argmax(axis=1).tolist()))),
     }
 
 
@@ -148,30 +152,35 @@ def main() -> int:
             record = _PP.train_paper(
                 mean_hz=args.mean_hz, seed=seed, knobs=knobs, variant="qat", checkpoint_path=ckpt,
                 qat_freeze_observer_after=args.freeze_observer_after,
-                episode_hook=lambda tr, ep: diag.append({"episode": ep, **_head_diag(tr.actor)}),
+                episode_hook=lambda tr, ep: diag.append(
+                    {"episode": ep, **_head_diag(tr.actor, alphabet)}
+                ),
                 trainer_hook=_init_from(args.init_from) if args.init_from else None,
             )
             qat = _PP.load_qat_actor(ckpt)
         for d in diag:
-            print(f"  ep{d['episode']}: {({k: v for k, v in d.items() if k != 'tied'})}", flush=True)
+            print(f"  ep{d['episode']}: {d}", flush=True)
+        policy = _PP.module_policy(qat, alphabet)
         cond = _PP.run_condition(
-            seed=args.eval_seed, alphabet=alphabet, policy=_PP.module_policy(qat)
+            seed=args.eval_seed, alphabet=alphabet, policy=policy, knobs=knobs
         )
-        logits = np.asarray(cond["logits"])
-        n_tied = [int(np.sum(np.isclose(r, r.max()))) for r in logits]
+        n_tied = []
+        for state in cond["_states"]:
+            _slots, logits = policy(state)
+            grid = np.asarray(logits).reshape(alphabet.n_pulses, alphabet.n_slots)
+            n_tied.append(float(np.mean([np.sum(np.isclose(r, r.max())) for r in grid])))
         steps = _PP.STEPS_PER_EPISODE
         row = {
             "actions": cond["actions"],
-            "n_tied_at_max": n_tied[0],
-            "n_tied_per_step": n_tied,
-            "tied_first_step": np.flatnonzero(np.isclose(logits[0], logits[0].max())).tolist(),
+            "distinct_slots_per_step": [len(set(r)) for r in cond["actions"]],
+            "mean_tied_at_row_max_per_step": n_tied,
             "pre": _PP.pre_mean(cond),
             "late": _PP.post_mean(cond, lo=4.0),
             "trace": cond["trace"],
             "time_s": cond["time_s"],
-            "train_unique_per_episode": [
-                len(set(record["actions"][i:i + steps]))
-                for i in range(0, len(record["actions"]), steps)
+            "train_isi_std_ms_per_episode": [
+                float(np.mean(record["isi_std_ms"][i:i + steps]))
+                for i in range(0, len(record["isi_std_ms"]), steps)
             ],
             "train_mean_beta_per_episode": [
                 float(np.mean(record["beta_trace"][i:i + steps]))
@@ -184,7 +193,7 @@ def main() -> int:
         row["late_over_pre"] = row["late"] / row["pre"]
         rows[str(seed)] = row
         print(
-            f"seed {seed}: actions={row['actions']} tied={n_tied} "
+            f"seed {seed}: distinct slots={row['distinct_slots_per_step']} tied={n_tied} "
             f"late/pre={row['late_over_pre']:.3f}",
             flush=True,
         )

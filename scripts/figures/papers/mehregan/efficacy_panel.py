@@ -133,14 +133,16 @@ def run_eval(cfg: EfficacyPanel, *, checkpoint: Path, seed: int, knobs: Any) -> 
             seed=seed, alphabet=alphabet, fixed_spec=_PP.regular_spec(alphabet)
         ),
         "trained": _PP.run_condition(
-            seed=seed, alphabet=alphabet, policy=_PP.module_policy(actor)
+            seed=seed, alphabet=alphabet, policy=_PP.module_policy(actor, alphabet), knobs=knobs
         ),
     }
     if cfg.with_cdbs:
         conditions["cdbs_130"] = _PP.run_condition(
             seed=seed, alphabet=alphabet, fixed_spec=DbsSpec.from_frequency_hz(130.0)
         )
-    print(f"trained actions {conditions['trained']['actions']}", flush=True)
+    conditions = {k: _PP.strip_private(v) for k, v in conditions.items()}
+    for row in conditions["trained"]["actions"]:
+        print(f"trained step: {len(set(row))} distinct pulse slots, first 8 {row[:8]}", flush=True)
     return {
         "figure": f"mehregan_fig{cfg.panel}",
         "protocol": "paper_closed_loop",
@@ -161,7 +163,7 @@ def panel_means(payload: dict[str, Any]) -> dict[str, Any]:
         f"{k}_mean": _PP.post_mean(v, lo=LATE_LO_S) for k, v in conds.items()
     }
     out.update({f"{k}_pre": _PP.pre_mean(v) for k, v in conds.items()})
-    out["trained_actions"] = conds["trained"]["actions"]
+    out["trained_n_steps"] = len(conds["trained"]["actions"])
     out["trained_closed_loop"] = bool(conds["trained"].get("closed_loop"))
     out["late_lo_s"] = LATE_LO_S
     return out
@@ -288,8 +290,7 @@ def main(cfg: EfficacyPanel, doc: str | None = None) -> int:
             training = {
                 "series": str(args.series),
                 "episode_rewards": record["episode_rewards"],
-                "unique_actions": record["unique_actions"],
-                "action_counts": record["action_counts"],
+                "isi_std_ms_last_episode": float(sum(record["isi_std_ms"][-30:]) / 30),
             }
         if not args.checkpoint.exists():
             print(f"missing checkpoint: {args.checkpoint}", file=sys.stderr)
@@ -327,7 +328,7 @@ def main(cfg: EfficacyPanel, doc: str | None = None) -> int:
         f"{k}={panel[f'{k}_mean']:.1f}" for k in payload["conditions"] if f"{k}_mean" in panel
     )
     print(f"wrote {args.out}\nwrote {args.manifest}", flush=True)
-    print(f"gates pass={gates['pass']} {summary} actions={panel['trained_actions']}", flush=True)
+    print(f"gates pass={gates['pass']} {summary}", flush=True)
     print({k: v for k, v in gates.items() if isinstance(v, bool)}, flush=True)
 
     if args.update_docs:

@@ -118,13 +118,20 @@ def _linked_png(path: Path) -> Path:
     return path
 
 
-def _logit_drift(fp32: list[list[float]], other: list[list[float]]) -> float:
-    """Max |logit difference| over the eval steps (report only)."""
-    a = np.asarray(fp32, dtype=float)
-    b = np.asarray(other, dtype=float)
-    if a.shape != b.shape or a.size == 0:
-        return float("nan")
-    return float(np.max(np.abs(a - b)))
+def _quant_drift(
+    fp32: torch.nn.Module, other: torch.nn.Module, states: list[np.ndarray], space: Any
+) -> dict[str, float]:
+    """How much a quantized actor moves the fp32 logits and pulse slots on the
+    states the fp32 policy visited (report only)."""
+    pf, po = _PP.module_policy(fp32, space), _PP.module_policy(other, space)
+    max_abs = 0.0
+    flips = []
+    for state in states:
+        sf, lf = pf(state)
+        so, lo = po(state)
+        max_abs = max(max_abs, float(np.max(np.abs(lf - lo))))
+        flips.append(float(np.mean(sf != so)))
+    return {"max_abs_logit_change": max_abs, "slot_flip_fraction": float(np.mean(flips)) if flips else 0.0}
 
 
 def parse_seeds(spec: str) -> list[int]:
@@ -193,7 +200,7 @@ def train_qat_seeds(
         out[str(seed)] = {
             "series": str(qat_dir / f"qat_series_seed{seed}.json"),
             "episode_rewards": record["episode_rewards"],
-            "unique_actions": record["unique_actions"],
+            "isi_std_ms_last_episode": float(np.mean(record["isi_std_ms"][-_PP.STEPS_PER_EPISODE:])),
         }
     return out
 
@@ -211,28 +218,33 @@ def run_eval(
     }
     t0 = time.time()
     conditions = {
-        name: _PP.run_condition(seed=seed, alphabet=alphabet, policy=_PP.module_policy(mod))
+        name: _PP.run_condition(
+            seed=seed, alphabet=alphabet, policy=_PP.module_policy(mod, alphabet), knobs=knobs
+        )
         for name, mod in modules.items()
     }
     for name, cond in conditions.items():
-        print(f"{name} actions {cond['actions']}", flush=True)
-    qat_seeds: dict[str, dict[str, Any]] = {}
-    for train_seed, path in sorted(qat_checkpoints.items()):
-        cond = _PP.run_condition(
-            seed=seed, alphabet=alphabet, policy=_PP.module_policy(_PP.load_qat_actor(path))
-        )
-        logits = np.asarray(cond["logits"], dtype=float)
-        cond["n_tied_at_max"] = [int(np.sum(np.isclose(r, r.max()))) for r in logits]
-        cond["checkpoint"] = str(path)
-        qat_seeds[str(train_seed)] = cond
-        print(
-            f"qat seed {train_seed} actions {cond['actions']} tied {cond['n_tied_at_max']}",
-            flush=True,
-        )
+        print(f"{name} distinct slots per step {[len(set(r)) for r in cond['actions']]}", flush=True)
     drift = {
-        name: _logit_drift(conditions["fp32"]["logits"], conditions[name]["logits"])
+        name: _quant_drift(fp32, modules[name], conditions["fp32"]["_states"], alphabet)
         for name in ("ptq_int8", "ptq_fp16")
     }
+    qat_seeds: dict[str, dict[str, Any]] = {}
+    for train_seed, path in sorted(qat_checkpoints.items()):
+        qat = _PP.load_qat_actor(path)
+        cond = _PP.run_condition(
+            seed=seed, alphabet=alphabet, policy=_PP.module_policy(qat, alphabet), knobs=knobs
+        )
+        cond["checkpoint"] = str(path)
+        cond["drift_vs_fp32"] = _quant_drift(fp32, qat, conditions["fp32"]["_states"], alphabet)
+        qat_seeds[str(train_seed)] = _PP.strip_private(cond)
+        print(
+            f"qat seed {train_seed} distinct slots per step "
+            f"{[len(set(r)) for r in cond['actions']]} drift {cond['drift_vs_fp32']}",
+            flush=True,
+        )
+    print(f"quantization drift vs fp32: {drift}", flush=True)
+    conditions = {k: _PP.strip_private(v) for k, v in conditions.items()}
     return {
         "figure": f"mehregan_fig{cfg.panel}",
         "protocol": "paper_closed_loop",
@@ -322,9 +334,10 @@ def plot_panel(cfg: QuantPanel, payload: dict[str, Any], *, out_path: Path) -> d
         **{f"{k}_pre_mean": _PP.pre_mean(conds[k]) for k in SERIES},
         "qat_post_mean": float(np.median(list(qat_post.values()))),
         "qat_seed_post_mean": qat_post,
-        "actions": {k: conds[k]["actions"] for k in SERIES},
-        "qat_seed_actions": {s: c["actions"] for s, c in qat.items()},
-        "qat_seed_n_tied_at_max": {s: c.get("n_tied_at_max") for s, c in qat.items()},
+        "distinct_slots": {k: [len(set(r)) for r in conds[k]["actions"]] for k in SERIES},
+        "qat_seed_distinct_slots": {
+            s: [len(set(r)) for r in c["actions"]] for s, c in qat.items()
+        },
         "ptq_logit_drift": payload.get("ptq_logit_drift"),
     }
 
