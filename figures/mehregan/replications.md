@@ -14,8 +14,8 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Fig 4b | Training reward vs episode | Pass (paired to 4a, rep v49) |
 | Fig 5a | Post-train efficacy @ 45 Hz | Pass (closed loop, Fig 4a model, rep v24) |
 | Fig 5b | Post-train efficacy @ 30 Hz | Pass (closed loop, burst alphabet, rep v25) |
-| Fig 6a | PTQ / QAT @ 45 Hz | Fail (`qat_elevated_vs_fp32`, QAT tie-break lands on regular pattern, rep v63) |
-| Fig 6b | PTQ / QAT @ 30 Hz | Pass (closed loop, rep v42) |
+| Fig 6a | PTQ / QAT @ 45 Hz | Pass (closed loop, int8 QAT, rep v64) |
+| Fig 6b | PTQ / QAT @ 30 Hz | Pass (closed loop, int8 QAT, rep v43) |
 <!-- summary:end -->
 
 Replication PNGs: `figures/mehregan/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/mehregan/images/<panel>/paper.png` (from paper-note embeds; composite Figs 1/2/4/5/6 split into panels). Full composites under `figures/mehregan/images/_full/`.
@@ -354,18 +354,18 @@ Quantization on the **45 Hz** model (§IV.A.3), same closed-loop eval and seed. 
 
 ### Replication
 
-![Replication Fig 6a](images/6a/ptq_qat_45hz_v63.png)
+![Replication Fig 6a](images/6a/ptq_qat_45hz_v64.png)
 
 <!-- caption-6a:start -->
-**Caption:** 45 Hz paper-protocol eval, seed 0, fp32_post=339, qat_post=299, PTQ tracks fp32, v63, 2026-10-06
+**Caption:** 45 Hz paper-protocol eval, seed 0, fp32_post=339, qat_post=644, PTQ tracks fp32, QAT elevated, v64, 2026-10-06
 
 **Manifest:** `artifacts/figures/papers/mehregan/6a/manifest.json`
 <!-- caption-6a:end -->
 
-**Status:** Fail — `qat_elevated_vs_fp32`, `qat_not_below_paper`. fp32 / PTQ fp16 / PTQ int8 all 339 (paper-like). The QAT run reproduces the paper's mechanism — it never converges in 10 episodes because its logits saturate at the fake-quant clamp — but the deployed $\arg\max$ then breaks a ~20-way tie toward the lowest index, which at 45 Hz is usually the regular train (a strong suppressor, 299). Across training seeds 0–6 that happens in 5/7 (`scripts/probes/mehregan_qat_seeds.py`). Documented gap — no seed picking, alphabet reordering or eval override. See [4a.md](../../docs/figures/mehregan/4a.md) § QAT tie-break.
+**Status:** Pass — fp32 / PTQ fp16 / PTQ int8 all 339 (paper-like); QAT 644 (above the pre-stim level; paper: QAT power "stayed at the same range or increased"). QAT now fake-quantizes to true int8 as the paper states (PyTorch's default was 7-bit). Caveat: 10-episode QAT never converges (its logits saturate at the fake-quant clamp, the paper's failure mechanism), so the deployed action is an `argmax` tie-break — paper-like at seed 0, but in only 3/7 training seeds at 45 Hz. See [4a.md](../../docs/figures/mehregan/4a.md) § QAT tie-break.
 
 <!-- gates-6a:start -->
-**Gates set** (`fig6_quant_gates` → manifest `gates`). Overall **`all_pass`**: no (from `artifacts/figures/papers/mehregan/6a/manifest.json`, 2026-10-06). Every row is required for exit.
+**Gates set** (`fig6_quant_gates` → manifest `gates`). Overall **`all_pass`**: yes (from `artifacts/figures/papers/mehregan/6a/manifest.json`, 2026-10-06). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -374,11 +374,11 @@ Quantization on the **45 Hz** model (§IV.A.3), same closed-loop eval and seed. 
 | `fp32_suppresses_vs_baseline` | fp32 late mean (t ≥ 4 s) < its pre-onset mean | yes |
 | `ptq_fp16_near_fp32` | PTQ fp16 late mean within 15% of fp32 | yes |
 | `ptq_int8_near_fp32` | PTQ int8 late mean within 20% of fp32 | yes |
-| `qat_elevated_vs_fp32` | QAT late mean > fp32 | no |
+| `qat_elevated_vs_fp32` | QAT late mean > fp32 | yes |
 | `fp32_level_near_paper` | fp32 late/pre within 20% of digitized paper | yes |
 | `ptq_fp16_level_near_paper` | PTQ fp16 late/pre within 20% of digitized paper | yes |
 | `ptq_int8_level_near_paper` | PTQ int8 late/pre within 20% of digitized paper | yes |
-| `qat_not_below_paper` | QAT late/pre ≥ 80% of digitized paper (paper: same range or increased) | no |
+| `qat_not_below_paper` | QAT late/pre ≥ 80% of digitized paper (paper: same range or increased) | yes |
 | `qat_late_sustained` | QAT [10,12] s mean ≥ 90% of its [2,8] s mean (no late fade) | yes |
 <!-- gates-6a:end -->
 
@@ -404,15 +404,15 @@ Same quantization panel for the **30 Hz** model (§IV.A.3): Fig 5b fp32 checkpoi
 
 ### Replication
 
-![Replication Fig 6b](images/6b/ptq_qat_30hz_v42.png)
+![Replication Fig 6b](images/6b/ptq_qat_30hz_v43.png)
 
 <!-- caption-6b:start -->
-**Caption:** 30 Hz paper-protocol eval, seed 0, fp32_post=372, qat_post=594, PTQ tracks fp32, QAT elevated, v42, 2026-10-06
+**Caption:** 30 Hz paper-protocol eval, seed 0, fp32_post=372, qat_post=594, PTQ tracks fp32, QAT elevated, v43, 2026-10-06
 
 **Manifest:** `artifacts/figures/papers/mehregan/6b/manifest.json`
 <!-- caption-6b:end -->
 
-**Status:** Pass — fp32 / PTQ fp16 / PTQ int8 372; QAT 594 (above the pre-stim level; paper: QAT power "stayed at the same range or increased"). As at 45 Hz the QAT logits saturate and the deployed action is a tie-break (here pattern 1, an elevating burst); across seeds 0–6, 4/7 land elevated.
+**Status:** Pass — fp32 / PTQ fp16 / PTQ int8 372; QAT 594 (above the pre-stim level). Same caveat as Fig 6a: the int8 QAT action is a tie-break of saturated logits — paper-like at seed 0, 2/7 training seeds at 30 Hz.
 
 <!-- gates-6b:start -->
 **Gates set** (`fig6_quant_gates` → manifest `gates`). Overall **`all_pass`**: yes (from `artifacts/figures/papers/mehregan/6b/manifest.json`, 2026-10-06). Every row is required for exit.
