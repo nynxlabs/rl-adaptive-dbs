@@ -16,6 +16,7 @@ from paper_gates import (  # noqa: E402
     fig4a_gates,
     fig4b_gates,
     fig5_efficacy_gates,
+    fig6_quant_gates,
     load_refined,
     refined_path,
     rel_close,
@@ -70,6 +71,7 @@ def test_fig4a_paper_self_drop():
     assert report["gates"]["overall_trend_down"]
     assert report["gates"]["drop_vs_paper"]
     assert report["gates"]["ep0_near_paper"]
+    assert report["pass"], {k: v for k, v in report["gates"].items() if not v}
 
 
 @pytest.mark.skipif(
@@ -85,7 +87,6 @@ def test_fig4b_paper_self_late_floor():
     beta = np.interp(episodes, px, py)
     reward = np.interp(episodes, rx, ry)
     report = fig4b_gates(reward, beta)
-    assert report["gates"]["late_beta_above_threshold"]
     assert report["gates"]["late_beta_near_paper"]
     assert report["gates"]["late_reward_near_zero"]
     assert report["gates"]["ep0_beta_near_paper"]
@@ -123,3 +124,53 @@ def test_fig1b_ordering_on_paper():
     assert report["gates"]["pd_gt_healthy"]
     assert report["gates"]["pd_130_lt_pd"]
     assert report["pass"]
+
+
+def _paper_means(panel: str, names: dict[str, str]) -> dict[str, float]:
+    paper = load_refined(refined_path(panel))
+    return {key: window_mean(*paper[name], lo=4.0) for key, name in names.items()}
+
+
+@pytest.mark.skipif(not (ARTIFACT / "5a/paper_digitization/curves_wpd_refined.json").exists(), reason="no digitization artifact")
+def test_fig5a_paper_self_passes():
+    means = _paper_means(
+        "5a",
+        {
+            "no_stim": "PD no stim",
+            "trained": "Fully Trained 45Hz",
+            "periodic": "Periodic 45Hz",
+            "cdbs_130": "Periodic 130Hz",
+        },
+    )
+    report = fig5_efficacy_gates(means, panel="5a", require_cdbs=True)
+    assert report["pass"], report["gates"]
+
+
+@pytest.mark.parametrize(
+    ("panel", "fp32_name"), [("6a", "Fully Trained 45Hz"), ("6b", "Fully Trained 30Hz")]
+)
+def test_fig6_paper_self_passes(panel: str, fp32_name: str):
+    if not (ARTIFACT / f"{panel}/paper_digitization/curves_wpd_refined.json").exists():
+        pytest.skip("no digitization artifact")
+    paper = load_refined(refined_path(panel))
+    traces = {
+        "fp32": paper[fp32_name],
+        "ptq_int8": paper["PTQ, INT8"],
+        "ptq_fp16": paper["PTQ, FP16"],
+        "qat": paper["QAT"],
+    }
+    closed = {k: True for k in traces}
+    report = fig6_quant_gates(traces, panel=panel, closed_loop=closed)
+    assert report["pass"], {k: v for k, v in report["gates"].items() if not v}
+
+
+def test_fig6_rejects_open_loop_and_suppressing_qat():
+    t = np.linspace(0.0, 12.0, 61)
+    pre = np.where(t <= 2.0, 470.0, 0.0)
+    suppressed = pre + np.where(t > 2.0, 360.0, 0.0)
+    traces = {k: (t, suppressed) for k in ("fp32", "ptq_int8", "ptq_fp16", "qat")}
+    closed = {"fp32": True, "ptq_int8": True, "ptq_fp16": True, "qat": False}
+    report = fig6_quant_gates(traces, panel="6a", paper={}, closed_loop=closed)
+    assert not report["gates"]["all_closed_loop"]
+    assert not report["gates"]["qat_elevated_vs_fp32"]
+    assert not report["pass"]

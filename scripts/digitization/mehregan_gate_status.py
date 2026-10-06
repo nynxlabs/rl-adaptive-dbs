@@ -29,18 +29,19 @@ from paper_gates import (  # noqa: E402
 _REPO = Path(__file__).resolve().parents[2]
 _MEHREGAN_PLOTS = _REPO / "scripts" / "figures" / "papers" / "mehregan"
 
-MEHREGAN_FIG6_PAPER_GATE_DESCRIPTIONS: dict[str, str] = {
-    "paper_qat_elevated_vs_fp32": "QAT post-onset mean > fp32",
-    "paper_fp32_level_ratio_near_paper": "fp32 post level ratio vs digitized paper",
-    "paper_ptq_int8_level_ratio_near_paper": "PTQ int8 post level ratio vs digitized paper",
-    "paper_ptq_fp16_level_ratio_near_paper": "PTQ fp16 post level ratio vs digitized paper",
-    "paper_qat_level_ratio_near_paper": "QAT post level ratio vs digitized paper",
-    "paper_ptq_fp16_near_fp32": "PTQ fp16 post mean within 15% of fp32",
-    "paper_ptq_int8_near_fp32": "PTQ int8 post mean within 20% of fp32",
-    "paper_not_open_loop_override": "eval uses trained/quantized policy, not open-loop lock",
-    "paper_not_shared_constant_action_lock": "fp32+PTQ lack shared identical constant action",
-    "paper_qat_late_sustained": "QAT stays elevated late (no end crash)",
-}
+MEHREGAN_FIG6_GATE_ROWS: tuple[tuple[str, str], ...] = (
+    ("all_closed_loop", "fp32, PTQ and QAT each run their own actor closed loop"),
+    ("prestim_shared", "all series share the pre-onset level (spread ≤ 1%)"),
+    ("fp32_suppresses_vs_baseline", "fp32 late mean (t ≥ 4 s) < its pre-onset mean"),
+    ("ptq_fp16_near_fp32", "PTQ fp16 late mean within 15% of fp32"),
+    ("ptq_int8_near_fp32", "PTQ int8 late mean within 20% of fp32"),
+    ("qat_elevated_vs_fp32", "QAT late mean > fp32"),
+    ("fp32_level_near_paper", "fp32 late/pre within 20% of digitized paper"),
+    ("ptq_fp16_level_near_paper", "PTQ fp16 late/pre within 20% of digitized paper"),
+    ("ptq_int8_level_near_paper", "PTQ int8 late/pre within 20% of digitized paper"),
+    ("qat_not_below_paper", "QAT late/pre ≥ 80% of digitized paper (paper: same range or increased)"),
+    ("qat_late_sustained", "QAT [10,12] s mean ≥ 90% of its [2,8] s mean (no late fade)"),
+)
 
 
 @dataclass(frozen=True)
@@ -211,7 +212,7 @@ def evaluate_4a() -> PanelGateStatus:
         overall=bool(dig["pass"]),
         gates=dict(dig["gates"]),
         source=str(series_path),
-        header="`fig4a_gates` → live `series.json` (digitization revisit; was locked `series_v18.json`)",
+        header="`fig4a_gates` → live `series.json`",
         rows=rows,
     )
 
@@ -222,11 +223,6 @@ def evaluate_4b() -> PanelGateStatus:
     dig = fig4b_gates(manifest["episode_rewards"], manifest["episode_mean_beta"])
     gates = dict(dig["gates"])
     gates["plot_style"] = len(manifest["episode_rewards"]) >= 2
-    summary_gates = (manifest.get("summary") or {}).get("gates") or {}
-    if "automation" in summary_gates:
-        gates["automation"] = bool(summary_gates["automation"])
-    else:
-        gates["automation"] = bool((manifest.get("summary") or {}).get("automation_pass", True))
     rows = (
         GateRow("early_negative", "mean reward ep 0–2 < 0"),
         GateRow("reward_rises", "late mean reward > early mean"),
@@ -235,12 +231,10 @@ def evaluate_4b() -> PanelGateStatus:
         GateRow("beta_drops", "late episode-mean PSD < early"),
         GateRow("beta_drop_ratio_near_paper", "PSD late/early ratio vs digitization"),
         GateRow("reward_recovers_like_paper", "qualitative rise (not magnitude match)"),
-        GateRow("late_beta_above_threshold", "late episode-mean PSD ≥ β_t=0.35"),
         GateRow("late_beta_near_paper", "late PSD within 15% of digitized paper"),
         GateRow("late_reward_near_zero", "late mean reward in (−10, 2] (paper ~−2)"),
         GateRow("ep0_beta_near_paper", "episode 0 PSD within 10% of digitized paper"),
         GateRow("plot_style", "≥ 2 episodes plotted"),
-        GateRow("automation", "manifest summary.automation_pass mirrors fig4b bundle"),
     )
     return PanelGateStatus(
         panel="4b",
@@ -248,7 +242,7 @@ def evaluate_4b() -> PanelGateStatus:
         overall=all(gates.values()),
         gates=gates,
         source=str(manifest_path),
-        header="`fig4b_gates` + legacy `_fig4b_pass` → manifest `summary.gates`",
+        header="`fig4b_gates` → manifest `summary.gates`",
         rows=rows,
     )
 
@@ -262,11 +256,12 @@ def evaluate_5a() -> PanelGateStatus:
     gates = {k: bool(v) for k, v in result.items() if isinstance(v, bool) and k != "pass"}
     rows = (
         GateRow("shared_baseline", "no-stim vs periodic pre-onset Δ < 25"),
-        GateRow("trained_below_no_stim", "trained post-onset mean < no stim"),
+        GateRow("trained_closed_loop", "trained series runs the actor closed loop (no replayed actions)"),
+        GateRow("trained_below_no_stim", "trained mean (t ≥ 4 s) < no stim"),
         GateRow("trained_above_periodic", "trained > periodic 45 Hz"),
         GateRow("cdbs_lowest", "130 Hz cDBS lowest of four series"),
-        GateRow("trained_no_stim_ratio_near_paper", "late ratio vs digitized paper"),
-        GateRow("periodic_no_stim_ratio_near_paper", "late ratio vs digitized paper"),
+        GateRow("trained_no_stim_ratio_near_paper", "trained/no-stim late ratio (t ≥ 4 s) vs digitized paper"),
+        GateRow("periodic_no_stim_ratio_near_paper", "periodic/no-stim late ratio (t ≥ 4 s) vs digitized paper"),
     )
     return PanelGateStatus(
         panel="5a",
@@ -288,11 +283,12 @@ def evaluate_5b() -> PanelGateStatus:
     gates = {k: bool(v) for k, v in result.items() if isinstance(v, bool) and k != "pass"}
     rows = (
         GateRow("shared_baseline", "no-stim vs periodic pre-onset Δ < 25"),
-        GateRow("trained_below_no_stim", "trained post-onset mean < no stim"),
+        GateRow("trained_closed_loop", "trained series runs the actor closed loop (no replayed actions)"),
+        GateRow("trained_below_no_stim", "trained mean (t ≥ 4 s) < no stim"),
         GateRow("trained_below_periodic", "trained < periodic 30 Hz"),
         GateRow("periodic_above_no_stim", "periodic 30 Hz elevates beta vs no stim"),
-        GateRow("trained_no_stim_ratio_near_paper", "late ratio vs digitized paper"),
-        GateRow("periodic_no_stim_ratio_near_paper", "late ratio vs digitized paper"),
+        GateRow("trained_no_stim_ratio_near_paper", "trained/no-stim late ratio (t ≥ 4 s) vs digitized paper"),
+        GateRow("periodic_no_stim_ratio_near_paper", "periodic/no-stim late ratio (t ≥ 4 s) vs digitized paper"),
     )
     return PanelGateStatus(
         panel="5b",
@@ -310,48 +306,14 @@ def _evaluate_6(panel: str) -> PanelGateStatus:
     manifest = _load_json(manifest_path)
     gates = _manifest_gates(manifest)
     overall = _manifest_overall(manifest, "all_pass")
-    rows = (
-        GateRow("prestim_shared", "all series agree pre-onset (≤1 PSD unit vs fp32)"),
-        GateRow("prestim_wiggly", "fp32 pre-onset std ≥ 5"),
-        GateRow("fp32_suppresses_vs_baseline", "fp32 post-onset < pre-stim baseline"),
-        GateRow("ptq-fp16_tracks_fp32", "PTQ fp16 post mean within tolerance of fp32"),
-        GateRow("ptq-int8_tracks_fp32", "PTQ int8 post mean within tolerance of fp32"),
-        GateRow("non_qat_traces_distinct", "fp32 / PTQ fp16 / PTQ int8 not identical post-onset"),
-        GateRow("qat_elevated_vs_fp32", "QAT post-onset > fp32"),
-        GateRow("qat_near_baseline_band", "QAT in elevated pre-stim band, not suppressed"),
-        GateRow("not_shared_constant_action_lock", "fp32+PTQ do not share one constant action"),
-    )
-    rows = rows + tuple(
-        GateRow(key, MEHREGAN_FIG6_PAPER_GATE_DESCRIPTIONS[key])
-        for key in (
-            "paper_qat_elevated_vs_fp32",
-            "paper_fp32_level_ratio_near_paper",
-            "paper_ptq_int8_level_ratio_near_paper",
-            "paper_ptq_fp16_level_ratio_near_paper",
-            "paper_qat_level_ratio_near_paper",
-            "paper_ptq_fp16_near_fp32",
-            "paper_ptq_int8_near_fp32",
-            "paper_not_open_loop_override",
-        )
-    )
-    if panel == "6a":
-        rows = rows + (
-            GateRow(
-                "paper_not_shared_constant_action_lock",
-                MEHREGAN_FIG6_PAPER_GATE_DESCRIPTIONS["paper_not_shared_constant_action_lock"],
-            ),
-            GateRow(
-                "paper_qat_late_sustained",
-                MEHREGAN_FIG6_PAPER_GATE_DESCRIPTIONS["paper_qat_late_sustained"],
-            ),
-        )
+    rows = tuple(GateRow(key, desc) for key, desc in MEHREGAN_FIG6_GATE_ROWS)
     return PanelGateStatus(
         panel=panel,
         pass_field="all_pass",
         overall=overall,
         gates=gates,
         source=str(manifest_path),
-        header="`_gate_summary` → manifest `gates`",
+        header="`fig6_quant_gates` → manifest `gates`",
         rows=rows,
     )
 

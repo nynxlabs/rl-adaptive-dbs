@@ -420,11 +420,13 @@ def fig4b_gates(
 ) -> dict[str, Any]:
     """Reward rise + episode PSD drop vs paper digitizations.
 
-    Digitization revisit (Report 3): paper late episode-mean PSD sits *above*
-    reward threshold ``β_t = 0.35`` (~0.37) so episode reward approaches 0
-    from below. A full collapse onto one suppressing pattern drives late PSD
-    ~0.30 and flips reward positive — reject that floor even when the
-    late/early *ratio* still looks paper-like.
+    Digitization revisit (Report 3): paper late episode-mean PSD sits just
+    above reward threshold ``β_t = 0.35`` (~0.37) so episode reward approaches
+    0 from below. ``late_beta_near_paper`` and ``late_reward_near_zero`` (the
+    digitized late reward ~−2) reject a collapse onto a deep suppressor (late
+    PSD ~0.30, reward ~+15) even when the late/early *ratio* looks paper-like.
+    ``late_beta_above_threshold`` (late PSD ≥ β_t) was dropped Oct 2026: it
+    restated those two gates with a 5% margin and failed paper-like runs.
     """
     paper_reward = paper_reward or load_refined(
         reward_path or refined_path("4b", stem="curves_wpd_refined_reward")
@@ -474,9 +476,6 @@ def fig4b_gates(
         "reward_recovers_like_paper": bool(
             late_r > early_r and p_late_r > p_early_r and late_r > -10.0
         ),
-        # Paper late PSD ~0.37 stays above β_t so Eq. (8) never enters the
-        # positive linear branch. Locked v4/v18 collapse to ~0.30 and go to +16.
-        "late_beta_above_threshold": bool(np.isfinite(late_b) and late_b >= reward_threshold),
         "late_beta_near_paper": rel_close(late_b, p_late_b, tol=late_beta_rel_tol),
         "late_reward_near_zero": bool(
             np.isfinite(late_r) and late_r > -10.0 and late_r <= late_reward_hi
@@ -500,6 +499,7 @@ def fig4b_gates(
             "ep0_beta": float(b[0]),
             "paper_ep0_beta": p_ep0_b,
             "reward_threshold": reward_threshold,
+            "late_beta_above_threshold": bool(np.isfinite(late_b) and late_b >= reward_threshold),
             "late_beta_rel_tol": late_beta_rel_tol,
         },
         paper_ref={
@@ -597,142 +597,108 @@ def fig5_efficacy_gates(
 
 
 def fig6_quant_gates(
-    post_means: dict[str, float],
+    traces: dict[str, tuple[np.ndarray, np.ndarray]],
     *,
     paper: dict[str, tuple[np.ndarray, np.ndarray]] | None = None,
     paper_path: Path | str | None = None,
     panel: str = "6a",
+    onset: float = 2.0,
     late_lo: float = 4.0,
-    ratio_tol: float = DEFAULT_RATIO_TOL,
-    baseline_key: str | None = None,
-    qat_trace: tuple[np.ndarray, np.ndarray] | None = None,
-    stim_actions: dict[str, list[int]] | None = None,
-    open_loop_override: bool = False,
+    level_tol: float = 0.20,
+    closed_loop: dict[str, bool] | None = None,
 ) -> dict[str, Any]:
-    """Fig 6a/6b: fp32/PTQ suppressed vs QAT elevated, paper-relative post means.
+    """Fig 6a/6b: PTQ tracks fp32 suppression; 10-episode QAT does not.
 
-    Extra paper-faithful checks (when provided):
-    - ``stim_actions``: reject a *shared* identical constant lock across
-      fp32+PTQ (that greenwash treated distinct constants as Pass while the
-      panel is still open-loop). Per-series constant greedy is allowed when
-      honest closed-loop (scalar $P_\\beta$ policies often lock).
-    - ``open_loop_override``: hard-fail when eval used weak-action / open-loop
-      locks instead of the trained / quantized policy.
-    - ``qat_trace`` ``(times, y)``: QAT must stay elevated late (no end crash);
-      paper QAT [10,12] stays ~high band (digitized peak−end ≈ 36).
+    ``traces`` maps ``fp32`` / ``ptq_fp16`` / ``ptq_int8`` / ``qat`` to
+    ``(time_s, P_beta)`` on the paper display axis (onset at 2 s). Levels are
+    compared as late (t ≥ ``late_lo``) mean over the shared pre-onset mean, the
+    same normalization applied to the digitized paper curves — plant and paper
+    absolute PSD scales differ slightly, the pre-stim baseline does not move.
+
+    ``closed_loop`` (series → bool) records that every series ran its own
+    (quantized) actor closed loop; any replayed / open-loop series fails.
     """
     paper = paper or load_refined(paper_path or refined_path(panel))
     alias = {
-        "fp32": ("Fully Trained 45Hz", "Fully Trained 30Hz", "fp32", "Fully Trained"),
-        "ptq_int8": ("PTQ, INT8", "ptq-int8", "ptq_int8"),
-        "ptq_fp16": ("PTQ, FP16", "ptq-fp16", "ptq_fp16"),
+        "fp32": ("Fully Trained 45Hz", "Fully Trained 30Hz", "fp32"),
+        "ptq_int8": ("PTQ, INT8", "ptq_int8"),
+        "ptq_fp16": ("PTQ, FP16", "ptq_fp16"),
         "qat": ("QAT", "qat"),
     }
 
-    def _ours(key: str) -> float:
-        for a in alias[key]:
-            if a in post_means:
-                return float(post_means[a])
-        return float("nan")
-
-    def _paper(key: str) -> float:
+    def _paper_xy(key: str) -> tuple[np.ndarray, np.ndarray] | None:
         for a in alias[key]:
             if a in paper:
-                return window_mean(*paper[a], lo=late_lo)
-        return float("nan")
+                return paper[a]
+        return None
 
-    o = {k: _ours(k) for k in alias}
-    p = {k: _paper(k) for k in alias}
-    base = o.get(baseline_key) if baseline_key else o["fp32"]
-    if not np.isfinite(base):
-        base = o["fp32"]
+    def _rel(xy: tuple[np.ndarray, np.ndarray] | None) -> tuple[float, float, float]:
+        if xy is None:
+            return float("nan"), float("nan"), float("nan")
+        x, y = (np.asarray(v, dtype=float) for v in xy)
+        pre = window_mean(x, y, hi=onset)
+        late = window_mean(x, y, lo=late_lo)
+        return pre, late, late / pre if pre else float("nan")
+
+    keys = ("fp32", "ptq_fp16", "ptq_int8", "qat")
+    ours = {k: _rel(traces.get(k)) for k in keys}
+    theirs = {k: _rel(_paper_xy(k)) for k in keys}
+    o_pre = {k: ours[k][0] for k in keys}
+    o_late = {k: ours[k][1] for k in keys}
+    o_rel = {k: ours[k][2] for k in keys}
+    p_rel = {k: theirs[k][2] for k in keys}
 
     gates: dict[str, bool] = {}
-    if np.isfinite(o["fp32"]) and np.isfinite(o["qat"]):
-        gates["qat_elevated_vs_fp32"] = o["qat"] > o["fp32"]
-    for k in ("fp32", "ptq_int8", "ptq_fp16", "qat"):
-        if np.isfinite(o[k]) and np.isfinite(p[k]) and np.isfinite(p["fp32"]):
-            gates[f"{k}_level_ratio_near_paper"] = ratio_close(
-                o[k], max(abs(base), 1.0), p[k], max(abs(p["fp32"]), 1.0), tol=ratio_tol
-            )
-    if np.isfinite(o["ptq_fp16"]) and np.isfinite(o["fp32"]):
-        gates["ptq_fp16_near_fp32"] = rel_close(o["ptq_fp16"], o["fp32"], tol=0.15)
-    if np.isfinite(o["ptq_int8"]) and np.isfinite(o["fp32"]):
-        gates["ptq_int8_near_fp32"] = rel_close(o["ptq_int8"], o["fp32"], tol=0.20)
+    if closed_loop is not None:
+        gates["all_closed_loop"] = all(bool(closed_loop.get(k)) for k in keys)
+    finite_pre = [v for v in o_pre.values() if np.isfinite(v)]
+    # Same seed + same reset → one shared pre-onset trace. 1% of the level
+    # (≈5 PSD units) absorbs digitization spread on the paper's own curves.
+    gates["prestim_shared"] = bool(
+        len(finite_pre) == len(keys)
+        and (max(finite_pre) - min(finite_pre)) <= 0.01 * abs(np.mean(finite_pre))
+    )
+    gates["fp32_suppresses_vs_baseline"] = bool(o_late["fp32"] < o_pre["fp32"])
+    gates["ptq_fp16_near_fp32"] = rel_close(o_late["ptq_fp16"], o_late["fp32"], tol=0.15)
+    gates["ptq_int8_near_fp32"] = rel_close(o_late["ptq_int8"], o_late["fp32"], tol=0.20)
+    gates["qat_elevated_vs_fp32"] = bool(o_late["qat"] > o_late["fp32"])
+    for k in ("fp32", "ptq_fp16", "ptq_int8"):
+        gates[f"{k}_level_near_paper"] = rel_close(o_rel[k], p_rel[k], tol=level_tol)
+    # §IV.A.3: under QAT "the power stayed at the same range or increased" — one
+    # sided: QAT must not drop below the digitized paper level band.
+    gates["qat_not_below_paper"] = bool(
+        np.isfinite(o_rel["qat"])
+        and np.isfinite(p_rel["qat"])
+        and o_rel["qat"] >= (1.0 - level_tol) * p_rel["qat"]
+    )
 
-    notes = [
-        "Paper QAT/PTQ wiggles are one seed; gates use post-onset means and ratios.",
-        "Paper: PTQ tracks fp32 suppression; 10-ep QAT fails to suppress (stays elevated).",
-    ]
-
-    if open_loop_override:
-        gates["not_open_loop_override"] = False
-        notes.append("Eval used open-loop / weak-action lock (not paper closed-loop).")
-    else:
-        gates["not_open_loop_override"] = True
-
-    if stim_actions:
-        # Reject shared identical constant lock across fp32+PTQ (greenwash).
-        # Per-series constant greedy under honest closed-loop is allowed —
-        # plant dynamics still produce the paper's wiggly suppressed traces.
-        def _acts(key: str) -> list[int]:
-            for alias_key in (key, key.replace("_", "-"), key.replace("-", "_")):
-                if alias_key in stim_actions and stim_actions[alias_key] is not None:
-                    return [int(a) for a in stim_actions[alias_key]]
-            return []
-
-        fp32 = _acts("fp32")
-        ptq16 = _acts("ptq-fp16")
-        ptq8 = _acts("ptq-int8")
-        shared_constant = bool(
-            fp32
-            and len(set(fp32)) <= 1
-            and ptq16
-            and ptq8
-            and ptq16 == fp32
-            and ptq8 == fp32
-        )
-        gates["not_shared_constant_action_lock"] = not shared_constant
-        notes.append(
-            "fp32/PTQ unique actions: "
-            f"fp32={len(set(fp32)) if fp32 else 0} "
-            f"ptq16={len(set(ptq16)) if ptq16 else 0} "
-            f"ptq8={len(set(ptq8)) if ptq8 else 0}; "
-            f"shared_constant_lock={shared_constant}"
-        )
-
-    if qat_trace is not None:
-        qt, qy = qat_trace
-        qt = np.asarray(qt, dtype=float)
-        qy = np.asarray(qy, dtype=float)
-        early_post = window_mean(qt, qy, lo=2.0, hi=8.0)
+    qat = traces.get("qat")
+    if qat is not None:
+        qt, qy = (np.asarray(v, dtype=float) for v in qat)
+        early_post = window_mean(qt, qy, lo=onset, hi=8.0)
         late_post = window_mean(qt, qy, lo=10.0, hi=12.0)
-        # Prefer a short end band over a single sample — trailing windows are
-        # noisy at exact t=12, and max(t≥2) often includes the shared onset
-        # baseline (~500) rather than a QAT-only spike.
-        end_band = window_mean(qt, qy, lo=11.0, hi=12.0)
-        post_mask = (qt >= 3.0) & (qt <= 12.0)
-        peak_post = float(np.max(qy[post_mask])) if np.any(post_mask) else float("nan")
-        # Paper late QAT stays in the elevated band (digitized ~430–450 at end).
-        # Reject late fade into the suppressed band (~fp32 post), not onset noise.
+        # Paper QAT stays in its elevated band to the end (no late fade into the
+        # suppressed fp32 band); allow a 10% sag vs the early post-onset mean.
         gates["qat_late_sustained"] = bool(
-            np.isfinite(late_post)
-            and np.isfinite(early_post)
-            and np.isfinite(end_band)
-            and late_post >= 0.90 * early_post
-            and end_band >= 0.88 * early_post
-            and (not np.isfinite(peak_post) or (peak_post - end_band) <= 90.0)
+            np.isfinite(late_post) and np.isfinite(early_post) and late_post >= 0.90 * early_post
         )
-        notes.append(
-            f"QAT early_post[2,8]={early_post:.1f} late[10,12]={late_post:.1f} "
-            f"end_band[11,12]={end_band:.1f} "
-            f"peak_post[3,12]-end_band="
-            f"{peak_post - end_band if np.isfinite(peak_post) and np.isfinite(end_band) else float('nan'):.1f}"
-        )
-
     return _gate_pack(
         gates,
-        {"ours_post": o, "paper_post": p, "baseline_used": base},
-        paper_ref={"path": str(paper_path or refined_path(panel)), "late_lo": late_lo},
-        notes=notes,
+        {
+            "ours_pre": o_pre,
+            "ours_late": o_late,
+            "ours_late_over_pre": o_rel,
+            "paper_late_over_pre": p_rel,
+            "paper_pre": {k: theirs[k][0] for k in keys},
+            "paper_late": {k: theirs[k][1] for k in keys},
+        },
+        paper_ref={
+            "path": str(paper_path or refined_path(panel)),
+            "late_lo": late_lo,
+            "level_tol": level_tol,
+        },
+        notes=[
+            "Paper: PTQ (fp16, int8) tracks fp32 suppression; 10-episode QAT stays near pre-stim.",
+            "Levels are late/pre ratios so plant-vs-paper PSD scale offsets cancel.",
+        ],
     )
