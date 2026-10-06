@@ -79,7 +79,7 @@ STATE_LENGTH = 1
 
 # --- Paper-silent defaults (conventions) ------------------------------------
 DEFAULT_ALPHABET = "burst"
-DEFAULT_LOGIT_NOISE = 0.5
+DEFAULT_LOGIT_NOISE = 1.0
 DEFAULT_INIT_BIAS = 0.0
 DEFAULT_GAMMA = 0.99
 DEFAULT_TAU = 0.005
