@@ -1,7 +1,7 @@
 """Episode-0 training $P_\\beta$ spread across seeds (Mehregan Fig 4a/4b ep0 gate).
 
 Episode 0 of the paper recipe is dominated by exploration over near-zero
-initial logits, so its mean $P_\\beta$ is a property of the seed + alphabet, not
+initial logits, so its mean $P_\\beta$ is a property of the seed, not
 of learning. Diagnostic only.
 
   uv run python -m rl_adaptive_dbs.run scripts/probes/mehregan_ep0_seeds.py --seeds 0-9 \
