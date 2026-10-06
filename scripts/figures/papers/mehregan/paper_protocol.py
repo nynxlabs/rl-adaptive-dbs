@@ -30,7 +30,9 @@ Paper-silent conventions (labelled; tune these, not the stated mechanism):
   yet) is the reset segment's $P_\\beta$, held.
 - Exploration: Gaussian noise on the actor logits; the executed slots are the
   argmax of the noisy logits and the stored ``a_logit`` is that noisy vector.
-- γ, τ, replay start size, init bias strength, seeds.
+- γ, τ, replay start size, init bias strength, seeds, and the number of
+  minibatch updates per environment step (Alg. 1 line 15 "for update
+  frequency do" — the paper gives no value).
 - Plant state carries across the 2 s steps of an episode; each episode resets
   to new initial conditions (seed + episode).
 - Eval display: 2 s no-stim pre-roll so the trailing 2 s $P_\\beta$ window is full
@@ -94,6 +96,7 @@ DEFAULT_INIT_BIAS = 0.0
 DEFAULT_GAMMA = 0.99
 DEFAULT_TAU = 0.005
 DEFAULT_STATE_SAMPLE_MS = 100
+DEFAULT_UPDATES_PER_STEP = 1
 
 # Eval display (Fig 2a protocol).
 DISPLAY_S = 12.0
@@ -115,6 +118,7 @@ class PaperKnobs:
     gamma: float = DEFAULT_GAMMA
     tau: float = DEFAULT_TAU
     state_sample_ms: int = DEFAULT_STATE_SAMPLE_MS
+    updates_per_step: int = DEFAULT_UPDATES_PER_STEP  # Alg. 1 line 15 "update frequency"
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -123,6 +127,7 @@ class PaperKnobs:
             "gamma": self.gamma,
             "tau": self.tau,
             "state_sample_ms": self.state_sample_ms,
+            "updates_per_step": self.updates_per_step,
         }
 
 
@@ -132,6 +137,7 @@ _KNOB_TYPES = {
     "gamma": float,
     "tau": float,
     "state_sample_ms": int,
+    "updates_per_step": int,
 }
 
 
@@ -328,7 +334,7 @@ def train_paper(
             slot_spread.append(float(np.std(np.diff(np.sort(slots)))))
             ep_reward += reward
             state = next_state
-            if len(buf) >= BATCH_SIZE:
+            for _ in range(knobs.updates_per_step if len(buf) >= BATCH_SIZE else 0):
                 s, a, r, s2, d = buf.sample(BATCH_SIZE)
                 with torch.no_grad():
                     q_target = r + knobs.gamma * (1.0 - d) * critic_t(s2, actor_t(s2))
