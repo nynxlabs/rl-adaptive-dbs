@@ -927,41 +927,24 @@ def _caption_2b(manifest: dict[str, Any]) -> str:
 def _caption_4a(manifest: dict[str, Any]) -> str:
     seed = manifest.get("seed", 0)
     mean_hz = manifest.get("mean_hz", 45)
-    state_length = manifest.get("state_length", 1)
-    state_mode = manifest.get("state_mode", "within_step")
-    reward_state_mode = manifest.get("reward_state_mode", "full_segment")
-    exploration = manifest.get("exploration_mode", "softmax")
-    critic = manifest.get("critic_action_input", "one_hot")
-    init_bias = manifest.get("init_bias_scale")
-    jitter = manifest.get("jitter_fraction")
+    knobs = manifest.get("knobs") or {}
     version = manifest.get("png_version")
     summary = manifest.get("summary") or {}
-    trend = summary.get("trend_down")
     early = summary.get("early_mean_0_130")
     late = summary.get("late_mean_150_end")
     ep0 = (summary.get("paper_gate_metrics") or {}).get("ep0_mean")
-    bits = [
-        f"{mean_hz:g} Hz fixed_mean_pattern",
-        f"{state_mode} L={state_length}",
-        f"reward={reward_state_mode}",
-        exploration,
-        f"critic={critic}",
-        f"seed {seed}",
-    ]
+    bits = [f"{mean_hz:g} Hz, paper Alg. 1 (critic on logits, lr 5e-4/1e-3)"]
+    if knobs:
+        bits.append(
+            f"{knobs.get('alphabet')} alphabet, logit noise σ={knobs.get('logit_noise_std'):g}"
+        )
+    bits.append(f"seed {seed}")
     if version is not None:
         bits.append(f"v{version}")
-    if isinstance(init_bias, (int, float)):
-        bits.append(f"init_bias={init_bias:g}")
-    if isinstance(jitter, (int, float)):
-        bits.append(f"jitter={jitter:g}")
     if isinstance(ep0, (int, float)):
         bits.append(f"ep0={ep0:.3f}")
     if isinstance(early, (int, float)) and isinstance(late, (int, float)):
         bits.append(f"early={early:.3f} late={late:.3f}")
-    if trend is True:
-        bits.append("trend↓")
-    elif trend is False:
-        bits.append("trend flat/↑")
     return f"{', '.join(bits)} ({_today()})"
 
 
@@ -1499,7 +1482,7 @@ def _caption_6a(manifest: dict[str, Any]) -> str:
         f"fp32_post={panel.get('fp32_post_mean', 0):.0f}",
         f"qat_post={panel.get('qat_post_mean', 0):.0f}",
     ]
-    if gates.get("ptq-fp16_tracks_fp32") and gates.get("ptq-int8_tracks_fp32"):
+    if gates.get("ptq_fp16_near_fp32") and gates.get("ptq_int8_near_fp32"):
         bits.append("PTQ tracks fp32")
     if gates.get("qat_elevated_vs_fp32"):
         bits.append("QAT elevated")
@@ -1574,7 +1557,7 @@ def _caption_6b(manifest: dict[str, Any]) -> str:
         f"fp32_post={panel.get('fp32_post_mean', 0):.0f}",
         f"qat_post={panel.get('qat_post_mean', 0):.0f}",
     ]
-    if gates.get("ptq-fp16_tracks_fp32") and gates.get("ptq-int8_tracks_fp32"):
+    if gates.get("ptq_fp16_near_fp32") and gates.get("ptq_int8_near_fp32"):
         bits.append("PTQ tracks fp32")
     if gates.get("qat_elevated_vs_fp32"):
         bits.append("QAT elevated")
