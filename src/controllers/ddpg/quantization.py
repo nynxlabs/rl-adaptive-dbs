@@ -43,9 +43,25 @@ def qat_backend() -> str:
 
 
 def _default_qat_qconfig() -> torch.ao.quantization.QConfig:
+    """Eager-mode QAT qconfig emulating **int8** (Mehregan §III.D).
+
+    PyTorch's fbgemm default sets ``reduce_range=True`` on activations, i.e.
+    7-bit (0..127) fake quantization — an x86 overflow workaround for real
+    int8 kernels, not part of the paper. The paper rounds weights and
+    activations "to emulate int8 values", so activations use the full 0..255
+    range here; weights keep the default per-channel symmetric int8.
+    """
     backend = qat_backend()
     torch.backends.quantized.engine = backend
-    return torch.ao.quantization.get_default_qat_qconfig(backend)
+    default = torch.ao.quantization.get_default_qat_qconfig(backend)
+    activation = torch.ao.quantization.FusedMovingAvgObsFakeQuantize.with_args(
+        observer=torch.ao.quantization.MovingAverageMinMaxObserver,
+        quant_min=0,
+        quant_max=255,
+        dtype=torch.quint8,
+        reduce_range=False,
+    )
+    return torch.ao.quantization.QConfig(activation=activation, weight=default.weight)
 
 
 def _assign_qat_qconfig(module: nn.Module, qconfig: torch.ao.quantization.QConfig) -> None:
