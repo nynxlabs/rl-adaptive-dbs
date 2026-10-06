@@ -12,9 +12,9 @@ Figs **1–2** are schematics — **not** replication targets.
 | Panel | Description | Status |
 |-------|-------------|--------|
 | Fig 3 | GPi α–β distribution (PD Off vs PD On) | Pass (rep v22) |
-| Fig 4 | Training reward + episode length | Pass (rep v162) |
-| Fig 5 | CBGT spikes + DBS energy over training | Pass (rep v58) |
-| Fig 6 | α–β + DBS parameters over training | Pass (rep v17) |
+| Fig 4 | Training reward + episode length | Pass (rep v163) |
+| Fig 5 | CBGT spikes + DBS energy over training | Pass (rep v59) |
+| Fig 6 | α–β + DBS parameters over training | Pass (rep v18) |
 | Fig 7 | 50-episode eval (25 steps) | Fail (`paper_start_near_paper`) |
 <!-- summary:end -->
 
@@ -139,17 +139,17 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 
 ### Replication
 
-![Replication Fig 5](images/5/spikes_energy_v58.png)
+![Replication Fig 5](images/5/spikes_energy_v59.png)
 
 <!-- caption-5:start -->
-**Caption:** Fig 4 shared train 500 ep, seed=1; spike_mean=110, energy_mean=913.9; pass=True (v58)
+**Caption:** Fig 4 shared train 500 ep, seed=1; spike_mean=110, energy_mean=913.9; pass=True (v59)
 
 **Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json`
 <!-- caption-5:end -->
 
-**Status:** Pass — see manifest gates (`spikes_energy_v58.png`).
+**Status:** Pass — see manifest gates (`spikes_energy_v59.png`).
 
-From v56 the spike panel is a real count (spike events per 100 ms step across the observed CBGT populations); up to v55 it was a formula anchored on the paper's ~810. Spike and energy levels are report-only; see [docs/figures/nguyen/5.md](../../docs/figures/nguyen/5.md) § Correction and gate split. From v58 the count excludes the stimulated STN, which fires about once per DBS pulse and made the count follow frequency; it comes from a seed-1 re-log that reproduces the v161 train exactly (Fig 4 v162). Our count is drawn on a right axis scaled to the paper's mean (it was below the axis floor in v56); see [5.md](../../docs/figures/nguyen/5.md) § High-charge STN block.
+From v56 the spike panel is a real count (spike events per 100 ms step across the observed CBGT populations); up to v55 it was a formula anchored on the paper's ~810. Spike and energy levels are report-only; see [docs/figures/nguyen/5.md](../../docs/figures/nguyen/5.md) § Correction and gate split. From v58 the count excludes the stimulated STN, which fires about once per DBS pulse and made the count follow frequency; it comes from a seed-1 re-log that reproduces the v161 train exactly (Fig 4 v162). See [5.md](../../docs/figures/nguyen/5.md) § High-charge STN block. From v59 the paper's traces keep their one-episode dips and each count has its own zero-based axis. Energy is about half the paper's because the paper's agent raised pulse width to ~1.1 ms and ours has no reason to on our plant ([5.md](../../docs/figures/nguyen/5.md) § Paper traces, plot axes, and the energy gap).
 
 <!-- gates-5:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: yes, 2026-10-06). Rows marked *report only* are logged and never change `pass`; the rest are required.
