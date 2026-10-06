@@ -12,8 +12,8 @@ Figs **1–2** are schematics — **not** replication targets.
 | Panel | Description | Status |
 |-------|-------------|--------|
 | Fig 3 | GPi α–β distribution (PD Off vs PD On) | Pass (rep v22) |
-| Fig 4 | Training reward + episode length | Pass (rep v161) |
-| Fig 5 | CBGT spikes + DBS energy over training | Fail (`paper_spike_trend_near_paper`) |
+| Fig 4 | Training reward + episode length | Pass (rep v162) |
+| Fig 5 | CBGT spikes + DBS energy over training | Pass (rep v58) |
 | Fig 6 | α–β + DBS parameters over training | Pass (rep v17) |
 | Fig 7 | 50-episode eval (25 steps) | Fail (`paper_start_near_paper`) |
 <!-- summary:end -->
@@ -41,7 +41,7 @@ Distribution of GPi **α–β** oscillation power (**7–35 Hz**) for **PD On** 
 **Status:** Pass — 500 × 100 ms samples; see `alpha_beta_dist_v22.png`.
 
 <!-- gates-3:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **`pass`**: yes, 2026-10-05). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **`pass`**: yes, 2026-10-06). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -76,20 +76,20 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 ### Replication (**v161**, passes every gate)
 
-![Replication Fig 4](images/4/training_reward_length_v161.png)
+![Replication Fig 4](images/4/training_reward_length_v162.png)
 
 <!-- caption-4:start -->
-**Caption:** DSQN train 500 ep, seed=1; reward ep150+=-29170, len ep150+=8.9; shape_pass=True pass=True (reward shape=True full=True, length shape=True full=True) (v161)
+**Caption:** DSQN train 500 ep, seed=1; reward ep150+=-29170, len ep150+=8.9; shape_pass=True pass=True (reward shape=True full=True, length shape=True full=True) (v162)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4:end -->
 
-**Status:** Pass — see manifest gates (`training_reward_length_v161.png`).
+**Status:** Pass — see manifest gates (`training_reward_length_v162.png`).
 
 Of 13 seeds of this config, 6 pass every gate and the 13-seed mean curve passes every gate (late length 8.9 vs the paper's 8.6). Shown: seed 1, the lowest-numbered passing seed (seed 0 misses `length_late_plateau_hold`). Step sizes (5 Hz, 0.1 ms) come from the paper's Fig 6; see [docs/figures/nguyen/6.md](../../docs/figures/nguyen/6.md).
 
 <!-- gates-4:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: yes, **`pass`**: yes, 2026-10-05). **`shape_pass`**: transition timing and ep 0–200 shape. Ship exit: **`pass`** (all required gates, scale-free, anchored to the digitized paper curves). Both subplot groups required; tier-2 rows are logged in the manifest only.
+**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: yes, **`pass`**: yes, 2026-10-06). **`shape_pass`**: transition timing and ep 0–200 shape. Ship exit: **`pass`** (all required gates, scale-free, anchored to the digitized paper curves). Both subplot groups required; tier-2 rows are logged in the manifest only.
 
 ### Reward (panel a) (`shape_pass`: yes | `pass`: yes)
 
@@ -139,20 +139,20 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 
 ### Replication
 
-![Replication Fig 5](images/5/spikes_energy_v56.png)
+![Replication Fig 5](images/5/spikes_energy_v58.png)
 
 <!-- caption-5:start -->
-**Caption:** Fig 4 shared train 500 ep, seed=1; spike_mean=171, energy_mean=913.9; pass=False (v56)
+**Caption:** Fig 4 shared train 500 ep, seed=1; spike_mean=110, energy_mean=913.9; pass=True (v58)
 
 **Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json`
 <!-- caption-5:end -->
 
-**Status:** Open — see manifest gates (`spikes_energy_v56.png`).
+**Status:** Pass — see manifest gates (`spikes_energy_v58.png`).
 
-From v56 the spike panel is a real count (spike events per 100 ms step across the observed CBGT populations); up to v55 it was a formula anchored on the paper's ~810. Spike and energy levels are report-only; see [docs/figures/nguyen/5.md](../../docs/figures/nguyen/5.md) § Correction and gate split.
+From v56 the spike panel is a real count (spike events per 100 ms step across the observed CBGT populations); up to v55 it was a formula anchored on the paper's ~810. Spike and energy levels are report-only; see [docs/figures/nguyen/5.md](../../docs/figures/nguyen/5.md) § Correction and gate split. From v58 the count excludes the stimulated STN, which fires about once per DBS pulse and made the count follow frequency; it comes from a seed-1 re-log that reproduces the v161 train exactly (Fig 4 v162). Our count is drawn on a right axis scaled to the paper's mean (it was below the axis floor in v56); see [5.md](../../docs/figures/nguyen/5.md) § High-charge STN block.
 
 <!-- gates-5:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: no, 2026-10-05). Rows marked *report only* are logged and never change `pass`; the rest are required.
+**Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: yes, 2026-10-06). Rows marked *report only* are logged and never change `pass`; the rest are required.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -161,7 +161,7 @@ From v56 the spike panel is a real count (spike events per 100 ms step across th
 | `energy_series_has_variance` | energy series has variance | yes |
 | `energy_not_constant` | energy not constant | yes |
 | `energy_in_paper_band` | mean 300–3200/ep, max ≤ 3520 | yes |
-| `paper_spike_trend_near_paper` | digitization — spikes flat trend (late/early) | no |
+| `paper_spike_trend_near_paper` | digitization — spikes flat trend (late/early) | yes |
 | `paper_energy_monotonic_rise` | digitization — monotonic rise early < mid < late | yes |
 | `paper_energy_late_above_early` | energy late > early × 1.25 | yes |
 | `paper_spike_series_has_variance` | digitization — spike variance | yes |
@@ -205,7 +205,7 @@ GPi **α–β** (a) and DBS amplitude / frequency / pulse width (b) over **500**
 **Status:** Pass — see manifest gates (`alpha_beta_params_v17.png`).
 
 <!-- gates-6:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: yes, 2026-10-05). Rows marked *report only* are logged and never change `pass`; the rest are required.
+**Gates set** (`artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: yes, 2026-10-06). Rows marked *report only* are logged and never change `pass`; the rest are required.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -265,7 +265,7 @@ Seeded eval of the trained policy: **50** episodes × **25** steps, different se
 From v24 every point is a plant reading; up to v23 the eval prepended two invented α–β values per episode. See [docs/figures/nguyen/7.md](../../docs/figures/nguyen/7.md) § Correction.
 
 <!-- gates-7:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: no, 2026-10-05). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: no, 2026-10-06). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
