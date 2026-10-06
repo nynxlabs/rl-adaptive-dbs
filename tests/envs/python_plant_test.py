@@ -95,3 +95,27 @@ def test_build_mehregan_env_python_backend() -> None:
         assert isinstance(env._plant, PythonPlant)
     finally:
         env.close()
+
+
+def test_carried_segments_keep_one_network() -> None:
+    """Carried segments of one episode reuse its wiring and conductances; reset draws a new one."""
+    plant = PythonPlant()
+    plant.reset(seed=123_456)  # no cached MATLAB draws for this seed
+    plant.integrate(0.01, DbsSpec.none(), carry=True, fixed_network=True)
+    first = plant._init_draws
+    assert first is not None
+    plant.integrate(0.01, DbsSpec.none(), carry=True, fixed_network=True)
+    assert plant._init_draws is first
+    plant.reset(seed=123_457)
+    plant.integrate(0.01, DbsSpec.none(), carry=True, fixed_network=True)
+    assert not np.array_equal(plant._init_draws.perms[0], first.perms[0]) or not np.array_equal(
+        plant._init_draws.gcorsna, first.gcorsna
+    )
+
+
+def test_carry_without_fixed_network_redraws_each_segment() -> None:
+    """Default carried segments (Mehregan continuous mode) keep the per-segment draws."""
+    plant = PythonPlant()
+    plant.reset(seed=123_456)
+    plant.integrate(0.01, DbsSpec.none(), carry=True)
+    assert plant._init_draws is None
