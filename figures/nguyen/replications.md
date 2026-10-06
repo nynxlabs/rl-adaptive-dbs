@@ -74,7 +74,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 ![Paper Fig 4](images/4/paper.png)
 
-### Replication (**v161**, passes every gate)
+### Replication (**v162**, passes every gate)
 
 ![Replication Fig 4](images/4/training_reward_length_v162.png)
 
