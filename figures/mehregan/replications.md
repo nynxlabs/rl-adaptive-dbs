@@ -14,8 +14,8 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Fig 4b | Training reward vs episode | Pass (paired to 4a, rep v49) |
 | Fig 5a | Post-train efficacy @ 45 Hz | Pass (closed loop, Fig 4a model, rep v24) |
 | Fig 5b | Post-train efficacy @ 30 Hz | Pass (closed loop, burst alphabet, rep v25) |
-| Fig 6a | PTQ / QAT @ 45 Hz | Pass (closed loop, int8 QAT, rep v64) |
-| Fig 6b | PTQ / QAT @ 30 Hz | Pass (closed loop, int8 QAT, rep v43) |
+| Fig 6a | PTQ / QAT @ 45 Hz | Pass (closed loop, int8 QAT, rep v65) |
+| Fig 6b | PTQ / QAT @ 30 Hz | Pass (closed loop, int8 QAT, rep v44) |
 <!-- summary:end -->
 
 Replication PNGs: `figures/mehregan/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/mehregan/images/<panel>/paper.png` (from paper-note embeds; composite Figs 1/2/4/5/6 split into panels). Full composites under `figures/mehregan/images/_full/`.
@@ -354,10 +354,10 @@ Quantization on the **45 Hz** model (§IV.A.3), same closed-loop eval and seed. 
 
 ### Replication
 
-![Replication Fig 6a](images/6a/ptq_qat_45hz_v64.png)
+![Replication Fig 6a](images/6a/ptq_qat_45hz_v65.png)
 
 <!-- caption-6a:start -->
-**Caption:** 45 Hz paper-protocol eval, seed 0, fp32_post=339, qat_post=644, PTQ tracks fp32, QAT elevated, v64, 2026-10-06
+**Caption:** 45 Hz paper-protocol eval, seed 0, fp32_post=339, qat_post=644, PTQ tracks fp32, QAT elevated, v65, 2026-10-06
 
 **Manifest:** `artifacts/figures/papers/mehregan/6a/manifest.json`
 <!-- caption-6a:end -->
@@ -404,10 +404,10 @@ Same quantization panel for the **30 Hz** model (§IV.A.3): Fig 5b fp32 checkpoi
 
 ### Replication
 
-![Replication Fig 6b](images/6b/ptq_qat_30hz_v43.png)
+![Replication Fig 6b](images/6b/ptq_qat_30hz_v44.png)
 
 <!-- caption-6b:start -->
-**Caption:** 30 Hz paper-protocol eval, seed 0, fp32_post=372, qat_post=594, PTQ tracks fp32, QAT elevated, v43, 2026-10-06
+**Caption:** 30 Hz paper-protocol eval, seed 0, fp32_post=372, qat_post=594, PTQ tracks fp32, QAT elevated, v44, 2026-10-06
 
 **Manifest:** `artifacts/figures/papers/mehregan/6b/manifest.json`
 <!-- caption-6b:end -->
