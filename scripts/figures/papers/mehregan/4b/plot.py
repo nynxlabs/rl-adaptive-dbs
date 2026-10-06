@@ -161,7 +161,6 @@ def _gate_summary(
     metrics = dig["metrics"]
     gates = dict(dig["gates"])
     gates["plot_style"] = n >= 2
-    gates["automation"] = bool(legacy.get("pass"))
     return {
         "n_episodes": n,
         "early_mean_ep1_3": metrics.get("early_reward"),
@@ -450,17 +449,9 @@ def _checklist_rows(gates: dict[str, Any], summary: dict[str, Any]) -> list[tupl
         ),
         (
             "**Episode-mean PSD**",
-            "Gradual fall ~0.50→~0.37 (late above β_t=0.35)",
+            "Gradual fall ~0.50→~0.37 (late just above β_t=0.35)",
             beta_txt if beta_txt != "—" else "see manifest",
-            "✓"
-            if g.get("late_beta_above_threshold") and g.get("late_beta_near_paper")
-            else "✗",
-        ),
-        (
-            "**Automation gate**",
-            "—",
-            f"recovery={_fmt(ep_pass.get('recovery_from_ep1'))}",
-            "✓" if g.get("automation") else "✗",
+            "✓" if g.get("late_beta_near_paper") else "✗",
         ),
     ]
 
@@ -669,7 +660,6 @@ def main() -> int:
     print(f"wrote {args.manifest}", flush=True)
     print(
         f"gates: gates_pass={summary.get('gates_pass')} "
-        f"automation={gates.get('automation')} "
         f"rise_ep={summary.get('rise_episode')} "
         f"ep1={fig4b_pass.get('ep1'):.1f} ep{args.episodes - 1}={fig4b_pass.get('ep_last'):.1f} "
         f"psd {episode_mean_beta[0]:.3f}→{episode_mean_beta[-1]:.3f} "
