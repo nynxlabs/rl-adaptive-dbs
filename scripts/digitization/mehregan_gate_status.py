@@ -343,11 +343,12 @@ MEHREGAN_SUMMARY_ROWS: tuple[tuple[str, str, str], ...] = (
 )
 
 MEHREGAN_STATUS_NOTES: dict[str, str] = {
-    "4a": "τ 3→1.0, locked train v18",
-    "4b": "paired train v18, v14",
-    "5b": "burst alphabet, locked eval v3",
-    "6a": "honest trailing eval",
-    "6b": "tier PTQ",
+    "4a": "paper Alg. 1",
+    "4b": "paired to 4a",
+    "5a": "closed loop, Fig 4a model",
+    "5b": "closed loop, burst alphabet",
+    "6a": "QAT tie-break lands on regular pattern",
+    "6b": "closed loop",
 }
 
 MEHREGAN_MANIFEST_PATHS: dict[str, Path] = {
