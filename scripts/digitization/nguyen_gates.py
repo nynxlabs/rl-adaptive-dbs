@@ -44,9 +44,13 @@ def curves_path(stem: str) -> Path:
     return ARTIFACT_ROOT / f"curves_{stem}.json"
 
 
+# Raw per-episode traces whose one-episode spikes must survive loading (load_refined).
+UNBINNED_STEMS = frozenset({"fig5_spikes", "fig5_energy"})
+
+
 def load_curves(stem: str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
     """Load ``{series_name: (x, y)}`` from ``curves_{stem}.json``."""
-    return load_refined(curves_path(stem))
+    return load_refined(curves_path(stem), bin_near_duplicates=stem not in UNBINNED_STEMS)
 
 
 def _pick_series(

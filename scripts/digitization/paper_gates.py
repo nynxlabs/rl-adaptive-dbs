@@ -36,12 +36,18 @@ def refined_path(panel: str, *, stem: str = "curves_wpd_refined") -> Path:
     return ARTIFACT_ROOT / panel / "paper_digitization" / f"{stem}.json"
 
 
-def load_refined(path: Path | str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+def load_refined(
+    path: Path | str,
+    *,
+    bin_near_duplicates: bool = True,
+) -> dict[str, tuple[np.ndarray, np.ndarray]]:
     """Load ``{series_name: (x, y)}`` from a refined curves JSON.
 
     Cleans HITL digitization quirks: sort by x, median-bin near-duplicate x
     (covers accidental double passes and small backtracks without dropping
-    the early pre-onset segment — important for Fig 2b).
+    the early pre-onset segment — important for Fig 2b). Raw per-episode traces
+    with one-episode spikes need ``bin_near_duplicates=False``: a spike is
+    digitized as top / bottom / top at nearly the same x, and the median erases it.
     """
     payload = json.loads(Path(path).read_text())
     out: dict[str, tuple[np.ndarray, np.ndarray]] = {}
@@ -51,7 +57,11 @@ def load_refined(path: Path | str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
         y = np.asarray(xy.get("y", []), dtype=float)
         if x.size == 0 or y.size == 0 or x.size != y.size:
             continue
-        x, y = _sort_and_bin_xy(x, y)
+        if bin_near_duplicates:
+            x, y = _sort_and_bin_xy(x, y)
+        else:
+            order = np.argsort(x, kind="mergesort")
+            x, y = x[order], y[order]
         out[str(name)] = (x, y)
     return out
 

@@ -277,9 +277,13 @@ def add_condensed_paper_legend(
     )
 
 
-def load_panel_curves(path: Path | str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+def load_panel_curves(
+    path: Path | str,
+    *,
+    bin_near_duplicates: bool = True,
+) -> dict[str, tuple[np.ndarray, np.ndarray]]:
     """Load ``{series_name: (x, y)}`` from a digitization JSON path."""
-    return load_refined(path)
+    return load_refined(path, bin_near_duplicates=bin_near_duplicates)
 
 
 def pick_series(
@@ -638,27 +642,52 @@ def overlay_nguyen_fig4(
     return {"reward": (pry, r_raw_y), "length": (ply, l_raw_y)}
 
 
+# Paper Fig 5a is drawn on its own axis next to ours; a contrasting hue keeps the two
+# purple-ish traces apart.
+NGUYEN_FIG5_PAPER_SPIKES = "#d95f02"
+
+
 def overlay_nguyen_fig5(
     ax_spikes,
     ax_energy,
     *,
     show_paper_raw: bool = True,
 ) -> dict[str, tuple[np.ndarray, np.ndarray]]:
-    spike_sy, spike_raw = overlay_smoothed_raw_axis(
+    """Paper Fig 5: (a) one raw spike line, (b) raw + smoothed energy.
+
+    Both raw traces have one-episode spikes, so they load unbinned and draw as thin
+    solid lines: median-binning or a dash pattern would cut the spikes off.
+    """
+    spikes = load_panel_curves(NGUYEN_DIG / "curves_fig5_spikes.json", bin_near_duplicates=False)
+    sx, sy = pick_series(spikes, "Spike Count")
+    overlay_on_axis(
         ax_spikes,
-        NGUYEN_DIG / "curves_fig5_spikes.json",
-        show_raw=False,
-        smoothed_names=("Spike Count",),
-        raw_names=(),
-        outline_color=NGUYEN_SPIKES,
+        sx,
+        sy,
+        label="Paper (digitized)",
+        color=NGUYEN_FIG5_PAPER_SPIKES,
+        lighten=False,
+        linestyle="-",
+        linewidth=0.8,
+        alpha=0.8,
     )
-    energy_sy, energy_raw = overlay_smoothed_raw_axis(
-        ax_energy,
-        NGUYEN_DIG / "curves_fig5_energy.json",
-        show_raw=show_paper_raw,
-        outline_color=NGUYEN_ENERGY,
-    )
-    return {"spikes": (spike_sy, spike_raw), "energy": (energy_sy, energy_raw)}
+    energy = load_panel_curves(NGUYEN_DIG / "curves_fig5_energy.json", bin_near_duplicates=False)
+    if show_paper_raw and "Raw" in energy:
+        rx, ry = energy["Raw"]
+        overlay_on_axis(
+            ax_energy,
+            rx,
+            ry,
+            label="Paper raw (digitized)",
+            outline_color=NGUYEN_ENERGY,
+            raw=True,
+            linestyle="-",
+            linewidth=0.7,
+        )
+    ex, ey = pick_series(energy, "Smoothed")
+    overlay_on_axis(ax_energy, ex, ey, label="Paper smoothed (digitized)", outline_color=NGUYEN_ENERGY)
+    raw_y = energy["Raw"][1] if "Raw" in energy else ey
+    return {"spikes": (sy, sy), "energy": (ey, raw_y)}
 
 
 def overlay_nguyen_fig6(
