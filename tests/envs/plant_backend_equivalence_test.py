@@ -47,6 +47,20 @@ def _integrate(
     return plant.reset(seed=seed).integrate(duration_s, dbs_spec or DbsSpec.none())
 
 
+@pytest.mark.parametrize(("seed", "hz"), [(42, 40), (42, 80), (0, 130)])
+def test_gpi_spikes_match_matlab_under_dbs(
+    matlab_plant: MatlabPlant,
+    python_plant: PythonPlant,
+    seed: int,
+    hz: int,
+) -> None:
+    """Regular STN DBS: GPi spikes match the reference, including the rise with frequency."""
+    spec = DbsSpec.from_frequency_hz(hz)
+    matlab = _integrate(matlab_plant, seed=seed, duration_s=2.0, dbs_spec=spec)
+    python = _integrate(python_plant, seed=seed, duration_s=2.0, dbs_spec=spec)
+    assert_gpi_spikes_match(matlab.gpi_spikes, python.gpi_spikes)
+
+
 @pytest.mark.parametrize("seed", [42, 7, 3])
 def test_gpi_spikes_match_matlab_no_dbs(
     matlab_plant: MatlabPlant,
