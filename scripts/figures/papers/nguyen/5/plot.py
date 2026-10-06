@@ -191,32 +191,28 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
 
     fig, axes = plt.subplots(2, 1, figsize=(8.0, 7.0), sharex=True, constrained_layout=True)
 
-    # The paper's count (~810) and ours (spike events per 100 ms step, STN excluded)
-    # have different, undefined-vs-documented scales. Ours goes on a right axis whose
-    # limits are the left limits × (our mean / paper mean), so equal relative changes
-    # look equally large and the trends can be compared directly.
+    # The paper never defines its count (~810); ours is spike events per 100 ms step
+    # with the stimulated STN excluded. Each gets its own axis, both starting at 0, so
+    # relative changes look proportional without scaling one count onto the other.
     ax0 = axes[0]
-    ax0.set_ylabel("Paper spike count")
+    ax0.plot(episodes, spikes, color="#7b6ba8", linewidth=0.9, alpha=0.85, label="Raw")
+    ax0.plot(episodes, spike_smooth, color="#4a148c", linewidth=1.8, label="Smoothed")
+    ax0.set_ylabel("Ours: spikes per 100 ms step", color="#4a148c")
     ax0.set_title("CBGT Network Spikes (stimulated STN excluded)")
     ax0.grid(True, linestyle="--", alpha=0.6)
-    ax0r = ax0.twinx()
-    ax0r.plot(episodes, spikes, color="#7b6ba8", linewidth=0.9, alpha=0.85, label="Raw")
-    ax0r.plot(episodes, spike_smooth, color="#4a148c", linewidth=1.8, label="Smoothed")
-    ax0r.set_ylabel("Ours: spikes per 100 ms step", color="#4a148c")
+    ax0p = ax0.twinx()
 
     ax1 = axes[1]
     ax1.plot(episodes, energies, color="#b2df8a", linewidth=0.8, alpha=0.85, label="Raw")
     ax1.plot(episodes, energy_smooth, color="#1b7837", linewidth=2.0, label="Smoothed")
-    paper_y = _paper_overlay.overlay_nguyen_fig5(ax0, axes[1])
+    paper_y = _paper_overlay.overlay_nguyen_fig5(ax0p, axes[1])
     paper_spikes = np.asarray(paper_y["spikes"][0], dtype=float)
-    spike_lo = PAPER_SPIKE_MIN - 50.0
-    spike_hi = max(PAPER_SPIKE_MAX + 50.0, float(np.nanmax(paper_spikes)) + 50.0)
-    ax0.set_ylim(spike_lo, spike_hi)
-    scale = float(np.nanmean(spikes)) / float(np.nanmean(paper_spikes)) if spikes.size else 1.0
-    ax0r.set_ylim(spike_lo * scale, spike_hi * scale)
-    handles, labels = ax0r.get_legend_handles_labels()
-    paper_handles, paper_labels = ax0.get_legend_handles_labels()
-    ax0.legend(handles + paper_handles, labels + paper_labels, fontsize=8, loc="upper right")
+    ax0p.set_ylabel("Paper: spike count (undefined)")
+    ax0.set_ylim(0.0, 1.15 * float(np.nanmax(spikes)) if spikes.size else 1.0)
+    ax0p.set_ylim(0.0, 1.15 * float(np.nanmax(paper_spikes)))
+    handles, labels = ax0.get_legend_handles_labels()
+    paper_handles, paper_labels = ax0p.get_legend_handles_labels()
+    ax0p.legend(handles + paper_handles, labels + paper_labels, fontsize=8, loc="lower right")
     ax1.set_xlabel("Episode")
     ax1.set_ylabel("Energy (a.u.)")
     ax1.set_title("DBS Energy Consumption")
