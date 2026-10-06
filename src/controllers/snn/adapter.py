@@ -21,6 +21,25 @@ from envs.plant.dbs import ContinuousPulseTrain, DbsSpec
 from envs.plant.matlab_backend import IntegrateResult
 
 
+CBGT_POPULATIONS: tuple[str, ...] = (
+    "cortex_exc",
+    "cortex_inh",
+    "str_dr",
+    "str_indr",
+    "stn",
+    "gpe",
+    "gpi",
+    "th",
+)
+# DBS is delivered to the STN; Fig. 5a counts exclude it (docs/figures/nguyen/5.md).
+STIMULATED_POPULATION = "stn"
+
+
+def observed_populations(config: SNNConfig) -> tuple[str, ...]:
+    """Observed populations in observation order: GPi only, or all eight CBGT populations."""
+    return ("gpi",) if config.n_regions == 1 else CBGT_POPULATIONS
+
+
 class PlantBackend(Protocol):
     def reset(self, seed: int | None = None) -> Any: ...
 
@@ -126,6 +145,15 @@ class NguyenEnvAdapter(gym.Env):
         """Spike events in this 100 ms step across the observed populations (Fig. 5a)."""
         return int(sum(np.asarray(t).size for t in self._observed_spike_trains(result)))
 
+    def _spike_events_by_population(self, result: IntegrateResult) -> list[int]:
+        """Spike events in this step per observed population, in ``observed_populations`` order."""
+        trains = self._observed_spike_trains(result)
+        n = self.config.neurons_per_region
+        return [
+            int(sum(np.asarray(t).size for t in trains[i * n : (i + 1) * n]))
+            for i in range(len(observed_populations(self.config)))
+        ]
+
     def _encode_observation(self, result: IntegrateResult) -> np.ndarray:
         return self.encoder.encode(
             self._observed_spike_trains(result),
@@ -194,6 +222,7 @@ class NguyenEnvAdapter(gym.Env):
             "step_duration_ms": self.config.step_duration_ms,
             "cbgt_spike_count": spike_count,
             "cbgt_spike_events": self._spike_events(result),
+            "cbgt_spike_events_by_population": self._spike_events_by_population(result),
             "step_energy": step_energy,
         }
         return obs, info
@@ -294,6 +323,7 @@ class NguyenEnvAdapter(gym.Env):
             "plant_guard": plant_guard,
             "cbgt_spike_count": spike_count,
             "cbgt_spike_events": self._spike_events(result),
+            "cbgt_spike_events_by_population": self._spike_events_by_population(result),
             "step_energy": step_energy,
         }
         return obs, reward, terminated, truncated, info

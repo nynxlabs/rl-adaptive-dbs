@@ -342,6 +342,7 @@ def train_series(
             "episode_rewards": result.episode_rewards,
             "episode_lengths": result.episode_lengths,
             "episode_spikes_per_step": result.episode_spikes_per_step,
+            "episode_spikes_per_step_by_population": result.episode_spikes_per_step_by_population,
             "episode_energies": result.episode_energies,
             "episode_alpha_beta_means": result.episode_alpha_beta_means,
             "episode_alpha_beta_finals": result.episode_alpha_beta_finals,
