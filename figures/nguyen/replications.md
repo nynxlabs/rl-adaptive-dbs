@@ -264,6 +264,8 @@ Seeded eval of the trained policy: **50** episodes × **25** steps, different se
 
 From v24 every point is a plant reading; up to v23 the eval prepended two invented α–β values per episode. See [docs/figures/nguyen/7.md](../../docs/figures/nguyen/7.md) § Correction.
 
+**Why it stays open (Oct 6 2026):** the policy keeps raising frequency, so α–β overshoots below the paper's ~150 plateau; reward weights, ε-greedy eval and a one-network-per-episode plant variant were tried ([7.md](../../docs/figures/nguyen/7.md) § What the late windows need). The onset (paper step 0 ≈ 146, peak at step 2; ours ≈ 330 falling) has no explanation in either paper.
+
 <!-- gates-7:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: no, 2026-10-06). Every row is required for exit.
 
