@@ -168,6 +168,10 @@ def panel_means(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def efficacy_gates(cfg: EfficacyPanel, means: dict[str, Any]) -> dict[str, Any]:
+    required = ("no_stim_mean", "trained_mean", "periodic_mean", "no_stim_pre", "periodic_pre")
+    if any(means.get(k) is None for k in required):
+        # Manifest from before the closed-loop eval (no pre-onset means) — re-run the panel.
+        return {"means_present": False, "pass": False}
     dig = fig5_efficacy_gates(
         {
             "no_stim": means["no_stim_mean"],
