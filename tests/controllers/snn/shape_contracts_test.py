@@ -143,6 +143,7 @@ def test_fig4_train_config_uses_published_training_loop() -> None:
     assert cfg.target_soft_update_tau == 0.005 and cfg.target_update_period == 0
     assert cfg.surrogate_gradient == "atan" and cfg.plant_carry and cfg.n_regions == 8
     assert cfg.replay_warmup_transitions == 1_500
+    assert not cfg.plant_fixed_network  # redrawing plant reproduces Figs 4-6
 
 
 def test_dsqn_forward_shapes() -> None:

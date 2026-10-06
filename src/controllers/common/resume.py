@@ -102,6 +102,7 @@ SNN_MATERIAL_FIELDS: tuple[str, ...] = (
     "alpha_beta_threshold",
     "subthreshold_steps_required",
     "plant_carry",
+    "plant_fixed_network",
     "energy_penalty",
     "threshold_reward",
     "alpha_beta_progress_coef",

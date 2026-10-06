@@ -31,6 +31,10 @@ class SNNConfig:
     # 100 ms steps) vs a fresh integrate from initial conditions every step. The
     # follow-up paper (arXiv 2606.28600) randomizes initial conditions per episode.
     plant_carry: bool = False
+    # With plant_carry: keep one network (wiring, conductances) for the whole episode
+    # instead of redrawing it every 100 ms segment. Off by default: the redrawing plant
+    # reproduces Figs 4-6 and the fixed network does not (docs/figures/nguyen/4.md).
+    plant_fixed_network: bool = False
     max_episode_steps: int = EVAL_MAX_STEPS
     num_episodes: int = TRAIN_EPISODES
 
