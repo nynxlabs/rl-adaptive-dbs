@@ -373,10 +373,13 @@ def test_cbgt_observation_stacks_eight_populations() -> None:
     cfg = SNNConfig(sequence_steps=10, neurons_per_region=10, n_regions=8, max_episode_steps=3)
     env = NguyenEnvAdapter(plant=_CbgtMockPlant(), config=cfg)
     try:
-        obs, _ = env.reset(seed=0)
+        obs, info = env.reset(seed=0)
     finally:
         env.close()
     assert obs.shape == (10, 80)
+    by_pop = info["cbgt_spike_events_by_population"]
+    assert len(by_pop) == 8 and sum(by_pop) == info["cbgt_spike_events"]
+    assert by_pop[4] == 10  # STN: one spike per neuron in the mock
     # Population p spikes at (p + 1) * 11 ms → 10 ms bin p + 1; GPi (p = 6) uses the plant's GPi trains.
     for p in (0, 1, 2, 3, 4, 5, 7):
         block = obs[:, p * 10 : (p + 1) * 10]

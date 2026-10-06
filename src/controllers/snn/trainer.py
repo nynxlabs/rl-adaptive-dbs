@@ -55,6 +55,8 @@ class TrainResult:
     episode_lengths: list[int] = field(default_factory=list)
     # Mean CBGT spike events per 100 ms step (all observed populations).
     episode_spikes_per_step: list[float] = field(default_factory=list)
+    # Same, per observed population (adapter.observed_populations order).
+    episode_spikes_per_step_by_population: list[list[float]] = field(default_factory=list)
     episode_energies: list[float] = field(default_factory=list)
     episode_alpha_beta_means: list[float] = field(default_factory=list)
     # α–β of the episode's last step, the same moment the DBS parameters are read.
@@ -350,6 +352,7 @@ class DSQNTrainer:
             # Fig. 5/6 per-episode spikes and energy use env.step() transitions only
             # (same steps as episode_lengths); reset() initial integrate is not counted.
             episode_spikes = 0
+            pop_spikes: np.ndarray | None = None
             episode_energy = 0.0
             alpha_betas: list[float] = []
             end_dbs = reset_info.get("dbs")
@@ -364,6 +367,9 @@ class DSQNTrainer:
                 next_obs, reward, terminated, truncated, step_info = env.step(indices)
                 done = bool(terminated or truncated)
                 episode_spikes += int(step_info.get("cbgt_spike_events", 0))
+                by_pop = step_info.get("cbgt_spike_events_by_population")
+                if by_pop is not None:
+                    pop_spikes = np.asarray(by_pop, dtype=float) + (0.0 if pop_spikes is None else pop_spikes)
                 episode_energy += float(step_info.get("step_energy", 0.0))
                 alpha_betas.append(float(step_info.get("alpha_beta", float("nan"))))
                 self.buffer.add(
@@ -406,6 +412,8 @@ class DSQNTrainer:
             result.episode_rewards.append(episode_reward)
             result.episode_lengths.append(steps)
             result.episode_spikes_per_step.append(float(episode_spikes / n))
+            if pop_spikes is not None:
+                result.episode_spikes_per_step_by_population.append([float(v / n) for v in pop_spikes])
             result.episode_energies.append(float(episode_energy / n * cfg.max_episode_steps))
             if alpha_betas:
                 result.episode_alpha_beta_means.append(float(np.nanmean(alpha_betas)))
@@ -498,6 +506,7 @@ EPISODE_SERIES_KEYS: tuple[str, ...] = (
     "episode_rewards",
     "episode_lengths",
     "episode_spikes_per_step",
+    "episode_spikes_per_step_by_population",
     "episode_energies",
     "episode_alpha_beta_means",
     "episode_alpha_beta_finals",
@@ -540,6 +549,7 @@ def train_result_from_payload(
     result.episode_rewards = series["episode_rewards"]
     result.episode_lengths = series["episode_lengths"]
     result.episode_spikes_per_step = series["episode_spikes_per_step"]
+    result.episode_spikes_per_step_by_population = series["episode_spikes_per_step_by_population"]
     result.episode_energies = series["episode_energies"]
     result.episode_alpha_beta_means = series["episode_alpha_beta_means"]
     result.episode_alpha_beta_finals = series["episode_alpha_beta_finals"]
@@ -583,6 +593,7 @@ def write_train_metrics(result: TrainResult, path: str | Path) -> Path:
         "episode_rewards": result.episode_rewards,
         "episode_lengths": result.episode_lengths,
         "episode_spikes_per_step": result.episode_spikes_per_step,
+        "episode_spikes_per_step_by_population": result.episode_spikes_per_step_by_population,
         "episode_energies": result.episode_energies,
         "episode_alpha_beta_means": result.episode_alpha_beta_means,
         "episode_alpha_beta_finals": result.episode_alpha_beta_finals,

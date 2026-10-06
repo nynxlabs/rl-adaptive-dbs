@@ -41,6 +41,7 @@ _paper_overlay = _overlay_import.load_paper_overlay()
 
 import matplotlib.pyplot as plt
 import numpy as np
+from controllers.snn.adapter import CBGT_POPULATIONS, STIMULATED_POPULATION
 
 FIG4_CACHE = Path("artifacts/figures/papers/nguyen/4")
 FIG4_SERIES = FIG4_CACHE / "series.json"
@@ -104,7 +105,7 @@ def load_series(path: Path) -> dict[str, Any]:
     if not path.is_file():
         raise FileNotFoundError(f"missing Fig 4 series cache: {path}")
     series = json.loads(path.read_text(encoding="utf-8"))
-    for key in ("episode_spikes_per_step", "episode_energies"):
+    for key in ("episode_spikes_per_step", "episode_spikes_per_step_by_population", "episode_energies"):
         if key not in series or len(series[key]) != len(series.get("episode_rewards", [])):
             msg = (
                 f"series missing {key!r}; re-run Fig 4 train with spike/energy logging:\n"
@@ -114,8 +115,22 @@ def load_series(path: Path) -> dict[str, Any]:
     return series
 
 
+def network_spikes(series: dict[str, Any]) -> np.ndarray:
+    """Fig. 5a count: spike events per step across the CBGT populations except the stimulated STN.
+
+    The STN fires about once per DBS pulse, so including it makes the count track
+    stimulation frequency rather than the network's response (docs/figures/nguyen/5.md).
+    """
+    by_pop = np.asarray(series["episode_spikes_per_step_by_population"], dtype=float)
+    if by_pop.ndim != 2 or by_pop.shape[1] != len(CBGT_POPULATIONS):
+        msg = f"expected per-episode counts for {len(CBGT_POPULATIONS)} CBGT populations, got shape {by_pop.shape}"
+        raise ValueError(msg)
+    keep = [i for i, name in enumerate(CBGT_POPULATIONS) if name != STIMULATED_POPULATION]
+    return by_pop[:, keep].sum(axis=1)
+
+
 def evaluate_gates(series: dict[str, Any], *, fig4_manifest: dict[str, Any] | None) -> dict[str, Any]:
-    spikes = np.asarray(series["episode_spikes_per_step"], dtype=float)
+    spikes = network_spikes(series)
     energies = np.asarray(series["episode_energies"], dtype=float)
     n = int(spikes.size)
     shared_train = bool(
@@ -144,6 +159,7 @@ def evaluate_gates(series: dict[str, Any], *, fig4_manifest: dict[str, Any] | No
         "spike_in_paper_band": spike_in_paper_band,
         "energy_in_paper_band": energy_in_paper_band,
         "spike_mean": spike_mean,
+        "spike_mean_with_stn": float(np.mean(series["episode_spikes_per_step"])) if n else 0.0,
         "energy_mean": energy_mean,
         "spike_std": spike_std,
         "energy_std": energy_std,
@@ -166,7 +182,7 @@ def evaluate_gates(series: dict[str, Any], *, fig4_manifest: dict[str, Any] | No
 
 def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -> dict[str, Any]:
     plt.rcParams.update(STYLE)
-    spikes = np.asarray(series["episode_spikes_per_step"], dtype=float)
+    spikes = network_spikes(series)
     energies = np.asarray(series["episode_energies"], dtype=float)
     episodes = np.arange(spikes.size, dtype=float)
 
@@ -179,7 +195,7 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
     ax0.plot(episodes, spikes, color="#7b6ba8", linewidth=0.9, alpha=0.85, label="Raw")
     ax0.plot(episodes, spike_smooth, color="#4a148c", linewidth=1.8, label="Smoothed")
     ax0.set_ylabel("Spike Count")
-    ax0.set_title("CBGT Network Spikes")
+    ax0.set_title("CBGT Network Spikes (stimulated STN excluded)")
     ax0.grid(True, linestyle="--", alpha=0.6)
 
     ax1 = axes[1]
