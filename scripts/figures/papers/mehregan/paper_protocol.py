@@ -222,6 +222,7 @@ def train_paper(
     num_episodes: int = NUM_EPISODES,
     log: Callable[[str], None] = _log,
     extra: dict[str, Any] | None = None,
+    qat_freeze_observer_after: int | None = None,
 ) -> dict[str, Any]:
     """Run Alg. 1 and return the per-step training record.
 
@@ -243,6 +244,12 @@ def train_paper(
     env_step = 0
     try:
         for episode in range(num_episodes):
+            if qat_freeze_observer_after is not None and episode == qat_freeze_observer_after:
+                # PyTorch QAT recipe: stop updating quantization ranges partway
+                # through training (paper-silent; probe knob, off by default).
+                for module in (trainer.actor, trainer.actor_target):
+                    module.apply(torch.ao.quantization.disable_observer)
+                log(f"froze QAT observers at episode {episode}")
             state, info0 = env.reset(seed=seed + episode)
             reset_beta.append(float(info0["p_beta_norm"]))
             # Alg. 1 line 7: the reset segment's reward is collected too.
