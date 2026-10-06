@@ -32,6 +32,7 @@ def main() -> int:
     ap.add_argument("--seeds", default="0-2")
     ap.add_argument("--eval-seed", type=int, default=0)
     ap.add_argument("--set", dest="overrides", action="append", default=[])
+    ap.add_argument("--freeze-observer-after", type=int, default=None)
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
     knobs = _PP.apply_overrides(_PP.PaperKnobs(), args.overrides)
@@ -42,7 +43,8 @@ def main() -> int:
         with tempfile.TemporaryDirectory() as tmp:
             ckpt = Path(tmp) / "qat.pt"
             _PP.train_paper(
-                mean_hz=args.mean_hz, seed=seed, knobs=knobs, variant="qat", checkpoint_path=ckpt
+                mean_hz=args.mean_hz, seed=seed, knobs=knobs, variant="qat", checkpoint_path=ckpt,
+                qat_freeze_observer_after=args.freeze_observer_after,
             )
             qat = _PP.load_qat_actor(ckpt)
         cond = _PP.run_condition(
@@ -58,7 +60,12 @@ def main() -> int:
         row["late_over_pre"] = row["late"] / row["pre"]
         rows[str(seed)] = row
         print(f"seed {seed}: {row}", flush=True)
-    out = {"mean_hz": args.mean_hz, "knobs": knobs.as_dict(), "rows": rows}
+    out = {
+        "mean_hz": args.mean_hz,
+        "knobs": knobs.as_dict(),
+        "freeze_observer_after": args.freeze_observer_after,
+        "rows": rows,
+    }
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(out, indent=2) + "\n")
     print(f"wrote {args.out}", flush=True)
