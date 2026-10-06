@@ -347,8 +347,8 @@ MEHREGAN_STATUS_NOTES: dict[str, str] = {
     "4b": "paired to 4a",
     "5a": "closed loop, Fig 4a model",
     "5b": "closed loop, burst alphabet",
-    "6a": "QAT tie-break lands on regular pattern",
-    "6b": "closed loop",
+    "6a": "closed loop, int8 QAT",
+    "6b": "closed loop, int8 QAT",
 }
 
 MEHREGAN_MANIFEST_PATHS: dict[str, Path] = {
