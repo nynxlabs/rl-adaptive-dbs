@@ -91,7 +91,7 @@ def _style(cfg: QuantPanel) -> dict[str, dict[str, Any]]:
         "fp32": {"label": cfg.fp32_label, "color": "#2ecc40", "ls": "-", "z": 4},
         "ptq_int8": {"label": "PTQ, INT8", "color": "#1f3fd1", "ls": "-", "z": 3},
         "ptq_fp16": {"label": "PTQ, FP16", "color": "#7b2d8e", "ls": "-", "z": 2},
-        "qat": {"label": "QAT", "color": "#e8731a", "ls": "--", "z": 1},
+        "qat": {"label": "QAT", "color": "#e8731a", "ls": "-", "z": 1},
     }
 
 
