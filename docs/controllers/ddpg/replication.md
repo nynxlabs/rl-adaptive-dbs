@@ -114,6 +114,8 @@ $$
 
 Optimize $J_{\mathrm{critic}}$ with **Adam** (critic learning rate **$10^{-3}$** in §IV.A.1).
 
+**Mehregan figure panels (Figs 4–6, Oct 2026):** the panels train with `scripts/figures/papers/mehregan/paper_protocol.py`, which keeps every stated piece of Algorithm 1 — critic on `logits` (Eqs. 3–5), actor lr $5\times10^{-4}$, critic lr $10^{-3}$, buffer 8192, batch 32, MSE, soft targets, 10 episodes × 30 steps of 2 s — and adds no entropy bonus, critic warmup, random warmup, or reward normalization. Exploration (paper-silent) is Gaussian noise on the actor logits: the executed pattern is $\arg\max$ of the noisy logits and the stored $a_{\mathrm{logit}}$ *is* that noisy vector, so the critic always scores the action that was played and the `logits` mode stays consistent under exploration. Init bias toward the regular pattern is 0 (a positive bias plays the strong regular suppressor from episode 0, unlike the paper's untreated-like first episode).
+
 **Critic action input (`DDPGConfig.critic_action_input`):** The paper tuple stores actor logits $a_{\mathrm{logit}}$, but when **training exploration** overrides argmax (§4.2), reward $R$ depends on the **executed** discrete index $a$, not on $\arg\max a_{\mathrm{logit}}$. Default **`one_hot`** feeds the critic a one-hot vector for the executed $a$ from replay; bootstrap uses $\arg\max \mu_{\mathrm{target}}(s')$ as a one-hot vector. Legacy **`logits`** mode uses stored $a_{\mathrm{logit}}$ for both critic and bootstrap (paper tuple layout; valid only when interaction is greedy).
 
 **Actor update (paper §III.B, Eq. (5)):**

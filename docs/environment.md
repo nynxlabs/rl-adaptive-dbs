@@ -176,9 +176,9 @@ The actor emits logits over a discrete STN pattern set, but §IV.A.1 does not st
 
 **Implemented (`envs/mehregan/patterns.py`):** 41 actions → Kumaravelu `pick_dbs_freq` 1…41 (`freqs = 0:5:200`); action `0` is no DBS (`pick_dbs_freq == 1`).
 
-**Fixed-mean pattern mode (`FixedMeanPatternAlphabet`):** 41 patterns at a constant mean rate (paper Option C); pattern 0 = regular train; patterns 1–40 = ±1/3 ISI jitter. Default for Fig 4a / Fig 5a.
+**Fixed-mean pattern mode (`FixedMeanPatternAlphabet`):** 41 patterns at a constant mean rate (paper Option C); pattern 0 = regular train; patterns 1–40 = ±1/3 ISI jitter. Library default; no longer used by the Mehregan figure panels.
 
-**Fig 5b convention (`BurstPatternAlphabet`):** same 41-cardinality / fixed 30 Hz pulse count, but irregular patterns are **high-rate clusters (60–120 Hz) with silence** so the instantaneous rate leaves the beta band (paper §IV.A.2). Needed because at `plant.dt_ms=0.02` the ±1/3 ISI alphabet has **0/41** open-loop beaters vs no-stim (TASK-176); burst construction yields **32/41** beaters. See [figures/mehregan/replications.md](../figures/mehregan/replications.md) Fig 5b.
+**Mehregan figure convention (`BurstPatternAlphabet`, Figs 4–6 at both 45 and 30 Hz):** same 41-cardinality / fixed pulse count, pattern 0 = regular train, irregular patterns are **high-rate clusters (60–120 Hz) with silence** so the instantaneous rate leaves the beta band (paper §IV.A.2 prose for the 30 Hz model). The paper trains the 30 Hz model with "all other parameters fixed", so one alphabet family serves both rates. Open-loop landscape on the eval protocol (seed 0, post-onset $P_\beta$, no stim ≈ 486): at 30 Hz the ±1/3 jitter family has **0/40** irregular patterns below no stim (Fig 5b impossible) vs **30/40** for burst; at 45 Hz the burst irregular mean ≈ 490 matches the paper's untreated-like training episode 0 (≈ 500), jitter ≈ 449. Probe: `scripts/probes/mehregan_paper_landscape.py`. Recipe: [figures/mehregan/4a.md](figures/mehregan/4a.md) § Paper-faithful recipe.
 
 ### 4. Observation normalization for reward Eq. (8)
 
