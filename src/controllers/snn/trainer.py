@@ -386,7 +386,7 @@ class DSQNTrainer:
                 episode_reward += float(reward)
                 steps += 1
                 obs = next_obs
-                if terminated:
+                if terminated or step_info.get("would_terminate", False):
                     terminated_early = True
                 if done:
                     break
