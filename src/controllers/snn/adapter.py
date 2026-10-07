@@ -300,7 +300,8 @@ class NguyenEnvAdapter(gym.Env):
         self._step_count += 1
         remaining = max(0, self.config.max_episode_steps - self._step_count)
         truncated = self._step_count >= self.config.max_episode_steps
-        terminated = self._subthreshold_streak >= self.config.subthreshold_steps_required
+        would_terminate = self._subthreshold_streak >= self.config.subthreshold_steps_required
+        terminated = would_terminate and self.config.terminate_on_subthreshold
         reward = nguyen_reward(
             alpha_beta=alpha_beta,
             energy=self._step_energy(),
@@ -321,6 +322,7 @@ class NguyenEnvAdapter(gym.Env):
             "adapter": True,
             "step_duration_ms": self.config.step_duration_ms,
             "subthreshold_streak": self._subthreshold_streak,
+            "would_terminate": would_terminate,
             "plant_guard": plant_guard,
             "cbgt_spike_count": spike_count,
             "cbgt_spike_events": self._spike_events(result),

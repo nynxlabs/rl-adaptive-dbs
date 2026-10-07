@@ -422,3 +422,26 @@ def test_sequence_mode_reads_one_matrix_row_per_step() -> None:
     late[0, 5:] = 1.0
     # Same spikes, different bins: an ordered sequence, not a bag of bins.
     assert not torch.allclose(net(early.reshape(1, -1)).membrane, net(late.reshape(1, -1)).membrane)
+
+
+def test_terminate_on_subthreshold_false_keeps_episode_running() -> None:
+    base = SNNConfig(
+        sequence_steps=4,
+        neurons_per_region=10,
+        max_episode_steps=4,
+        alpha_beta_threshold=1e12,  # every step is sub-threshold
+        subthreshold_steps_required=1,
+    )
+    assert base.terminate_on_subthreshold
+    env = NguyenEnvAdapter(plant=_SpikeMockPlant(), config=base)
+    env.reset(seed=0)
+    _, stop_reward, terminated, _, info = env.step(np.array([1, 1, 1]))
+    assert terminated and info["would_terminate"]
+
+    env = NguyenEnvAdapter(plant=_SpikeMockPlant(), config=replace(base, terminate_on_subthreshold=False))
+    env.reset(seed=0)
+    for _ in range(3):
+        _, reward, terminated, truncated, info = env.step(np.array([1, 1, 1]))
+        assert not terminated and not truncated and info["would_terminate"]
+        # Non-terminated Eq. (7) branch, not the τ·(t_r + 1) stop bonus.
+        assert reward < stop_reward

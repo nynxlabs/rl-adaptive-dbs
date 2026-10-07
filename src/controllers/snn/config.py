@@ -46,6 +46,11 @@ class SNNConfig:
     # Biomarker / termination
     alpha_beta_threshold: float = BIOMARKER_THRESHOLD
     subthreshold_steps_required: int = 3  # t_u — open in paper
+    # Paper §III: an episode terminates after t_u sub-threshold steps. False keeps
+    # training episodes running to the horizon (Eq. 7 non-terminated reward every step)
+    # and only flags where they would have stopped. A deviation from the paper, kept
+    # for the Fig 7 probe (docs/figures/nguyen/7.md); not adopted without approval.
+    terminate_on_subthreshold: bool = True
 
     # DSQN topology
     hidden_size: int = HIDDEN_SIZE

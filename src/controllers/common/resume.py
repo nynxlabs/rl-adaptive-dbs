@@ -101,6 +101,7 @@ SNN_MATERIAL_FIELDS: tuple[str, ...] = (
     "max_episode_steps",
     "alpha_beta_threshold",
     "subthreshold_steps_required",
+    "terminate_on_subthreshold",
     "plant_carry",
     "plant_fixed_network",
     "energy_penalty",
