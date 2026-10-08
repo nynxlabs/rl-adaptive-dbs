@@ -12,10 +12,10 @@ Figs **1–2** are schematics — **not** replication targets.
 | Panel | Description | Status |
 |-------|-------------|--------|
 | Fig 3 | GPi α–β distribution (PD Off vs PD On) | Pass (rep v22) |
-| Fig 4 | Training reward + episode length | Pass (rep v163) |
+| Fig 4 | Training reward + episode length | Pass (rep v162) |
 | Fig 5 | CBGT spikes + DBS energy over training | Pass (rep v59) |
-| Fig 6 | α–β + DBS parameters over training | Pass (rep v18) |
-| Fig 7 | 50-episode eval (25 steps) | Fail (`paper_start_near_paper`) |
+| Fig 6 | α–β + DBS parameters over training | Pass (rep v17) |
+| Fig 7 | 50-episode eval (25 steps) | Parked: official run fails; best plot is a labelled deviation |
 <!-- summary:end -->
 
 ---
@@ -264,7 +264,19 @@ Seeded eval of the trained policy: **50** episodes × **25** steps, different se
 
 From v24 every point is a plant reading; up to v23 the eval prepended two invented α–β values per episode. See [docs/figures/nguyen/7.md](../../docs/figures/nguyen/7.md) § Correction.
 
-**Why it stays open (Oct 6 2026):** the policy keeps raising frequency, so α–β overshoots below the paper's ~150 plateau; reward weights, ε-greedy eval and a one-network-per-episode plant variant were tried ([7.md](../../docs/figures/nguyen/7.md) § What the late windows need). The onset (paper step 0 ≈ 146, peak at step 2; ours ≈ 330 falling) has no explanation in either paper.
+**Parked (Oct 8 2026):** the official run above fails, and Fig 7 is parked with the best match below as our plot until we write to the authors. The policy keeps raising frequency, so α–β overshoots below the paper's ~150 plateau ([7.md](../../docs/figures/nguyen/7.md) § What the late windows need).
+
+### Best match so far (labelled deviation, not the panel run)
+
+![Best Fig 7: seed 4, slip + carry](images/7/eval_50ep_slipcarry_v1.png)
+
+Passes every Fig 7 gate from plant readings: steps 0–6 = 161, 255, 228, 227, 201, 181, 176 vs the paper's 146, 252, 278, 259, 206, 190, 171; late 153 vs 152; RMSE 14; $r$ = 0.95. It rests on three things the official run doesn't do:
+
+- The checkpoint (`noterm-s4`) was trained past the $t_u$ stop, so it fails Fig 4.
+- Each episode's first reading runs at the previous episode's final DBS setting.
+- Neuron state carries across episodes.
+
+Details, the reproduce command (`scripts/probes/nguyen_fig7_slip_carry.py`) and the questions for the authors: [7.md](../../docs/figures/nguyen/7.md) § Parked on the slip + carry plot.
 
 <!-- gates-7:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: no, 2026-10-06). Every row is required for exit.
