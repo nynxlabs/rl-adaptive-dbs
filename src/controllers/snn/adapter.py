@@ -75,9 +75,10 @@ class NguyenEnvAdapter(gym.Env):
         self.encoder = SpikeObservationEncoder(self.config)
         self._owns_plant = plant is None
         if plant is None:
+            from envs.plant.config import PlantConfig
             from envs.plant.python_backend import PythonPlant
 
-            self._plant: PlantBackend = PythonPlant()
+            self._plant: PlantBackend = PythonPlant(PlantConfig(stn_dbs_spread=self.config.stn_dbs_spread))
         else:
             self._plant = plant
         self.render_mode = render_mode

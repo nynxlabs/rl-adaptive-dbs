@@ -119,3 +119,27 @@ def test_carry_without_fixed_network_redraws_each_segment() -> None:
     plant.reset(seed=123_456)
     plant.integrate(0.01, DbsSpec.none(), carry=True)
     assert plant._init_draws is None
+
+
+def test_stn_dbs_gains_by_distance() -> None:
+    from envs.plant.dbs import stn_dbs_gains
+
+    np.testing.assert_array_equal(stn_dbs_gains(10, 1.0), np.ones(10))
+    gains = stn_dbs_gains(10, 4.0)
+    assert gains[0] == 1.0
+    assert gains[-1] == pytest.approx(1 / 16)
+    assert np.all(np.diff(gains) < 0)
+    with pytest.raises(ValueError):
+        stn_dbs_gains(10, 0.5)
+
+
+def test_stn_dbs_spread_recruits_fewer_stn_neurons() -> None:
+    from envs.plant import PlantConfig
+
+    def stn_spikes(spread: float) -> int:
+        plant = PythonPlant(PlantConfig(stn_dbs_spread=spread)).reset(seed=3)
+        result = plant.integrate(0.3, DbsSpec.from_frequency_hz(80.0), record_bg_spikes=True)
+        return sum(np.asarray(t).size for t in result.info["stn_spikes"])
+
+    # 300 nA/cm2 x 0.3 ms drives every STN neuron at spread 1; distant neurons drop out at 4.
+    assert stn_spikes(4.0) < 0.8 * stn_spikes(1.0)

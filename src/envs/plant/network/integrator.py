@@ -18,7 +18,7 @@ from envs.plant.config import (
     BOC_SMC_PULSE_WIDTH_MS,
     PlantConfig,
 )
-from envs.plant.dbs import DbsSpec, create_dbs_current
+from envs.plant.dbs import DbsSpec, create_dbs_current, stn_dbs_gains
 from envs.plant.matlab_backend import IntegrateResult
 from envs.plant.network import gating as g
 from envs.plant.network.synapses import SpikeConvolver, build_synaptic_kernels
@@ -595,6 +595,7 @@ def integrate_network(
             tmax_ms=tmax_ms,
             dt_ms=dt_ms,
         )
+    stn_dbs_gain = stn_dbs_gains(n, config.stn_dbs_spread)
     iappco, corstim, smc_trace_co = _resolve_iappco(
         corstim=corstim,
         config=config,
@@ -891,6 +892,7 @@ def integrate_network(
             corstim,
             conv_th.max_index,
             idbs,
+            stn_dbs_gain,
             iappco,
             iappth,
             float(config.ggith),
@@ -1295,7 +1297,7 @@ def integrate_network(
                     - igesn
                     - icorsnampa
                     - icorsnnmda
-                    + idbs[step]
+                    + idbs[step] * stn_dbs_gain
                 )
             )
             N2 = N2 + dt * ((n2 - N2) / tn2)
