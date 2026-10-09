@@ -213,6 +213,7 @@ def run_cbgt_loop(
     corstim: int,
     max_index: int,
     idbs: np.ndarray,
+    stn_dbs_gain: np.ndarray,
     iappco: np.ndarray,
     iappth: np.ndarray,
     ggith: float,
@@ -671,7 +672,7 @@ def run_cbgt_loop(
             igesn = _GGESN * ((V2 - _ESYN0) * (S3a[i] + S31a_w[i]))
             icorsnampa = gcorsna[i] * (V2 - _ESYN1) * (S6b[i] + S61b_w[i])
             icorsnnmda = gcorsnn[i] * (V2 - _ESYN1) * (S6bn[i] + S61bn_w[i])
-            vsn[i] = V2 + dt * ((1.0 / _CM) * (-ina2 - ik2 - ia2 - il2_stn - it2 - icak2 - il2 - igesn - icorsnampa - icorsnnmda + idbs[step]))
+            vsn[i] = V2 + dt * ((1.0 / _CM) * (-ina2 - ik2 - ia2 - il2_stn - it2 - icak2 - il2 - igesn - icorsnampa - icorsnnmda + idbs[step] * stn_dbs_gain[i]))
             N2[i] = N2[i] + dt * ((n2_i - N2[i]) / tn2_i)
             H2[i] = H2[i] + dt * ((h2_i - H2[i]) / th2_i)
             M2[i] = M2[i] + dt * ((m2_i - M2[i]) / tm2_i)

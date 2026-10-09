@@ -144,6 +144,9 @@ class MatlabPlant:
         record_cor_spikes: bool = False,
         cor_spike_buffer_size: int | None = None,
     ) -> IntegrateResult:
+        if self.config.stn_dbs_spread != 1.0:
+            msg = "stn_dbs_spread is Python-plant only; the MATLAB reference has uniform STN DBS"
+            raise ValueError(msg)
         if duration_s <= 0:
             msg = "duration_s must be positive"
             raise ValueError(msg)

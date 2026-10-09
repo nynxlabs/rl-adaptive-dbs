@@ -11,6 +11,22 @@ DBS_PULSE_WIDTH_MS: float = 0.3
 DBS_AMPLITUDE_NA_PER_CM2: float = 300.0
 
 
+def stn_dbs_gains(n: int, spread: float) -> np.ndarray:
+    """Share of the DBS current each STN neuron receives, by distance from the contact.
+
+    Neurons sit uniformly through a sphere's volume between r0 and ``spread`` * r0
+    (r_i = r0 * (1 + (spread^3 - 1) * i / (n - 1))^(1/3)) and take (r0 / r_i)^2 of the
+    current, so the nearest neuron gets all of it. ``spread`` = 1 gives every neuron the
+    full current (Kumaravelu).
+    """
+    if spread < 1.0:
+        raise ValueError(f"stn_dbs_spread must be >= 1, got {spread}")
+    if spread == 1.0 or n == 1:
+        return np.ones(n, dtype=np.float64)
+    r = (1.0 + (spread**3 - 1.0) * np.arange(n) / (n - 1)) ** (1.0 / 3.0)
+    return 1.0 / r**2
+
+
 def create_dbs_current(
     frequency_hz: float,
     *,
