@@ -50,6 +50,8 @@ FIGURES_DIR = Path("figures/nguyen/images/5")
 CACHE_DIR = Path("artifacts/figures/papers/nguyen/5")
 DEFAULT_MANIFEST = CACHE_DIR / "manifest.json"
 OUT_STEM = "spikes_energy"
+# Left out of the Fig. 5a count: the stimulated STN and GPi, which follow the pulse train.
+PULSE_FOLLOWING_POPULATIONS = (STIMULATED_POPULATION, "gpi")
 SMOOTH_WINDOW = 20
 ENERGY_FLAT_FRAC = 0.01
 # Paper Fig. 5 axis bands (one-seed qualitative).
@@ -116,16 +118,17 @@ def load_series(path: Path) -> dict[str, Any]:
 
 
 def network_spikes(series: dict[str, Any]) -> np.ndarray:
-    """Fig. 5a count: spike events per step across the CBGT populations except the stimulated STN.
+    """Fig. 5a count: spike events per step across the CBGT populations except STN and GPi.
 
-    The STN fires about once per DBS pulse, so including it makes the count track
-    stimulation frequency rather than the network's response (docs/figures/nguyen/5.md).
+    The stimulated STN fires about once per DBS pulse and GPi, its direct target, follows
+    it, so including either makes the count track stimulation frequency rather than the
+    rest of the network's response (docs/figures/nguyen/5.md).
     """
     by_pop = np.asarray(series["episode_spikes_per_step_by_population"], dtype=float)
     if by_pop.ndim != 2 or by_pop.shape[1] != len(CBGT_POPULATIONS):
         msg = f"expected per-episode counts for {len(CBGT_POPULATIONS)} CBGT populations, got shape {by_pop.shape}"
         raise ValueError(msg)
-    keep = [i for i, name in enumerate(CBGT_POPULATIONS) if name != STIMULATED_POPULATION]
+    keep = [i for i, name in enumerate(CBGT_POPULATIONS) if name not in PULSE_FOLLOWING_POPULATIONS]
     return by_pop[:, keep].sum(axis=1)
 
 
@@ -192,13 +195,13 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
     fig, axes = plt.subplots(2, 1, figsize=(8.0, 7.0), sharex=True, constrained_layout=True)
 
     # The paper never defines its count (~810); ours is spike events per 100 ms step
-    # with the stimulated STN excluded. Each gets its own axis, both starting at 0, so
+    # without the pulse-following STN and GPi. Each gets its own axis, both starting at 0, so
     # relative changes look proportional without scaling one count onto the other.
     ax0 = axes[0]
     ax0.plot(episodes, spikes, color="#7b6ba8", linewidth=0.9, alpha=0.85, label="Raw")
     ax0.plot(episodes, spike_smooth, color="#4a148c", linewidth=1.8, label="Smoothed")
     ax0.set_ylabel("Ours: spikes per 100 ms step", color="#4a148c")
-    ax0.set_title("CBGT Network Spikes (stimulated STN excluded)")
+    ax0.set_title("CBGT Network Spikes (STN and GPi excluded)")
     ax0.grid(True, linestyle="--", alpha=0.6)
     ax0p = ax0.twinx()
 

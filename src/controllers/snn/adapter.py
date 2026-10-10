@@ -31,7 +31,7 @@ CBGT_POPULATIONS: tuple[str, ...] = (
     "gpi",
     "th",
 )
-# DBS is delivered to the STN; Fig. 5a counts exclude it (docs/figures/nguyen/5.md).
+# DBS is delivered to the STN; Fig. 5a counts exclude it and GPi (docs/figures/nguyen/5.md).
 STIMULATED_POPULATION = "stn"
 
 
