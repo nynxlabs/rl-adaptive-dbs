@@ -309,9 +309,11 @@ def fig4_nguyen_config(
     steps, surrogate-gradient training, per-episode continuous simulation, all eight CBGT
     populations observed. Step sizes 5 Hz / 0.1 ms read off Fig 6 (40 + 8 × 5 = 80 Hz,
     0.3 + 8 × 0.1 = 1.1 ms in ~8-step episodes). Paper-silent conventions: t_u = 3,
-    amplitude step 10 nA/cm², δ = 1, τ = 330, 32 minibatches per update, 1,500-transition
-    replay warm-up, rewards scaled by 1e-4 for learning only. 13 seeds: 6 pass every
-    Fig 4 gate and the 13-seed mean passes every gate; the shipped figure is seed 1.
+    amplitude step 10 nA/cm², δ = 1, τ = 330, 64 minibatches per update, 1,650-transition
+    replay warm-up, rewards scaled by 1e-4 for learning only. Plant deviation (master's OK,
+    Oct 11 2026): distance-based STN recruitment ρ = 3 (``stn_dbs_spread``); Kumaravelu
+    drives all STN neurons equally (ρ = 1), which keeps pulse width and energy flat.
+    26 seeds: 15 pass every Fig 4 gate and 11 every Fig 4–6 gate; the shipped figure is seed 1.
     """
     return SNNConfig(
         seed=seed,
@@ -332,8 +334,8 @@ def fig4_nguyen_config(
         surrogate_gradient="atan",
         snn_input_mode="static",
         replay_update_cadence=128,
-        replay_update_steps=32,
-        replay_warmup_transitions=1_500,
+        replay_update_steps=64,
+        replay_warmup_transitions=1_650,
         replay_capacity=100_000,
         batch_size=128,
         q_loss_fn="huber",
@@ -349,5 +351,6 @@ def fig4_nguyen_config(
         epsilon_decay_steps=2_000,
         epsilon_schedule="linear",
         stimulated_neurons=1,
+        stn_dbs_spread=3.0,
         log_episodes=True,
     )
