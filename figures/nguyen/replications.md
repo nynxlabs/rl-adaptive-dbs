@@ -12,9 +12,9 @@ Figs **1–2** are schematics — **not** replication targets.
 | Panel | Description | Status |
 |-------|-------------|--------|
 | Fig 3 | GPi α–β distribution (PD Off vs PD On) | Pass (rep v22) |
-| Fig 4 | Training reward + episode length | Pass (rep v162) |
-| Fig 5 | CBGT spikes + DBS energy over training | Pass (rep v60) |
-| Fig 6 | α–β + DBS parameters over training | Pass (rep v17) |
+| Fig 4 | Training reward + episode length | Pass (rep v163) |
+| Fig 5 | CBGT spikes + DBS energy over training | Pass (rep v61) |
+| Fig 6 | α–β + DBS parameters over training | Pass (rep v18) |
 | Fig 7 | 50-episode eval (25 steps) | Fail (`paper_start_near_paper`) |
 <!-- summary:end -->
 
@@ -41,7 +41,7 @@ Distribution of GPi **α–β** oscillation power (**7–35 Hz**) for **PD On** 
 **Status:** Pass — 500 × 100 ms samples; see `alpha_beta_dist_v22.png`.
 
 <!-- gates-3:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **`pass`**: yes, 2026-10-09). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/3/manifest.json`; overall **`pass`**: yes, 2026-10-11). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -74,22 +74,22 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 ![Paper Fig 4](images/4/paper.png)
 
-### Replication (**v162**, passes every gate)
+### Replication (**v163**, passes every gate)
 
-![Replication Fig 4](images/4/training_reward_length_v162.png)
+![Replication Fig 4](images/4/training_reward_length_v163.png)
 
 <!-- caption-4:start -->
-**Caption:** DSQN train 500 ep, seed=1; reward ep150+=-29170, len ep150+=8.9; shape_pass=True pass=True (reward shape=True full=True, length shape=True full=True) (v162)
+**Caption:** DSQN train 500 ep, seed=1; reward ep150+=-27332, len ep150+=9.2; shape_pass=True pass=True (reward shape=True full=True, length shape=True full=True) (v163)
 
 **Manifest:** `artifacts/figures/papers/nguyen/4/manifest.json`
 <!-- caption-4:end -->
 
-**Status:** Pass — see manifest gates (`training_reward_length_v162.png`).
+**Status:** Pass — see manifest gates (`training_reward_length_v163.png`).
 
-Of 13 seeds of this config, 6 pass every gate and the 13-seed mean curve passes every gate (late length 8.9 vs the paper's 8.6). Shown: seed 1, the lowest-numbered passing seed (seed 0 misses `length_late_plateau_hold`). Step sizes (5 Hz, 0.1 ms) come from the paper's Fig 6; see [docs/figures/nguyen/6.md](../../docs/figures/nguyen/6.md).
+From v163 the plant uses distance-based STN recruitment (ρ = 3, `stn_dbs_spread`), a plant deviation master approved on Oct 11 2026: Kumaravelu drives all ten STN neurons with the full DBS current, which keeps the agent's pulse width near 0.3 ms and makes energy fall where the paper's rises. On that plant the paper-silent replay settings were retuned to 64 minibatches per update and a 1,650-transition warm-up. Of 26 seeds, 15 pass every Fig 4 gate and 11 pass every required gate of Figs 4–6; the 13-seed mean curve passes every gate. Shown: seed 1, the lowest-numbered seed passing Figs 4–6 (seed 0 misses Fig 4). See [docs/figures/nguyen/4.md](../../docs/figures/nguyen/4.md) § Retuning for distance-based STN recruitment. Step sizes (5 Hz, 0.1 ms) come from the paper's Fig 6; see [docs/figures/nguyen/6.md](../../docs/figures/nguyen/6.md).
 
 <!-- gates-4:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: yes, **`pass`**: yes, 2026-10-09). **`shape_pass`**: transition timing and ep 0–200 shape. Ship exit: **`pass`** (all required gates, scale-free, anchored to the digitized paper curves). Both subplot groups required; tier-2 rows are logged in the manifest only.
+**Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: yes, **`pass`**: yes, 2026-10-11). **`shape_pass`**: transition timing and ep 0–200 shape. Ship exit: **`pass`** (all required gates, scale-free, anchored to the digitized paper curves). Both subplot groups required; tier-2 rows are logged in the manifest only.
 
 ### Reward (panel a) (`shape_pass`: yes | `pass`: yes)
 
@@ -139,20 +139,20 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 
 ### Replication
 
-![Replication Fig 5](images/5/spikes_energy_v60.png)
+![Replication Fig 5](images/5/spikes_energy_v61.png)
 
 <!-- caption-5:start -->
-**Caption:** Fig 4 shared train 500 ep, seed=1; spike_mean=53, energy_mean=913.9; pass=True (v60)
+**Caption:** Fig 4 shared train 500 ep, seed=1; spike_mean=53, energy_mean=1269.3; pass=True (v61)
 
 **Manifest:** `artifacts/figures/papers/nguyen/5/manifest.json`
 <!-- caption-5:end -->
 
-**Status:** Pass — see manifest gates (`spikes_energy_v60.png`).
+**Status:** Pass — see manifest gates (`spikes_energy_v61.png`).
 
-From v56 the spike panel is a real count (spike events per 100 ms step across the observed CBGT populations); up to v55 it was a formula anchored on the paper's ~810. Spike and energy levels are report-only; see [docs/figures/nguyen/5.md](../../docs/figures/nguyen/5.md) § Correction and gate split. From v58 the count excludes the stimulated STN, which fires about once per DBS pulse and made the count follow frequency; it comes from a seed-1 re-log that reproduces the v161 train exactly (Fig 4 v162). See [5.md](../../docs/figures/nguyen/5.md) § High-charge STN block. From v59 the paper's traces keep their one-episode dips and each count has its own zero-based axis. Energy is about half the paper's because the paper's agent raised pulse width to ~1.1 ms and ours has no reason to on our plant ([5.md](../../docs/figures/nguyen/5.md) § Paper traces, plot axes, and the energy gap). From v60 the count also leaves out GPi, which follows the STN's pulses; the rest of the network stays flat (late/early ×0.97 vs the paper's ×1.01) while the agent moves from ~24 Hz to ~67 Hz ([5.md](../../docs/figures/nguyen/5.md) § Count without STN and GPi).
+From v56 the spike panel is a real count (spike events per 100 ms step across the observed CBGT populations); up to v55 it was a formula anchored on the paper's ~810. Spike and energy levels are report-only; see [docs/figures/nguyen/5.md](../../docs/figures/nguyen/5.md) § Correction and gate split. From v58 the count excludes the stimulated STN, which fires about once per DBS pulse and made the count follow frequency; it comes from a seed-1 re-log that reproduces the v161 train exactly (Fig 4 v162). See [5.md](../../docs/figures/nguyen/5.md) § High-charge STN block. From v59 the paper's traces keep their one-episode dips and each count has its own zero-based axis. Energy is about half the paper's because the paper's agent raised pulse width to ~1.1 ms and ours has no reason to on our plant ([5.md](../../docs/figures/nguyen/5.md) § Paper traces, plot axes, and the energy gap). From v60 the count also leaves out GPi, which follows the STN's pulses; the rest of the network stays flat (late/early ×0.97 vs the paper's ×1.01) while the agent moves from ~24 Hz to ~67 Hz ([5.md](../../docs/figures/nguyen/5.md) § Count without STN and GPi). From v61 the train uses distance-based STN recruitment (Fig 4 v163): the agent widens the pulse to ~0.85 ms late, so energy rises from ~700 to ~1,440 after episode ~70, against the paper's ~2,035 plateau.
 
 <!-- gates-5:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: yes, 2026-10-09). Rows marked *report only* are logged and never change `pass`; the rest are required.
+**Gates set** (`artifacts/figures/papers/nguyen/5/manifest.json`; overall **`pass`**: yes, 2026-10-11). Rows marked *report only* are logged and never change `pass`; the rest are required.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -194,18 +194,18 @@ GPi **α–β** (a) and DBS amplitude / frequency / pulse width (b) over **500**
 
 ### Replication
 
-![Replication Fig 6](images/6/alpha_beta_params_v17.png)
+![Replication Fig 6](images/6/alpha_beta_params_v18.png)
 
 <!-- caption-6:start -->
-**Caption:** Fig 4 shared train 500 ep; αβ_late=98.4, amp=310; pass=True (v17)
+**Caption:** Fig 4 shared train 500 ep; αβ_late=91.3, amp=310; pass=True (v18)
 
 **Manifest:** `artifacts/figures/papers/nguyen/6/manifest.json`
 <!-- caption-6:end -->
 
-**Status:** Pass — see manifest gates (`alpha_beta_params_v17.png`).
+**Status:** Pass — see manifest gates (`alpha_beta_params_v18.png`).
 
 <!-- gates-6:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: yes, 2026-10-09). Rows marked *report only* are logged and never change `pass`; the rest are required.
+**Gates set** (`artifacts/figures/papers/nguyen/6/manifest.json`; overall **`pass`**: yes, 2026-10-11). Rows marked *report only* are logged and never change `pass`; the rest are required.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -230,7 +230,7 @@ GPi **α–β** (a) and DBS amplitude / frequency / pulse width (b) over **500**
 | `paper_freq_late_stable` | frequency std last 50 ep ≤ 20% of mean | yes |
 | `paper_params_left_init` | *report only* — amp / freq / pw each >5% off init | no |
 | `paper_amp_late_near_paper` | *report only* — digitization — late amplitude | yes |
-| `paper_pw_late_near_paper` | *report only* — digitization — late pulse width | no |
+| `paper_pw_late_near_paper` | *report only* — digitization — late pulse width | yes |
 | `paper_late_params_stable` | *report only* — std last 50 ep ≤ 20% of mean | no |
 | `paper_amp_left_init` | *report only* — amplitude >5% off init | no |
 | `paper_pw_left_init` | *report only* — pulse width >5% off init | yes |
@@ -279,7 +279,7 @@ Passes every Fig 7 gate from plant readings: steps 0–6 = 161, 255, 228, 227, 2
 Details, the reproduce command (`scripts/probes/nguyen_fig7_slip_carry.py`) and the questions for the authors: [7.md](../../docs/figures/nguyen/7.md) § Parked on the slip + carry plot.
 
 <!-- gates-7:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: no, 2026-10-09). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: no, 2026-10-11). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
