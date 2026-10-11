@@ -142,7 +142,8 @@ def test_fig4_train_config_uses_published_training_loop() -> None:
     assert (cfg.optimizer, cfg.q_loss_fn, cfg.grad_clip_mode) == ("adamw", "huber", "value")
     assert cfg.target_soft_update_tau == 0.005 and cfg.target_update_period == 0
     assert cfg.surrogate_gradient == "atan" and cfg.plant_carry and cfg.n_regions == 8
-    assert cfg.replay_warmup_transitions == 1_500
+    assert (cfg.replay_warmup_transitions, cfg.replay_update_steps) == (1_650, 64)
+    assert cfg.stn_dbs_spread == 3.0  # distance-based STN recruitment (plant deviation)
     assert not cfg.plant_fixed_network  # redrawing plant reproduces Figs 4-6
 
 
