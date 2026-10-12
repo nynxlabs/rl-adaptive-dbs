@@ -13,24 +13,12 @@ from envs.plant.dbs import DbsSpec, create_dbs_current
 from envs.plant.matlab_backend import IntegrateResult
 
 
-def duration_s_for_action(
-    action: int,
-    *,
-    untreated_window_s: float | None,
-    stim_window_s: float,
-) -> float:
-    if untreated_window_s is not None and int(action) == 0:
-        return float(untreated_window_s)
-    return float(stim_window_s)
-
-
 def idbs_segment_for_action(
     action: int,
     *,
     duration_s: float,
     carrier_hz: float,
-    burst_ms: float,
-    delay_ms: float,
+    burst_ms: float | None,
     dt_ms: float,
 ) -> np.ndarray:
     n_steps = int(round(duration_s * 1000.0 / dt_ms)) + 1
@@ -38,69 +26,40 @@ def idbs_segment_for_action(
         return np.zeros(n_steps, dtype=np.float64)
     integration_ms = duration_s * 1000.0
     full = create_dbs_current(carrier_hz, tmax_ms=integration_ms, dt_ms=dt_ms)
-    if delay_ms > 0.0:
-        shift = int(round(delay_ms / dt_ms))
-        delayed = np.zeros_like(full)
-        if 0 < shift < full.size:
-            delayed[shift:] = full[: full.size - shift]
-            full = delayed
-    if burst_ms < integration_ms:
-        keep = int(round(burst_ms / dt_ms))
-        full[keep:] = 0.0
+    if burst_ms is not None and burst_ms < integration_ms:
+        full[int(round(burst_ms / dt_ms)) :] = 0.0
     return full
 
 
-def segment_schedule(
-    actions: list[int],
-    *,
-    untreated_window_s: float,
-    stim_window_s: float,
-) -> list[tuple[float, float, int]]:
-    """Reset untreated onset + one entry per policy action."""
-    segments: list[tuple[float, float, int]] = []
-    t = 0.0
-    dur = float(untreated_window_s)
-    segments.append((t, t + dur, 0))
-    t += dur
+def segment_schedule(actions: list[int], *, window_s: float) -> list[tuple[float, float, int]]:
+    """Reset untreated onset + one equal-length entry per policy action."""
+    segments: list[tuple[float, float, int]] = [(0.0, float(window_s), 0)]
+    t = float(window_s)
     for action in actions:
-        dur = duration_s_for_action(
-            action,
-            untreated_window_s=untreated_window_s,
-            stim_window_s=stim_window_s,
-        )
-        segments.append((t, t + dur, int(action)))
-        t += dur
+        segments.append((t, t + float(window_s), int(action)))
+        t += float(window_s)
     return segments
 
 
 def stitch_binary_idbs(
     actions: list[int],
     *,
-    untreated_window_s: float,
-    stim_window_s: float,
+    window_s: float,
     carrier_hz: float,
-    burst_ms: float,
-    delay_ms: float,
+    burst_ms: float | None,
     dt_ms: float,
 ) -> tuple[np.ndarray, list[tuple[float, float, int]]]:
-    segments = segment_schedule(
-        actions,
-        untreated_window_s=untreated_window_s,
-        stim_window_s=stim_window_s,
-    )
-    parts: list[np.ndarray] = []
-    for t0, t1, action in segments:
-        dur = t1 - t0
-        parts.append(
-            idbs_segment_for_action(
-                action,
-                duration_s=dur,
-                carrier_hz=carrier_hz,
-                burst_ms=burst_ms,
-                delay_ms=delay_ms,
-                dt_ms=dt_ms,
-            )
+    segments = segment_schedule(actions, window_s=window_s)
+    parts = [
+        idbs_segment_for_action(
+            action,
+            duration_s=t1 - t0,
+            carrier_hz=carrier_hz,
+            burst_ms=burst_ms,
+            dt_ms=dt_ms,
         )
+        for t0, t1, action in segments
+    ]
     idbs = parts[0]
     for part in parts[1:]:
         idbs = np.concatenate([idbs, part[1:]])
@@ -120,20 +79,13 @@ def integrate_stitched_binary_step(
         msg = "integrate_stitched_binary_step requires at least one action"
         raise ValueError(msg)
 
-    untreated = config.untreated_window_s
-    if untreated is None:
-        msg = "continuous plant integration requires untreated_window_s"
-        raise ValueError(msg)
-
-    stim_window_s = float(config.biomarker_window_s)
+    window_s = float(config.integration_duration_s)
     dt_ms = float(config.plant_dt_ms)
     idbs, segments = stitch_binary_idbs(
         actions,
-        untreated_window_s=float(untreated),
-        stim_window_s=stim_window_s,
+        window_s=window_s,
         carrier_hz=float(carrier_hz),
-        burst_ms=float(config.dbs_burst_ms),
-        delay_ms=float(config.dbs_pulse_delay_ms),
+        burst_ms=config.dbs_burst_ms,
         dt_ms=dt_ms,
     )
     total_s = segments[-1][1]

@@ -29,16 +29,11 @@ class Actor(nn.Module):
         state_dim: int,
         n_actions: int = 2,
         hidden_size: int = 64,
-        no_stim_bias: float = 0.0,
     ) -> None:
         super().__init__()
         self.n_actions = n_actions
+        # Paper §V.A: "All networks are initialized randomly" (PyTorch default init).
         self.net = _mlp(state_dim, hidden_size, n_actions)
-        if no_stim_bias != 0.0 and n_actions >= 2:
-            # Bias action 0 (no pulse) so early PSD starts high; learning then stims.
-            with torch.no_grad():
-                self.net[-1].bias[0] += float(no_stim_bias)
-                self.net[-1].bias[1] -= float(no_stim_bias)
 
     def forward(self, state: Tensor) -> Tensor:
         return self.net(state)
@@ -84,7 +79,9 @@ def gumbel_softmax_sample(
 
     Returns ``(relaxed_probs, hard_action_index)``. The hard index is
     Gumbel-max on the raw logits and does **not** depend on ``tau``;
-    temperature only scales the straight-through soft probabilities.
+    temperature only scales the soft probabilities. Training draws the
+    executed action from the relaxed probabilities instead
+    (``sample_relaxed_action``), which is where tau sets exploration.
     """
     if logits.dim() == 1:
         logits = logits.unsqueeze(0)
@@ -98,6 +95,12 @@ def gumbel_softmax_sample(
         return y, index.squeeze(0) if index.numel() == 1 else index
     index = y.argmax(dim=-1)
     return y, index
+
+
+def sample_relaxed_action(relaxed: Tensor, generator: torch.Generator | None = None) -> int:
+    """Draw a ~ Categorical(relaxed) from one Eq. (11) relaxed sample (Fig. 3, step 3)."""
+    probs = relaxed.reshape(-1).float().clamp_min(0.0)
+    return int(torch.multinomial(probs / probs.sum(), 1, generator=generator).item())
 
 
 def action_one_hot(actions: Tensor, n_actions: int) -> Tensor:

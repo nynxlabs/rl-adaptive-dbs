@@ -56,7 +56,8 @@ def test_set_carrier_hz_survives_reset() -> None:
         env.close()
 
 
-def test_untreated_window_used_for_reset_and_skip() -> None:
+def test_same_plant_window_for_stim_and_no_stim() -> None:
+    """One P_beta estimator: reset, stim, and no-stim shots share the window."""
     from types import SimpleNamespace
 
     durations: list[float] = []
@@ -72,20 +73,40 @@ def test_untreated_window_used_for_reset_and_skip() -> None:
         def close(self) -> None:
             return None
 
-    cfg = replace(
-        SEADBSConfig(seed=0, biomarker_window_s=0.15),
-        untreated_window_s=0.10,
-    )
-    env = SEA_DBSEnvAdapter(plant=_FakePlant(), config=cfg)
+    env = SEA_DBSEnvAdapter(plant=_FakePlant(), config=SEADBSConfig(seed=0, biomarker_window_s=0.15))
     try:
         env.reset(seed=0)
         env.step(1)
         env.step(0)
     finally:
         env.close()
-    assert durations[0] == pytest.approx(0.10)
-    assert durations[1] == pytest.approx(0.15)
-    assert durations[2] == pytest.approx(0.10)
+    assert durations == pytest.approx([0.15, 0.15, 0.15])
+
+
+def test_prefilled_window_starts_at_untreated_mean() -> None:
+    from types import SimpleNamespace
+
+    values = iter([200.0, 100.0])
+
+    class _FakePlant:
+        def reset(self, seed: int | None = None) -> None:
+            return None
+
+        def integrate(self, duration_s, dbs_spec=None, *, record_spikes: bool = True):
+            return SimpleNamespace(p_beta=next(values))
+
+        def close(self) -> None:
+            return None
+
+    cfg = SEADBSConfig(seed=0, observation_scale=400.0, n_obs=5, prefill_obs_window=True)
+    env = SEA_DBSEnvAdapter(plant=_FakePlant(), config=cfg)
+    try:
+        obs, _info = env.reset(seed=0)
+        assert float(obs[0]) == pytest.approx(0.5)
+        obs, *_ = env.step(1)
+        assert float(obs[0]) == pytest.approx((4 * 0.5 + 0.25) / 5)
+    finally:
+        env.close()
 
 
 def test_reward_eq7_below_threshold_positive() -> None:
@@ -139,162 +160,77 @@ def test_for_smoke_reduces_episodes() -> None:
     assert cfg.max_episode_steps == 4
 
 
-def test_gs_episode_schedule() -> None:
-    cfg = replace(
-        SEADBSConfig(variant="baseline-gs").for_smoke(episodes=6, max_steps=2),
-        gs_tau0=1.0,
-        gs_tau_min=0.05,
-        gs_lambda=1e-4,
-        gs_early_lambda_episode_hi=3,
-        gs_early_lambda_scale=10.0,
-        gs_late_tau_floor_episode_lo=4,
-        gs_late_tau_floor=0.5,
-    )
+def test_gs_temperature_follows_eq14() -> None:
+    cfg = SEADBSConfig(variant="paper", gs_tau0=1.0, gs_tau_min=0.5, gs_lambda=1e-3)
     env = SEA_DBSEnvAdapter(config=cfg)
     try:
         trainer = SEA_DBSTrainer(env, cfg)
-        trainer._total_steps = 1000
-        trainer._current_episode = 1
-        tau_boosted = trainer.gs_temperature()
-        trainer._current_episode = 4
-        tau_unboosted = trainer.gs_temperature()
-        trainer._current_episode = 5
-        tau_late_floor = trainer.gs_temperature()
-        assert tau_boosted < tau_unboosted
-        assert tau_late_floor >= 0.5
+        assert trainer.gs_temperature() == pytest.approx(1.0)
+        trainer._total_steps = 100
+        assert trainer.gs_temperature() == pytest.approx(np.exp(-0.1))
+        trainer._total_steps = 10_000
+        assert trainer.gs_temperature() == pytest.approx(0.5)
     finally:
         env.close()
 
 
-def test_episode_stim_logit_boost() -> None:
-    cfg = replace(
-        SEADBSConfig(variant="baseline-gs").for_smoke(episodes=6, max_steps=2),
-        actor_mid_episode_lo=2,
-        actor_mid_episode_hi=4,
-        actor_mid_episode_stim_logit_boost=0.5,
-    )
-    env = SEA_DBSEnvAdapter(config=cfg)
-    try:
-        trainer = SEA_DBSTrainer(env, cfg)
-        base = torch.tensor([1.0, -1.0])
-        trainer._current_episode = 1
-        assert torch.allclose(trainer._episode_action_logits(base), base)
-        trainer._current_episode = 3
-        boosted = trainer._episode_action_logits(base)
-        assert float(boosted[0]) == pytest.approx(0.5)
-        assert float(boosted[1]) == pytest.approx(-0.5)
-    finally:
-        env.close()
+def test_relaxed_sampling_explores_at_high_tau() -> None:
+    """High tau: relaxed probs ~uniform, so a strong stim logit still explores."""
+    from controllers.sea_dbs.networks import sample_relaxed_action
 
-
-def test_episode_midlate_stim_logit_boost() -> None:
-    cfg = replace(
-        SEADBSConfig(variant="baseline-gs").for_smoke(episodes=6, max_steps=2),
-        actor_midlate_episode_lo=2,
-        actor_midlate_episode_hi=4,
-        actor_midlate_episode_stim_logit_boost=0.25,
-    )
-    env = SEA_DBSEnvAdapter(config=cfg)
-    try:
-        trainer = SEA_DBSTrainer(env, cfg)
-        base = torch.tensor([1.0, -1.0])
-        trainer._current_episode = 3
-        boosted = trainer._episode_action_logits(base)
-        assert float(boosted[0]) == pytest.approx(0.75)
-        assert float(boosted[1]) == pytest.approx(-0.75)
-    finally:
-        env.close()
-
-
-def test_episode_gap_patch_no_stim_boost() -> None:
-    cfg = replace(
-        SEADBSConfig(variant="baseline-gs").for_smoke(episodes=6, max_steps=2),
-        actor_gap_patch_episode_lo=2,
-        actor_gap_patch_episode_hi=4,
-        actor_gap_patch_no_stim_boost=0.15,
-    )
-    env = SEA_DBSEnvAdapter(config=cfg)
-    try:
-        trainer = SEA_DBSTrainer(env, cfg)
-        base = torch.tensor([0.0, 0.0])
-        trainer._current_episode = 3
-        patched = trainer._episode_action_logits(base)
-        assert float(patched[0]) == pytest.approx(0.15)
-    finally:
-        env.close()
-
-
-def test_episode_late_no_stim_flat_boost() -> None:
-    cfg = replace(
-        SEADBSConfig(variant="baseline-gs").for_smoke(episodes=6, max_steps=2),
-        actor_late_episode_lo=4,
-        actor_late_episode_hi=6,
-        actor_late_episode_no_stim_boost=0.3,
-        actor_late_episode_boost_ramp=False,
-    )
-    env = SEA_DBSEnvAdapter(config=cfg)
-    try:
-        trainer = SEA_DBSTrainer(env, cfg)
-        base = torch.tensor([0.0, 0.0])
-        trainer._current_episode = 4
-        flat = trainer._episode_action_logits(base)
-        assert float(flat[0]) == pytest.approx(0.3)
-    finally:
-        env.close()
-
-
-def test_episode_late_no_stim_logit_boost() -> None:
-    cfg = replace(
-        SEADBSConfig(variant="baseline-gs").for_smoke(episodes=6, max_steps=2),
-        actor_late_episode_lo=4,
-        actor_late_episode_hi=6,
-        actor_late_episode_no_stim_boost=0.3,
-        actor_late_episode_boost_ramp=True,
-    )
-    env = SEA_DBSEnvAdapter(config=cfg)
-    try:
-        trainer = SEA_DBSTrainer(env, cfg)
-        base = torch.tensor([0.0, 0.0])
-        trainer._current_episode = 4
-        ramp_start = trainer._episode_action_logits(base)
-        assert float(ramp_start[0]) == pytest.approx(0.0)
-        trainer._current_episode = 5
-        late = trainer._episode_action_logits(base)
-        assert float(late[0]) == pytest.approx(0.3)
-        assert float(late[1]) == pytest.approx(-0.3)
-    finally:
-        env.close()
-
-
-def test_ptq_weight_noise_is_deterministic_and_changes_params() -> None:
-    from controllers.sea_dbs.networks import Actor
-    from controllers.sea_dbs.quantization import apply_fp16_ptq, perturb_float_parameters
-
-    actor = Actor(state_dim=1, n_actions=2, hidden_size=8)
     torch.manual_seed(0)
-    with torch.no_grad():
-        for param in actor.parameters():
-            param.normal_(0.0, 0.1)
-    a = perturb_float_parameters(actor, scale=0.03, seed=11)
-    b = perturb_float_parameters(actor, scale=0.03, seed=11)
-    c = perturb_float_parameters(actor, scale=0.03, seed=22)
-    for pa, pb in zip(a.parameters(), b.parameters(), strict=True):
-        assert torch.allclose(pa, pb)
-    changed = False
-    for pa, pc in zip(a.parameters(), c.parameters(), strict=True):
-        if not torch.allclose(pa, pc):
-            changed = True
-            break
-    assert changed
-    fp16 = apply_fp16_ptq(actor, weight_noise=0.03, noise_seed=11)
+    logits = torch.tensor([0.0, 3.0])
+    hot = []
+    cold = []
+    for _ in range(2000):
+        relaxed, _ = gumbel_softmax_sample(logits, tau=50.0, hard=False)
+        hot.append(sample_relaxed_action(relaxed))
+        relaxed, _ = gumbel_softmax_sample(logits, tau=0.05, hard=False)
+        cold.append(sample_relaxed_action(relaxed))
+    assert 0.40 < float(np.mean(hot)) < 0.60
+    # tau -> 0 approaches Gumbel-max: P(stim) = softmax(logits)[1] ~ 0.953.
+    assert float(np.mean(cold)) == pytest.approx(0.953, abs=0.03)
+
+
+def test_fig4_config_identical_across_variants() -> None:
+    from dataclasses import asdict
+
+    from controllers.sea_dbs.config import fig4_ravivarapu_config
+
+    base = asdict(fig4_ravivarapu_config(variant="baseline"))
+    for variant in ("baseline-pm", "baseline-gs", "paper"):
+        other = asdict(fig4_ravivarapu_config(variant=variant))
+        assert {k for k in base if base[k] != other[k]} == {"variant"}
+
+
+def test_config_from_dict_drops_removed_knobs() -> None:
+    from dataclasses import asdict
+
+    from controllers.sea_dbs.config import config_from_dict
+
+    raw = asdict(SEADBSConfig(variant="paper"))
+    raw.update({"actor_late_episode_no_stim_boost": 2.4, "untreated_window_s": 0.1})
+    assert config_from_dict(raw) == SEADBSConfig(variant="paper")
+    with pytest.raises(ValueError, match="unknown"):
+        config_from_dict({**raw, "not_a_field": 1})
+
+
+def test_fp16_ptq_is_a_plain_cast() -> None:
+    from controllers.sea_dbs.networks import Actor
+    from controllers.sea_dbs.quantization import apply_fp16_ptq
+
+    torch.manual_seed(0)
+    actor = Actor(state_dim=1, n_actions=2, hidden_size=8)
+    fp16 = apply_fp16_ptq(actor)
     assert next(fp16.parameters()).dtype == torch.float16
+    for p32, p16 in zip(actor.parameters(), fp16.parameters(), strict=True):
+        assert torch.equal(p32.detach().half(), p16.detach())
 
 
 def test_continuous_plant_integration_differs_from_disconnected() -> None:
     """Stitched timeline should move Pβ across repeated stim actions."""
     cfg = replace(
         SEADBSConfig(seed=0, biomarker_window_s=0.15),
-        untreated_window_s=0.10,
         n_obs=1,
         max_episode_steps=3,
     )

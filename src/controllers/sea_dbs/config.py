@@ -1,83 +1,49 @@
-"""SEA-DBS hyperparameters (Ravivarapu et al., docs/controllers/sea_dbs/replication.md)."""
+"""SEA-DBS hyperparameters (Ravivarapu et al., docs/controllers/sea_dbs/replication.md).
+
+Every Ravivarapu panel (Figs 4–7) trains and evaluates with **one** config: the
+variants differ only in which paper components they switch on (predictive
+model, Gumbel-Softmax). Values the paper states (Table I, §V.A, Eq. (7)) are
+fixed; paper-silent values are labeled conventions below and in
+``docs/controllers/sea_dbs/replication.md``.
+"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
-from typing import Literal
+from dataclasses import dataclass, fields, replace
+from typing import Any, Literal
 
 # Paper §V.A / Table I (fixed RL cadence metadata).
 STEP_DURATION_MS: float = 2.0
-# Minimum plant segment for multitaper P_beta (Kumaravelu GPi spikes); 2 ms yields zero PSD.
-BIOMARKER_WINDOW_S: float = 0.1
+# Convention: plant segment per RL step for multitaper P_beta. 2 ms yields no
+# beta estimate. 150 ms is the shortest window in which the paper's 50 Hz
+# carrier suppresses GPi beta on Kumaravelu (100 ms: stim/untreated ratio
+# 0.95 ± 0.16 over seeds 0–9; 150 ms: 0.69 ± 0.06). Probe:
+# scripts/probes/ravivarapu_plant_levels.py.
+BIOMARKER_WINDOW_S: float = 0.15
 MAX_EPISODE_STEPS: int = 30
 TRAIN_EPISODES: int = 150
 BETA_THRESHOLD: float = 0.35
 REWARD_SCALE: float = 10.0
-# Mehregan uses 1000 so 2 s raw P_beta ~400–600 → ~0.4–0.6. On the SEA-DBS
-# biomarker window (100 ms), unstimulated raw P_beta ≈ 196; scale 1000 puts
-# norm ≈ 0.20 already below β_t=0.35 and kills learning pressure. Scale ≈ 425
-# maps that raw onto the paper Fig 4a band (~0.46) so reward Eq. (7) can teach.
-OBSERVATION_SCALE: float = 425.0
+# Convention: normalization so untreated GPi P_beta (150 ms shot, mean over
+# plant seeds 0–9: raw 217.9) maps onto the paper's untreated level ~0.46
+# (Figs 4–7 all start there). Eq. (7)'s beta_t = 0.35 only teaches on that scale.
+OBSERVATION_SCALE: float = 472.0
 BUFFER_CAPACITY: int = 8192
 BATCH_SIZE: int = 32
 GAMMA: float = 0.99
 ACTOR_LR: float = 5e-4
 CRITIC_LR: float = 1e-3
+# Paper Figs 5a / 6 / 7 stimulation frequency. Training carrier is
+# paper-silent; the paper names no other frequency, so training uses 50 Hz too.
 DEFAULT_CARRIER_HZ: float = 50.0
 INFERENCE_CARRIER_30HZ: float = 30.0
 INFERENCE_CARRIER_50HZ: float = 50.0
-# Fig 5a eval-only: 50 Hz pulse count in the biomarker window.
-# 100 ms floors Pβ at ~0.388; 140 ms last-window ~0.339 (paper SEA step 5
-# ~0.338, step 10 ~0.310). 150 ms last-window ~0.328. Fig 4a train stays
-# 100 ms / 62 ms burst @ 130 Hz.
-FIG5A_INFERENCE_WINDOW_S: float = 0.15
-FIG5A_INFERENCE_BURST_MS: float = 150.0
-# Untreated baseline shot duration (100 ms) so step 0 starts at paper untreated level (~0.461 / PSD 461.5).
-FIG5A_UNTREATED_WINDOW_S: float = 0.10
-# Pre-fill the observation window on reset with n_obs baseline samples so moving average
-# reflects a physical buffer entering from steady untreated state (Eq. 4–5), matching
-# the paper's gradual early decline curve.
-FIG5A_PREFILL_OBS_WINDOW: bool = True
-# Fig 5a plots 11 samples. n_obs=6 lets onset age out at step 6 so SEA
-# sits on the 150 ms floor (~0.328) for steps 6–10 (paper ~0.332→0.310).
-# n_obs=10 holds SEA ~0.35 through step 9 (leftover untreated in the mean).
-# n_obs<=5 equalizes Baseline and SEA at the end unless Baseline skips late.
-# Table I leaves n_obs open; Fig 4a train stays n_obs=5.
-FIG5A_INFERENCE_N_OBS: int = 6
-# Skip-first Gumbel draw with late skip so Baseline ends at ~0.350 (paper ~0.354)
-# while SEA-DBS is all-stim (10/10) ending at 150 ms floor (~0.328, paper ~0.310).
-FIG5A_GUMBEL_SEED_OFFSET: int = 5
-# Fig 5b eval-only (30 Hz). At 30 Hz carrier, multi-pulse stimulation in
-# steps 1–2 generates resonant STN-GPi beta excitation on the Kumaravelu
-# plant (single-step PSD ~470–485 > untreated ~461), matching the paper
-# baseline initial rise. Adaptive single-pulse bursts (20 ms) with phase/delay
-# progression provide the non-linear S-curve transition from initial plateau
-# (delay 2 ms -> PSD ~458) through middle descent (delay 0 ms -> PSD ~423) to
-# asymptotic floor (delay 4-5 ms -> PSD ~390). Table I n_obs=5 observation window.
-FIG5B_INFERENCE_WINDOW_S: float = 0.10
-FIG5B_INFERENCE_BURST_MS: float = 20.0
-FIG5B_INFERENCE_PULSE_DELAY_MS: float = 5.0
-FIG5B_INFERENCE_N_OBS: int = 5
-FIG5B_SEA_STEP_PULSE_DELAYS: tuple[float, ...] = (2.0, 2.0, 0.0, 5.0, 5.0, 5.0, 4.0, 4.0, 4.0, 4.0)
-FIG5B_BASELINE_STEP_PULSE_DELAYS: tuple[float, ...] = (8.0, 8.0, 0.0, 0.0, 0.0, 0.0, 5.0, 5.0, 5.0, 5.0)
-FIG5B_BASELINE_BURST_MS: float = 20.0
-FIG5B_BASELINE_PULSE_DELAY_MS: float = 8.0
-FIG5B_BASELINE_EARLY_STEPS: int = 2
-FIG5B_GUMBEL_SEED_OFFSET: int = 6
-# Fig 7 ablation eval: calibrated offsets ensuring Baseline >= Baseline+PM (blue above orange),
-# higher GS (green dropping less), and distinct non-overlapping monotonic trajectories across all 4 variants matching paper Fig 7.
-FIG7_GUMBEL_SEED_OFFSET: int = 5
-FIG7_VARIANT_GUMBEL_OFFSETS: dict[str, int] = {
-    "baseline": 225,
-    "baseline-pm": 141,
-    "baseline-gs": 586,
-    "paper": 5,
-}
 ABLATION_EVAL_STEPS: int = 10
 # Paper Figs 5–7 x-axis is steps 0–10: untreated PSD at t=0 plus 10 stim actions.
 INFERENCE_PSD_SAMPLES: int = ABLATION_EVAL_STEPS + 1
 
 PlantIntegrationMode = Literal["disconnected", "continuous"]
+GumbelActionSampling = Literal["relaxed", "hard"]
 
 
 @dataclass(frozen=True)
@@ -87,12 +53,9 @@ class SEADBSConfig:
     # RL timing (§5)
     step_duration_ms: float = STEP_DURATION_MS
     biomarker_window_s: float = BIOMARKER_WINDOW_S
-    # Fig 6 eval-only: untreated reset / no-pulse shots can use the 100 ms
-    # Fig 4a window (paper start ~0.46) while stim keeps a longer floor window.
-    # None = same duration as ``biomarker_window_s``.
-    untreated_window_s: float | None = None
-    # Fig 6 eval: ``continuous`` stitches one Kumaravelu trajectory across steps
-    # (PythonPlant only). Training / Fig 4a default ``disconnected``.
+    # ``disconnected`` (default): each RL step is an independent plant shot from
+    # the episode IC (Mehregan-style env). ``continuous`` stitches one Kumaravelu
+    # trajectory across the episode's steps (PythonPlant only; diagnostic).
     plant_integration_mode: PlantIntegrationMode = "disconnected"
     max_episode_steps: int = MAX_EPISODE_STEPS
     num_episodes: int = TRAIN_EPISODES
@@ -102,9 +65,10 @@ class SEADBSConfig:
     reward_scale: float = REWARD_SCALE
     observation_scale: float = OBSERVATION_SCALE
     n_obs: int = 5  # window for mean P_beta (Eq. 4–5); open in Table I
-    prefill_obs_window: bool = False  # pre-fill moving average buffer with untreated baseline at reset
+    # Convention: Eq. (4) state is a window of *past* beta estimates; on reset the
+    # window holds n_obs untreated samples (the history before the episode).
+    prefill_obs_window: bool = True
     state_dim: int = 1  # default: mean P_bar only (replication.md §14.1)
-    prefill_obs_window: bool = False  # pre-fill observation window on reset with n_obs baseline samples
 
     # Table I
     actor_lr: float = ACTOR_LR
@@ -115,83 +79,46 @@ class SEADBSConfig:
     gamma: float = GAMMA
     polyak_tau: float = 0.005  # open — standard DDPG default
     min_buffer_size: int = BATCH_SIZE
-    update_frequency: int = 1
+    update_frequency: int = 1  # open — gradient steps per env step
 
-    # Gumbel-Softmax (§8, Eq. 14) — open schedule
+    # Gumbel-Softmax (§IV.C, Eq. 14). tau_0, tau_min, lambda_tau are not in
+    # Table I; defaults follow the cited Gumbel-Softmax paper (Jang et al. 2016:
+    # tau = max(0.5, exp(-r t)), r in {1e-5, 1e-4}).
     gs_tau0: float = 1.0
-    gs_tau_min: float = 0.1
-    gs_lambda: float = 1e-4  # fig4 paper override in fig4_ravivarapu_config
-    # Optional Fig 4a baseline schedule (paper-silent): step-indexed τ can leave an
-    # ep 15–40 PSD bump; boost λ early and raise τ floor late when set.
-    gs_early_lambda_episode_hi: int = 0  # 0 = off; apply scale while episode < hi
-    gs_early_lambda_scale: float = 1.0
-    gs_late_tau_floor_episode_lo: int = 0  # 0 = off; floor τ from this episode on
-    gs_late_tau_floor: float = 0.0
+    gs_tau_min: float = 0.5
+    gs_lambda: float = 1e-4
+    # How the *executed* binary action is drawn. ``relaxed`` (default) samples
+    # a ~ Categorical(a_tilde) from the Eq. (11) relaxed probabilities — Fig. 3
+    # "actions are sampled from the resulting distribution", and the only reading
+    # in which tau "promotes exploration" (§IV.C). ``hard`` is Gumbel-max
+    # (argmax of a_tilde), which is tau-independent.
+    gs_action_sampling: GumbelActionSampling = "relaxed"
 
-    # Baseline exploration (no GS)
+    # Baseline DDPG exploration (no GS; paper-silent): epsilon-greedy with a
+    # linear decay over the whole run.
     epsilon_start: float = 0.5
     epsilon_end: float = 0.05
 
     # MLP topology (§14.9 — open)
     hidden_size: int = 64
 
-    # Plant / DBS carrier (§14.10 — fixed eval knob, default train carrier)
+    # Plant / DBS carrier (§14.10)
     carrier_hz: float = DEFAULT_CARRIER_HZ
     # Integrator grid (PlantConfig.dt_ms); used to build the STN drive trace grid.
     plant_dt_ms: float = 0.01
-    # Short-burst STN drive (ms) per stim action within the integration window.
-    # 100.0 == continuous drive for the whole window (Kumaravelu default). A
-    # shorter burst yields an intermediate beta floor; paper 3 describes pulses
-    # as "short bursts rather than continuously" (Eq. 6). Fig 4a override below.
-    dbs_burst_ms: float = 100.0
-    # Shift the carrier train later in the biomarker window (ms). 0 = first
-    # pulse at t=0. Fig 5b eval uses 5 ms so one 30 Hz pulse last-window
-    # ~0.393 (paper SEA end ~0.390); delay 0 is ~0.424.
-    dbs_pulse_delay_ms: float = 0.0
+    # Stim action = carrier pulse train for this many ms of the step's plant
+    # window. ``None`` = the whole window (default).
+    dbs_burst_ms: float | None = None
 
     variant: str = "paper"
     seed: int = 0
     device: str = "cpu"
     log_episodes: bool = False
-    fixed_episode_seed: bool = False  # optional; fixed seed can collapse paper GS policy
-    # Episodes with index < until reset with cfg.seed (smooth early IC); later episodes use
-    # cfg.seed + episode. 0 = off. Ignored when fixed_episode_seed is True.
-    fixed_episode_seed_until: int = 0
+    # Default: episode e resets the plant with seed + e. True = same IC every episode.
+    fixed_episode_seed: bool = False
 
     # Fig 4a episode PSD logging: "mean" (all steps) or "last" (final step biomarker)
     episode_psd_metric: str = "mean"
-    # Ramp predictive-model r_hat into critic target over this many env steps (0 = off)
-    pm_warmup_steps: int = 0
-    # Actor logit bias toward no-stim (action 0); helps early PSD start high (Fig 4a).
-    actor_no_stim_bias: float = 0.0
-    # Optional Fig 4a mid-training stim nudge (paper-silent): transient logit boost
-    # during ep [lo, hi) counters the ep 15–40 baseline PSD bump.
-    actor_mid_episode_lo: int = 0
-    actor_mid_episode_hi: int = 0
-    actor_mid_episode_stim_logit_boost: float = 0.0
-    # Mid-late stim nudge (paper-silent): ep 80–120 gap_midlate gate band; favors
-    # stimulation to lower baseline PSD without late-window flattening (v83 lesson).
-    actor_midlate_episode_lo: int = 0
-    actor_midlate_episode_hi: int = 0
-    actor_midlate_episode_stim_logit_boost: float = 0.0
-    # Late-training no-stim nudge (paper-silent): ramps from 0 at lo to full at
-    # hi−1 so ep 145–149 gap lift does not flatten the whole late window (pearson).
-    actor_late_episode_lo: int = 0
-    actor_late_episode_hi: int = 0
-    actor_late_episode_no_stim_boost: float = 0.0
-    actor_late_episode_stim_logit_boost: float = 0.0
-    actor_late_episode_boost_ramp: bool = True
-    # Narrow mid-late gap patch (paper-silent): lifts ep ~142–145 without the
-    # wide-late lift that costs pearson (v74 lesson).
-    actor_gap_patch_episode_lo: int = 0
-    actor_gap_patch_episode_hi: int = 0
-    actor_gap_patch_no_stim_boost: float = 0.0
-    # Fig 4a Baseline convention: the paper's Baseline curve fades GRADUALLY across
-    # episodes, which epsilon-greedy argmax cannot produce (it flips abruptly into a
-    # step). Force Gumbel-Softmax structured sampling for the baseline WITHOUT the
-    # predictive model, so the duty ramps smoothly and the baseline stays the weaker
-    # variant. Leave the plain ``baseline`` (epsilon-greedy) intact for Fig 7.
-    force_gumbel_softmax: bool = False
 
     @property
     def step_duration_s(self) -> float:
@@ -208,7 +135,7 @@ class SEADBSConfig:
 
     @property
     def use_gumbel_softmax(self) -> bool:
-        return self.variant in {"baseline-gs", "paper"} or self.force_gumbel_softmax
+        return self.variant in {"baseline-gs", "paper"}
 
     @property
     def n_actions(self) -> int:
@@ -217,8 +144,6 @@ class SEADBSConfig:
     def episode_plant_seed(self, episode: int) -> int:
         """Plant ``reset(seed=…)`` for zero-based training episode index."""
         if self.fixed_episode_seed:
-            return self.seed
-        if self.fixed_episode_seed_until > 0 and episode < self.fixed_episode_seed_until:
             return self.seed
         return self.seed + episode
 
@@ -243,90 +168,63 @@ class SEADBSConfig:
         )
 
 
+# Knobs removed in the honest-replication pass. Old checkpoints still carry them;
+# ``config_from_dict`` drops them (they only ever changed training, never the
+# saved actor weights' meaning).
+REMOVED_CONFIG_FIELDS: frozenset[str] = frozenset(
+    {
+        "untreated_window_s",
+        "dbs_pulse_delay_ms",
+        "fixed_episode_seed_until",
+        "pm_warmup_steps",
+        "actor_no_stim_bias",
+        "actor_mid_episode_lo",
+        "actor_mid_episode_hi",
+        "actor_mid_episode_stim_logit_boost",
+        "actor_midlate_episode_lo",
+        "actor_midlate_episode_hi",
+        "actor_midlate_episode_stim_logit_boost",
+        "actor_late_episode_lo",
+        "actor_late_episode_hi",
+        "actor_late_episode_no_stim_boost",
+        "actor_late_episode_stim_logit_boost",
+        "actor_late_episode_boost_ramp",
+        "actor_gap_patch_episode_lo",
+        "actor_gap_patch_episode_hi",
+        "actor_gap_patch_no_stim_boost",
+        "gs_early_lambda_episode_hi",
+        "gs_early_lambda_scale",
+        "gs_late_tau_floor_episode_lo",
+        "gs_late_tau_floor",
+        "force_gumbel_softmax",
+    }
+)
+
+
+def config_from_dict(raw: dict[str, Any]) -> SEADBSConfig:
+    """Build a config from a checkpoint dict, ignoring removed legacy knobs."""
+    known = {f.name for f in fields(SEADBSConfig)}
+    unknown = set(raw) - known - REMOVED_CONFIG_FIELDS
+    if unknown:
+        msg = f"unknown SEADBSConfig fields in checkpoint: {sorted(unknown)}"
+        raise ValueError(msg)
+    return SEADBSConfig(**{k: v for k, v in raw.items() if k in known})
+
+
 def fig4_ravivarapu_config(
     *,
     seed: int = 0,
     num_episodes: int = TRAIN_EPISODES,
     variant: str = "baseline",
 ) -> SEADBSConfig:
-    """Fig 4a/4b training defaults — paper-faithful Baseline vs SEA-DBS.
+    """Training config for every Ravivarapu panel (Figs 4–7).
 
-    v93 (2026-08-12): walk back v92 overshoot. 70 ms burst + SEA midlate stim
-    collapsed SEA late to 0.274 (paper ~0.340) and front-loaded the mid drop.
-    Burst 62 ms (between the 60 ms ~0.35 floor and the 70 ms collapse) with
-    v91-like SEA logits; baseline ~60% of the way from v91 (late 0.401) toward
-    v92 (late 0.346) to aim at paper ~0.368. Dig gates unchanged.
-    ``fixed_episode_seed_until=2``.
-
-    v92: burst 70 + extra SEA stim; Fail front-loaded SEA + gap_widens.
-    v91: earlier stim nudges; baseline late improved; failed gap_widens.
+    Same config for all four variants; ``variant`` only switches the paper's
+    components (PM, GS). No per-variant or per-episode knobs.
     """
-    cfg = SEADBSConfig(
+    return SEADBSConfig(
         seed=seed,
         num_episodes=num_episodes,
         log_episodes=True,
         variant=variant,
-        fixed_episode_seed_until=2,
-        carrier_hz=130.0,
-        actor_no_stim_bias=1.8,
-        episode_psd_metric="mean",
-        min_buffer_size=192,
-        polyak_tau=0.0035,
-        dbs_burst_ms=58.0,
     )
-    if variant == "paper":
-        return replace(
-            cfg,
-            dbs_burst_ms=62.0,
-            actor_no_stim_bias=1.25,
-            gs_tau0=5.0,
-            gs_lambda=1.25e-5,
-            gs_tau_min=0.45,
-            update_frequency=2,
-            pm_warmup_steps=15000,
-            actor_lr=7.5e-6,
-            critic_lr=1.45e-4,
-            actor_mid_episode_lo=3,
-            actor_mid_episode_hi=45,
-            actor_mid_episode_stim_logit_boost=0.42,
-            actor_midlate_episode_lo=45,
-            actor_midlate_episode_hi=65,
-            actor_midlate_episode_stim_logit_boost=0.18,
-            actor_late_episode_lo=65,
-            actor_late_episode_hi=150,
-            actor_late_episode_no_stim_boost=2.40,
-            actor_late_episode_stim_logit_boost=0.0,
-            actor_late_episode_boost_ramp=True,
-        )
-    if variant == "baseline":
-        return replace(
-            cfg,
-            actor_no_stim_bias=1.38,
-            force_gumbel_softmax=True,
-            gs_tau0=5.0,
-            gs_lambda=6.1e-5,
-            gs_tau_min=0.87,
-            gs_early_lambda_episode_hi=38,
-            gs_early_lambda_scale=4.5,
-            gs_late_tau_floor_episode_lo=108,
-            gs_late_tau_floor=0.94,
-            actor_mid_episode_lo=3,
-            actor_mid_episode_hi=80,
-            actor_mid_episode_stim_logit_boost=0.76,
-            actor_midlate_episode_lo=80,
-            actor_midlate_episode_hi=150,
-            actor_midlate_episode_stim_logit_boost=0.65,
-            actor_gap_patch_episode_lo=0,
-            actor_gap_patch_episode_hi=0,
-            actor_gap_patch_no_stim_boost=0.0,
-            actor_late_episode_lo=0,
-            actor_late_episode_hi=0,
-            actor_late_episode_no_stim_boost=0.0,
-            actor_late_episode_boost_ramp=False,
-            epsilon_start=0.21,
-            epsilon_end=0.21,
-            update_frequency=2,
-            actor_lr=5.2e-6,
-            critic_lr=1.16e-4,
-        )
-    return cfg

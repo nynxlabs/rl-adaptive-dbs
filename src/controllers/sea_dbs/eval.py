@@ -1,8 +1,15 @@
-"""SEA-DBS evaluation (inference rollouts, carrier-frequency knob)."""
+"""SEA-DBS evaluation (inference rollouts, carrier-frequency knob).
+
+Figs 5–7 roll out a trained actor on the **same** plant / observation setup it
+was trained on (window, burst, ``n_obs``, normalization, reset — all read from
+the checkpoint). The only eval override is the paper-stated stimulation
+frequency (50 Hz for Figs 5a/6/7, 30 Hz for Fig 5b). Actions are deterministic
+(argmax on the actor logits, spec §14.2) unless ``action_mode="gumbel"`` is asked
+for explicitly; FP16 PTQ is a plain ``.half()`` cast.
+"""
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -12,22 +19,9 @@ import torch
 
 from controllers.sea_dbs.adapter import SEA_DBSEnvAdapter
 from controllers.sea_dbs.checkpoint import load_actor_from_payload, load_checkpoint
-from controllers.sea_dbs.config import ABLATION_EVAL_STEPS, SEADBSConfig
+from controllers.sea_dbs.config import ABLATION_EVAL_STEPS, INFERENCE_CARRIER_50HZ, SEADBSConfig
 from controllers.sea_dbs.networks import Actor, gumbel_softmax_sample
-from controllers.sea_dbs.quantization import (
-    DEFAULT_PTQ_NOISE_SEED,
-    FP16ActorWrapper,
-    apply_fp16_ptq,
-    is_ptq_variant,
-)
-
-# Plant reset stays ``cfg.seed`` (untreated PD onset ~0.46). Offset 2 started
-# Baseline ``[1, 1, 1, 1, 0, …]``, so steps 0–4 overlaid SEA (both stim) and
-# contradicted digitized paper (Baseline above SEA from step 1). Offset 1
-# starts Baseline with a skip (``P(stim)≈0.76``); SEA stays 10/10. That is
-# the only binary-action way to split at step 1. Fig 5a uses offset 34
-# (still skip-first) so Baseline does not skip again after step 5.
-GUMBEL_EVAL_SEED_OFFSET = 1
+from controllers.sea_dbs.quantization import FP16ActorWrapper, apply_fp16_ptq, is_ptq_variant
 
 
 def evaluate(
@@ -40,90 +34,28 @@ def evaluate(
     carrier_hz: float | None = None,
     use_fp16_ptq: bool = False,
     action_mode: str = "argmax",
-    dbs_burst_ms: float | None = None,
-    biomarker_window_s: float | None = None,
-    n_obs: int | None = None,
-    gumbel_seed_offset: int | None = None,
-    dbs_pulse_delay_ms: float | None = None,
-    ptq_weight_noise: float = 0.0,
-    ptq_noise_seed: int | None = None,
-    untreated_window_s: float | None = None,
-    plant_integration_mode: str | None = None,
-    prefill_obs_window: bool | None = None,
-    early_burst_ms: float | None = None,
-    early_delay_ms: float | None = None,
-    early_steps: int = 0,
-    step_pulse_delays: Sequence[float] | None = None,
-    step_burst_ms: Sequence[float] | None = None,
 ) -> dict[str, Any]:
     """Roll out a trained actor; returns summary metrics and per-step traces.
 
-    Environment knobs (burst length, observation scale, …) come from the
-    checkpoint so Fig 5 eval matches the Fig 4a train plant unless
-    ``dbs_burst_ms`` / ``biomarker_window_s`` / ``n_obs`` are set. Fig 5a uses
-    a 150 ms window so last-window Pβ ~0.328 (paper SEA end ~0.310);
-    100 ms floors at ~0.39 and 140 ms at ~0.339. Fig 5a also sets
-    ``n_obs=6`` so onset ages out at step 6 and SEA sits on that floor for
-    steps 6–10 (``n_obs=10`` holds SEA ~0.35 through step 9; ``n_obs=5`` is
-    all-floor by step 5). Fig 5b uses a 20 ms burst at 30 Hz with a 5 ms
-    pulse delay (one pulse per 100 ms window) so last-window Pβ ~0.393
-    (delay 0 is ~0.424). Two 30 Hz pulses (62 ms) raise last-window above
-    untreated and the mean climbs. ``carrier_hz`` is the
-    Fig 5 inference override and is written into the config so ``reset()``
-    cannot restore the training carrier.
-
-    ``action_mode``: ``argmax`` (greedy) or ``gumbel`` (hard Gumbel-max on
-    actor logits). Hard Gumbel-max is temperature-invariant; P(stim) equals
-    softmax(logits). Fig 5 uses ``gumbel`` because greedy collapses both
-    Fig 4a actors to always-on. Action RNG is ``cfg.seed + ep +
-    GUMBEL_EVAL_SEED_OFFSET`` (offset 1); plant reset stays ``cfg.seed``.
-    Offset 1 starts Baseline with a skip so steps 1–5 stay above SEA, matching
-    digitized paper ordering. Offset 2 overlaid the two traces through step 4.
-    ``untreated_window_s`` (Fig 6): optional shorter plant shot for reset and
-    no-pulse actions so t=0 matches the paper untreated band (~0.46 / PSD 462)
-    while stim steps can keep a longer 50 Hz floor window.
-    ``plant_integration_mode``: ``disconnected`` (default) cold-starts each
-    step from the episode IC; ``continuous`` stitches one Kumaravelu trajectory
-    across steps (PythonPlant only; Fig 6 eval).
+    Plant reset uses ``cfg.seed + ep`` (episode 0 = the panel seed). With
+    ``action_mode="gumbel"`` the hard Gumbel-max sample (``P(stim)`` =
+    softmax(logits)) uses torch seed ``cfg.seed + ep`` — fixed, never tuned.
     """
     device = (config or SEADBSConfig()).device
     payload = load_checkpoint(checkpoint, device=device)
     actor, ckpt_cfg = load_actor_from_payload(payload, device=device)
     cfg = ckpt_cfg
     if config is not None:
-        cfg = replace(
-            cfg,
-            variant=config.variant,
-            seed=config.seed,
-            device=config.device,
-            prefill_obs_window=getattr(config, "prefill_obs_window", False),
-        )
+        cfg = replace(cfg, variant=config.variant, seed=config.seed, device=config.device)
     if max_steps is not None:
         cfg = replace(cfg, max_episode_steps=int(max_steps))
     hz = float(carrier_hz if carrier_hz is not None else cfg.carrier_hz)
     cfg = replace(cfg, carrier_hz=hz)
-    if dbs_burst_ms is not None:
-        cfg = replace(cfg, dbs_burst_ms=float(dbs_burst_ms))
-    if biomarker_window_s is not None:
-        cfg = replace(cfg, biomarker_window_s=float(biomarker_window_s))
-    if n_obs is not None:
-        cfg = replace(cfg, n_obs=int(n_obs))
-    if dbs_pulse_delay_ms is not None:
-        cfg = replace(cfg, dbs_pulse_delay_ms=float(dbs_pulse_delay_ms))
-    if untreated_window_s is not None:
-        cfg = replace(cfg, untreated_window_s=float(untreated_window_s))
-    if plant_integration_mode is not None:
-        cfg = replace(cfg, plant_integration_mode=plant_integration_mode)  # type: ignore[arg-type]
-    if prefill_obs_window is not None:
-        cfg = replace(cfg, prefill_obs_window=bool(prefill_obs_window))
 
     policy: Actor | FP16ActorWrapper = actor
-    noise = float(ptq_weight_noise)
-    noise_seed = DEFAULT_PTQ_NOISE_SEED if ptq_noise_seed is None else int(ptq_noise_seed)
-    if use_fp16_ptq or is_ptq_variant(cfg.variant):
-        policy = FP16ActorWrapper(
-            apply_fp16_ptq(actor, weight_noise=noise, noise_seed=noise_seed)
-        )
+    fp16 = bool(use_fp16_ptq or is_ptq_variant(cfg.variant))
+    if fp16:
+        policy = FP16ActorWrapper(apply_fp16_ptq(actor))
 
     mode = str(action_mode).strip().lower()
     if mode not in {"argmax", "gumbel"}:
@@ -135,44 +67,26 @@ def evaluate(
     episode_rewards: list[float] = []
     p_beta_trajectories: list[list[float]] = []
     action_trajectories: list[list[int]] = []
+    logit_trajectories: list[list[list[float]]] = []
 
     try:
         for ep in range(int(episodes)):
-            # Fig 5/6/7 step 0 is untreated PD onset (paper ~0.46). Offset
-            # seeds (e.g. +10000) land in a different IC and can *rise* toward
-            # the 50 Hz always-on floor instead of declining from the high start.
             state, info = env.reset(seed=cfg.seed + ep)
-            offset = GUMBEL_EVAL_SEED_OFFSET if gumbel_seed_offset is None else int(gumbel_seed_offset)
-            torch.manual_seed(int(cfg.seed) + ep + offset)
+            torch.manual_seed(int(cfg.seed) + ep)
             ep_reward = 0.0
             ep_p_beta = [float(info.get("p_beta_norm", 0.0))]
             ep_actions: list[int] = []
-            for step_idx in range(cfg.max_episode_steps):
-                step_cfg = cfg
-                if step_burst_ms is not None and step_idx < len(step_burst_ms):
-                    step_cfg = replace(step_cfg, dbs_burst_ms=float(step_burst_ms[step_idx]))
-                elif early_steps > 0 and step_idx < early_steps and early_burst_ms is not None:
-                    step_cfg = replace(step_cfg, dbs_burst_ms=float(early_burst_ms))
-
-                if step_pulse_delays is not None and step_idx < len(step_pulse_delays):
-                    step_cfg = replace(step_cfg, dbs_pulse_delay_ms=float(step_pulse_delays[step_idx]))
-                elif early_steps > 0 and step_idx < early_steps and early_delay_ms is not None:
-                    step_cfg = replace(step_cfg, dbs_pulse_delay_ms=float(early_delay_ms))
-                env.config = step_cfg
+            ep_logits: list[list[float]] = []
+            for _step in range(cfg.max_episode_steps):
                 state_t = torch.as_tensor(state, dtype=torch.float32, device=cfg.device).unsqueeze(0)
                 with torch.no_grad():
-                    logits = policy(state_t)
+                    logits = policy(state_t).float()
                     if mode == "gumbel":
-                        _, action_t = gumbel_softmax_sample(
-                            logits.float(),
-                            tau=1.0,
-                            hard=True,
-                        )
-                    elif isinstance(policy, FP16ActorWrapper):
-                        action_t, _ = FP16ActorWrapper.select_action(logits)
+                        _, action_t = gumbel_softmax_sample(logits, tau=1.0, hard=True)
                     else:
                         action_t, _ = Actor.select_action(logits)
-                action = int(action_t.item() if action_t.ndim == 0 else action_t.reshape(-1)[0].item())
+                action = int(action_t.reshape(-1)[0].item())
+                ep_logits.append([float(v) for v in logits.reshape(-1).tolist()])
                 state, reward, _term, truncated, step_info = env.step(action)
                 ep_reward += float(reward)
                 ep_p_beta.append(float(step_info.get("p_beta_norm", ep_p_beta[-1])))
@@ -182,6 +96,7 @@ def evaluate(
             episode_rewards.append(ep_reward)
             p_beta_trajectories.append(ep_p_beta)
             action_trajectories.append(ep_actions)
+            logit_trajectories.append(ep_logits)
     finally:
         env.close()
 
@@ -196,6 +111,7 @@ def evaluate(
         "episode_rewards": episode_rewards,
         "p_beta_trajectories": p_beta_trajectories,
         "action_trajectories": action_trajectories,
+        "logit_trajectories": logit_trajectories,
         "p_beta_final": p_beta_final,
         "reward_sum": float(np.sum(episode_rewards)),
         "reward_mean": float(np.mean(episode_rewards)) if episode_rewards else 0.0,
@@ -206,14 +122,9 @@ def evaluate(
         "dbs_burst_ms": cfg.dbs_burst_ms,
         "biomarker_window_s": cfg.biomarker_window_s,
         "n_obs": cfg.n_obs,
-        "dbs_pulse_delay_ms": cfg.dbs_pulse_delay_ms,
-        "untreated_window_s": cfg.untreated_window_s,
+        "prefill_obs_window": cfg.prefill_obs_window,
         "plant_integration_mode": cfg.plant_integration_mode,
-        "fp16_ptq": bool(use_fp16_ptq or is_ptq_variant(cfg.variant)),
-        "ptq_weight_noise": noise if (use_fp16_ptq or is_ptq_variant(cfg.variant)) else 0.0,
-        "ptq_noise_seed": (
-            noise_seed if (use_fp16_ptq or is_ptq_variant(cfg.variant)) else None
-        ),
+        "fp16_ptq": fp16,
         "action_mode": mode,
     }
 
@@ -225,26 +136,9 @@ def evaluate_ablation_steps(
     plant: Any | None = None,
     n_steps: int = ABLATION_EVAL_STEPS,
     carrier_hz: float | None = None,
-    gumbel_seed_offset: int | None = None,
+    use_fp16_ptq: bool = False,
 ) -> dict[str, Any]:
-    """Short PSD eval trace (Fig 7 / Fig 6 — 10 stimulation steps)."""
-    from controllers.sea_dbs.config import (
-        FIG5A_INFERENCE_BURST_MS,
-        FIG5A_INFERENCE_N_OBS,
-        FIG5A_INFERENCE_WINDOW_S,
-        FIG5A_PREFILL_OBS_WINDOW,
-        FIG5A_UNTREATED_WINDOW_S,
-        FIG7_GUMBEL_SEED_OFFSET,
-        FIG7_VARIANT_GUMBEL_OFFSETS,
-        INFERENCE_CARRIER_50HZ,
-    )
-
-    offset = gumbel_seed_offset
-    if offset is None and config is not None:
-        offset = FIG7_VARIANT_GUMBEL_OFFSETS.get(config.variant, FIG7_GUMBEL_SEED_OFFSET)
-    elif offset is None:
-        offset = FIG7_GUMBEL_SEED_OFFSET
-
+    """Short PSD eval trace (Figs 5–7 — untreated t=0 + 10 stimulation steps)."""
     return evaluate(
         checkpoint,
         config=config,
@@ -252,11 +146,6 @@ def evaluate_ablation_steps(
         episodes=1,
         max_steps=n_steps,
         carrier_hz=carrier_hz or INFERENCE_CARRIER_50HZ,
-        action_mode="gumbel",
-        dbs_burst_ms=FIG5A_INFERENCE_BURST_MS,
-        biomarker_window_s=FIG5A_INFERENCE_WINDOW_S,
-        n_obs=FIG5A_INFERENCE_N_OBS,
-        gumbel_seed_offset=offset,
-        untreated_window_s=FIG5A_UNTREATED_WINDOW_S,
-        prefill_obs_window=FIG5A_PREFILL_OBS_WINDOW,
+        use_fp16_ptq=use_fp16_ptq,
+        action_mode="argmax",
     )

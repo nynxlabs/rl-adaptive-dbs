@@ -1956,7 +1956,7 @@ def _ravivarapu_4a_status_line(manifest: dict[str, Any]) -> str:
     if gates.get("pass"):
         return (
             f"**Status:** **Pass**{rep} — `shape_pass` and full `pass`; "
-            f"`fixed_episode_seed_until=2`; `{train}`{roll_note}; "
+            f"`{train}`{roll_note}; "
             "paper overlay (black baseline, grey SEA-DBS). "
             f"Manifest `{manifest_rel}`."
         )

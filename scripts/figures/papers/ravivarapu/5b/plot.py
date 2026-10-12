@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Ravivarapu Fig 5b — inference @ 30 Hz carrier (post-train eval).
 
-Eval-only panel. Train or resume SEA-DBS weights via Fig 4a ``plot.py``
-(``--resume``) or Fig 7 ``plot.py`` (``--retrain``).
+Eval-only panel on the Fig 4 checkpoints (``baseline_train0.pt`` /
+``paper_train0.pt``). Each actor runs on the plant / observation setup it was
+trained on (read from the checkpoint); the only override is the paper's
+stimulation frequency (30 Hz here). Untreated t=0 plus 10 deterministic (argmax)
+actions. Cross-panel gates read Fig 5a's ``series.json``.
 
-Paper panel: steps 0–10; SEA-DBS below Baseline; weaker than 50 Hz.
-Same checkpoints as Fig 5a. Carrier 30 Hz, 20 ms burst (one pulse at
-t=5 ms of the 100 ms window), and n_obs=8 are Fig 5b eval overrides:
-2+ 30 Hz pulses raise last-window Pβ; delay 0 last ~0.424; delay 5 ms
-last ~0.393 (paper SEA end ~0.390). Fig 4a train stays 100 ms / 62 ms
-@ 130 Hz. Actions are hard Gumbel-max (offset 34: skip-first).
+Run:
+  uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5b/plot.py --export-notes --update-report
+  uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5b/plot.py --plot-only
 """
 from __future__ import annotations
 
@@ -31,14 +31,6 @@ import numpy as np
 
 from controllers.sea_dbs.config import (
     ABLATION_EVAL_STEPS,
-    FIG5B_BASELINE_BURST_MS,
-    FIG5B_BASELINE_STEP_PULSE_DELAYS,
-    FIG5B_GUMBEL_SEED_OFFSET,
-    FIG5B_INFERENCE_BURST_MS,
-    FIG5B_INFERENCE_N_OBS,
-    FIG5B_INFERENCE_PULSE_DELAY_MS,
-    FIG5B_INFERENCE_WINDOW_S,
-    FIG5B_SEA_STEP_PULSE_DELAYS,
     INFERENCE_CARRIER_30HZ,
     INFERENCE_CARRIER_50HZ,
     INFERENCE_PSD_SAMPLES,
@@ -52,6 +44,9 @@ _resume_cli = load_script_module("figure_resume_cli", _RESUME_CLI)
 
 _PARALLEL_SERIES = Path(__file__).resolve().parents[2] / "parallel_series.py"
 _parallel_series = load_script_module("figure_parallel_series", _PARALLEL_SERIES)
+
+_COMMON = Path(__file__).resolve().parents[1] / "common.py"
+_common = load_script_module("ravivarapu_common", _COMMON)
 
 _DIG = Path(__file__).resolve().parents[4] / "digitization"
 if str(_DIG) not in sys.path:
@@ -67,60 +62,19 @@ FIGURES_DIR = Path("figures/ravivarapu/images/5b")
 FIG5A_SERIES = Path("artifacts/figures/papers/ravivarapu/5a/series.json")
 OUT_STEM = "inference_30hz"
 VARIANTS = ("baseline", "paper")
+CARRIER_HZ = INFERENCE_CARRIER_30HZ
 
 
-def _linked_png(path: Path) -> Path:
-    path = Path(path)
-    roots: list[Path] = []
-    main_root = getattr(_figure_promote, "REPO_ROOT", None)
-    if isinstance(main_root, Path):
-        roots.append(main_root)
-    roots.append(Path.cwd())
-    for root in roots:
-        paper = root / path.parent / "paper.png"
-        if not paper.is_symlink():
-            continue
-        linked_dir = paper.resolve().parent
-        linked_target = linked_dir / path.name
-        local = path if path.is_absolute() else Path.cwd() / path
-        local.parent.mkdir(parents=True, exist_ok=True)
-        if not linked_target.exists():
-            linked_target.parent.mkdir(parents=True, exist_ok=True)
-            linked_target.touch()
-        if local.exists() or local.is_symlink():
-            if local.resolve() != linked_target.resolve():
-                return linked_target
-            return local
-        try:
-            local.symlink_to(linked_target)
-        except OSError:
-            return linked_target
-        return local
-    path.parent.mkdir(parents=True, exist_ok=True)
-    return path
-
-
-def _ckpt(variant: str, seed: int) -> Path:
-    path = Path("artifacts/figures/papers/ravivarapu/4") / f"{variant}_train{seed}.pt"
-    if path.is_file():
-        return path
-    return Path("artifacts/sea_dbs") / f"{variant}_train{seed}.pt"
-
-
-def evaluate_gates(
-    traces: dict[str, list[float]],
-    *,
-    traces_50: dict[str, list[float]] | None,
-    n_expected: int,
-) -> dict[str, Any]:
-    sea_50 = traces_50.get("paper") if traces_50 else None
-    baseline_50 = traces_50.get("baseline") if traces_50 else None
+def evaluate_gates(traces: dict[str, list[float]], *, n_expected: int) -> dict[str, Any]:
+    traces_50 = None
+    if FIG5A_SERIES.is_file():
+        traces_50 = json.loads(FIG5A_SERIES.read_text(encoding="utf-8"))["traces"]
     dig = ravivarapu_inference_gates(
         traces["baseline"],
         traces["paper"],
-        carrier_hz=INFERENCE_CARRIER_30HZ,
-        sea_trace_50hz=sea_50,
-        baseline_trace_50hz=baseline_50,
+        carrier_hz=CARRIER_HZ,
+        sea_trace_50hz=traces_50.get("paper") if traces_50 else None,
+        baseline_trace_50hz=traces_50.get("baseline") if traces_50 else None,
         n_expected=n_expected,
     )
     return merge_gate_report(dig, {"n_psd_samples": len(traces["baseline"])})
@@ -130,15 +84,15 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--smoke", action="store_true")
-    parser.add_argument(
-        "--plot-only",
-        action="store_true",
-        help="Replot from cached series.json (no eval)",
-    )
+    parser.add_argument("--plot-only", action="store_true", help="Replot from cached series.json (no eval)")
     _resume_cli.add_export_notes_arg(parser)
     _resume_cli.add_update_report3_arg(parser)
     _parallel_series.add_parallel_series_argument(parser)
+    _common.add_no_promote_arg(parser)
     args = parser.parse_args()
+    if args.no_promote:
+        args.export_notes = False
+        args.update_report = False
     _resume_cli.configure_promote_publish(args, _figure_promote)
     steps = 5 if args.smoke else ABLATION_EVAL_STEPS
     n_expected = steps + 1 if args.smoke else INFERENCE_PSD_SAMPLES
@@ -148,39 +102,22 @@ def main() -> int:
     if args.plot_only:
         if not series_path.is_file():
             raise SystemExit(f"missing series cache: {series_path}")
-        cached = json.loads(series_path.read_text(encoding="utf-8"))
-        traces = cached["traces"]
-        actions = cached.get("actions") or {}
-        steps = int(cached.get("steps", len(next(iter(traces.values()))) - 1))
-        n_expected = int(cached.get("n_psd_samples", len(next(iter(traces.values())))))
+        payload = json.loads(series_path.read_text(encoding="utf-8"))
+        traces = payload["traces"]
+        actions = payload.get("actions") or {}
+        eval_meta = payload.get("eval_meta") or {}
+        steps = int(payload.get("steps", len(next(iter(traces.values()))) - 1))
+        n_expected = int(payload.get("n_psd_samples", len(next(iter(traces.values())))))
     else:
         eval_jobs = [
             _parallel_series.RavivarapuInferenceEvalJob(
-                variant="paper",
+                variant=variant,
                 seed=args.seed,
-                checkpoint=str(_ckpt("paper", args.seed)),
+                checkpoint=str(_common.fig4_checkpoint(variant, args.seed)),
                 max_steps=steps,
-                carrier_hz=INFERENCE_CARRIER_30HZ,
-                dbs_burst_ms=FIG5B_INFERENCE_BURST_MS,
-                biomarker_window_s=FIG5B_INFERENCE_WINDOW_S,
-                n_obs=FIG5B_INFERENCE_N_OBS,
-                gumbel_seed_offset=FIG5B_GUMBEL_SEED_OFFSET,
-                dbs_pulse_delay_ms=FIG5B_INFERENCE_PULSE_DELAY_MS,
-                step_pulse_delays=FIG5B_SEA_STEP_PULSE_DELAYS,
-            ),
-            _parallel_series.RavivarapuInferenceEvalJob(
-                variant="baseline",
-                seed=args.seed,
-                checkpoint=str(_ckpt("baseline", args.seed)),
-                max_steps=steps,
-                carrier_hz=INFERENCE_CARRIER_30HZ,
-                dbs_burst_ms=FIG5B_BASELINE_BURST_MS,
-                biomarker_window_s=FIG5B_INFERENCE_WINDOW_S,
-                n_obs=FIG5B_INFERENCE_N_OBS,
-                gumbel_seed_offset=FIG5B_GUMBEL_SEED_OFFSET,
-                dbs_pulse_delay_ms=FIG5B_INFERENCE_PULSE_DELAY_MS,
-                step_pulse_delays=FIG5B_BASELINE_STEP_PULSE_DELAYS,
-            ),
+                carrier_hz=CARRIER_HZ,
+            )
+            for variant in VARIANTS
         ]
         eval_results = _parallel_series.run_series_parallel(
             eval_jobs,
@@ -192,10 +129,6 @@ def main() -> int:
             traces[result.variant] = result.trace
             actions[result.variant] = result.actions
             eval_meta[result.variant] = result.eval_meta
-
-    traces_50 = None
-    if FIG5A_SERIES.is_file():
-        traces_50 = json.loads(FIG5A_SERIES.read_text())["traces"]
 
     fig, ax = plt.subplots(figsize=(6, 4))
     scale = float(_paper_overlay.RAVI_INFERENCE_PAPER_Y_TO_NORM)
@@ -217,13 +150,12 @@ def main() -> int:
     ax.grid(True, alpha=0.3)
     _paper_overlay.place_legend(ax, fontsize=8)
     png_path, png_version = _figure_promote.next_versioned_png(FIGURES_DIR, OUT_STEM)
-    fig.savefig(_linked_png(png_path), dpi=150)
+    fig.savefig(_common.linked_png(png_path, _figure_promote, promote=not args.no_promote), dpi=150)
     plt.close(fig)
 
-    if args.smoke:
-        gates = {"pass": False, "smoke_override": True}
-    else:
-        gates = evaluate_gates(traces, traces_50=traces_50, n_expected=n_expected)
+    gates = {"pass": False, "smoke_override": True} if args.smoke else evaluate_gates(
+        traces, n_expected=n_expected
+    )
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     if not args.plot_only:
         series_path.write_text(
@@ -240,12 +172,12 @@ def main() -> int:
             + "\n"
         )
     caption = (
-        f"Inference GPi beta PSD vs step @ 30 Hz (seed {args.seed}, Gumbel-max); "
-        f"pass={gates.get('pass')}; Baseline vs SEA-DBS."
+        f"Inference GPi beta PSD vs step @ 30 Hz (seed {args.seed}, argmax actions, "
+        f"training plant setup); pass={gates.get('pass')}; Baseline vs SEA-DBS."
     )
     manifest = {
         "panel": "5b",
-        "carrier_hz": INFERENCE_CARRIER_30HZ,
+        "carrier_hz": CARRIER_HZ,
         "cross_check_carrier_hz": INFERENCE_CARRIER_50HZ,
         "n_steps": steps,
         "n_psd_samples": n_expected,
@@ -259,12 +191,13 @@ def main() -> int:
     }
     manifest = _panel.stamp_manifest(manifest)
     (CACHE_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
-    if hasattr(_figure_promote, "promote_ravivarapu_5b"):
+    if not args.no_promote and hasattr(_figure_promote, "promote_ravivarapu_5b"):
         _figure_promote.promote_ravivarapu_5b(manifest=manifest, png_path=png_path)
     print(json.dumps(manifest, indent=2))
     print(f"wrote {png_path}")
 
     return _panel.exit_code(manifest, smoke=bool(getattr(args, "smoke", False)))
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

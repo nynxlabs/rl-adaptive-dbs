@@ -52,47 +52,34 @@ DEFAULT_MANIFEST = CACHE_DIR / "manifest_4b.json"
 OUT_STEM = "training_reward"
 PLOT_4A = Path(__file__).resolve().parents[1] / "4a" / "plot.py"
 DISPLAY_ROLL_WINDOW = 10
+EPISODE_STEPS = 30
+
+_COMMON = Path(__file__).resolve().parents[1] / "common.py"
+_common = load_script_module("ravivarapu_common", _COMMON)
 
 
-def _rolling_mean(values: list[float] | np.ndarray, window: int) -> np.ndarray:
-    y = np.asarray(values, dtype=float)
-    if window <= 1 or y.size == 0:
-        return y
-    out = np.empty_like(y)
-    for i in range(y.size):
-        lo = max(0, i - window + 1)
-        out[i] = float(y[lo : i + 1].mean())
-    return out
+def _per_step_rewards(series: dict[str, Any], variant: str) -> np.ndarray:
+    """Episode reward as the mean Eq. (7) reward per step (paper Fig 4b units).
 
-
-def _linked_png(path: Path) -> Path:
-    path = Path(path)
-    paper = path.parent / "paper.png"
-    if not paper.is_symlink():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return path
-    linked_dir = paper.resolve().parent
-    linked_target = linked_dir / path.name
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() or path.is_symlink():
-        return path
-    if not linked_target.exists():
-        linked_target.touch()
-    path.symlink_to(linked_target)
-    return path
+    The paper's Fig 4b y-range (~-1.4 → 0) is one Eq. (7) step reward, not a
+    30-step sum; series.json stores the sum.
+    """
+    entry = series["variants"][variant]
+    steps = int((entry.get("config") or {}).get("max_episode_steps", EPISODE_STEPS))
+    return np.asarray(entry["episode_rewards"], dtype=float) / float(max(1, steps))
 
 
 def evaluate_gates(series: dict[str, Any]) -> dict[str, Any]:
     if series.get("smoke"):
         return {"pass": False, "shape_pass": False, "smoke_override": True}
-    baseline = series["variants"]["baseline"]["episode_rewards"]
-    sea = series["variants"]["paper"]["episode_rewards"]
+    baseline = _per_step_rewards(series, "baseline")
+    sea = _per_step_rewards(series, "paper")
     dig = ravivarapu_fig4b_gates(baseline, sea, n_expected=150)
     merged = merge_gate_report(dig, {"n_episodes": min(len(baseline), len(sea))})
     return ravivarapu_fig4b_attach_tiered_pass(merged)
 
 
-def plot_series(series: dict[str, Any], png_path: Path) -> None:
+def plot_series(series: dict[str, Any], png_path: Path, *, promote: bool = True) -> None:
     fig, ax = plt.subplots(figsize=(6, 4))
     repl_ys: list[np.ndarray] = []
     roll_w = DISPLAY_ROLL_WINDOW
@@ -100,26 +87,23 @@ def plot_series(series: dict[str, Any], png_path: Path) -> None:
         ("baseline", f"Baseline (DDPG, roll{roll_w})"),
         ("paper", f"SEA-DBS (roll{roll_w})"),
     ):
-        raw_rewards = series["variants"][variant]["episode_rewards"]
-        rewards = _rolling_mean(raw_rewards, roll_w)
+        rewards = _common.rolling_mean(_per_step_rewards(series, variant), roll_w)
         episodes = np.arange(1, len(rewards) + 1)
         ax.plot(episodes, rewards, label=label, linewidth=1.6 if variant == "baseline" else 1.8)
         repl_ys.append(rewards)
-    early = float(np.mean(repl_ys[0][: max(1, len(repl_ys[0]) // 10)])) if repl_ys else -95.0
-    paper = _paper_overlay.overlay_ravivarapu_fig4b(ax, replication_early_mean=early)
+    paper = _paper_overlay.overlay_ravivarapu_fig4b(ax, y_scale=1.0)
     paper_ys = [v[0] for v in paper.values()]
     all_y = np.concatenate(repl_ys + paper_ys)
-    lo = float(np.nanmin(all_y))
-    span = 20.0 - lo
-    pad = 0.08 * (span + 1e-6)
-    ax.set_ylim(lo - pad, 20.0)
+    lo, hi = float(np.nanmin(all_y)), float(np.nanmax(all_y))
+    pad = 0.06 * (hi - lo + 1e-6)
+    ax.set_ylim(lo - pad, hi + pad)
     ax.set_xlabel("Training episode")
-    ax.set_ylabel("Episode reward (Eq. 7)")
+    ax.set_ylabel("Mean step reward (Eq. 7)")
     ax.grid(True, alpha=0.3)
     _paper_overlay.place_legend(ax, loc="lower right", fontsize=8)
     fig.tight_layout()
     png_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(_linked_png(png_path), dpi=150)
+    fig.savefig(_common.linked_png(png_path, _figure_promote, promote=promote), dpi=150)
     plt.close(fig)
 
 
@@ -141,7 +125,11 @@ def main() -> int:
         action="store_true",
         help="After promote, refresh Report 3 gallery image links in the notes folder",
     )
+    _common.add_no_promote_arg(parser)
     args = parser.parse_args()
+    if args.no_promote:
+        args.export_notes = False
+        args.update_report = False
     _figure_promote.set_export_notes_images(args.export_notes)
     _figure_promote.set_update_report3(args.update_report)
 
@@ -170,7 +158,7 @@ def main() -> int:
 
     gates = evaluate_gates(series)
     png_path, png_version = _figure_promote.next_versioned_png(FIGURES_DIR, OUT_STEM)
-    plot_series(series, png_path)
+    plot_series(series, png_path, promote=not args.no_promote)
 
     manifest = {
         "panel": "4b",
@@ -182,14 +170,15 @@ def main() -> int:
         "elapsed_s": round(time.time() - t0, 1),
         "caption": (
             f"Training episode reward vs episode (seed {args.seed}); "
-            "paired with Fig 4a cache; display roll10 (gates on raw)."
+            "mean Eq. (7) reward per step; paired with Fig 4a cache; "
+            "display roll10 (gates on raw)."
         ),
         "series_cache": SHARED_SERIES.as_posix(),
         "display_roll_window": DISPLAY_ROLL_WINDOW,
     }
     manifest = _panel.stamp_manifest(manifest)
     DEFAULT_MANIFEST.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-    if hasattr(_figure_promote, "promote_ravivarapu_4b"):
+    if not args.no_promote and hasattr(_figure_promote, "promote_ravivarapu_4b"):
         _figure_promote.promote_ravivarapu_4b(manifest=manifest, png_path=png_path)
     print(json.dumps(manifest, indent=2))
     print(f"wrote {png_path}")
