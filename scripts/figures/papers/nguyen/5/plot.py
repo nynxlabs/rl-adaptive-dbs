@@ -42,6 +42,7 @@ _paper_overlay = _overlay_import.load_paper_overlay()
 import matplotlib.pyplot as plt
 import numpy as np
 from controllers.snn.adapter import CBGT_POPULATIONS, STIMULATED_POPULATION
+from controllers.snn.energy import dbs_energy_index
 
 FIG4_CACHE = Path("artifacts/figures/papers/nguyen/4")
 FIG4_SERIES = FIG4_CACHE / "series.json"
@@ -132,6 +133,36 @@ def network_spikes(series: dict[str, Any]) -> np.ndarray:
     return by_pop[:, keep].sum(axis=1)
 
 
+def final_setting_energy(series: dict[str, Any]) -> np.ndarray | None:
+    """Report only: Eq. (6) at each episode's final DBS setting × the 25-step horizon.
+
+    The panel plots the trainer's per-step mean × 25 (``episode_energies``). The paper does
+    not say how an episode's energy is formed; its late level (~2,040) equals Eq. (6) at its
+    late Fig. 6 setting × 25, which this metric reproduces for our run
+    (docs/figures/nguyen/5.md § Dose-response and the late energy gap).
+    """
+    keys = ("episode_frequencies", "episode_amplitudes", "episode_pulse_widths")
+    if not all(k in series for k in keys):
+        return None
+    cfg = series.get("config", {})
+    steps = int(series.get("max_episode_steps", 25))
+    step_s = float(cfg.get("step_duration_ms", 100.0)) / 1000.0
+    return np.array(
+        [
+            steps
+            * dbs_energy_index(
+                frequency_hz=float(f),
+                amplitude=float(a),
+                pulse_width_ms=float(w),
+                step_duration_s=step_s,
+                stimulated_neurons=int(cfg.get("stimulated_neurons", 1)),
+            )
+            for f, a, w in zip(*(series[k] for k in keys))
+        ],
+        dtype=float,
+    )
+
+
 def evaluate_gates(series: dict[str, Any], *, fig4_manifest: dict[str, Any] | None) -> dict[str, Any]:
     spikes = network_spikes(series)
     energies = np.asarray(series["episode_energies"], dtype=float)
@@ -167,6 +198,10 @@ def evaluate_gates(series: dict[str, Any], *, fig4_manifest: dict[str, Any] | No
         "spike_std": spike_std,
         "energy_std": energy_std,
     }
+    final_energy = final_setting_energy(series)
+    if final_energy is not None and n > 350:
+        gates["energy_late_at_final_setting"] = float(np.mean(final_energy[350:]))
+        gates["energy_late"] = float(np.mean(energies[350:]))
     gates["pass"] = bool(
         shared_train
         and spike_series_has_variance
