@@ -1046,8 +1046,9 @@ def ravivarapu_fig6_gates(
     return _gate_pack(gates, metrics)
 
 
-# Ties within this (normalized PSD) count as "highest" for the Fig 7 GS tail gate.
-FIG7_TAIL_TIE_TOL = 0.005
+# Fig 7 tail ordering must be a real separation, not a tie: paper gaps are
+# ~0.04–0.05 (normalized PSD); require at least this much.
+FIG7_MIN_SEPARATION = 0.005
 
 
 def ravivarapu_fig7_gates(
@@ -1103,9 +1104,9 @@ def ravivarapu_fig7_gates(
             early_mae_s <= 0.030 if np.isfinite(early_mae_s) else True
         ),
         "baseline_above_pm_early": baseline_above_pm_early,
-        "sea_dbs_lowest_tail": sea <= min(base, pm, gs) + 1e-6,
+        "sea_dbs_lowest_tail": sea < min(base, pm, gs) - FIG7_MIN_SEPARATION,
         # Paper Fig 7 tails (steps 6–10, ÷1000): GS 0.419 > Baseline 0.380 ≈ PM 0.373 > SEA 0.323.
-        "gs_highest_tail": gs >= max(base, pm, sea) - FIG7_TAIL_TIE_TOL,
-        "pm_not_sea": abs(pm - base) <= abs(pm - sea),
+        "gs_highest_tail": gs > max(base, pm, sea) + FIG7_MIN_SEPARATION,
+        "pm_not_sea": abs(pm - base) < abs(pm - sea),
     }
     return _gate_pack(gates, {"tail_means": tail, "early_mae_baseline": early_mae_b, "early_mae_sea": early_mae_s})

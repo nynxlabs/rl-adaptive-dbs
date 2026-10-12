@@ -470,3 +470,14 @@ def test_fig7_rejects_gs_not_highest():
     report = ravivarapu_fig7_gates(traces)
     assert not report["gates"]["gs_highest_tail"]
     assert not report["pass"]
+
+
+def test_fig7_rejects_identical_variants():
+    """Four policies that all stimulate every step tie; ties are not the paper's ordering."""
+    from ravivarapu_gates import ravivarapu_fig7_gates
+
+    trace = [0.449, 0.418, 0.387, 0.357, 0.326, 0.295, 0.295, 0.295, 0.295, 0.295, 0.295]
+    report = ravivarapu_fig7_gates({k: list(trace) for k in ("baseline", "baseline-pm", "baseline-gs", "paper")})
+    assert not report["gates"]["sea_dbs_lowest_tail"]
+    assert not report["gates"]["gs_highest_tail"]
+    assert not report["gates"]["pm_not_sea"]
