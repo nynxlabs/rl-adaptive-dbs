@@ -92,7 +92,7 @@ def plot_series(series: dict[str, Any], png_path: Path, *, promote: bool = True)
         ax.plot(episodes, rewards, label=label, linewidth=1.6 if variant == "baseline" else 1.8)
         repl_ys.append(rewards)
     paper = _paper_overlay.overlay_ravivarapu_fig4b(ax, y_scale=1.0)
-    paper_ys = [v[0] for v in paper.values()]
+    paper_ys = [py for _px, py in paper.values()]
     all_y = np.concatenate(repl_ys + paper_ys)
     lo, hi = float(np.nanmin(all_y)), float(np.nanmax(all_y))
     pad = 0.06 * (hi - lo + 1e-6)
