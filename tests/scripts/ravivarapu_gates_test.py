@@ -186,22 +186,41 @@ def test_fig4b_tiered_shape_pass_without_full_polish():
     assert not tiered["pass"]
 
 
+def _paper_steps(stem: str, series: str) -> list[float]:
+    from ravivarapu_gates import _paper_early_norm
+
+    values = _paper_early_norm(stem, series, n=11)
+    assert values is not None
+    return [float(v) for v in values]
+
+
 @needs_paper_curves
-def test_inference_shape_gates_pass_on_split_decline():
-    # 150 ms / n_obs=6 with 100 ms untreated start: SEA reaches the last-window floor at step 6.
-    baseline = [0.4606, 0.4606, 0.4164, 0.4274, 0.4075, 0.3943, 0.3721, 0.3500, 0.3500, 0.3500, 0.3500]
-    sea = [0.4606, 0.3943, 0.3721, 0.3611, 0.3544, 0.3500, 0.3279, 0.3279, 0.3279, 0.3279, 0.3279]
+def test_inference_50hz_paper_self_passes():
+    baseline = _paper_steps("fig5a", "Baseline 50Hz")
+    sea = _paper_steps("fig5a", "SEA-DBS 50Hz")
     report = ravivarapu_inference_gates(baseline, sea, carrier_hz=50.0)
-    assert report["pass"]
-    assert report["gates"]["shared_start_near_paper"]
-    assert report["gates"]["baseline_declines"]
-    assert report["gates"]["paper_declines"]
-    assert report["gates"]["paper_end_below_baseline"]
-    assert report["gates"]["paper_steeper_drop"]
-    assert report["gates"]["early_mae_sea_3_5"]
-    assert report["gates"]["late_sea_declines"]
-    assert report["gates"]["late_baseline_declines"]
-    assert report["gates"]["mid_mae_sea"]
+    assert report["pass"], report["gates"]
+
+
+@needs_paper_curves
+def test_inference_30hz_paper_self_passes():
+    report = ravivarapu_inference_gates(
+        _paper_steps("fig5b", "Baseline 30Hz"),
+        _paper_steps("fig5b", "SEA-DBS 30Hz"),
+        carrier_hz=30.0,
+        sea_trace_50hz=_paper_steps("fig5a", "SEA-DBS 50Hz"),
+        baseline_trace_50hz=_paper_steps("fig5a", "Baseline 50Hz"),
+    )
+    assert report["pass"], report["gates"]
+
+
+@needs_paper_curves
+def test_inference_50hz_rejects_identical_always_on_traces():
+    """Two policies that both stimulate every step overlay — paper splits them."""
+    sea = _paper_steps("fig5a", "SEA-DBS 50Hz")
+    report = ravivarapu_inference_gates(list(sea), list(sea), carrier_hz=50.0)
+    assert not report["gates"]["paper_end_below_baseline"]
+    assert not report["pass"]
 
 
 def test_inference_shape_gates_any_net_drop_counts():
@@ -280,45 +299,6 @@ def test_inference_5b_rejects_baseline_early_drop():
     )
     assert not report["gates"]["early_baseline_rises"]
     assert not report["pass"]
-
-
-def test_inference_early_window_passes_on_five_pulse_50hz():
-    """140 ms / 8-pulse 50 Hz with an early Baseline skip (paper 3–5)."""
-    sea = [
-        0.4795,
-        0.4092,
-        0.3857,
-        0.3740,
-        0.3670,
-        0.3623,
-        0.3589,
-        0.3564,
-        0.3545,
-        0.3529,
-        0.3516,
-    ]
-    baseline = [
-        0.4795,
-        0.4795,
-        0.4326,
-        0.4443,
-        0.4232,
-        0.4092,
-        0.3991,
-        0.3916,
-        0.3857,
-        0.3810,
-        0.3772,
-    ]
-    report = ravivarapu_inference_gates(baseline, sea, carrier_hz=50.0)
-    if "early_mae_sea" not in report["gates"]:
-        return
-    assert report["gates"]["early_mae_sea"]
-    assert report["gates"]["early_mae_sea_3_5"]
-    assert report["gates"]["early_mae_baseline"]
-    assert report["gates"]["early_sea_declines"]
-    assert report["gates"]["early_baseline_declines"]
-    assert report["gates"]["early_sea_below_baseline"]
 
 
 def test_inference_early_window_rejects_overlaid_traces():
@@ -453,3 +433,40 @@ def test_fig7_gates_pass():
     assert report["gates"]["pm_not_sea"]
     # Baseline must be above or equal to Baseline+PM across steps 0-4
     assert all(b >= pm for b, pm in zip(traces["baseline"][:5], traces["baseline-pm"][:5]))
+
+
+@needs_paper_curves
+def test_fig6_paper_self_passes():
+    from ravivarapu_gates import ravivarapu_fig6_gates
+
+    names = ("Baseline", "Baseline + PTQ(fp16)", "SEA-DBS", "SEA-DBS + PTQ(fp16)")
+    report = ravivarapu_fig6_gates({n: _paper_steps("fig6", n) for n in names})
+    assert report["pass"], report["gates"]
+
+
+@needs_paper_curves
+def test_fig7_paper_self_passes():
+    from ravivarapu_gates import ravivarapu_fig7_gates
+
+    names = {
+        "baseline": "Baseline",
+        "baseline-pm": "Baseline + PM",
+        "baseline-gs": "Baseline + GS",
+        "paper": "SEA-DBS",
+    }
+    report = ravivarapu_fig7_gates({k: _paper_steps("fig7", v) for k, v in names.items()})
+    assert report["pass"], report["gates"]
+
+
+def test_fig7_rejects_gs_not_highest():
+    from ravivarapu_gates import ravivarapu_fig7_gates
+
+    traces = {
+        "baseline": [0.46, 0.45, 0.44, 0.43, 0.42, 0.41, 0.40, 0.40, 0.40, 0.40, 0.40],
+        "baseline-pm": [0.46, 0.44, 0.43, 0.42, 0.41, 0.40, 0.39, 0.39, 0.39, 0.39, 0.39],
+        "baseline-gs": [0.46, 0.44, 0.42, 0.40, 0.38, 0.36, 0.35, 0.35, 0.35, 0.35, 0.35],
+        "paper": [0.46, 0.43, 0.40, 0.37, 0.34, 0.33, 0.32, 0.32, 0.32, 0.32, 0.32],
+    }
+    report = ravivarapu_fig7_gates(traces)
+    assert not report["gates"]["gs_highest_tail"]
+    assert not report["pass"]
