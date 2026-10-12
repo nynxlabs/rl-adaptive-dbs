@@ -4,7 +4,7 @@ This document specifies the **SEA-DBS** (sample-efficient actor–critic) contro
 
 **Companion spec:** The shared **Kumaravelu et al. (2016)** plant — [plant.md](../../plant.md). **Mehregan et al.** Gymnasium API — [environment.md](../../environment.md). **This document is authoritative for the Ravivarapu controller**—binary actions, predictive reward modeling, Gumbel-Softmax exploration, timing, reward shape, and training—unless the others explicitly describe the same quantity.
 
-**Scheduling:** SEA-DBS replication is **Phase 6** and is **active in parallel** with Nguyen ([roadmap.md](../../development/roadmap.md)). Panel tracker and **qualitative gates:** [figures/ravivarapu/replications.md](../../../figures/ravivarapu/replications.md) (Figs 4a/4b Pass; 5–7 open). Gate design notes: [docs/figures/papers/ravivarapu.md](../../figures/papers/ravivarapu.md). Mehregan panel set is Pass — [figures/mehregan/replications.md](../../../figures/mehregan/replications.md).
+**Scheduling:** SEA-DBS replication is **Phase 6** and is **active in parallel** with Nguyen ([roadmap.md](../../development/roadmap.md)). Panel tracker and **qualitative gates:** [figures/ravivarapu/replications.md](../../../figures/ravivarapu/replications.md) (all panels Fail with documented gaps after the oct 2026 honest-replication pass, §15). Gate design notes: [docs/figures/papers/ravivarapu.md](../../figures/papers/ravivarapu.md). Mehregan panel set is Pass — [figures/mehregan/replications.md](../../../figures/mehregan/replications.md).
 
 ---
 
@@ -59,7 +59,7 @@ $$
 
 **Evaluation / inference:** **Argmax** (or hardened GS at $\tau \approx 0$) on actor logits—**intentionally open** which convention matches released code; document the choice next to `select_action`.
 
-**Baselines in the paper:** A **DDPG baseline** without predictive modeling or GS (same binary action space) is used for comparison (§V, Table II, Figs. 4–7). Implement `variant=baseline` vs `variant=paper` (full SEA-DBS: PM+GS) for benchmarking per [benchmarking.md](../../benchmarking.md).
+**Baselines in the paper:** A **DDPG baseline** without predictive modeling or GS (same binary action space) is used for comparison (§V, Table II, Figs. 4–7). Implement `variant=baseline` vs `variant=paper` (full SEA-DBS: PM+GS) for benchmarking per [benchmarking.md](../../benchmarking.md). **Chosen (Baseline exploration, paper-silent):** ε-greedy on the actor's argmax, ε linear from 1.0 to 0.05 over the whole run; its actor loss feeds $\mathrm{softmax}(\text{logits})$ to the critic (the deterministic-policy-gradient analogue for two actions). All four variants share every other setting; `variant` only switches PM and GS.
 
 ---
 
@@ -77,7 +77,19 @@ Values from **§V.A (Experiment setup)** unless noted.
 
 The shared repo environment spec follows **Mehregan timing** for a single Gym API. **SEA-DBS replication requires either** (i) a **sea_dbs-specific env config** / adapter that subsamples or re-integrates at **2 ms** RL steps, or (ii) an agreed project convention that maps Ravivarapu steps onto longer segments—**intentionally open** until `envs/` implements both profiles; do not silently use 2 s steps while claiming SEA-DBS parity.
 
-**Repo convention (Fig 4a+):** Ravivarapu reports **2 ms** RL cadence (Table I / §V.A), but multitaper GPi $P_\beta$ on the Kumaravelu plant needs **≥ ~100 ms** of spike data per integrate. `SEA_DBSEnvAdapter` therefore integrates **`biomarker_window_s = 0.1`** per RL step while logging **`step_duration_ms = 2`** for paper metadata. Episode length remains **30 steps**; simulated time per episode is **3 s** (not 60 ms) under this convention—documented here and in `SEAADBSConfig.integration_duration_s`.
+**Repo convention (all Ravivarapu panels):** Ravivarapu reports **2 ms** RL cadence (Table I / §V.A), but multitaper GPi $P_\beta$ on the Kumaravelu plant needs ≳100 ms of spike data per integrate. `SEA_DBSEnvAdapter` therefore integrates **`biomarker_window_s = 0.15`** per RL step while logging **`step_duration_ms = 2`** for paper metadata. Episode length remains **30 steps**; simulated time per episode is **4.5 s** (not 60 ms). Each step is an **independent plant shot** from the episode IC (`plant_integration_mode="disconnected"`, the Mehregan-style env); a stimulating step runs the carrier for the whole window.
+
+Why 150 ms: it is the shortest window in which the paper's 50 Hz stimulation suppresses GPi beta on Kumaravelu. Stim / untreated $P_\beta$ over plant seeds 0–9 (`scripts/probes/ravivarapu_plant_levels.py`):
+
+| Shot | 50 Hz | 30 Hz | 130 Hz |
+|------|-------|-------|--------|
+| 100 ms | $0.95 \pm 0.16$ | $1.05 \pm 0.08$ | $0.39 \pm 0.14$ |
+| 150 ms | $0.69 \pm 0.06$ | $1.13 \pm 0.20$ | — |
+| 200 ms | $0.65 \pm 0.14$ | $1.21 \pm 0.26$ | — |
+
+The paper's Fig 5a SEA-DBS end/start ratio is $0.67$. 30 Hz raises beta at every window, so Fig 5b's declining curves are out of reach of any policy on this plant ([docs/figures/ravivarapu/5b.md](../../figures/ravivarapu/5b.md)).
+
+**Continuous plant (diagnostic only):** `plant_integration_mode="continuous"` carries the network state across the episode's segments (PythonPlant `carry=True`). Open-loop (`scripts/probes/ravivarapu_openloop_traces.py`, seeds 0–4): untreated beta drifts up from 0.43 to ~0.53 over 10 segments, and always-on 50 Hz falls to 0.32 by step 5 and rebounds to ~0.36. Neither matches the paper's steady 50 Hz decline better than independent shots, so training and evals keep `disconnected`.
 
 **Progression / non-stationarity eval (Table II):** For some experiments, the **environment seed** changes every $n \in \{10, 20, 50, 75\}$ **steps** to simulate varying PD progression. This is an **evaluation protocol** on top of the base step loop—implement in the benchmark harness or adapter, not inside the core policy networks.
 
@@ -151,7 +163,9 @@ $$
 \tau_t = \max\left(\tau_{\min},\, \tau_0\, e^{-\lambda_\tau t}\right)
 $$
 
-$\tau_0$, $\tau_{\min}$, and $\lambda_\tau$ are **not** in Table I — **intentionally open**; tune for stable early exploration and document values in code. **Ablation:** `variant=baseline-gs` enables GS without predictive modeling.[^gs]
+$\tau_0$, $\tau_{\min}$, and $\lambda_\tau$ are **not** in Table I — **intentionally open**. **Chosen:** $\tau_0 = 200$, $\tau_{\min} = 1$, $\lambda_\tau = \ln(200)/4500 \approx 1.18 \times 10^{-3}$ per env step ($t$ counts env steps), so $\tau$ anneals from a near-uniform relaxed sample to $\tau = 1$ over exactly the 4,500 training steps — "initially a high $\tau$ promotes exploration; over time, decreasing $\tau$ sharpens the policy" (§IV.C). "High" is relative to the actor's logits: at Table I learning rates the stim logit margin reaches ~15–20 within ~15 episodes, so the cited Gumbel-Softmax defaults (Jang et al. 2016: $\tau = \max(0.5, e^{-rt})$, i.e. $\tau_0 = 1$) and $\tau_0 \in \{10, 50\}$ leave SEA-DBS stimulating 70–90 % of steps from the first episodes. Candidate table: [docs/figures/ravivarapu/4a.md](../../figures/ravivarapu/4a.md) § Exploration conventions.
+
+**Executed action (chosen):** the binary action is **sampled from the relaxed probabilities** $\tilde a$ of Eq. (11), $a_t \sim \mathrm{Categorical}(\tilde a)$ (`gs_action_sampling="relaxed"`). Fig. 3 says actions "are sampled from the resulting distribution", and §IV.C says a high $\tau$ promotes exploration. Gumbel-max ($\arg\max \tilde a$) gives the same action for every $\tau$, so with it Eq. (14) would not affect exploration at all. `gs_action_sampling="hard"` keeps Gumbel-max for comparison. The actor loss uses the relaxed sample (straight-through is not needed). **Ablation:** `variant=baseline-gs` enables GS without predictive modeling.[^gs]
 
 [^gs]: Fig. 7 labels this technique **“guided sampling”**; it is the same as **Gumbel-Softmax** (different naming in the paper).
 
@@ -231,7 +245,7 @@ Use the `sea_dbs_eval` suite per [benchmarking.md](../../benchmarking.md) §3.2 
 
 | Mode | When | Notes |
 |------|------|------|
-| **FP16 PTQ** | After full-precision training | Reported **~2×** memory reduction; performance close to FP32 on 10-step eval. Optional paper-silent eval convention: Gaussian weight noise (Baseline extra late skip, SEA stim-first plus a mid skip) on a deep copy **before** `.half()`. Fig 6 uses a 100 ms untreated window for t=0 / no-pulse shots so the shared start matches paper PSD ~462, while stim steps keep the 150 ms 50 Hz floor. Fig 6 `$n_{\mathrm{obs}}=8$` (Fig 5a stays 6) so a mid PTQ skip remains in the Eq. 4–5 mean through step 10. Display stays ordinary solid lines. |
+| **FP16 PTQ** | After full-precision training | Reported **~2×** memory reduction; performance close to FP32 on 10-step eval. Implemented as a plain `.half()` cast of the trained actor (`apply_fp16_ptq`); inference casts the state to fp16. No weight perturbation. Fig 6 reports parameter bytes (fp32 vs fp16), not checkpoint file size. |
 
 Quantization affects **network inference only**, not plant timing or biomarker definition.
 
@@ -305,17 +319,42 @@ Scope notes full layer counts and widths are out of scope where the paper is sil
 
 ### 10. Stimulation carrier frequency at inference
 
-Fig. 5 compares **50 Hz** vs **30 Hz** carrier during inference; this is not a per-step RL action. **Fixed:** binary pulse/no-pulse control during training. **Chosen (adapter):** `SEA_DBSEnvAdapter.set_carrier_hz` is the eval override and **survives `reset()`** (reset used to restore `config.carrier_hz`, which silently ran Fig 5 at the Fig 4a train carrier of 130 Hz). `evaluate()` loads plant knobs (`dbs_burst_ms`, `observation_scale`, …) from the checkpoint, then writes the eval carrier into the config. **Chosen (Fig 5a eval window):** `biomarker_window_s=0.15` and `dbs_burst_ms=150` at 50 Hz, plus `n_obs=6` so onset ages out at step 6 and SEA sits on the last-window floor (~0.328) for steps 6–10 (digitized ~0.332→0.310). A 100 ms window floors $P_\beta$ at ~0.388; 140 ms last-window ~0.339; `n_obs=10` holds SEA ~0.35 through step 9. Amplitude and pulse-width sweeps at 50 Hz / 100 ms do not move that floor. Continuous 50 Hz on Kumaravelu (piecewise 150 ms blocks and one phase-continuous 1.65 s train) **bounces** 0.28–0.47 rather than accumulating the paper’s late 0.332→0.310 slope; independent always-on shots are a horizontal last-window floor (~0.328) once $n_{\mathrm{obs}}$ fills. That late flatness is the plant, not a plot lock — do not paper over it with leftover-onset $n_{\mathrm{obs}}$ filling or display filters. Fig 4a train stays 100 ms / 62 ms @ 130 Hz, $n_{\mathrm{obs}}=5$. **Chosen (Fig 5b eval burst):** `dbs_burst_ms=20` at 30 Hz with `dbs_pulse_delay_ms=5` (one pulse at t=5 ms of the 100 ms window, $n_{\mathrm{obs}}=8$, Gumbel offset 34). Two 30 Hz pulses (62 ms) raise last-window $P_\beta$ above untreated so the Eq. 4–5 mean climbs; one pulse at t=0 last-window ~0.424; delay 5 ms last-window ~0.393 (digitized SEA end ~0.390). Delay 10 ms jumps last to ~0.486. `n_obs=6` equalizes both ends on the floor after Baseline’s skip ages out. Do not copy Fig 5a’s 150 ms window onto 5b — extra 30 Hz pulses raise further. **Chosen (Fig 5 action sampling):** hard **Gumbel-max** on actor logits (`action_mode="gumbel"`). That sample is temperature-invariant; $P(\mathrm{stim})=\mathrm{softmax}(\mathrm{logits})$. Greedy `argmax` collapses both Fig 4a actors to always-on. Fig 5a and 5b both use Gumbel offset **34** (skip-first). See [docs/figures/ravivarapu/5a.md](../../figures/ravivarapu/5a.md) and [5b.md](../../figures/ravivarapu/5b.md).
+Fig. 5 compares **50 Hz** vs **30 Hz** carrier during inference; this is not a per-step RL action. **Fixed:** binary pulse/no-pulse control during training. **Chosen (training carrier):** 50 Hz — the only frequency the paper names for its main results (Figs 5a, 6, 7); the training carrier itself is paper-silent. **Chosen (eval):** Figs 5–7 roll out each actor on exactly the plant / observation setup it was trained on (`evaluate()` reads window, burst, `n_obs`, prefill, and normalization from the checkpoint). The only override is the paper-stated carrier, applied through `SEA_DBSEnvAdapter.set_carrier_hz`, which survives `reset()`. Plant reset uses the panel seed (0). **Chosen (eval actions):** deterministic **argmax** on the actor logits (§2: deployment is deterministic). `action_mode="gumbel"` (hard Gumbel-max, torch seed = panel seed, never tuned) remains for diagnostics. Earlier eval-only windows, `n_obs`, untreated windows, pulse delays, per-step schedules, and hand-picked Gumbel seed offsets are removed (§15).
 
 ### 11. Beta normalization scale
 
-$\beta_t = 0.35$ implies consistent scaling of $\bar{P}_\beta$ between observations and reward, as with Mehregan. **Fixed:** Eq. (7) reward shape. **Chosen (SEA-DBS adapter):** `observation_scale = 425` (not Mehregan's 1000). On the **100 ms** biomarker window, unstimulated raw $P_\beta \approx 196$; scale 1000 maps that to $\approx 0.20$ already below $\beta_t$ and removes learning pressure. Scale **425** maps the same raw onto the paper Fig 4a band ($\approx 0.46$) so Eq. (7) can teach. **`biomarker_window_s = 0.1`** per RL step for valid multitaper estimates (§5 convention).
+$\beta_t = 0.35$ implies consistent scaling of $\bar{P}_\beta$ between observations and reward, as with Mehregan. **Fixed:** Eq. (7) reward shape. **Chosen (SEA-DBS adapter):** `observation_scale = 472` (not Mehregan's 1000): untreated raw $P_\beta$ on a 150 ms shot averages 217.9 over plant seeds 0–9, and 472 maps that onto the paper's untreated level (~0.46, the start of Figs 4a and 5–7). At scale 1000 untreated beta would already sit below $\beta_t$ and Eq. (7) would reward doing nothing.
 
-**Fig 4a gate tuning (v23, passing):** Short-burst STN drive (`dbs_burst_ms=60` of the 100 ms biomarker window) per paper Eq. (6) — stimulation as "short bursts rather than continuously". Continuous 130 Hz on the Kumaravelu plant collapses GPi beta to ~0.12, far below the paper's Fig 4a late levels; a 60 ms burst lands the full-duty floor at ~0.35, so SEA-DBS converges to a paper-like late level (0.355 vs paper 0.340) and the Baseline (higher-epsilon duty, `epsilon_end=0.42`) holds ~0.375 (paper 0.368). All 16 structural + digitization gates pass. Earlier attempts: v18/v19 buffer freeze (cliff at ep ~45), v20/v21 slow learning with continuous drive (over-suppressed to ~0.22), v22 50 ms burst (floor too high → gap 0.006 vs paper 0.028). `dbs_burst_ms` is a material resume field; changing it invalidates a checkpoint.
+### 12. Observation window on reset
+
+Eq. (4) makes the state a window of the last $n_{\mathrm{obs}}$ beta estimates. **Chosen:** $n_{\mathrm{obs}} = 5$ and, on reset, the window holds $n_{\mathrm{obs}}$ untreated samples (the history before the episode; `prefill_obs_window=True`), in training and eval alike.
 
 ---
 
-## 15. References
+## 15. Honest-replication audit (oct 2026)
+
+Before this pass every Ravivarapu panel was marked Pass, but the passes rested on mechanisms the paper does not describe, tuned version by version against the digitized curves. All were removed; no shipped config can reach them (`config_from_dict` drops the old fields from legacy checkpoints).
+
+| Shortcut | Where | What it did |
+|----------|-------|-------------|
+| Episode-scheduled actor logit boosts | Fig 4 trainer | Added hand-tuned stim / no-stim logit offsets by episode range (mid, mid-late, ramped late brake up to +2.4, gap patch) per variant |
+| No-stim actor init bias | Fig 4 trainer | Shifted the final-layer bias toward no-stim (1.25 SEA / 1.38 Baseline) so early PSD started at the paper's untreated level; the paper initializes randomly |
+| Per-variant plant | Fig 4 config | Baseline 58 ms bursts, SEA-DBS 62 ms bursts at 130 Hz |
+| Per-variant learning rates | Fig 4 config | $\alpha_a$ $5.2$–$7.5 \times 10^{-6}$, $\alpha_c$ $1.2$–$1.5 \times 10^{-4}$ instead of Table I's $5 \times 10^{-4}$ / $10^{-3}$ |
+| Forced Gumbel-Softmax on Baseline | Fig 4 config | Turned the DDPG Baseline into a GS agent so its curve faded gradually |
+| Episode-dependent $\tau$ schedule | Fig 4 trainer | Early $\lambda$ ×4.5 before ep 38 and a late $\tau$ floor after ep 108 (Baseline) |
+| Predictive-model warmup | Fig 4 trainer | Ramped $\hat r$ into Eq. (9) over 15,000 steps; Eq. (9) adds it directly |
+| Fixed seed for episodes 0–1 | Fig 4 config | Removed one episode's IC dip |
+| Eval-only plant windows and `n_obs` | Figs 5a / 6 / 7 | 150–160 ms stim windows, 100 ms untreated window (two different estimators in one trace), `n_obs` 6 / 8 chosen per panel |
+| Hand-scheduled pulse delays and bursts | Fig 5b | Per-step pulse delays `(2, 2, 0, 5, …)` and per-variant bursts written to reproduce the paper's 30 Hz shape open-loop |
+| Cherry-picked Gumbel seeds | Figs 5a / 5b / 6 / 7 | Eval RNG offsets (5, 6, 34, 141, 225, 586, …) picked per panel and per variant for the action sequences that matched the paper |
+| PTQ weight noise | Fig 6 | Gaussian noise (σ 0.08–0.28, retried over seeds) added before `.half()` so PTQ traces split from fp32; checkpoint file size halved as "model size" |
+| Different training config for +PM / +GS | Fig 7 | +PM / +GS trained on library defaults (other plant, other learning rates) while Baseline / SEA-DBS came from the tuned Fig 4 config |
+| Loosened gates | `ravivarapu_gates.py` | Fig 4a gap bands and level tolerances widened to admit tuned runs; Fig 5a steps 3–5 MAE 0.015 → 0.020; Fig 7 GS gate with a −5.0 margin on ~0.4-scale data (always true) |
+
+Kept as labeled conventions (paper-silent): 150 ms shot, 50 Hz training carrier, scale 472, $n_{\mathrm{obs}} = 5$ with prefill, independent shots, Gumbel schedule defaults, Baseline ε-greedy, Polyak 0.005, one update per env step, 64-unit MLPs, seed 0, and the display-only 10-episode rolling mean on Figs 4a/4b (gates use raw episodes). Panel results: [figures/ravivarapu/replications.md](../../../figures/ravivarapu/replications.md).
+
+## 16. References
 
 - Ravivarapu et al., *Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson’s Disease*.
 
