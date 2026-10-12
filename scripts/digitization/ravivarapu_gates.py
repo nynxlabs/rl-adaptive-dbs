@@ -298,8 +298,8 @@ def ravivarapu_fig4a_gates(
     timing_episode: float = 50.0,
     drop_frac_of_paper: float = 0.40,
     profile_frac_of_paper: float = 0.30,
-    pearson_baseline_min: float = 0.55,
-    pearson_sea_min: float = 0.55,
+    pearson_baseline_min: float = 0.58,
+    pearson_sea_min: float = 0.58,
     rel_tol: float = DEFAULT_REL_TOL,
     ratio_tol: float = DEFAULT_RATIO_TOL,
     n_expected: int = 150,
@@ -416,7 +416,7 @@ def ravivarapu_fig4a_gates(
             and gap >= gap_midlate - 0.008
         ),
         "late_gap_substantial": bool(
-            np.isfinite(gap) and 0.015 <= gap <= 0.065
+            np.isfinite(gap) and 0.015 <= gap <= 0.050
         ),
         "drop_timing_baseline": _drop_timing_ok(b_drop_frac, pb_drop_frac),
         "drop_timing_sea": _drop_timing_ok(s_drop_frac, ps_drop_frac),
@@ -443,26 +443,26 @@ def ravivarapu_fig4a_gates(
         "sea_drop_vs_paper": bool(
             np.isfinite(s_drop) and np.isfinite(ps_drop) and s_drop >= drop_frac_of_paper * ps_drop
         ),
-        "sea_mid_near_paper": rel_close(s_mid, ps_mid, tol=0.15),
-        "sea_midlate_near_paper": rel_close(s_midlate_w, ps_midlate_w, tol=0.15),
-        "sea_late_near_paper": rel_close(s_late, ps_late, tol=0.15),
+        "sea_mid_near_paper": rel_close(s_mid, ps_mid, tol=0.12),
+        "sea_midlate_near_paper": rel_close(s_midlate_w, ps_midlate_w, tol=0.12),
+        "sea_late_near_paper": rel_close(s_late, ps_late, tol=0.12),
         "mid_gap_near_paper": bool(
             np.isfinite(gap_mid)
             and np.isfinite(p_gap_mid)
             and p_gap_mid > 0
-            and 0.40 * p_gap_mid <= gap_mid <= 2.50 * p_gap_mid
+            and 0.40 * p_gap_mid <= gap_mid <= 1.80 * p_gap_mid
         ),
         "midlate_gap_near_paper": bool(
             np.isfinite(gap_midlate)
             and np.isfinite(p_gap_midlate)
             and p_gap_midlate > 0
-            and 0.40 * p_gap_midlate <= gap_midlate <= 2.60 * p_gap_midlate
+            and 0.40 * p_gap_midlate <= gap_midlate <= 1.75 * p_gap_midlate
         ),
         "late_gap_near_paper": bool(
             np.isfinite(gap)
             and np.isfinite(p_gap)
             and p_gap > 0
-            and 0.40 * p_gap <= gap <= 2.20 * p_gap
+            and 0.50 * p_gap <= gap <= 1.60 * p_gap
         ),
         "late_early_ratio_baseline_near_paper": ratio_close(
             b_late, b_early, pb_late, pb_early, tol=ratio_tol
@@ -778,7 +778,7 @@ INFERENCE_SHARED_START_MAX = 0.05
 # match the early window "to an extent", not Fig 4a-style magnitude polish.
 INFERENCE_EARLY_N = 6
 INFERENCE_EARLY_MAE_MAX = 0.030
-INFERENCE_EARLY_SEA_MAE_3_5_MAX = 0.020
+INFERENCE_EARLY_SEA_MAE_3_5_MAX = 0.015
 INFERENCE_EARLY_SEA_DROP_MIN = 0.050
 # Fig 5a steps 5–10: paper keeps falling (SEA ~0.338→0.310, Baseline
 # ~0.404→0.356). n_obs=5 independent shots are already all-floor by step 5.
@@ -793,6 +793,7 @@ INFERENCE_EARLY_SERIES_50HZ = ("Baseline 50Hz", "SEA-DBS 50Hz")
 INFERENCE_EARLY_SERIES_30HZ = ("Baseline 30Hz", "SEA-DBS 30Hz")
 INFERENCE_30HZ_PEARSON_MIN = 0.70
 INFERENCE_30HZ_EARLY_MAE_MAX = 0.025
+INFERENCE_30HZ_CROSS_TOL = 0.003
 
 
 def _paper_early_norm(stem: str, series: str, n: int = INFERENCE_EARLY_N) -> np.ndarray | None:
@@ -914,9 +915,11 @@ def ravivarapu_inference_gates(
             gates["early_baseline_rises"] = b1 >= b0 - 0.002
             # Paper Fig 5b: SEA-DBS delayed drop / plateau on steps 0-2 (drop <= 0.015 step 1, <= 0.025 step 2)
             gates["early_sea_plateau"] = bool((p0 - p1 <= 0.015) and (p0 - p2 <= 0.025))
-            # Paper: Baseline above SEA from step 1 through 5
+            # Paper 5b: SEA below Baseline on steps 1–5 on average; at step 4 the
+            # digitized SEA sits 0.002 above Baseline, so allow that crossing.
             gates["early_sea_below_baseline"] = bool(
-                np.all(p_early[1:] < b_early[1:])
+                np.all(p_early[1:] <= b_early[1:] + INFERENCE_30HZ_CROSS_TOL)
+                and float(np.mean(p_early[1:])) < float(np.mean(b_early[1:]))
             )
         # Late window declines
         late_drop_b = float(b[INFERENCE_LATE_LO] - b_end)
@@ -1043,6 +1046,10 @@ def ravivarapu_fig6_gates(
     return _gate_pack(gates, metrics)
 
 
+# Ties within this (normalized PSD) count as "highest" for the Fig 7 GS tail gate.
+FIG7_TAIL_TIE_TOL = 0.005
+
+
 def ravivarapu_fig7_gates(
     traces: dict[str, Sequence[float]],
     *,
@@ -1096,8 +1103,9 @@ def ravivarapu_fig7_gates(
             early_mae_s <= 0.030 if np.isfinite(early_mae_s) else True
         ),
         "baseline_above_pm_early": baseline_above_pm_early,
-        "sea_dbs_lowest_tail": sea <= min(tail.values()) + 1e-6,
-        "gs_highest_or_near_highest_tail": gs >= max(tail.values()) - 5.0,
+        "sea_dbs_lowest_tail": sea <= min(base, pm, gs) + 1e-6,
+        # Paper Fig 7 tails (steps 6–10, ÷1000): GS 0.419 > Baseline 0.380 ≈ PM 0.373 > SEA 0.323.
+        "gs_highest_tail": gs >= max(base, pm, sea) - FIG7_TAIL_TIE_TOL,
         "pm_not_sea": abs(pm - base) <= abs(pm - sea),
     }
     return _gate_pack(gates, {"tail_means": tail, "early_mae_baseline": early_mae_b, "early_mae_sea": early_mae_s})
