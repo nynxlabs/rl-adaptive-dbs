@@ -4,15 +4,17 @@
 
 Side-by-side **paper panel** vs **our replication**. Plot scripts write replication PNGs to `figures/ravivarapu/images/`; JSON caches to `artifacts/figures/papers/`. Per-panel gate tables show live **Pass** per check (all required; refreshed by `scripts/digitization/ravivarapu_gate_status.py` on promote / `--plot-only`).
 
+**Honest replication (oct 12 2026).** Every panel used to be marked Pass, but those passes rested on mechanisms the paper doesn't describe (episode-scheduled actor logit boosts, a no-stim init bias, per-variant plants and learning rates, eval-only windows, hand-picked eval seeds, per-step pulse schedules, PTQ weight noise, loosened gates). All were removed ([sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md) §15). Every variant now trains with one config (Table I, random init, Eq. (9) as written), and Figs 5–7 evaluate on the training plant setup with only the paper's stimulation frequency changed. Every panel now fails, with the gaps documented in each lab notebook. The two root causes: Eq. (7) has no stimulation cost, so all four variants learn to stimulate every step and their deterministic rollouts coincide; and on Kumaravelu, 30 Hz raises beta.
+
 <!-- summary:start -->
 | Panel | Description | Status |
 |-------|-------------|--------|
-| Fig 4a | Training PSD vs episode | Pass (v70) |
-| Fig 4b | Training reward vs episode | Pass (v15) |
-| Fig 5a | Inference @ 50 Hz | Pass |
-| Fig 5b | Inference @ 30 Hz | Pass |
-| Fig 6 | FP16 PTQ @ 50 Hz | Pass |
-| Fig 7 | Ablation (Baseline / +PM / +GS / SEA-DBS) | Pass |
+| Fig 4a | Training PSD vs episode | Fail (`sea_declines` (shape), v77) |
+| Fig 4b | Training reward vs episode | Fail (`shared_start` (shape), v17) |
+| Fig 5a | Inference @ 50 Hz | Fail (`paper_end_below_baseline`) |
+| Fig 5b | Inference @ 30 Hz | Fail (`baseline_declines`) |
+| Fig 6 | FP16 PTQ @ 50 Hz | Fail (`early_mae_baseline`) |
+| Fig 7 | Ablation (Baseline / +PM / +GS / SEA-DBS) | Fail (`early_mae_baseline`) |
 <!-- summary:end -->
 
 Replication PNGs: `figures/ravivarapu/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/ravivarapu/images/<panel>/paper.png` (from KB paper-note embeds; Fig 4/5 split from combined panels). Full composites also under `figures/ravivarapu/images/_full/`. Controller spec: [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md). Schematics (paper Figs 1, 3) are **out of scope**. Fig 2 (reward curve) is optional polish, not a gate.
@@ -41,38 +43,38 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`
 <!-- caption-4a:end -->
 
-**Status:** **Pass** (rep v70) — `shape_pass` and full `pass`; `fixed_episode_seed_until=2`; `fig4_ravivarapu_config_v109`; display roll10 (gates on raw); paper overlay (black baseline, grey SEA-DBS). Manifest `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`.
+**Status:** Fail — see manifest gates (`shape_pass` / `pass`). Manifest `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`.
 
 <!-- gates-4a:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4a.json`; **`shape_pass`**: yes, **`pass`**: yes, 2026-08-31). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
+**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4a.json`; **`shape_pass`**: no, **`pass`**: no, 2026-10-12). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
 
 | Key | Description | Shape | Full |
 |-----|-------------|-------|------|
 | `n_episodes_ok` | ≥ 150 training episodes | yes | yes |
 | `shared_start` | baseline and SEA-DBS agree at episode start | yes | yes |
 | `baseline_declines` | baseline PSD declines over training | yes | yes |
-| `sea_declines` | SEA-DBS PSD declines over training | yes | yes |
+| `sea_declines` | SEA-DBS PSD declines over training | no | no |
 | `sea_below_baseline_mid` | SEA-DBS mid PSD below baseline | yes | yes |
 | `sea_below_baseline_midlate` | SEA-DBS ep 70–110 PSD below baseline | yes | yes |
 | `sea_below_baseline_late` | SEA-DBS late PSD below baseline | yes | yes |
-| `sea_steeper_drop_than_baseline` | SEA-DBS drop steeper than baseline | yes | yes |
-| `gap_widens_over_training` | baseline − SEA-DBS gap widens over training | yes | yes |
-| `late_gap_substantial` | late baseline − SEA-DBS gap in [0.015, 0.050] | yes | yes |
+| `sea_steeper_drop_than_baseline` | SEA-DBS drop steeper than baseline | no | no |
+| `gap_widens_over_training` | baseline − SEA-DBS gap widens over training | no | no |
+| `late_gap_substantial` | late baseline − SEA-DBS gap in [0.015, 0.050] | no | no |
 | `drop_timing_baseline` | baseline drop not front-loaded by ep 50 | yes | yes |
-| `drop_timing_sea` | SEA-DBS drop not front-loaded by ep 50 | yes | yes |
+| `drop_timing_sea` | SEA-DBS drop not front-loaded by ep 50 | no | no |
 | `gradual_decline_baseline` | gradual baseline mid→late drop | yes | yes |
-| `gradual_decline_sea` | gradual SEA-DBS mid→late drop | yes | yes |
-| `pearson_baseline_min` | baseline trajectory shape (Pearson r) | yes | yes |
-| `pearson_sea_min` | SEA-DBS trajectory shape (Pearson r) | yes | yes |
+| `gradual_decline_sea` | gradual SEA-DBS mid→late drop | no | no |
+| `pearson_baseline_min` | baseline trajectory shape (Pearson r) | no | no |
+| `pearson_sea_min` | SEA-DBS trajectory shape (Pearson r) | no | no |
 | `shared_start_near_paper` | shared start vs paper | — | yes |
-| `baseline_drop_vs_paper` | baseline drop vs paper | — | yes |
-| `sea_drop_vs_paper` | SEA-DBS drop vs paper | — | yes |
+| `baseline_drop_vs_paper` | baseline drop vs paper | — | no |
+| `sea_drop_vs_paper` | SEA-DBS drop vs paper | — | no |
 | `sea_mid_near_paper` | SEA-DBS mid-training level vs paper | — | yes |
 | `sea_midlate_near_paper` | SEA-DBS ep 70–110 level vs paper | — | yes |
 | `sea_late_near_paper` | SEA-DBS late level vs paper | — | yes |
-| `mid_gap_near_paper` | mid-training gap vs paper (bounded) | — | yes |
+| `mid_gap_near_paper` | mid-training gap vs paper (bounded) | — | no |
 | `midlate_gap_near_paper` | ep 70–110 gap vs paper (bounded) | — | yes |
-| `late_gap_near_paper` | late gap vs paper (bounded) | — | yes |
+| `late_gap_near_paper` | late gap vs paper (bounded) | — | no |
 | `late_early_ratio_baseline_near_paper` | baseline late/early ratio vs paper | — | yes |
 | `late_early_ratio_sea_near_paper` | SEA-DBS late/early ratio vs paper | — | yes |
 <!-- gates-4a:end -->
@@ -84,7 +86,9 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4a/plot.p
 uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4a/plot.py --plot-only
 ```
 
-**Defaults (paper §V.A / Table I):** seed `0` (paper seed unspecified — lock one seed for gates), **2 ms** RL step × **30** steps/episode × **150** episodes, $\gamma=0.99$, buffer **8192**, batch **32**, $\alpha_a=5\times10^{-4}$, $\alpha_c=10^{-3}$, variants `baseline` vs `paper`.
+**Defaults (paper §V.A / Table I):** seed `0` (paper seed unspecified — lock one seed for gates), **30** steps/episode × **150** episodes, $\gamma=0.99$, buffer **8192**, batch **32**, $\alpha_a=5\times10^{-4}$, $\alpha_c=10^{-3}$, variants `baseline` vs `paper` with one shared config (`fig4_ravivarapu_config`). Conventions: 150 ms plant shot per step at 50 Hz, scale 472, $n_{\mathrm{obs}}=5$ prefilled, plant reseeded per episode, Gumbel $\tau$ 200 → 1 and Baseline ε 1.0 → 0.05 over the run.
+
+**Gap (honest, oct 12 2026):** SEA-DBS stimulates every step by ep ~40 and sits on the full-stimulation floor (late 0.357 vs paper 0.340); the Baseline's late level matches (0.366 vs 0.368). Both start at 0.38–0.40, not the paper's untreated 0.45 (random init stimulates half the time). 12 of 27 gates fail — [4a.md](../../docs/figures/ravivarapu/4a.md) § Honest replication.
 
 ---
 
@@ -106,27 +110,27 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4a/plot.p
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4b.json`
 <!-- caption-4b:end -->
 
-**Status:** Pass — see manifest gates.
+**Status:** Fail — 6 of 19 gates (`shared_start`, SEA rise timing / steepness / gradual rise, both Pearson). Mean Eq. (7) reward per step (the paper's y-range is one step's reward); the shape matches the paper from ep ~40 on, but SEA-DBS reaches ~−0.07 by ep 25 and both start at −0.1 to −0.4 instead of the paper's −1.3. See [4a.md](../../docs/figures/ravivarapu/4a.md).
 
 <!-- gates-4b:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4b.json`; **`shape_pass`**: yes, **`pass`**: yes, 2026-08-31). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
+**Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4b.json`; **`shape_pass`**: no, **`pass`**: no, 2026-10-12). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
 
 | Key | Description | Shape | Full |
 |-----|-------------|-------|------|
 | `n_episodes_ok` | ≥ 150 training episodes | yes | yes |
-| `shared_start` | baseline and SEA-DBS agree at episode start | yes | yes |
+| `shared_start` | baseline and SEA-DBS agree at episode start | no | no |
 | `baseline_rises` | baseline reward rises over training | yes | yes |
 | `sea_rises` | SEA-DBS reward rises over training | yes | yes |
 | `sea_above_baseline_late` | SEA-DBS late reward above baseline | yes | yes |
-| `sea_steeper_rise_than_baseline` | SEA-DBS rise steeper than baseline | yes | yes |
+| `sea_steeper_rise_than_baseline` | SEA-DBS rise steeper than baseline | no | no |
 | `paper_pull_ahead_mid` | SEA-DBS ahead in mid training window | yes | yes |
 | `late_gap_substantial` | late SEA-DBS − baseline gap substantial | yes | yes |
 | `rise_timing_baseline` | baseline rise not front-loaded by ep 50 | yes | yes |
-| `rise_timing_sea` | SEA-DBS rise not front-loaded by ep 50 | yes | yes |
+| `rise_timing_sea` | SEA-DBS rise not front-loaded by ep 50 | no | no |
 | `gradual_rise_baseline` | gradual baseline mid→late rise | yes | yes |
-| `gradual_rise_sea` | gradual SEA-DBS mid→late rise | yes | yes |
-| `pearson_baseline_min` | baseline trajectory shape (Pearson r) | yes | yes |
-| `pearson_sea_min` | SEA-DBS trajectory shape (Pearson r) | yes | yes |
+| `gradual_rise_sea` | gradual SEA-DBS mid→late rise | no | no |
+| `pearson_baseline_min` | baseline trajectory shape (Pearson r) | no | no |
+| `pearson_sea_min` | SEA-DBS trajectory shape (Pearson r) | no | no |
 | `shared_start_near_paper` | shared start vs paper | — | yes |
 | `baseline_rise_vs_paper` | baseline rise vs paper | — | yes |
 | `sea_rise_vs_paper` | SEA-DBS rise vs paper | — | yes |
@@ -141,7 +145,7 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4b/plot.p
 uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4b/plot.py --plot-only
 ```
 
-**Defaults:** paired Fig 4a cache / checkpoint; seed `0`; reward from Eq. (7) ($\beta_t = 0.35$).
+**Defaults:** paired Fig 4a cache / checkpoint; seed `0`; reward from Eq. (7) ($\beta_t = 0.35$), plotted as the mean per step.
 
 ---
 
@@ -151,7 +155,7 @@ Panel lab notebook: [docs/figures/ravivarapu/5a.md](../../docs/figures/ravivarap
 
 Post-train **inference** comparison of SEA-DBS vs Baseline with stimulation **carrier frequency 50 Hz** (above beta band; Fig. 5(a)). Paper claim: **50 Hz** more effectively disrupts pathological oscillations → **greater PSD reduction** than the 30 Hz panel; SEA-DBS **below** Baseline on PSD (and higher reward).
 
-Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md) §14.10).
+Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md) §14.10). Figs 5–7 roll out the Fig 4 checkpoints on their training plant setup; the paper's stimulation frequency is the only override.
 
 ### Paper (Ravivarapu et al.)
 
@@ -167,10 +171,10 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 **Manifest:** `artifacts/figures/papers/ravivarapu/5a/manifest.json`
 <!-- caption-5a:end -->
 
-**Status:** **Pass** (rep v19) — inference @ 50 Hz; Manifest `artifacts/figures/papers/ravivarapu/5a/manifest.json`.
+**Status:** Fail — Baseline and SEA-DBS both stimulate on all 10 steps, so the traces coincide (0.449 → 0.295 by step 5, flat after; paper SEA 0.458 → 0.310, Baseline → 0.356). 8 of 17 gates pass. Manifest `artifacts/figures/papers/ravivarapu/5a/manifest.json`.
 
 <!-- gates-5a:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/5a/manifest.json`; overall **`pass`**: yes, 2026-08-31). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/5a/manifest.json`; overall **`pass`**: no, 2026-10-12). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -178,19 +182,19 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 | `shared_start` | baseline and SEA-DBS agree at step 0 | yes |
 | `baseline_declines` | baseline PSD net drop step 0→10 | yes |
 | `paper_declines` | SEA-DBS PSD net drop step 0→10 | yes |
-| `paper_end_below_baseline` | SEA-DBS end PSD below baseline | yes |
-| `paper_steeper_drop` | SEA-DBS drop steeper than baseline | yes |
+| `paper_end_below_baseline` | SEA-DBS end PSD below baseline | no |
+| `paper_steeper_drop` | SEA-DBS drop steeper than baseline | no |
 | `carrier_hz_ok` | carrier frequency 50 Hz | yes |
 | `shared_start_near_paper` | shared start vs paper ~462.5 | yes |
-| `early_mae_baseline` | steps 0–5 MAE vs digitized Baseline ≤ 0.03 | yes |
-| `early_mae_sea` | steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03 | yes |
-| `early_mae_sea_3_5` | steps 3–5 MAE vs digitized SEA-DBS ≤ 0.020 | yes |
+| `early_mae_baseline` | steps 0–5 MAE vs digitized Baseline ≤ 0.03 | no |
+| `early_mae_sea` | steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03 | no |
+| `early_mae_sea_3_5` | steps 3–5 MAE vs digitized SEA-DBS ≤ 0.015 | no |
 | `early_sea_declines` | SEA-DBS drop steps 0→5 > 0.05 | yes |
 | `early_baseline_declines` | Baseline drop steps 0→5 | yes |
-| `early_sea_below_baseline` | SEA-DBS below Baseline at every step 1–5 | yes |
-| `late_baseline_declines` | Baseline keeps declining steps 5→10 | yes |
-| `late_sea_declines` | SEA-DBS keeps declining steps 5→10 | yes |
-| `mid_mae_sea` | steps 4–10 MAE vs digitized SEA-DBS ≤ 0.012 | yes |
+| `early_sea_below_baseline` | SEA-DBS below Baseline at every step 1–5 | no |
+| `late_baseline_declines` | Baseline keeps declining steps 5→10 | no |
+| `late_sea_declines` | SEA-DBS keeps declining steps 5→10 | no |
+| `mid_mae_sea` | steps 4–10 MAE vs digitized SEA-DBS ≤ 0.012 | no |
 <!-- gates-5a:end -->
 
 **Run:**
@@ -200,7 +204,7 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5a/plot.p
 uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5a/plot.py --plot-only --export-notes --update-report
 ```
 
-**Defaults:** seed `0`; carrier **50 Hz**; binary pulse policy from trained SEA-DBS / Baseline.
+**Defaults:** seed `0`; carrier **50 Hz**; argmax actions from the Fig 4 Baseline / SEA-DBS actors.
 
 ---
 
@@ -224,31 +228,31 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 **Manifest:** `artifacts/figures/papers/ravivarapu/5b/manifest.json`
 <!-- caption-5b:end -->
 
-**Status:** **Pass** (rep v19) — inference @ 30 Hz; Manifest `artifacts/figures/papers/ravivarapu/5b/manifest.json`.
+**Status:** Fail — on Kumaravelu 30 Hz raises beta, so both always-on policies climb 0.449 → 0.607 (paper: both decline to ~0.39–0.40). 7 of 18 gates pass. Manifest `artifacts/figures/papers/ravivarapu/5b/manifest.json`.
 
 <!-- gates-5b:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/5b/manifest.json`; overall **`pass`**: yes, 2026-08-31). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/5b/manifest.json`; overall **`pass`**: no, 2026-10-12). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
 | `n_steps_ok` | 11 PSD samples (t=0 + 10 stim steps) | yes |
 | `shared_start` | baseline and SEA-DBS agree at step 0 | yes |
-| `baseline_declines` | baseline PSD net drop step 0→10 | yes |
-| `paper_declines` | SEA-DBS PSD net drop step 0→10 | yes |
-| `paper_end_below_baseline` | SEA-DBS end PSD below baseline | yes |
-| `paper_steeper_drop` | SEA-DBS drop steeper than baseline | yes |
+| `baseline_declines` | baseline PSD net drop step 0→10 | no |
+| `paper_declines` | SEA-DBS PSD net drop step 0→10 | no |
+| `paper_end_below_baseline` | SEA-DBS end PSD below baseline | no |
+| `paper_steeper_drop` | SEA-DBS drop steeper than baseline | no |
 | `carrier_hz_ok` | carrier frequency 30 Hz | yes |
 | `weaker_than_50hz_sea` | 30 Hz SEA-DBS weaker suppression than 50 Hz panel | yes |
 | `weaker_than_50hz_baseline` | 30 Hz baseline weaker suppression than 50 Hz panel | yes |
 | `early_baseline_rises` | baseline PSD initial rise at step 1-2 | yes |
 | `early_sea_plateau` | SEA-DBS delayed drop / plateau on steps 0-2 | yes |
-| `early_sea_below_baseline` | SEA-DBS below baseline on steps 1-5 | yes |
-| `early_mae_baseline` | steps 0–5 MAE vs digitized baseline ≤ 0.025 | yes |
-| `early_mae_sea` | steps 0–5 MAE vs digitized SEA-DBS ≤ 0.025 | yes |
-| `late_baseline_declines` | baseline keeps declining steps 5→10 | yes |
-| `late_sea_declines` | SEA-DBS keeps declining steps 5→10 | yes |
-| `pearson_baseline_min` | baseline trajectory correlation vs paper (r ≥ 0.70) | yes |
-| `pearson_sea_min` | SEA-DBS trajectory correlation vs paper (r ≥ 0.70) | yes |
+| `early_sea_below_baseline` | SEA-DBS below baseline on steps 1-5 (mean; ≤0.003 crossing) | no |
+| `early_mae_baseline` | steps 0–5 MAE vs digitized baseline ≤ 0.025 | no |
+| `early_mae_sea` | steps 0–5 MAE vs digitized SEA-DBS ≤ 0.025 | no |
+| `late_baseline_declines` | baseline keeps declining steps 5→10 | no |
+| `late_sea_declines` | SEA-DBS keeps declining steps 5→10 | no |
+| `pearson_baseline_min` | baseline trajectory correlation vs paper (r ≥ 0.70) | no |
+| `pearson_sea_min` | SEA-DBS trajectory correlation vs paper (r ≥ 0.70) | no |
 <!-- gates-5b:end -->
 
 **Run:**
@@ -258,7 +262,7 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5b/plot.p
 uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5b/plot.py --plot-only --export-notes --update-report
 ```
 
-**Defaults:** seed `0`; carrier **30 Hz**; same checkpoints as Fig 5a where possible.
+**Defaults:** seed `0`; carrier **30 Hz**; same checkpoints and rollout as Fig 5a.
 
 ---
 
@@ -282,10 +286,10 @@ QAT is **out of scope** for SEA-DBS (not reported).
 **Manifest:** `artifacts/figures/papers/ravivarapu/6/manifest.json`
 <!-- caption-6:end -->
 
-**Status:** **Pass** (rep v19) — FP16 PTQ @ 50 Hz; checkpoint ~0.6 MB → ~0.3 MB; Manifest `artifacts/figures/papers/ravivarapu/6/manifest.json`.
+**Status:** Fail — all four series coincide: both policies stimulate every step and a plain fp16 cast flips no action (max logit change 0.15 against margins ~19–555). Networks 52 KB → 26 KB (paper 65 MB → 33 MB). 6 of 11 gates pass. Lab notebook [docs/figures/ravivarapu/6.md](../../docs/figures/ravivarapu/6.md). Manifest `artifacts/figures/papers/ravivarapu/6/manifest.json`.
 
 <!-- gates-6:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/6/manifest.json`; overall **`pass`**: yes, 2026-08-31). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/6/manifest.json`; overall **`pass`**: no, 2026-10-12). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -293,13 +297,13 @@ QAT is **out of scope** for SEA-DBS (not reported).
 | `n_steps_ok` | 11 PSD samples (t=0 + 10 stim steps) | yes |
 | `shared_start` | paired series share pre-stim level | yes |
 | `shared_start_near_paper` | shared start vs paper ~462.5 | yes |
-| `early_mae_baseline` | steps 0–5 MAE vs digitized Baseline ≤ 0.03 | yes |
-| `early_mae_sea` | steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03 | yes |
-| `sea_below_baseline` | SEA-DBS fp32 below baseline fp32 late | yes |
-| `sea_ptq_below_baseline` | SEA-DBS PTQ below baseline fp32 late | yes |
+| `early_mae_baseline` | steps 0–5 MAE vs digitized Baseline ≤ 0.03 | no |
+| `early_mae_sea` | steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03 | no |
+| `sea_below_baseline` | SEA-DBS fp32 below baseline fp32 late | no |
+| `sea_ptq_below_baseline` | SEA-DBS PTQ below baseline fp32 late | no |
 | `sea_ptq_tracks_fp32` | SEA-DBS PTQ tracks fp32 | yes |
 | `baseline_ptq_near_or_above_baseline` | baseline PTQ near/above baseline fp32 | yes |
-| `ptq_traces_distinct` | PTQ traces not identical to paired fp32 | yes |
+| `ptq_traces_distinct` | PTQ traces not identical to paired fp32 | no |
 <!-- gates-6:end -->
 
 **Run:**
@@ -309,7 +313,7 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/6/plot.py
 uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/6/plot.py --plot-only
 ```
 
-**Defaults:** seed `0`; **FP16 PTQ** only (no QAT); 10-step eval; 50 Hz carrier.
+**Defaults:** seed `0`; **FP16 PTQ** as a plain `.half()` cast (no QAT, no weight noise); 10-step eval; 50 Hz carrier.
 
 ---
 
@@ -333,10 +337,10 @@ Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper` ([se
 **Manifest:** `artifacts/figures/papers/ravivarapu/7/manifest.json`
 <!-- caption-7:end -->
 
-**Status:** **Pass** (rep v22) — ablation (Baseline / +PM / +GS / SEA-DBS); Manifest `artifacts/figures/papers/ravivarapu/7/manifest.json`.
+**Status:** Fail — all four variants stimulate on every step, so the traces tie and the tail-ordering gates fail. 4 of 10 gates pass. Lab notebook [docs/figures/ravivarapu/7.md](../../docs/figures/ravivarapu/7.md). Manifest `artifacts/figures/papers/ravivarapu/7/manifest.json`.
 
 <!-- gates-7:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/7/manifest.json`; overall **`pass`**: yes, 2026-08-31). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/7/manifest.json`; overall **`pass`**: no, 2026-10-12). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -344,20 +348,19 @@ Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper` ([se
 | `n_steps_ok` | 11 PSD samples (t=0 + 10 stim steps) | yes |
 | `shared_start` | baseline and SEA-DBS agree at step 0 | yes |
 | `shared_start_near_paper` | shared start vs paper ~462.5 | yes |
-| `early_mae_baseline` | steps 0–5 MAE vs digitized Baseline ≤ 0.03 | yes |
-| `early_mae_sea` | steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03 | yes |
-| `baseline_above_pm_early` | Baseline above Baseline+PM early (steps 0-4) | yes |
-| `sea_dbs_lowest_tail` | SEA-DBS lowest tail mean PSD | yes |
-| `gs_highest_or_near_highest_tail` | GS highest or near-highest tail | yes |
-| `pm_not_sea` | PM closer to baseline than to SEA-DBS | yes |
+| `early_mae_baseline` | steps 0–5 MAE vs digitized Baseline ≤ 0.03 | no |
+| `early_mae_sea` | steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03 | no |
+| `baseline_above_pm_early` | Baseline above Baseline+PM early (steps 0-4) | no |
+| `sea_dbs_lowest_tail` | SEA-DBS tail ≥ 0.005 below every other variant | no |
+| `gs_highest_tail` | Baseline+GS tail ≥ 0.005 above every other variant (paper 0.419 vs ≤ 0.380) | no |
+| `pm_not_sea` | PM closer to baseline than to SEA-DBS | no |
 <!-- gates-7:end -->
 
 **Run:**
 
 ```bash
-uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/7/plot.py --eval-only --export-notes --update-report
-uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/7/plot.py --train-only --train-variants baseline-pm baseline-gs
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/7/plot.py --export-notes --update-report
 uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/7/plot.py --plot-only --export-notes --update-report
 ```
 
-**Defaults:** seed `0`; baseline/paper checkpoints from Fig 4a; +PM/+GS train 150 ep into panel cache; Fig 5a-style 50 Hz Gumbel eval (11 PSD samples).
+**Defaults:** seed `0`; Baseline / SEA-DBS checkpoints from Fig 4; +PM / +GS train 150 episodes with the same `fig4_ravivarapu_config`; Fig 5a rollout (50 Hz, argmax, 11 PSD samples).

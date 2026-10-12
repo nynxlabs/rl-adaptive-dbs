@@ -8,16 +8,18 @@ Controller / adapter: [sea_dbs/replication.md](../../controllers/sea_dbs/replica
 
 | Panel | Script | Status |
 |-------|--------|--------|
-| Fig 4a — training PSD vs episode | `scripts/figures/papers/ravivarapu/4a/plot.py` | **Pass** — v40 (`shape_pass` + `pass`); lab notes [4a.md](../ravivarapu/4a.md) |
-| Fig 4b — training reward vs episode | `scripts/figures/papers/ravivarapu/4b/plot.py` | Open — paired with 4a |
-| Fig 5a — inference @ 50 Hz | `scripts/figures/papers/ravivarapu/5a/plot.py` | Open |
-| Fig 5b — inference @ 30 Hz | `scripts/figures/papers/ravivarapu/5b/plot.py` | Open |
-| Fig 6 — FP16 PTQ @ 50 Hz | `scripts/figures/papers/ravivarapu/6/plot.py` | Open |
-| Fig 7 — ablation (Baseline / +PM / +GS / SEA-DBS) | `scripts/figures/papers/ravivarapu/7/plot.py` | Open |
+| Fig 4a — training PSD vs episode | `scripts/figures/papers/ravivarapu/4a/plot.py` | **Fail, gap documented** — lab notes [4a.md](../ravivarapu/4a.md) |
+| Fig 4b — training reward vs episode | `scripts/figures/papers/ravivarapu/4b/plot.py` | **Fail, gap documented** — paired with 4a |
+| Fig 5a — inference @ 50 Hz | `scripts/figures/papers/ravivarapu/5a/plot.py` | **Fail, gap documented** — [5a.md](../ravivarapu/5a.md) |
+| Fig 5b — inference @ 30 Hz | `scripts/figures/papers/ravivarapu/5b/plot.py` | **Fail, gap documented** — [5b.md](../ravivarapu/5b.md) |
+| Fig 6 — FP16 PTQ @ 50 Hz | `scripts/figures/papers/ravivarapu/6/plot.py` | **Fail, gap documented** — [6.md](../ravivarapu/6.md) |
+| Fig 7 — ablation (Baseline / +PM / +GS / SEA-DBS) | `scripts/figures/papers/ravivarapu/7/plot.py` | **Fail, gap documented** — [7.md](../ravivarapu/7.md) |
 
-**Pause note (2026-07-31):** full trains/probes are paused until gates below are implemented from **paper figure digitization** (color-mask readout of `figures/ravivarapu/images/*/paper.png`). Absolute y values have ~±0.01–0.02 (Fig 4a) / ~±10–15 (Figs 5–7) calibration uncertainty; **ordering, shared starts, relative drops, and cross-panel ratios** are the hard targets.
+Status as of the honest-replication pass (oct 12 2026): every shortcut that produced the earlier passes is removed ([sea_dbs/replication.md](../../controllers/sea_dbs/replication.md) §15). Live gates: [figures/ravivarapu/replications.md](../../../figures/ravivarapu/replications.md).
 
-Digitization cache (local): `artifacts/figures/papers/ravivarapu/paper_digitization/curves.json`.
+**Digitization:** refined WebPlotDigitizer curves per panel (`curves_fig{4a,4b,5a,5b,6,7}.json`); gates read them through `scripts/digitization/ravivarapu_gates.py`. Absolute y values have ~±0.01–0.02 (Fig 4a) / ~±10–15 (Figs 5–7) calibration uncertainty; **ordering, shared starts, relative drops, and cross-panel ratios** are the hard targets.
+
+Digitization cache (local): `artifacts/figures/papers/ravivarapu/paper_digitization/curves_*.json`.
 
 **Scale note:** Fig 4a y-axis is labeled **(PSD × 10⁻³)** with values ~0.32–0.48. Figs 5–7 use **PSD** on ~300–480. Same biomarker: $0.46$ on Fig 4a ↔ ~$460$ on Figs 5–7.
 
@@ -104,33 +106,34 @@ Average **beta-band PSD** across **training episodes** for **Baseline (DDPG)** v
 | 6 | **Episode axis** | 150 episodes | Wrong count |
 | 7 | **Paired with Fig 4b** | Same training run | Mismatched lineage |
 
-**Automated gates (revamped 2-tier suite):**
+**Automated gates (2-tier suite, `ravivarapu_fig4a_gates`):** windows are early ep 0–15, mid 40–80, mid-late 70–110, late 120–150; "paper" values come from `curves_fig4a.json` over the same windows.
 
 | Tier | Key | Rule (paper-faithful) |
 |------|-----|------------------------|
 | **Shape** | `n_episodes_ok` | $N \ge 150$ episodes for both variants |
-| **Shape** | `shared_start` | $\|b_{\mathrm{early}} - s_{\mathrm{early}}\| \le 0.05$ (first 15 eps) |
+| **Shape** | `shared_start` | $\|b_{\mathrm{early}} - s_{\mathrm{early}}\| \le 0.05$ |
 | **Shape** | `baseline_declines` | $b_{\mathrm{early}} - b_{\mathrm{late}} \ge 0.02$ |
 | **Shape** | `sea_declines` | $s_{\mathrm{early}} - s_{\mathrm{late}} \ge 0.04$ |
-| **Shape** | `sea_below_baseline_late` | $s_{\mathrm{late}} < b_{\mathrm{late}}$ (last 30 eps) |
-| **Shape** | `sea_steeper_drop_than_baseline` | $(s_{\mathrm{early}}-s_{\mathrm{late}}) > (b_{\mathrm{early}}-b_{\mathrm{late}})$ |
-| **Shape** | `late_gap_substantial` | $b_{\mathrm{late}} - s_{\mathrm{late}} \ge 0.02$ |
-| **Shape** | `drop_timing_baseline` | drop by ep 50 not front-loaded vs paper |
-| **Shape** | `drop_timing_sea` | drop by ep 50 not front-loaded vs paper |
-| **Shape** | `gradual_decline_baseline` | mid (ep 40–80) above late (ep 120–150) by $\ge 30\%$ paper drop |
-| **Shape** | `gradual_decline_sea` | mid (ep 40–80) above late (ep 120–150) by $\ge 30\%$ paper drop |
-| **Shape** | `pearson_baseline_min` | $r(x, b) \ge 0.55$ vs digitized paper baseline curve |
-| **Shape** | `pearson_sea_min` | $r(x, s) \ge 0.55$ vs digitized paper SEA-DBS curve |
-| **Full** | `shared_start_near_paper` | both early means within $25\%$ of paper onset |
-| **Full** | `baseline_drop_vs_paper` | baseline drop $\ge 40\%$ of paper drop |
-| **Full** | `sea_drop_vs_paper` | SEA-DBS drop $\ge 40\%$ of paper drop |
-| **Full** | `late_gap_near_paper` | late gap $\ge 70\%$ of paper late gap |
-| **Full** | `late_early_ratio_baseline_near_paper` | late/early ratio matches paper within $30\%$ |
-| **Full** | `late_early_ratio_sea_near_paper` | late/early ratio matches paper within $30\%$ |
+| **Shape** | `sea_below_baseline_mid` / `_midlate` / `_late` | SEA window mean below Baseline in each window |
+| **Shape** | `sea_steeper_drop_than_baseline` | SEA early→late drop larger than Baseline's |
+| **Shape** | `gap_widens_over_training` | Baseline − SEA gap does not close from mid → mid-late → late (−0.005 / −0.008 slack) |
+| **Shape** | `late_gap_substantial` | late gap in $[0.015, 0.050]$ |
+| **Shape** | `drop_timing_baseline` / `_sea` | share of the drop reached by ep 50 ≤ max(1.55 × paper, paper + 0.10) |
+| **Shape** | `gradual_decline_baseline` / `_sea` | mid − late ≥ 30 % of paper's mid − late |
+| **Shape** | `pearson_baseline_min` / `_sea_min` | Pearson $r \ge 0.58$ vs the digitized curve |
+| **Full** | `shared_start_near_paper` | both early means within 25 % of paper |
+| **Full** | `baseline_drop_vs_paper` / `sea_drop_vs_paper` | drop ≥ 40 % of paper's |
+| **Full** | `sea_mid_near_paper` / `_midlate_` / `_late_` | SEA window means within 12 % of paper |
+| **Full** | `mid_gap_near_paper` | mid gap in $[0.40, 1.80] \times$ paper |
+| **Full** | `midlate_gap_near_paper` | mid-late gap in $[0.40, 1.75] \times$ paper |
+| **Full** | `late_gap_near_paper` | late gap in $[0.50, 1.60] \times$ paper |
+| **Full** | `late_early_ratio_baseline_near_paper` / `_sea_` | late/early ratio within 30 % of paper's |
+
+These are the thresholds of the 23-gate suite before Aug 31 2026; a later commit widened the gap bands, level tolerances, and Pearson floor to admit shortcut-tuned runs and was reverted in the honest-replication pass.
 
 Do **not** pass a frozen / non-learning Baseline. Do **not** use display hacks to force these levels.
 
-**Stimulation drive convention (v23, passing):** `SEA_DBSEnvAdapter` applies each stim action as a **short burst** — 60 ms of 130 Hz carrier within the 100 ms biomarker step (`dbs_burst_ms=60`) — matching the paper's "short bursts rather than continuously" (Eq. (6)). Continuous 130 Hz on the shared Kumaravelu plant drives GPi beta to ~0.12, far below the paper's Fig 4a late levels; the 60 ms burst gives a ~0.35 full-duty floor so SEA-DBS lands at 0.355 (paper 0.340) and the Baseline at 0.375 (paper 0.368). This is a controller convention (docs/controllers/sea_dbs/replication.md §11), not a display or eval shortcut. All gates pass (v8).
+**Stimulation drive convention:** every panel uses one plant setup — 150 ms independent plant shots per RL step, 50 Hz carrier on for the whole shot when $a = 1$, `observation_scale = 472` (Figs 5–7 override only the paper's stimulation frequency). The earlier per-variant 58 / 62 ms bursts at 130 Hz were tuned to the curves and are removed. Rationale and probe numbers: [sea_dbs/replication.md](../../controllers/sea_dbs/replication.md) §5, §15.
 
 ---
 
