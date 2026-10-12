@@ -73,17 +73,48 @@ REPL_BASELINE_COLOR = "#1f77b4"
 REPL_SEA_COLOR = "#d62728"
 
 
+def parse_overrides(items: list[str] | None) -> tuple[tuple[str, Any], ...]:
+    """Typed ``--set FIELD=VALUE`` overrides for ``SEADBSConfig`` (applied to every variant)."""
+    from dataclasses import fields
+
+    from controllers.sea_dbs.config import SEADBSConfig
+
+    types = {f.name: f.type for f in fields(SEADBSConfig)}
+    defaults = SEADBSConfig()
+    out: list[tuple[str, Any]] = []
+    for item in items or []:
+        name, sep, raw = item.partition("=")
+        if not sep or name not in types or name in {"variant", "seed"}:
+            raise SystemExit(f"--set expects FIELD=VALUE with a shared SEADBSConfig field, got {item!r}")
+        current = getattr(defaults, name)
+        if isinstance(current, bool):
+            if raw.lower() not in {"true", "false"}:
+                raise SystemExit(f"--set {name}: expected true/false, got {raw!r}")
+            value: Any = raw.lower() == "true"
+        elif raw.lower() == "none":
+            value = None
+        elif isinstance(current, int):
+            value = int(raw)
+        elif isinstance(current, float) or current is None:
+            value = float(raw)
+        else:
+            value = raw
+        out.append((name, value))
+    return tuple(out)
+
+
 def train_variant(
     variant: str,
     *,
     seed: int,
     smoke: bool,
     num_episodes: int | None,
+    overrides: tuple[tuple[str, Any], ...] = (),
     resume_path: Path | None = None,
     start_episode: int | None = None,
     checkpoint_interval: int = _resume_cli.DEFAULT_CHECKPOINT_INTERVAL,
 ) -> dict[str, Any]:
-    cfg = fig4_ravivarapu_config(seed=seed, variant=variant)
+    cfg = replace(fig4_ravivarapu_config(seed=seed, variant=variant), **dict(overrides))
     if smoke:
         cfg = cfg.for_smoke(episodes=3, max_steps=5)
     elif num_episodes is not None:
@@ -156,6 +187,7 @@ class _TrainVariantJob:
     resume_path: str | None
     start_episode: int | None
     checkpoint_interval: int
+    overrides: tuple[tuple[str, Any], ...] = ()
 
 
 def _train_variant_worker(job: _TrainVariantJob) -> dict[str, Any]:
@@ -169,6 +201,7 @@ def _train_variant_worker(job: _TrainVariantJob) -> dict[str, Any]:
         resume_path=resume,
         start_episode=job.start_episode,
         checkpoint_interval=job.checkpoint_interval,
+        overrides=job.overrides,
     )
 
 
@@ -182,9 +215,15 @@ def train_all(
     checkpoint_interval: int = _resume_cli.DEFAULT_CHECKPOINT_INTERVAL,
     train_variants: tuple[str, ...] = VARIANTS,
     parallel_series: int = 0,
+    overrides: tuple[tuple[str, Any], ...] = (),
 ) -> dict[str, Any]:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    series: dict[str, Any] = {"seed": seed, "smoke": smoke, "variants": {}}
+    series: dict[str, Any] = {
+        "seed": seed,
+        "smoke": smoke,
+        "overrides": {k: v for k, v in overrides},
+        "variants": {},
+    }
     cached: dict[str, Any] = {}
     if SHARED_SERIES.is_file():
         try:
@@ -219,6 +258,7 @@ def train_all(
                 resume_path=resume_file.as_posix() if resume_file else None,
                 start_episode=start_episode,
                 checkpoint_interval=checkpoint_interval,
+                overrides=overrides,
             )
         )
         job_variants.append(variant)
@@ -275,6 +315,7 @@ def plot_series(series: dict[str, Any], png_path: Path, *, promote: bool = True)
 
 
 def main() -> int:
+    global CACHE_DIR, SHARED_SERIES, DEFAULT_MANIFEST
     parser = argparse.ArgumentParser()
     parser.add_argument("--plot-only", action="store_true")
     parser.add_argument("--smoke", action="store_true")
@@ -290,7 +331,27 @@ def main() -> int:
     _resume_cli.add_training_resume_args(parser)
     _parallel_series.add_parallel_series_argument(parser)
     _common.add_no_promote_arg(parser)
+    parser.add_argument(
+        "--set",
+        action="append",
+        default=[],
+        metavar="FIELD=VALUE",
+        help="Override a shared SEADBSConfig field for every variant (repeatable; candidates)",
+    )
+    parser.add_argument(
+        "--cache-dir",
+        type=Path,
+        default=None,
+        help=f"Write checkpoints / series / manifests here instead of {CACHE_DIR} (candidates)",
+    )
     args = parser.parse_args()
+    overrides = parse_overrides(args.set)
+    if args.cache_dir is not None:
+        CACHE_DIR = args.cache_dir
+        SHARED_SERIES = CACHE_DIR / "series.json"
+        DEFAULT_MANIFEST = CACHE_DIR / "manifest_4a.json"
+        if not args.no_promote:
+            raise SystemExit("--cache-dir is for candidates; pass --no-promote too")
     if args.no_promote:
         args.export_notes = False
         args.update_report = False
@@ -312,6 +373,7 @@ def main() -> int:
             checkpoint_interval=args.checkpoint_interval,
             train_variants=train_variants,
             parallel_series=args.parallel_series,
+            overrides=overrides,
         )
 
     gates = evaluate_gates(series)
@@ -339,6 +401,7 @@ def main() -> int:
         "series_cache": SHARED_SERIES.as_posix(),
         "display_roll_window": DISPLAY_ROLL_WINDOW,
         "train_config": "fig4_ravivarapu_config (shared, no per-variant knobs)",
+        "config_overrides": series.get("overrides") or {},
         "stim_frac_windows": {
             v: {
                 "early_0_15": float(np.mean(f[:15])) if len(f) >= 15 else None,

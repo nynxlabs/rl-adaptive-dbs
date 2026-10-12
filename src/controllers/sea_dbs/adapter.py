@@ -10,7 +10,6 @@ import numpy as np
 from gymnasium import spaces
 
 from controllers.sea_dbs.config import SEADBSConfig
-from controllers.sea_dbs.plant_integration import integrate_stitched_binary_step
 from controllers.sea_dbs.reward import sea_dbs_reward
 from envs.plant.dbs import DbsSpec, create_dbs_current
 from envs.plant.matlab_backend import IntegrateResult, MatlabPlant
@@ -56,7 +55,7 @@ class SEA_DBSEnvAdapter(gym.Env):
         ):
             msg = (
                 "plant_integration_mode='continuous' requires PythonPlant "
-                "(stitched idbs waveforms)"
+                "(carries plant state across segments)"
             )
             raise ValueError(msg)
         self.render_mode = render_mode
@@ -71,7 +70,6 @@ class SEA_DBSEnvAdapter(gym.Env):
 
         self._rng: np.random.Generator | None = None
         self._episode_seed: int | None = None
-        self._episode_actions: list[int] = []
         self._step_count = 0
         self._obs_window: deque[float] = deque(maxlen=self.config.n_obs)
         # Eval may override via set_carrier_hz; reset must not clobber that.
@@ -134,15 +132,19 @@ class SEA_DBSEnvAdapter(gym.Env):
     def _is_continuous(self) -> bool:
         return self.config.plant_integration_mode == "continuous"
 
-    def _integrate_continuous_step(self, action: int) -> IntegrateResult:
-        self._episode_actions.append(int(action))
-        return integrate_stitched_binary_step(
-            self._plant,
-            seed=self._episode_seed,
-            config=self.config,
-            carrier_hz=self._carrier_hz,
-            actions=self._episode_actions,
-        )
+    def _integrate(self, duration_s: float, spec: DbsSpec) -> IntegrateResult:
+        """One plant segment. ``continuous`` carries the network state (and wiring)
+        from the previous segment of the episode; ``disconnected`` restarts from
+        the episode IC every step."""
+        if self._is_continuous():
+            return self._plant.integrate(  # type: ignore[call-arg]
+                duration_s,
+                spec,
+                record_spikes=True,
+                carry=True,
+                fixed_network=True,
+            )
+        return self._plant.integrate(duration_s, spec, record_spikes=True)
 
     def reset(
         self,
@@ -160,15 +162,10 @@ class SEA_DBSEnvAdapter(gym.Env):
             self._episode_seed = None
         self._plant.reset(seed=seed)
         self._step_count = 0
-        self._episode_actions.clear()
         self._obs_window.clear()
 
         duration_s = self._window_s_for_action(0)
-        result = self._plant.integrate(
-            duration_s,
-            self._dbs_spec_for_action(0, duration_s=duration_s),
-            record_spikes=True,
-        )
+        result = self._integrate(duration_s, self._dbs_spec_for_action(0, duration_s=duration_s))
         raw = self._raw_p_beta(result)
         norm_val = self._normalize_p_beta(raw)
         if self.config.prefill_obs_window:
@@ -193,16 +190,10 @@ class SEA_DBSEnvAdapter(gym.Env):
         self,
         action: int,
     ) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
-        if self._is_continuous():
-            result = self._integrate_continuous_step(int(action))
-            duration_s = self._window_s_for_action(int(action))
-        else:
-            duration_s = self._window_s_for_action(int(action))
-            result = self._plant.integrate(
-                duration_s,
-                self._dbs_spec_for_action(int(action), duration_s=duration_s),
-                record_spikes=True,
-            )
+        duration_s = self._window_s_for_action(int(action))
+        result = self._integrate(
+            duration_s, self._dbs_spec_for_action(int(action), duration_s=duration_s)
+        )
         raw = self._raw_p_beta(result)
         self._obs_window.append(self._normalize_p_beta(raw))
         obs = self._observation_from_window()
