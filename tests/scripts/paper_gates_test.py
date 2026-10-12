@@ -174,3 +174,25 @@ def test_fig6_rejects_open_loop_and_suppressing_qat():
     assert not report["gates"]["all_closed_loop"]
     assert not report["gates"]["qat_elevated_vs_fp32"]
     assert not report["pass"]
+
+
+def test_fig6_qat_seed_band_needs_majority_and_median():
+    t = np.linspace(0.0, 12.0, 61)
+    pre = 500.0
+
+    def trace(late_over_pre: float) -> tuple[np.ndarray, np.ndarray]:
+        return t, np.where(t <= 2.0, pre, pre * late_over_pre)
+
+    fp32 = trace(0.78)
+    traces = {"fp32": fp32, "ptq_int8": fp32, "ptq_fp16": fp32}
+    paper = {"QAT": trace(1.0), "fp32": fp32, "PTQ, INT8": fp32, "PTQ, FP16": fp32}
+    lucky = {str(s): trace(r) for s, r in enumerate((1.26, 0.59, 1.26, 0.59, 0.59, 0.89, 0.69))}
+    report = fig6_quant_gates(traces, qat_seeds=lucky, paper=paper)
+    assert report["metrics"]["qat_paper_like_count"] == 3
+    assert not report["gates"]["qat_majority_not_below_paper"]
+    assert not report["gates"]["qat_median_near_paper"]
+    robust = {str(s): trace(r) for s, r in enumerate((0.95, 1.05, 0.59, 1.0, 0.9, 1.1, 0.69))}
+    report = fig6_quant_gates(traces, qat_seeds=robust, paper=paper)
+    assert report["gates"]["qat_majority_not_below_paper"]
+    assert report["gates"]["qat_median_near_paper"]
+    assert report["gates"]["qat_elevated_vs_fp32"]
