@@ -82,11 +82,15 @@ class SEADBSConfig:
     update_frequency: int = 1  # open — gradient steps per env step
 
     # Gumbel-Softmax (§IV.C, Eq. 14). tau_0, tau_min, lambda_tau are not in
-    # Table I; defaults follow the cited Gumbel-Softmax paper (Jang et al. 2016:
-    # tau = max(0.5, exp(-r t)), r in {1e-5, 1e-4}).
-    gs_tau0: float = 1.0
-    gs_tau_min: float = 0.5
-    gs_lambda: float = 1e-4
+    # Table I. Convention: anneal over exactly the 4,500 training steps from a
+    # near-uniform relaxed sample to tau = 1 (lambda = ln(200) / 4500). The actor's
+    # stim logit margin reaches ~15–20 within ~15 episodes at Table I learning
+    # rates, so tau must start ~10x that to explore at all; Jang et al.'s
+    # tau_0 = 1 (and tau_0 = 10, 50) leave SEA-DBS stimulating 70–90 % of
+    # steps from the first episodes (docs/figures/ravivarapu/4a.md).
+    gs_tau0: float = 200.0
+    gs_tau_min: float = 1.0
+    gs_lambda: float = 1.18e-3
     # How the *executed* binary action is drawn. ``relaxed`` (default) samples
     # a ~ Categorical(a_tilde) from the Eq. (11) relaxed probabilities — Fig. 3
     # "actions are sampled from the resulting distribution", and the only reading
@@ -94,9 +98,9 @@ class SEADBSConfig:
     # (argmax of a_tilde), which is tau-independent.
     gs_action_sampling: GumbelActionSampling = "relaxed"
 
-    # Baseline DDPG exploration (no GS; paper-silent): epsilon-greedy with a
-    # linear decay over the whole run.
-    epsilon_start: float = 0.5
+    # Baseline DDPG exploration (no GS; paper-silent): epsilon-greedy, linear
+    # decay from fully random to 0.05 over the whole run.
+    epsilon_start: float = 1.0
     epsilon_end: float = 0.05
 
     # MLP topology (§14.9 — open)
