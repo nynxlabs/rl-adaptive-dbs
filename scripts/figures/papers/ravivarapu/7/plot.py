@@ -113,12 +113,6 @@ def ensure_checkpoints(
     parallel_series: int,
 ) -> None:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    for variant in FIG4_VARIANTS:
-        if not _ckpt(variant, seed).is_file():
-            raise SystemExit(
-                f"missing {_ckpt(variant, seed)}; train Fig 4 first "
-                "(scripts/figures/papers/ravivarapu/4a/plot.py)"
-            )
     jobs = [
         _TrainJob(
             variant=variant,
@@ -133,6 +127,12 @@ def ensure_checkpoints(
     ]
     if jobs:
         _parallel_series.run_series_parallel(jobs, _train_worker, parallel_series)
+    for variant in FIG4_VARIANTS:
+        if not _ckpt(variant, seed).is_file():
+            raise SystemExit(
+                f"missing {_ckpt(variant, seed)}; train Fig 4 first "
+                "(scripts/figures/papers/ravivarapu/4a/plot.py)"
+            )
 
 
 def evaluate_gates(traces: dict[str, list[float]]) -> dict[str, Any]:
