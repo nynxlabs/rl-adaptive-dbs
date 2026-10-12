@@ -3,10 +3,12 @@
 
 Thin entry point over ``mehregan/quant_panel.py`` (shared with Fig 6a). The fp32
 series is the Fig 5b 30 Hz checkpoint; PTQ fp16 / int8 quantize it; QAT is a
-separate 10-episode quantization-aware run with the same recipe.
+separate 10-episode quantization-aware run with the same recipe, trained on
+seeds 0–6 and shown as a seed band (its argmax is a tie-break of saturated
+int8 logits, so one seed is one draw).
 
 Run:
-  uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/6b/plot.py --train-qat
+  uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/6b/plot.py --train-qat   # 7 QAT seeds in parallel
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/6b/plot.py
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/6b/plot.py --plot-only
 """
