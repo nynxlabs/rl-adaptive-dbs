@@ -1472,16 +1472,30 @@ def promote_5a(
     }
 
 
+def _qat_band_caption_bits(manifest: dict[str, Any]) -> list[str]:
+    """Fig 6 QAT seed band: paper-like seed count and median late/pre."""
+    metrics = manifest.get("paper_gate_metrics") or {}
+    n = metrics.get("qat_seed_count")
+    if not n:
+        return []
+    rel = (metrics.get("ours_late_over_pre") or {}).get("qat")
+    bits = [f"QAT paper-like {metrics.get('qat_paper_like_count', 0)}/{n} train seeds"]
+    if rel is not None:
+        bits.append(f"QAT median late/pre {rel:.2f}")
+    return bits
+
+
 def _caption_6a(manifest: dict[str, Any]) -> str:
     seed = manifest.get("seed", 0)
     panel = manifest.get("panel") or {}
     gates = panel.get("gates") or {}
     bits = [
         "45 Hz paper-protocol eval",
-        f"seed {seed}",
+        f"eval seed {seed}",
         f"fp32_post={panel.get('fp32_post_mean', 0):.0f}",
-        f"qat_post={panel.get('qat_post_mean', 0):.0f}",
+        f"QAT median post={panel.get('qat_post_mean', 0):.0f}",
     ]
+    bits.extend(_qat_band_caption_bits(manifest))
     if gates.get("ptq_fp16_near_fp32") and gates.get("ptq_int8_near_fp32"):
         bits.append("PTQ tracks fp32")
     if gates.get("qat_elevated_vs_fp32"):
@@ -1553,10 +1567,11 @@ def _caption_6b(manifest: dict[str, Any]) -> str:
     gates = panel.get("gates") or {}
     bits = [
         "30 Hz paper-protocol eval",
-        f"seed {seed}",
+        f"eval seed {seed}",
         f"fp32_post={panel.get('fp32_post_mean', 0):.0f}",
-        f"qat_post={panel.get('qat_post_mean', 0):.0f}",
+        f"QAT median post={panel.get('qat_post_mean', 0):.0f}",
     ]
+    bits.extend(_qat_band_caption_bits(manifest))
     if gates.get("ptq_fp16_near_fp32") and gates.get("ptq_int8_near_fp32"):
         bits.append("PTQ tracks fp32")
     if gates.get("qat_elevated_vs_fp32"):

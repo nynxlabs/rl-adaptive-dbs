@@ -30,17 +30,18 @@ _REPO = Path(__file__).resolve().parents[2]
 _MEHREGAN_PLOTS = _REPO / "scripts" / "figures" / "papers" / "mehregan"
 
 MEHREGAN_FIG6_GATE_ROWS: tuple[tuple[str, str], ...] = (
-    ("all_closed_loop", "fp32, PTQ and QAT each run their own actor closed loop"),
-    ("prestim_shared", "all series share the pre-onset level (spread ≤ 1%)"),
+    ("all_closed_loop", "fp32, PTQ and every QAT seed each run their own actor closed loop"),
+    ("prestim_shared", "all series and QAT seeds share the pre-onset level (spread ≤ 1%)"),
     ("fp32_suppresses_vs_baseline", "fp32 late mean (t ≥ 4 s) < its pre-onset mean"),
     ("ptq_fp16_near_fp32", "PTQ fp16 late mean within 15% of fp32"),
     ("ptq_int8_near_fp32", "PTQ int8 late mean within 20% of fp32"),
-    ("qat_elevated_vs_fp32", "QAT late mean > fp32"),
+    ("qat_elevated_vs_fp32", "median-seed QAT late mean > fp32"),
     ("fp32_level_near_paper", "fp32 late/pre within 20% of digitized paper"),
     ("ptq_fp16_level_near_paper", "PTQ fp16 late/pre within 20% of digitized paper"),
     ("ptq_int8_level_near_paper", "PTQ int8 late/pre within 20% of digitized paper"),
-    ("qat_not_below_paper", "QAT late/pre ≥ 80% of digitized paper (paper: same range or increased)"),
-    ("qat_late_sustained", "QAT [10,12] s mean ≥ 90% of its [2,8] s mean (no late fade)"),
+    ("qat_majority_not_below_paper", "QAT late/pre ≥ 80% of digitized paper in a strict majority of QAT training seeds"),
+    ("qat_median_near_paper", "median-seed QAT late/pre within 20% of digitized paper (figure: same range)"),
+    ("qat_late_sustained", "median QAT trace [10,12] s mean ≥ 90% of its [2,8] s mean (no late fade)"),
 )
 
 

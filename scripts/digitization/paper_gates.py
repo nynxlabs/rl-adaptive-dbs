@@ -614,6 +614,7 @@ def fig5_efficacy_gates(
 def fig6_quant_gates(
     traces: dict[str, tuple[np.ndarray, np.ndarray]],
     *,
+    qat_seeds: dict[str, tuple[np.ndarray, np.ndarray]] | None = None,
     paper: dict[str, tuple[np.ndarray, np.ndarray]] | None = None,
     paper_path: Path | str | None = None,
     panel: str = "6a",
@@ -624,14 +625,21 @@ def fig6_quant_gates(
 ) -> dict[str, Any]:
     """Fig 6a/6b: PTQ tracks fp32 suppression; 10-episode QAT does not.
 
-    ``traces`` maps ``fp32`` / ``ptq_fp16`` / ``ptq_int8`` / ``qat`` to
-    ``(time_s, P_beta)`` on the paper display axis (onset at 2 s). Levels are
-    compared as late (t ≥ ``late_lo``) mean over the shared pre-onset mean, the
-    same normalization applied to the digitized paper curves — plant and paper
+    ``traces`` maps ``fp32`` / ``ptq_fp16`` / ``ptq_int8`` to ``(time_s,
+    P_beta)`` on the paper display axis (onset at 2 s). Levels are compared as
+    late (t ≥ ``late_lo``) mean over the shared pre-onset mean, the same
+    normalization applied to the digitized paper curves — plant and paper
     absolute PSD scales differ slightly, the pre-stim baseline does not move.
 
-    ``closed_loop`` (series → bool) records that every series ran its own
-    (quantized) actor closed loop; any replayed / open-loop series fails.
+    QAT is judged as a **seed band**: ``qat_seeds`` maps each QAT training seed
+    to its eval trace (without it, ``traces["qat"]`` is a one-seed band).
+    10-episode int8 QAT does not converge, so the pattern its deployed argmax
+    plays varies by training seed; the QAT gates test the paper's claim on the
+    share of seeds and on the median seed, not on one draw.
+
+    ``closed_loop`` (series → bool; ``qat`` = every QAT seed) records that every
+    series ran its own (quantized) actor closed loop; any replayed / open-loop
+    series fails.
     """
     paper = paper or load_refined(paper_path or refined_path(panel))
     alias = {
@@ -655,8 +663,18 @@ def fig6_quant_gates(
         late = window_mean(x, y, lo=late_lo)
         return pre, late, late / pre if pre else float("nan")
 
+    band = dict(qat_seeds) if qat_seeds else ({"0": traces["qat"]} if "qat" in traces else {})
+    band_rel = {str(s): _rel(xy) for s, xy in band.items()}
+    seed_pre = np.array([v[0] for v in band_rel.values()], dtype=float)
+    seed_late = np.array([v[1] for v in band_rel.values()], dtype=float)
+    seed_rel = np.array([v[2] for v in band_rel.values()], dtype=float)
+
+    def _median(v: np.ndarray) -> float:
+        return float(np.median(v)) if v.size else float("nan")
+
     keys = ("fp32", "ptq_fp16", "ptq_int8", "qat")
-    ours = {k: _rel(traces.get(k)) for k in keys}
+    ours = {k: _rel(traces.get(k)) for k in keys[:3]}
+    ours["qat"] = (_median(seed_pre), _median(seed_late), _median(seed_rel))
     theirs = {k: _rel(_paper_xy(k)) for k in keys}
     o_pre = {k: ours[k][0] for k in keys}
     o_late = {k: ours[k][1] for k in keys}
@@ -666,11 +684,13 @@ def fig6_quant_gates(
     gates: dict[str, bool] = {}
     if closed_loop is not None:
         gates["all_closed_loop"] = all(bool(closed_loop.get(k)) for k in keys)
-    finite_pre = [v for v in o_pre.values() if np.isfinite(v)]
+    pres = [o_pre[k] for k in keys[:3]] + seed_pre.tolist()
+    finite_pre = [v for v in pres if np.isfinite(v)]
     # Same seed + same reset → one shared pre-onset trace. 1% of the level
     # (≈5 PSD units) absorbs digitization spread on the paper's own curves.
     gates["prestim_shared"] = bool(
-        len(finite_pre) == len(keys)
+        seed_pre.size
+        and len(finite_pre) == len(pres)
         and (max(finite_pre) - min(finite_pre)) <= 0.01 * abs(np.mean(finite_pre))
     )
     gates["fp32_suppresses_vs_baseline"] = bool(o_late["fp32"] < o_pre["fp32"])
@@ -679,17 +699,24 @@ def fig6_quant_gates(
     gates["qat_elevated_vs_fp32"] = bool(o_late["qat"] > o_late["fp32"])
     for k in ("fp32", "ptq_fp16", "ptq_int8"):
         gates[f"{k}_level_near_paper"] = rel_close(o_rel[k], p_rel[k], tol=level_tol)
-    # §IV.A.3: under QAT "the power stayed at the same range or increased" — one
-    # sided: QAT must not drop below the digitized paper level band.
-    gates["qat_not_below_paper"] = bool(
-        np.isfinite(o_rel["qat"])
-        and np.isfinite(p_rel["qat"])
-        and o_rel["qat"] >= (1.0 - level_tol) * p_rel["qat"]
+    # §IV.A.3: under QAT the power "stayed at the same range or increased" and the
+    # model "failed to generate a stimulation pattern capable of reducing" it —
+    # a claim about the method, so a strict majority of QAT training seeds must
+    # not drop below the digitized paper band (one-sided, as the text) ...
+    paper_like = (
+        seed_rel >= (1.0 - level_tol) * p_rel["qat"]
+        if np.isfinite(p_rel["qat"])
+        else np.zeros(seed_rel.shape, dtype=bool)
     )
+    gates["qat_majority_not_below_paper"] = bool(
+        seed_rel.size and 2 * int(np.sum(paper_like)) > seed_rel.size
+    )
+    # ... and the median seed must sit in the figure's "same range" (two-sided).
+    gates["qat_median_near_paper"] = rel_close(o_rel["qat"], p_rel["qat"], tol=level_tol)
 
-    qat = traces.get("qat")
-    if qat is not None:
-        qt, qy = (np.asarray(v, dtype=float) for v in qat)
+    if band:
+        qt = np.asarray(next(iter(band.values()))[0], dtype=float)
+        qy = np.median(np.vstack([np.asarray(xy[1], dtype=float) for xy in band.values()]), axis=0)
         early_post = window_mean(qt, qy, lo=onset, hi=8.0)
         late_post = window_mean(qt, qy, lo=10.0, hi=12.0)
         # Paper QAT stays in its elevated band to the end (no late fade into the
@@ -706,6 +733,10 @@ def fig6_quant_gates(
             "paper_late_over_pre": p_rel,
             "paper_pre": {k: theirs[k][0] for k in keys},
             "paper_late": {k: theirs[k][1] for k in keys},
+            "qat_seed_late_over_pre": {s: v[2] for s, v in band_rel.items()},
+            "qat_seed_paper_like": {s: bool(v) for s, v in zip(band_rel, paper_like)},
+            "qat_paper_like_count": int(np.sum(paper_like)),
+            "qat_seed_count": int(seed_rel.size),
         },
         paper_ref={
             "path": str(paper_path or refined_path(panel)),
@@ -715,5 +746,6 @@ def fig6_quant_gates(
         notes=[
             "Paper: PTQ (fp16, int8) tracks fp32 suppression; 10-episode QAT stays near pre-stim.",
             "Levels are late/pre ratios so plant-vs-paper PSD scale offsets cancel.",
+            "QAT is a seed band: ours_*['qat'] are medians over the QAT training seeds.",
         ],
     )
