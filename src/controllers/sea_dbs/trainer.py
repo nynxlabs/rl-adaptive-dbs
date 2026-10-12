@@ -20,7 +20,7 @@ from controllers.sea_dbs.checkpoint import (
     save_checkpoint,
     validate_resume_config,
 )
-from controllers.sea_dbs.config import SEADBSConfig
+from controllers.sea_dbs.config import SEADBSConfig, config_from_dict
 from controllers.sea_dbs.networks import (
     Actor,
     Critic,
@@ -28,6 +28,7 @@ from controllers.sea_dbs.networks import (
     action_one_hot,
     clone_module,
     gumbel_softmax_sample,
+    sample_relaxed_action,
     soft_update,
 )
 
@@ -36,6 +37,7 @@ from controllers.sea_dbs.networks import (
 class TrainMetrics:
     episode_rewards: list[float] = field(default_factory=list)
     episode_psd: list[float] = field(default_factory=list)
+    episode_stim_frac: list[float] = field(default_factory=list)
     critic_losses: list[float] = field(default_factory=list)
     actor_losses: list[float] = field(default_factory=list)
     pred_losses: list[float] = field(default_factory=list)
@@ -50,6 +52,7 @@ class TrainResult:
     metrics: TrainMetrics
     episode_rewards: list[float] = field(default_factory=list)
     episode_psd: list[float] = field(default_factory=list)
+    episode_stim_frac: list[float] = field(default_factory=list)
     update_count: int = 0
 
 
@@ -78,7 +81,6 @@ class SEA_DBSTrainer:
             state_dim=state_dim,
             n_actions=n_actions,
             hidden_size=config.hidden_size,
-            no_stim_bias=config.actor_no_stim_bias,
         )
         self.critic = critic or Critic(
             state_dim=state_dim,
@@ -129,24 +131,9 @@ class SEA_DBSTrainer:
         self._metrics = TrainMetrics()
 
     def gs_temperature(self) -> float:
+        """Eq. (14): tau_t = max(tau_min, tau_0 exp(-lambda_tau t)), t = env steps."""
         cfg = self.config
-        lam = cfg.gs_lambda
-        if cfg.gs_early_lambda_episode_hi > 0 and self._current_episode < cfg.gs_early_lambda_episode_hi:
-            lam *= cfg.gs_early_lambda_scale
-        tau = max(cfg.gs_tau_min, cfg.gs_tau0 * np.exp(-lam * self._total_steps))
-        if (
-            cfg.gs_late_tau_floor_episode_lo > 0
-            and cfg.gs_late_tau_floor > 0.0
-            and self._current_episode >= cfg.gs_late_tau_floor_episode_lo
-        ):
-            tau = max(tau, cfg.gs_late_tau_floor)
-        return float(tau)
-
-    def pm_warmup_scale(self) -> float:
-        steps = int(self.config.pm_warmup_steps)
-        if steps <= 0:
-            return 1.0
-        return min(1.0, self._total_steps / steps)
+        return float(max(cfg.gs_tau_min, cfg.gs_tau0 * np.exp(-cfg.gs_lambda * self._total_steps)))
 
     def epsilon(self) -> float:
         total = self.config.num_episodes * self.config.max_episode_steps
@@ -160,83 +147,24 @@ class SEA_DBSTrainer:
     def _to_tensor(self, array: np.ndarray) -> torch.Tensor:
         return torch.as_tensor(array, device=self.device, dtype=torch.float32)
 
-    def _episode_action_logits(self, logits: torch.Tensor) -> torch.Tensor:
-        cfg = self.config
-        ep = self._current_episode
-        adjusted = logits
-
-        stim_boost = cfg.actor_mid_episode_stim_logit_boost
-        mid_lo, mid_hi = cfg.actor_mid_episode_lo, cfg.actor_mid_episode_hi
-        if stim_boost != 0.0 and mid_lo > 0 and mid_hi > mid_lo and mid_lo <= ep < mid_hi:
-            adjusted = adjusted.clone()
-            adjusted[0] -= stim_boost
-            adjusted[1] += stim_boost
-
-        midlate_boost = cfg.actor_midlate_episode_stim_logit_boost
-        midlate_lo, midlate_hi = (
-            cfg.actor_midlate_episode_lo,
-            cfg.actor_midlate_episode_hi,
-        )
-        if (
-            midlate_boost != 0.0
-            and midlate_lo > 0
-            and midlate_hi > midlate_lo
-            and midlate_lo <= ep < midlate_hi
-        ):
-            if adjusted is logits:
-                adjusted = logits.clone()
-            adjusted[0] -= midlate_boost
-            adjusted[1] += midlate_boost
-
-        patch_boost = cfg.actor_gap_patch_no_stim_boost
-        patch_lo, patch_hi = cfg.actor_gap_patch_episode_lo, cfg.actor_gap_patch_episode_hi
-        if patch_boost != 0.0 and patch_lo > 0 and patch_hi > patch_lo and patch_lo <= ep < patch_hi:
-            if adjusted is logits:
-                adjusted = logits.clone()
-            adjusted[0] += patch_boost
-            adjusted[1] -= patch_boost
-
-        no_stim_boost = cfg.actor_late_episode_no_stim_boost
-        stim_late_boost = cfg.actor_late_episode_stim_logit_boost
-        late_lo, late_hi = cfg.actor_late_episode_lo, cfg.actor_late_episode_hi
-        if (
-            (no_stim_boost != 0.0 or stim_late_boost != 0.0)
-            and late_lo > 0
-            and late_hi > late_lo
-            and late_lo <= ep < late_hi
-        ):
-            span = late_hi - late_lo
-            if cfg.actor_late_episode_boost_ramp and span > 1:
-                frac = (ep - late_lo) / (span - 1)
-            else:
-                frac = 1.0
-            if no_stim_boost != 0.0:
-                effective_no_stim = no_stim_boost * frac
-                if adjusted is logits:
-                    adjusted = logits.clone()
-                adjusted[0] += effective_no_stim
-                adjusted[1] -= effective_no_stim
-            if stim_late_boost != 0.0:
-                effective_stim = stim_late_boost * frac
-                if adjusted is logits:
-                    adjusted = logits.clone()
-                adjusted[0] -= effective_stim
-                adjusted[1] += effective_stim
-        return adjusted
-
     def _select_action(self, state: np.ndarray) -> tuple[int, np.ndarray]:
         state_t = self._to_tensor(state).unsqueeze(0)
         with torch.no_grad():
-            logits = self._episode_action_logits(self.actor(state_t).squeeze(0))
+            logits = self.actor(state_t).squeeze(0)
             logits_np = logits.cpu().numpy().astype(np.float32)
 
         if self.config.use_gumbel_softmax:
-            _, action_t = gumbel_softmax_sample(
+            # Algorithm 1 lines 5–7 / Fig. 3: perturb logits with Gumbel noise,
+            # temperature-scaled softmax (Eqs. 11–13), then sample the action.
+            relaxed, action_t = gumbel_softmax_sample(
                 logits,
                 tau=self.gs_temperature(),
-                hard=True,
+                hard=False,
             )
-            action = int(action_t.item() if action_t.ndim == 0 else action_t[0].item())
+            if self.config.gs_action_sampling == "relaxed":
+                action = sample_relaxed_action(relaxed)
+            else:
+                action = int(action_t.reshape(-1)[0].item())
             return action, logits_np
 
         if self._rng.random() < self.epsilon():
@@ -264,10 +192,7 @@ class SEA_DBSTrainer:
             next_action = torch.argmax(next_logits, dim=-1)
             next_oh = action_one_hot(next_action, cfg.n_actions).to(self.device)
             next_q = self.critic_target(next_states, next_oh)
-            pm_scale = self.pm_warmup_scale()
-            pm_term = (
-                pm_scale * r_hat_batch if cfg.use_predictive_model else torch.zeros_like(rewards)
-            )
+            pm_term = r_hat_batch if cfg.use_predictive_model else torch.zeros_like(rewards)
             target = rewards + pm_term + cfg.gamma * (1.0 - dw) * next_q
 
         q_pred = self.critic(states, action_oh)
@@ -353,6 +278,9 @@ class SEA_DBSTrainer:
             psd = extra.get("episode_psd")
         if isinstance(psd, list):
             self._metrics.episode_psd = list(psd)
+        stim = trainer_state.get("episode_stim_frac")
+        if isinstance(stim, list):
+            self._metrics.episode_stim_frac = list(stim)
 
     def train_episodes(
         self,
@@ -373,12 +301,14 @@ class SEA_DBSTrainer:
         if start_episode > 0:
             result.episode_rewards = list(self._metrics.episode_rewards)
             result.episode_psd = list(self._metrics.episode_psd)
+            result.episode_stim_frac = list(self._metrics.episode_stim_frac)
 
         for episode in range(start_episode, cfg.num_episodes):
             self._current_episode = episode
             state, info = self.env.reset(seed=cfg.episode_plant_seed(episode))
             episode_reward = 0.0
             episode_p_beta: list[float] = [float(info.get("p_beta_norm", 0.0))]
+            episode_actions: list[int] = []
 
             for _ in range(cfg.max_episode_steps):
                 action, logits = self._select_action(state)
@@ -413,6 +343,7 @@ class SEA_DBSTrainer:
                         self._update_step()
 
                 episode_reward += float(reward)
+                episode_actions.append(int(action))
                 episode_p_beta.append(float(step_info.get("p_beta_norm", 0.0)))
                 state = next_state
                 if truncated:
@@ -423,9 +354,12 @@ class SEA_DBSTrainer:
             else:
                 episode_psd_val = float(np.mean(episode_p_beta)) if episode_p_beta else 0.0
             result.episode_rewards.append(episode_reward)
+            stim_frac = float(np.mean(episode_actions)) if episode_actions else 0.0
             result.episode_psd.append(episode_psd_val)
+            result.episode_stim_frac.append(stim_frac)
             self.metrics.episode_rewards.append(episode_reward)
             self.metrics.episode_psd.append(episode_psd_val)
+            self.metrics.episode_stim_frac.append(stim_frac)
             completed = episode + 1
             if checkpoint_path is not None and checkpoint_interval > 0:
                 if completed % checkpoint_interval == 0 or completed == cfg.num_episodes:
@@ -440,6 +374,7 @@ class SEA_DBSTrainer:
                             "completed_episodes": completed,
                             "episode_rewards": list(result.episode_rewards),
                             "episode_psd": list(result.episode_psd),
+                            "episode_stim_frac": list(result.episode_stim_frac),
                             "update_count": self._update_count,
                         },
                     )
@@ -450,7 +385,8 @@ class SEA_DBSTrainer:
                 print(
                     f"episode {episode + 1}/{cfg.num_episodes} "
                     f"reward={episode_reward:.3f} "
-                    f"{'last' if cfg.episode_psd_metric == 'last' else 'mean'}_p_beta={episode_psd_val:.4f}",
+                    f"{'last' if cfg.episode_psd_metric == 'last' else 'mean'}_p_beta={episode_psd_val:.4f} "
+                    f"stim={stim_frac:.2f}",
                     flush=True,
                 )
 
@@ -468,6 +404,7 @@ def write_train_metrics(result: TrainResult, path: str | Path) -> Path:
         "num_episodes": result.config.num_episodes,
         "episode_rewards": result.episode_rewards,
         "episode_psd": result.episode_psd,
+        "episode_stim_frac": result.episode_stim_frac,
         "update_count": result.update_count,
     }
     out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -495,7 +432,7 @@ def train_sea_dbs(
         if resume_path is not None:
             payload = load_checkpoint(resume_path, device=cfg.device)
             saved_raw = payload["sea_dbs_config"]
-            saved_cfg = SEADBSConfig(**saved_raw)
+            saved_cfg = config_from_dict(saved_raw)
             metrics_path = Path(resume_path).with_suffix(".metrics.json")
             resume_start = infer_sea_dbs_start_episode(
                 payload,

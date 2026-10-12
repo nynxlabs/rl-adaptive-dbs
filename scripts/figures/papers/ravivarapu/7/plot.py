@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
-"""Ravivarapu Fig 7 — ablation PSD over 10 stimulation steps."""
+"""Ravivarapu Fig 7 — ablation PSD over 10 stimulation steps.
+
+All four variants train with the same Fig 4 config (``fig4_ravivarapu_config``):
+Baseline and SEA-DBS reuse the Fig 4 checkpoints; Baseline+PM and Baseline+GS
+train here with the identical config. Eval is the Fig 5a rollout (training
+plant setup, 50 Hz, untreated t=0 plus 10 argmax actions).
+
+Run:
+  uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/7/plot.py --export-notes --update-report
+  uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/7/plot.py --plot-only
+"""
 from __future__ import annotations
 
 from rl_adaptive_dbs.panel import load_script_module
@@ -10,7 +20,7 @@ import argparse
 import json
 import os
 import sys
-from dataclasses import replace
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -19,8 +29,7 @@ os.environ.setdefault("MPLBACKEND", "Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from controllers.sea_dbs.config import ABLATION_EVAL_STEPS, SEADBSConfig
-from rl_adaptive_dbs.parallel_workers import TrainSeedJob, train_seed_worker
+from controllers.sea_dbs.config import ABLATION_EVAL_STEPS, INFERENCE_CARRIER_50HZ
 
 _RESUME_CLI = Path(__file__).resolve().parents[2] / "resume_cli.py"
 _resume_cli = load_script_module("figure_resume_cli", _RESUME_CLI)
@@ -30,6 +39,9 @@ _parallel_series = load_script_module("figure_parallel_series", _PARALLEL_SERIES
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
 _figure_promote = load_script_module("figure_promote", _PROMOTE)
+
+_COMMON = Path(__file__).resolve().parents[1] / "common.py"
+_common = load_script_module("ravivarapu_common", _COMMON)
 
 _DIG = Path(__file__).resolve().parents[4] / "digitization"
 if str(_DIG) not in sys.path:
@@ -44,6 +56,7 @@ CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/7")
 FIGURES_DIR = Path("figures/ravivarapu/images/7")
 OUT_STEM = "ablation_psd"
 VARIANTS = ("baseline", "baseline-pm", "baseline-gs", "paper")
+FIG4_VARIANTS = ("baseline", "paper")
 LABELS = {
     "baseline": "Baseline",
     "baseline-pm": "Baseline+PM",
@@ -53,81 +66,73 @@ LABELS = {
 
 
 def _ckpt(variant: str, seed: int) -> Path:
-    if variant in ("baseline", "paper"):
-        p4 = Path("artifacts/figures/papers/ravivarapu/4") / f"{variant}_train{seed}.pt"
-        if p4.is_file():
-            return p4
-    p7 = CACHE_DIR / f"{variant}_train{seed}.pt"
-    if p7.is_file():
-        return p7
-    return Path("artifacts/figures/papers/ravivarapu/4") / f"{variant}_train{seed}.pt"
+    if variant in FIG4_VARIANTS:
+        return _common.fig4_checkpoint(variant, seed)
+    return CACHE_DIR / f"{variant}_train{seed}.pt"
 
 
-def _linked_png(path: Path) -> Path:
-    path = Path(path)
-    roots: list[Path] = []
-    main_root = getattr(_figure_promote, "REPO_ROOT", None)
-    if isinstance(main_root, Path):
-        roots.append(main_root)
-    roots.append(Path.cwd())
-    for root in roots:
-        paper = root / path.parent / "paper.png"
-        if not paper.is_symlink():
-            continue
-        linked_dir = paper.resolve().parent
-        linked_target = linked_dir / path.name
-        local = path if path.is_absolute() else Path.cwd() / path
-        local.parent.mkdir(parents=True, exist_ok=True)
-        if not linked_target.exists():
-            linked_target.parent.mkdir(parents=True, exist_ok=True)
-            linked_target.touch()
-        if local.exists() or local.is_symlink():
-            if local.resolve() != linked_target.resolve():
-                return linked_target
-            return local
-        try:
-            local.symlink_to(linked_target)
-        except OSError:
-            return linked_target
-        return local
-    path.parent.mkdir(parents=True, exist_ok=True)
-    return path
+@dataclass(frozen=True)
+class _TrainJob:
+    variant: str
+    seed: int
+    smoke: bool
+    checkpoint: str
+    resume: bool
+    checkpoint_interval: int
+
+
+def _train_worker(job: _TrainJob) -> dict[str, Any]:
+    _parallel_series.bootstrap_worker_threads()
+    from controllers.sea_dbs.config import fig4_ravivarapu_config
+    from controllers.sea_dbs.trainer import train_sea_dbs
+
+    cfg = fig4_ravivarapu_config(seed=job.seed, variant=job.variant)
+    if job.smoke:
+        cfg = cfg.for_smoke(episodes=2, max_steps=5)
+    ckpt = Path(job.checkpoint)
+    result = train_sea_dbs(
+        config=cfg,
+        checkpoint_path=ckpt,
+        resume_path=ckpt if job.resume and ckpt.is_file() else None,
+        checkpoint_interval=job.checkpoint_interval,
+    )
+    return {
+        "variant": job.variant,
+        "episode_psd": result.episode_psd,
+        "episode_rewards": result.episode_rewards,
+        "episode_stim_frac": result.episode_stim_frac,
+    }
 
 
 def ensure_checkpoints(
     seed: int,
     *,
     smoke: bool,
-    resume: bool = False,
-    checkpoint_interval: int = 50,
-    parallel_series: int = 0,
+    resume: bool,
+    checkpoint_interval: int,
+    parallel_series: int,
 ) -> None:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    jobs: list[TrainSeedJob] = []
-    for variant in VARIANTS:
-        ckpt = CACHE_DIR / f"{variant}_train{seed}.pt"
-        if ckpt.is_file() and not resume:
-            continue
-        cfg = SEADBSConfig(variant=variant, seed=seed, log_episodes=True)
-        if smoke:
-            cfg = cfg.for_smoke(episodes=2, max_steps=5)
-        else:
-            cfg = replace(cfg, num_episodes=150)
-        jobs.append(
-            TrainSeedJob(
-                controller="sea_dbs",
-                variant=variant,
-                seed=seed,
-                episodes=cfg.num_episodes if not smoke else cfg.num_episodes,
-                checkpoint_dir=CACHE_DIR,
-                smoke=smoke,
-                resume_path=ckpt if ckpt.is_file() and resume else None,
-                checkpoint_interval=checkpoint_interval,
+    for variant in FIG4_VARIANTS:
+        if not _ckpt(variant, seed).is_file():
+            raise SystemExit(
+                f"missing {_ckpt(variant, seed)}; train Fig 4 first "
+                "(scripts/figures/papers/ravivarapu/4a/plot.py)"
             )
+    jobs = [
+        _TrainJob(
+            variant=variant,
+            seed=seed,
+            smoke=smoke,
+            checkpoint=str(_ckpt(variant, seed)),
+            resume=resume,
+            checkpoint_interval=checkpoint_interval,
         )
-    if not jobs:
-        return
-    _parallel_series.run_series_parallel(jobs, train_seed_worker, parallel_series)
+        for variant in VARIANTS
+        if variant not in FIG4_VARIANTS and (resume or not _ckpt(variant, seed).is_file())
+    ]
+    if jobs:
+        _parallel_series.run_series_parallel(jobs, _train_worker, parallel_series)
 
 
 def evaluate_gates(traces: dict[str, list[float]]) -> dict[str, Any]:
@@ -144,7 +149,7 @@ def main() -> int:
     parser.add_argument(
         "--retrain",
         action="store_true",
-        help="Resume training from existing per-variant checkpoints in cache",
+        help="Resume training from existing +PM / +GS checkpoints in the Fig 7 cache",
     )
     parser.add_argument(
         "--checkpoint-interval",
@@ -155,15 +160,23 @@ def main() -> int:
     _resume_cli.add_export_notes_arg(parser)
     _resume_cli.add_update_report3_arg(parser)
     _parallel_series.add_parallel_series_argument(parser)
+    _common.add_no_promote_arg(parser)
     args = parser.parse_args()
+    if args.no_promote:
+        args.export_notes = False
+        args.update_report = False
     _resume_cli.configure_promote_publish(args, _figure_promote)
     steps = 5 if args.smoke else ABLATION_EVAL_STEPS
     series_path = CACHE_DIR / "series.json"
+    actions: dict[str, list[int]] = {}
+    eval_meta: dict[str, Any] = {}
     if args.plot_only:
         if not series_path.is_file():
             raise SystemExit(f"missing series cache: {series_path}")
         payload = json.loads(series_path.read_text(encoding="utf-8"))
         traces = payload["traces"]
+        actions = payload.get("actions") or {}
+        eval_meta = payload.get("eval_meta") or {}
         steps = int(payload.get("steps", len(next(iter(traces.values()))) - 1))
     else:
         ensure_checkpoints(
@@ -173,22 +186,26 @@ def main() -> int:
             checkpoint_interval=args.checkpoint_interval,
             parallel_series=args.parallel_series,
         )
-
         eval_jobs = [
-            _parallel_series.RavivarapuAblationEvalJob(
+            _parallel_series.RavivarapuInferenceEvalJob(
                 variant=variant,
                 seed=args.seed,
                 checkpoint=str(_ckpt(variant, args.seed)),
-                n_steps=steps,
+                max_steps=steps,
+                carrier_hz=INFERENCE_CARRIER_50HZ,
             )
             for variant in VARIANTS
         ]
-        eval_results = _parallel_series.run_series_parallel(
+        results = _parallel_series.run_series_parallel(
             eval_jobs,
-            _parallel_series.ravivarapu_ablation_eval_worker,
+            _parallel_series.ravivarapu_inference_eval_worker,
             args.parallel_series,
         )
-        traces = {variant: trace for variant, trace in eval_results}
+        traces = {}
+        for result in results:
+            traces[result.variant] = result.trace
+            actions[result.variant] = result.actions
+            eval_meta[result.variant] = result.eval_meta
 
     fig, ax = plt.subplots(figsize=(7, 4))
     scale = float(_paper_overlay.RAVI_INFERENCE_PAPER_Y_TO_NORM)
@@ -210,7 +227,7 @@ def main() -> int:
     ax.grid(True, alpha=0.3)
     _paper_overlay.place_legend(ax, fontsize=8)
     png_path, png_version = _figure_promote.next_versioned_png(FIGURES_DIR, OUT_STEM)
-    fig.savefig(_linked_png(png_path), dpi=150)
+    fig.savefig(_common.linked_png(png_path, _figure_promote, promote=not args.no_promote), dpi=150)
     plt.close(fig)
     gates = {"pass": False, "smoke_override": True} if args.smoke else evaluate_gates(traces)
     if not args.plot_only:
@@ -218,6 +235,8 @@ def main() -> int:
             json.dumps(
                 {
                     "traces": traces,
+                    "actions": actions,
+                    "eval_meta": eval_meta,
                     "steps": steps,
                     "n_psd_samples": steps + 1,
                 },
@@ -226,8 +245,8 @@ def main() -> int:
             + "\n"
         )
     caption = (
-        f"Ablation study GPi beta PSD over 10 steps (seed {args.seed}); pass={gates.get('pass')}; "
-        f"Baseline vs +PM vs +GS vs SEA-DBS."
+        f"Ablation GPi beta PSD over 10 steps @ 50 Hz (seed {args.seed}, argmax actions); "
+        f"pass={gates.get('pass')}; Baseline vs +PM vs +GS vs SEA-DBS, one shared training config."
     )
     manifest = {
         "panel": "7",
@@ -239,15 +258,18 @@ def main() -> int:
         "gates": gates,
         "caption": caption,
         "series_cache": series_path.as_posix(),
+        "actions": {k: list(v) for k, v in actions.items()},
+        "eval_meta": eval_meta,
     }
     manifest = _panel.stamp_manifest(manifest)
     (CACHE_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
-    if hasattr(_figure_promote, "promote_ravivarapu_7"):
+    if not args.no_promote and hasattr(_figure_promote, "promote_ravivarapu_7"):
         _figure_promote.promote_ravivarapu_7(manifest=manifest, png_path=png_path)
     print(json.dumps(manifest, indent=2))
     print(f"wrote {png_path}")
 
     return _panel.exit_code(manifest, smoke=bool(getattr(args, "smoke", False)))
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

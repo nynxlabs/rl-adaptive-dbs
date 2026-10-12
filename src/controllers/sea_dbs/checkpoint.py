@@ -14,7 +14,7 @@ from controllers.common.resume import (
     infer_completed_episodes,
     validate_resume_config_fields,
 )
-from controllers.sea_dbs.config import SEADBSConfig
+from controllers.sea_dbs.config import SEADBSConfig, config_from_dict
 from controllers.sea_dbs.networks import Actor, Critic, PredictiveModel
 
 
@@ -55,6 +55,7 @@ def save_checkpoint(
             "rng_state": trainer._rng.bit_generator.state,
             "episode_rewards": list(trainer.metrics.episode_rewards),
             "episode_psd": list(trainer.metrics.episode_psd),
+            "episode_stim_frac": list(trainer.metrics.episode_stim_frac),
         }
     if extra:
         payload["extra"] = extra
@@ -71,8 +72,7 @@ def load_actor_from_payload(
     *,
     device: str = "cpu",
 ) -> tuple[Actor, SEADBSConfig]:
-    raw = payload["sea_dbs_config"]
-    config = SEADBSConfig(**raw)
+    config = config_from_dict(payload["sea_dbs_config"])
     actor = Actor(
         state_dim=int(payload.get("state_dim", config.state_dim)),
         n_actions=int(payload.get("n_actions", config.n_actions)),

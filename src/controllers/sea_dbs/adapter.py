@@ -77,10 +77,8 @@ class SEA_DBSEnvAdapter(gym.Env):
         # Eval may override via set_carrier_hz; reset must not clobber that.
         self._carrier_hz = float(self.config.carrier_hz)
 
-    def _window_s_for_action(self, action: int) -> float:
-        untreated = self.config.untreated_window_s
-        if untreated is not None and int(action) == 0:
-            return float(untreated)
+    def _window_s_for_action(self, action: int) -> float:  # noqa: ARG002 - same window for both actions
+        """Plant shot length; identical for stim and no-stim so P_beta is one estimator."""
         return float(self.config.integration_duration_s)
 
     def close(self) -> None:
@@ -90,8 +88,8 @@ class SEA_DBSEnvAdapter(gym.Env):
     def set_carrier_hz(self, hz: float) -> None:
         """Fixed eval knob for inference (Fig 5a/5b); not an RL action.
 
-        Survives ``reset()``. Fig 4 training uses 130 Hz; Fig 5 eval switches
-        the same adapter to 50 Hz or 30 Hz without rebuilding the env.
+        Survives ``reset()``. Training and Figs 5a/6/7 use 50 Hz; Fig 5b eval
+        switches the same adapter to 30 Hz without rebuilding the env.
         """
         self._carrier_hz = float(hz)
 
@@ -120,27 +118,16 @@ class SEA_DBSEnvAdapter(gym.Env):
         integration_ms = (
             self._window_s_for_action(action) if duration_s is None else float(duration_s)
         ) * 1000.0
-        burst_ms = float(cfg.dbs_burst_ms)
-        delay_ms = float(cfg.dbs_pulse_delay_ms)
-        if burst_ms < integration_ms or delay_ms > 0.0:
-            # Short-burst convention (paper Eq. (6)): apply the carrier train for
-            # only ``burst_ms`` of the biomarker window, then leave the rest of the
-            # window unstimulated. Optional ``dbs_pulse_delay_ms`` shifts the
-            # train later in the window (Fig 5b: 5 ms, one 30 Hz pulse).
-            full = create_dbs_current(
+        burst_ms = integration_ms if cfg.dbs_burst_ms is None else float(cfg.dbs_burst_ms)
+        if burst_ms < integration_ms:
+            # Short-burst convention (paper Eq. (6) "short bursts"): carrier train
+            # for ``burst_ms`` of the window, then no stimulation.
+            burst = create_dbs_current(
                 self._carrier_hz,
                 tmax_ms=integration_ms,
                 dt_ms=cfg.plant_dt_ms,
             )
-            if delay_ms > 0.0:
-                shift = int(round(delay_ms / cfg.plant_dt_ms))
-                delayed = np.zeros_like(full)
-                if 0 < shift < full.size:
-                    delayed[shift:] = full[: full.size - shift]
-                    full = delayed
-            burst = full.copy()
-            if burst_ms < integration_ms:
-                burst[int(round(burst_ms / cfg.plant_dt_ms)) :] = 0.0
+            burst[int(round(burst_ms / cfg.plant_dt_ms)) :] = 0.0
             return DbsSpec(pick_dbs_freq=2, idbs=burst)
         return DbsSpec.from_frequency_hz(self._carrier_hz)
 

@@ -26,8 +26,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from controllers.sea_dbs.adapter import SEA_DBSEnvAdapter
-from controllers.sea_dbs.config import SEADBSConfig, fig4_ravivarapu_config
-from dataclasses import dataclass, replace
+from controllers.sea_dbs.config import config_from_dict, fig4_ravivarapu_config
+from dataclasses import asdict, dataclass, replace
 
 from controllers.sea_dbs.checkpoint import load_checkpoint, save_checkpoint
 from controllers.sea_dbs.trainer import SEA_DBSTrainer
@@ -53,6 +53,9 @@ _parallel_series = load_script_module("figure_parallel_series", _PARALLEL_SERIES
 _OVERLAY = Path(__file__).resolve().parents[2] / "paper_overlay.py"
 _paper_overlay = load_script_module("figure_paper_overlay", _OVERLAY)
 
+_COMMON = Path(__file__).resolve().parents[1] / "common.py"
+_common = load_script_module("ravivarapu_common", _COMMON)
+
 FIGURES_DIR = Path("figures/ravivarapu/images/4a")
 CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/4")
 SHARED_SERIES = CACHE_DIR / "series.json"
@@ -68,56 +71,6 @@ DISPLAY_ROLL_WINDOW = 10
 # Replication traces; paper overlays use lightened dashed versions of these colors.
 REPL_BASELINE_COLOR = "#1f77b4"
 REPL_SEA_COLOR = "#d62728"
-
-
-def _rolling_mean(values: list[float] | np.ndarray, window: int) -> np.ndarray:
-    y = np.asarray(values, dtype=float)
-    if window <= 1 or y.size == 0:
-        return y
-    out = np.empty_like(y)
-    for i in range(y.size):
-        lo = max(0, i - window + 1)
-        out[i] = float(y[lo : i + 1].mean())
-    return out
-
-
-def _linked_png(path: Path) -> Path:
-    """Write versioned PNGs into the symlink-backed main figures tree when possible.
-
-    Worktree checkouts often materialize ``paper.png`` as a real file, so the local
-    ``figures/...`` tree is not a symlink. Prefer the main-checkout
-    ``paper.png`` symlink (via ``promote.REPO_ROOT``) so ``savefig`` + ``--export-notes``
-    land bytes where the tracker and Report 3 expect them.
-    """
-    path = Path(path)
-    roots: list[Path] = []
-    main_root = getattr(_figure_promote, "REPO_ROOT", None)
-    if isinstance(main_root, Path):
-        roots.append(main_root)
-    roots.append(Path.cwd())
-    for root in roots:
-        paper = root / path.parent / "paper.png"
-        if not paper.is_symlink():
-            continue
-        linked_dir = paper.resolve().parent
-        linked_target = linked_dir / path.name
-        local = path if path.is_absolute() else Path.cwd() / path
-        local.parent.mkdir(parents=True, exist_ok=True)
-        if not linked_target.exists():
-            linked_target.parent.mkdir(parents=True, exist_ok=True)
-            linked_target.touch()
-        if local.exists() or local.is_symlink():
-            if local.resolve() != linked_target.resolve():
-                # Prefer the linked target for the actual write.
-                return linked_target
-            return local
-        try:
-            local.symlink_to(linked_target)
-        except OSError:
-            return linked_target
-        return local
-    path.parent.mkdir(parents=True, exist_ok=True)
-    return path
 
 
 def train_variant(
@@ -146,7 +99,7 @@ def train_variant(
         resume_start = 0
         if resume_path is not None:
             payload = load_checkpoint(resume_path, device=cfg.device)
-            saved_cfg = SEADBSConfig(**payload["sea_dbs_config"])
+            saved_cfg = config_from_dict(payload["sea_dbs_config"])
             from controllers.sea_dbs.checkpoint import infer_sea_dbs_start_episode, validate_resume_config
 
             metrics_path = resume_path.with_suffix(".metrics.json")
@@ -176,6 +129,7 @@ def train_variant(
                 "completed_episodes": len(result.episode_rewards),
                 "episode_rewards": result.episode_rewards,
                 "episode_psd": result.episode_psd,
+                "episode_stim_frac": result.episode_stim_frac,
             },
         )
         return {
@@ -183,6 +137,8 @@ def train_variant(
             "seed": seed,
             "episode_rewards": result.episode_rewards,
             "episode_psd": result.episode_psd,
+            "episode_stim_frac": result.episode_stim_frac,
+            "config": asdict(cfg),
             "num_episodes": cfg.num_episodes,
             "smoke": smoke,
             "checkpoint": ckpt.as_posix(),
@@ -288,7 +244,7 @@ def evaluate_gates(series: dict[str, Any]) -> dict[str, Any]:
     return ravivarapu_fig4a_attach_tiered_pass(merged)
 
 
-def plot_series(series: dict[str, Any], png_path: Path) -> None:
+def plot_series(series: dict[str, Any], png_path: Path, *, promote: bool = True) -> None:
     fig, ax = plt.subplots(figsize=(6, 4))
     paper_y: list[np.ndarray] = []
     roll_w = DISPLAY_ROLL_WINDOW
@@ -297,7 +253,7 @@ def plot_series(series: dict[str, Any], png_path: Path) -> None:
         ("paper", f"SEA-DBS (roll{roll_w})", REPL_SEA_COLOR),
     )
     for variant, label, color in repl_styles:
-        psd = _rolling_mean(series["variants"][variant]["episode_psd"], roll_w)
+        psd = _common.rolling_mean(series["variants"][variant]["episode_psd"], roll_w)
         episodes = np.arange(1, len(psd) + 1)
         ax.plot(episodes, psd, label=label, linewidth=1.6 if variant == "baseline" else 1.8, color=color)
         paper_y.append(np.asarray(psd, dtype=float))
@@ -314,7 +270,7 @@ def plot_series(series: dict[str, Any], png_path: Path) -> None:
     _paper_overlay.place_legend(ax, fontsize=8)
     fig.tight_layout()
     png_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(_linked_png(png_path), dpi=150)
+    fig.savefig(_common.linked_png(png_path, _figure_promote, promote=promote), dpi=150)
     plt.close(fig)
 
 
@@ -333,7 +289,11 @@ def main() -> int:
     )
     _resume_cli.add_training_resume_args(parser)
     _parallel_series.add_parallel_series_argument(parser)
+    _common.add_no_promote_arg(parser)
     args = parser.parse_args()
+    if args.no_promote:
+        args.export_notes = False
+        args.update_report = False
     _resume_cli.configure_promote_publish(args, _figure_promote)
 
     t0 = time.time()
@@ -356,14 +316,17 @@ def main() -> int:
 
     gates = evaluate_gates(series)
     png_path, png_version = _figure_promote.next_versioned_png(FIGURES_DIR, OUT_STEM)
-    plot_series(series, png_path)
+    plot_series(series, png_path, promote=not args.no_promote)
 
     caption = (
         f"Training mean GPi beta PSD vs episode (seed {args.seed}); "
         f"shape_pass={gates['shape_pass']} pass={gates['pass']}; "
-        f"Baseline vs full SEA-DBS (PM+GS); display roll{DISPLAY_ROLL_WINDOW} "
-        "(gates on raw)."
+        f"Baseline vs full SEA-DBS (PM+GS); one shared training config; "
+        f"display roll{DISPLAY_ROLL_WINDOW} (gates on raw)."
     )
+    stim = {
+        v: series["variants"][v].get("episode_stim_frac") or [] for v in VARIANTS
+    }
     manifest = {
         "panel": "4a",
         "seed": args.seed,
@@ -375,11 +338,19 @@ def main() -> int:
         "caption": caption,
         "series_cache": SHARED_SERIES.as_posix(),
         "display_roll_window": DISPLAY_ROLL_WINDOW,
-        "train_config": "fig4_ravivarapu_config_v109",
+        "train_config": "fig4_ravivarapu_config (shared, no per-variant knobs)",
+        "stim_frac_windows": {
+            v: {
+                "early_0_15": float(np.mean(f[:15])) if len(f) >= 15 else None,
+                "mid_40_80": float(np.mean(f[40:80])) if len(f) >= 80 else None,
+                "late_120_150": float(np.mean(f[120:150])) if len(f) >= 150 else None,
+            }
+            for v, f in stim.items()
+        },
     }
     manifest = _panel.stamp_manifest(manifest)
     DEFAULT_MANIFEST.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-    if hasattr(_figure_promote, "promote_ravivarapu_4a"):
+    if not args.no_promote and hasattr(_figure_promote, "promote_ravivarapu_4a"):
         _figure_promote.promote_ravivarapu_4a(manifest=manifest, png_path=png_path)
     print(json.dumps(manifest, indent=2))
     print(f"wrote {png_path}")

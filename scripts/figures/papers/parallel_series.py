@@ -75,23 +75,15 @@ def run_series_parallel(
 
 @dataclass(frozen=True)
 class RavivarapuInferenceEvalJob:
+    """One Ravivarapu Figs 5–7 rollout: checkpoint env config + carrier override only."""
+
     variant: str
     seed: int
     checkpoint: str
     max_steps: int
     carrier_hz: float
-    dbs_burst_ms: float
-    biomarker_window_s: float
-    n_obs: int
-    gumbel_seed_offset: int
-    dbs_pulse_delay_ms: float | None = None
-    untreated_window_s: float | None = None
-    prefill_obs_window: bool = False
-    early_burst_ms: float | None = None
-    early_delay_ms: float | None = None
-    early_steps: int = 0
-    step_pulse_delays: tuple[float, ...] | None = None
-    step_burst_ms: tuple[float, ...] | None = None
+    use_fp16_ptq: bool = False
+    label: str | None = None
 
 
 @dataclass(frozen=True)
@@ -100,6 +92,7 @@ class RavivarapuInferenceEvalResult:
     trace: list[float]
     actions: list[int]
     eval_meta: dict[str, Any]
+    label: str | None = None
 
 
 def ravivarapu_inference_eval_worker(job: RavivarapuInferenceEvalJob) -> RavivarapuInferenceEvalResult:
@@ -109,67 +102,33 @@ def ravivarapu_inference_eval_worker(job: RavivarapuInferenceEvalJob) -> Ravivar
     from controllers.sea_dbs.config import SEADBSConfig
     from controllers.sea_dbs.eval import evaluate
 
-    kwargs: dict[str, Any] = {
-        "max_steps": job.max_steps,
-        "carrier_hz": job.carrier_hz,
-        "action_mode": "gumbel",
-        "dbs_burst_ms": job.dbs_burst_ms,
-        "biomarker_window_s": job.biomarker_window_s,
-        "n_obs": job.n_obs,
-        "gumbel_seed_offset": job.gumbel_seed_offset,
-        "prefill_obs_window": job.prefill_obs_window,
-        "early_burst_ms": job.early_burst_ms,
-        "early_delay_ms": job.early_delay_ms,
-        "early_steps": job.early_steps,
-        "step_pulse_delays": job.step_pulse_delays,
-        "step_burst_ms": job.step_burst_ms,
-    }
-    if job.dbs_pulse_delay_ms is not None:
-        kwargs["dbs_pulse_delay_ms"] = job.dbs_pulse_delay_ms
-    if job.untreated_window_s is not None:
-        kwargs["untreated_window_s"] = job.untreated_window_s
     payload = evaluate(
         Path(job.checkpoint),
-        config=SEADBSConfig(variant=job.variant, seed=job.seed, prefill_obs_window=job.prefill_obs_window),
-        **kwargs,
+        config=SEADBSConfig(variant=job.variant, seed=job.seed),
+        max_steps=job.max_steps,
+        carrier_hz=job.carrier_hz,
+        use_fp16_ptq=job.use_fp16_ptq,
+        action_mode="argmax",
     )
     actions = payload["action_trajectories"][0]
+    logits = np.asarray(payload["logit_trajectories"][0], dtype=float)
+    margins = (logits[:, 1] - logits[:, 0]).tolist() if logits.size else []
     eval_meta = {
         "carrier_hz": payload["carrier_hz"],
         "dbs_burst_ms": payload["dbs_burst_ms"],
         "biomarker_window_s": payload.get("biomarker_window_s"),
         "n_obs": payload.get("n_obs"),
-        "gumbel_seed_offset": job.gumbel_seed_offset,
+        "prefill_obs_window": payload.get("prefill_obs_window"),
         "n_psd_samples": payload["n_psd_samples"],
         "action_mode": payload["action_mode"],
-        "stim_frac": float(np.mean(actions)),
+        "fp16_ptq": payload["fp16_ptq"],
+        "stim_frac": float(np.mean(actions)) if actions else 0.0,
+        "stim_logit_margins": [round(float(m), 4) for m in margins],
     }
-    if payload.get("dbs_pulse_delay_ms") is not None:
-        eval_meta["dbs_pulse_delay_ms"] = payload["dbs_pulse_delay_ms"]
     return RavivarapuInferenceEvalResult(
         variant=job.variant,
         trace=list(payload["p_beta_trajectories"][0]),
         actions=[int(a) for a in actions],
         eval_meta=eval_meta,
+        label=job.label,
     )
-
-
-@dataclass(frozen=True)
-class RavivarapuAblationEvalJob:
-    variant: str
-    seed: int
-    checkpoint: str
-    n_steps: int
-
-
-def ravivarapu_ablation_eval_worker(job: RavivarapuAblationEvalJob) -> tuple[str, list[float]]:
-    bootstrap_worker_threads()
-    from controllers.sea_dbs.config import SEADBSConfig
-    from controllers.sea_dbs.eval import evaluate_ablation_steps
-
-    payload = evaluate_ablation_steps(
-        Path(job.checkpoint),
-        config=SEADBSConfig(variant=job.variant, seed=job.seed),
-        n_steps=job.n_steps,
-    )
-    return job.variant, list(payload["p_beta_trajectories"][0])
