@@ -7,6 +7,8 @@ Two monkeypatches on the eval env, both guesses at unpublished environment detai
   uses the initial setting.
 - Carried network (``--carry``): the plant keeps its neuron state across the episode reset; the
   per-episode seed still changes.
+- Stimulation off at reset (``--reset-off``, replaces the slip): the reset's 100 ms reading runs
+  with amplitude 0 on a fresh network; the initial setting takes over from step 1.
 
 Every point is a plant reading. Best match so far (Oct 8 2026): the ``noterm-s4`` Fig 4 candidate
 with both patches passes every Fig 7 gate. See docs/figures/nguyen/7.md
@@ -40,7 +42,7 @@ from nguyen_gates import fig7_eval_gates  # noqa: E402
 FIG3_PD_ON_MEDIAN = 295.2
 
 
-def patch(*, slip: bool, carry: bool) -> list:
+def patch(*, slip: bool, carry: bool, reset_off: bool = False) -> list:
     """Install the patches; returns the list that collects each episode's first-step DBS setting."""
     cls = A.NguyenEnvAdapter
     orig_reset, orig_int = cls.reset, cls._integrate_current_dbs
@@ -48,7 +50,13 @@ def patch(*, slip: bool, carry: bool) -> list:
 
     def reset(self, *a, **kw):
         prev = getattr(self, "_dbs", None)
-        self._stale_dbs = prev.copy() if (slip and prev is not None) else None
+        if reset_off:
+            # Stimulation off for the reset reading; the initial setting starts at step 1.
+            off = A.DBSParameterState.from_config(self.config)
+            off.amplitude = 0.0
+            self._stale_dbs = off
+        else:
+            self._stale_dbs = prev.copy() if (slip and prev is not None) else None
         return orig_reset(self, *a, **kw)
 
     def integrate(self):
@@ -86,10 +94,15 @@ def main() -> None:
     ap.add_argument("--episodes", type=int, default=50)
     ap.add_argument("--no-slip", action="store_true", help="keep the reset order as shipped")
     ap.add_argument("--carry", action="store_true", help="keep neuron state across episode resets")
+    ap.add_argument(
+        "--reset-off",
+        action="store_true",
+        help="stimulation off for the reset reading (replaces the slip); initial setting from step 1",
+    )
     ap.add_argument("--png-name", default="eval_50ep_slipcarry_v1.png")
     args = ap.parse_args()
 
-    first = patch(slip=not args.no_slip, carry=args.carry)
+    first = patch(slip=not args.no_slip, carry=args.carry, reset_off=args.reset_off)
     r = evaluate(args.checkpoint, episodes=args.episodes)
     trajs = r["alpha_beta_trajectories"]
     g = fig7_eval_gates(trajs, fig3_pd_on_median=FIG3_PD_ON_MEDIAN)
@@ -100,7 +113,8 @@ def main() -> None:
     mean = np.asarray(trajs).mean(0)
     summary = {
         "checkpoint": str(args.checkpoint),
-        "slip": not args.no_slip,
+        "slip": not args.no_slip and not args.reset_off,
+        "reset_off": args.reset_off,
         "carry": args.carry,
         "episodes": args.episodes,
         "mean_steps_0_6": np.round(mean[:7]).astype(int).tolist(),
