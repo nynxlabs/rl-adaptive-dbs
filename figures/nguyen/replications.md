@@ -252,34 +252,33 @@ Seeded eval of the trained policy: **50** episodes × **25** steps, different se
 
 ### Replication
 
-![Replication Fig 7](images/7/eval_50ep_v26.png)
+![Replication Fig 7](images/7/eval_50ep_v27.png)
 
 <!-- caption-7:start -->
-**Caption:** eval 50×26 steps; mean αβ=153.9; pass=False (v26)
+**Caption:** eval 50×26 steps; mean αβ=161.0; pass=False (v27)
 
 **Manifest:** `artifacts/figures/papers/nguyen/7/manifest.json`
 <!-- caption-7:end -->
 
-**Status:** Open — see manifest gates (`eval_50ep_v26.png`).
+**Status:** Open — see manifest gates (`eval_50ep_v27.png`).
 
 From v24 every point is a plant reading; up to v23 the eval prepended two invented α–β values per episode. See [docs/figures/nguyen/7.md](../../docs/figures/nguyen/7.md) § Correction.
 
-**Parked (Oct 8 2026):** the official run above fails, and Fig 7 is parked with the best match below as our plot until we write to the authors. The policy keeps raising frequency, so α–β overshoots below the paper's ~150 plateau ([7.md](../../docs/figures/nguyen/7.md) § What the late windows need).
+**Parked (Oct 8 2026, re-checked Oct 12 on v27):** the official run above fails only the three onset gates (`start_near_paper`, `peak_step_timing`, `pearson_shape_ok`): step 0 reads 321 against the paper's 153. Our step 0 is the reset reading, the first 100 ms of a fresh network at the initial 40 Hz / 300 nA/cm² / 0.3 ms setting. No fresh-network start reads near 153, so no faithful eval change closes the gap ([7.md](../../docs/figures/nguyen/7.md) § Onset on the distance-based plant). Fig 7 stays parked with the best match below.
 
 ### Best match so far (labelled deviation, not the panel run)
 
-![Best Fig 7: seed 4, slip + carry](images/7/eval_50ep_slipcarry_v1.png)
+![Best Fig 7: official checkpoint, slip + carry](images/7/eval_50ep_slipcarry_v2.png)
 
-Passes every Fig 7 gate from plant readings: steps 0–6 = 161, 255, 228, 227, 201, 181, 176 vs the paper's 146, 252, 278, 259, 206, 190, 171; late 153 vs 152; RMSE 14; $r$ = 0.95. It rests on three things the official run doesn't do:
+The official checkpoint (the same one as Figs 4–6 and the run above) with the slip + carry episode start. Passes every Fig 7 gate from plant readings: steps 0–6 = 123, 230, 229, 208, 177, 152, 148 vs the paper's 146, 252, 278, 259, 206, 190, 171; mid 131 vs 161; late 124 vs 153; RMSE 32; $r$ = 0.99. It rests on two guesses about the authors' environment that neither paper states:
 
-- The checkpoint (`noterm-s4`) was trained past the $t_u$ stop, so it fails Fig 4.
 - Each episode's first reading runs at the previous episode's final DBS setting.
-- Neuron state carries across episodes.
+- Neuron state carries across episodes. The follow-up paper randomizes initial conditions per episode, which argues against this.
 
-Details, the reproduce command (`scripts/probes/nguyen_fig7_slip_carry.py`) and the questions for the authors: [7.md](../../docs/figures/nguyen/7.md) § Parked on the slip + carry plot.
+The earlier best match (`eval_50ep_slipcarry_v1.png`, seed 4 trained past the $t_u$ stop) also needed a third deviation and failed Fig 4. Details, the reproduce command (`scripts/probes/nguyen_fig7_slip_carry.py`) and the questions for the authors: [7.md](../../docs/figures/nguyen/7.md) § Parked on the slip + carry plot and § Onset on the distance-based plant.
 
 <!-- gates-7:start -->
-**Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: no, 2026-10-11). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/nguyen/7/manifest.json`; overall **`pass`**: no, 2026-10-12). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -290,7 +289,7 @@ Details, the reproduce command (`scripts/probes/nguyen_fig7_slip_carry.py`) and 
 | `paper_peak_step_timing` | digitization — peak power timing (step 1–3) | no |
 | `paper_peak_power_near_paper` | digitization — peak power near paper (~278.4) | yes |
 | `paper_early_mean_near_paper` | digitization — early mean near paper (steps 0–5) | yes |
-| `paper_mid_mean_near_paper` | digitization — mid mean near paper (steps 6–15) | no |
+| `paper_mid_mean_near_paper` | digitization — mid mean near paper (steps 6–15) | yes |
 | `paper_late_mean_near_paper` | digitization — late mean near paper (steps 18–25) | yes |
 | `paper_overall_mean_near_paper` | digitization — overall mean near paper (~174.0) | yes |
 | `paper_peak_to_late_drop` | digitization — peak to late drop near paper (~125.5) | yes |
