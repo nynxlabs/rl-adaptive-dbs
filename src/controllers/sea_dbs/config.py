@@ -65,7 +65,12 @@ class SEADBSConfig:
     beta_threshold: float = BETA_THRESHOLD
     reward_scale: float = REWARD_SCALE
     observation_scale: float = OBSERVATION_SCALE
-    n_obs: int = 5  # window for mean P_beta (Eq. 4–5); open in Table I
+    # Window for mean P_beta (Eq. 4–5); paper-silent. Convention: 10, the paper's
+    # inference horizon (Figs 5–7 plot 10 stimulation steps). With independent
+    # plant shots the window mean reaches its floor exactly at step n_obs; the
+    # digitized Fig 5a curves keep falling through step 10 (n_obs = 5 floored at
+    # step 5). Same value in training and eval (docs/figures/ravivarapu/5a.md).
+    n_obs: int = 10
     # Convention: Eq. (4) state is a window of *past* beta estimates; on reset the
     # window holds n_obs untreated samples (the history before the episode).
     prefill_obs_window: bool = True
