@@ -108,14 +108,9 @@ def evaluate_gates(
     if not checkpoint_ok:
         heuristic["reason"] = "fig4_train_not_passing"
 
-    trajectories = eval_payload["alpha_beta_trajectories"]
-    max_len = max(len(tr) for tr in trajectories) if trajectories else 0
-    pad_trajectories = [
-        tr + [tr[-1]] * (max_len - len(tr)) if len(tr) < max_len else tr[:max_len]
-        for tr in trajectories
-    ]
+    # Gate the readings as recorded; padding would hide short episodes.
     dig = fig7_eval_gates(
-        pad_trajectories,
+        eval_payload["alpha_beta_trajectories"],
         fig3_pd_on_median=fig3_pd_on_median,
     )
     return attach_digitization(heuristic, dig)
@@ -154,7 +149,7 @@ def plot_eval(eval_payload: dict[str, Any], out_path: Path) -> dict[str, Any]:
         alpha=0.30,
         edgecolor="#08519c",
         linewidth=0.8,
-        label="Replication 95% CI",
+        label="Replication 2.5–97.5 % of episodes",
         zorder=2,
     )
     ax.plot(steps, mean_trace, color="#08519c", linewidth=2.2, label="Replication Mean", zorder=3)

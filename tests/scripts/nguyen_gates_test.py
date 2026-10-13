@@ -126,11 +126,20 @@ def test_fig7_paper_self_consistent():
     ax, ay = ax[sort_idx], ay[sort_idx]
     steps = np.arange(26)
     interp_y = np.interp(steps, ax, ay)
-    trajectories = [interp_y.tolist() for _ in range(3)]
+    trajectories = [interp_y.tolist() for _ in range(50)]
     report = fig7_eval_gates(trajectories)
     assert report["gates"]["eval_protocol_ok"]
     assert report["gates"]["overall_mean_near_paper"]
     assert report["pass"]
+
+
+@pytest.mark.skipif(not (ARTIFACT / "curves_fig7.json").exists(), reason="no digitization")
+def test_fig7_protocol_needs_paper_episode_count_and_horizon():
+    trace = [200.0] * 26
+    assert fig7_eval_gates([trace] * 50)["gates"]["eval_protocol_ok"]
+    assert not fig7_eval_gates([trace] * 3)["gates"]["eval_protocol_ok"]
+    short = [trace] * 49 + [[200.0] * 20]
+    assert not fig7_eval_gates(short)["gates"]["eval_protocol_ok"]
 
 
 def test_curves_path_stems():
