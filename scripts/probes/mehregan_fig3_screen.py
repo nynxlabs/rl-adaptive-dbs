@@ -70,6 +70,14 @@ def main() -> int:
     ap.add_argument("--variant", default="paper", choices=("paper", "qat"))
     ap.add_argument("--set", dest="overrides", action="append", default=[])
     ap.add_argument("--checkpoint", type=Path, required=True)
+    ap.add_argument(
+        "--critic-on-softmax", action="store_true",
+        help="DEVIATION (probe only): critic scores per-pulse softmax, not the Fig 3b logits",
+    )
+    ap.add_argument(
+        "--actor-lr", type=float, default=_PP.ACTOR_LR,
+        help="DEVIATION (probe only) when not the paper's 5e-4",
+    )
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
     knobs = _PP.apply_overrides(_PP.PaperKnobs(), args.overrides)
@@ -90,6 +98,7 @@ def main() -> int:
     record = _PP.train_paper(
         mean_hz=args.mean_hz, seed=args.seed, knobs=knobs, variant=args.variant,
         checkpoint_path=args.checkpoint, trainer_hook=on_start, episode_hook=on_episode,
+        critic_on_softmax=args.critic_on_softmax, actor_lr=args.actor_lr,
     )
     train_s = time.time() - t0
     load = _PP.load_fp32_actor if args.variant == "paper" else _PP.load_qat_actor
@@ -108,6 +117,8 @@ def main() -> int:
         "eval_seed": args.eval_seed,
         "variant": args.variant,
         "knobs": knobs.as_dict(),
+        "critic_on_softmax": args.critic_on_softmax,
+        "actor_lr": args.actor_lr,
         "train_s": round(train_s, 1),
         "beta_per_episode": per_ep(record["beta_trace"]),
         "isi_std_per_episode": per_ep(record["isi_std_ms"]),
