@@ -9,12 +9,12 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 <!-- summary:start -->
 | Panel | Description | Status |
 |-------|-------------|--------|
-| Fig 4a | Training PSD vs episode | Fail — 15 of 27 gates (rep v80) |
-| Fig 4b | Training reward vs episode | Fail — 11 of 19 gates (rep v18) |
-| Fig 5a | Inference @ 50 Hz | Fail — 12 of 17 gates (rep v22) |
-| Fig 5b | Inference @ 30 Hz | Fail — 7 of 18 gates (rep v22) |
-| Fig 6 | FP16 PTQ @ 50 Hz | Fail — 8 of 11 gates (rep v22) |
-| Fig 7 | Ablation (Baseline / +PM / +GS / SEA-DBS) | Fail — 6 of 10 gates (rep v27) |
+| Fig 4a | Training PSD vs episode | Fail — 15 of 27 gates (rep v81) |
+| Fig 4b | Training reward vs episode | Fail — 11 of 19 gates (rep v19) |
+| Fig 5a | Inference @ 50 Hz | Fail — 12 of 17 gates (rep v23) |
+| Fig 5b | Inference @ 30 Hz | Fail — 7 of 18 gates (rep v23) |
+| Fig 6 | FP16 PTQ @ 50 Hz | Fail — 8 of 11 gates (rep v23) |
+| Fig 7 | Ablation (Baseline / +PM / +GS / SEA-DBS) | Fail — 6 of 10 gates (rep v28) |
 <!-- summary:end -->
 
 Replication PNGs: `figures/ravivarapu/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/ravivarapu/images/<panel>/paper.png` (from KB paper-note embeds; Fig 4/5 split from combined panels). Full composites also under `figures/ravivarapu/images/_full/`. Controller spec: [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md). Schematics (paper Figs 1, 3) are **out of scope**. Fig 2 (reward curve) is optional polish, not a gate.
@@ -35,15 +35,15 @@ Related numeric protocol (not a separate panel): **Table II** — seed change ev
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_psd_v80.png)
+![Replication Fig 4a](images/4a/training_psd_v81.png)
 
 <!-- caption-4a:start -->
-**Caption:** Training mean GPi beta PSD vs episode (seed 0); shape_pass=False pass=False; Baseline vs full SEA-DBS (PM+GS); one shared training config; display roll10 (gates on raw). (v80)
+**Caption:** Training mean GPi beta PSD vs episode (seed 0); shape_pass=False pass=False; Baseline vs full SEA-DBS (PM+GS); one shared training config; display roll10 (gates on raw). (v81)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`
 <!-- caption-4a:end -->
 
-**Status:** Fail (rep v80) — 15 of 27 gates. Both curves start at ~0.39–0.40 (a random two-action policy already stimulates half the time; paper ~0.45), SEA-DBS reaches full stimulation by episode ~40 and sits on the plant floor (late 0.366 vs paper 0.340), and the late gap is 0.008 vs the paper's 0.028. Notes [4a.md](../../docs/figures/ravivarapu/4a.md). Manifest `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`.
+**Status:** Fail (rep v81) — 15 of 27 gates. Both curves start at ~0.39–0.40 (a random two-action policy already stimulates half the time; paper ~0.45), SEA-DBS reaches full stimulation by episode ~40 and sits on the plant floor (late 0.366 vs paper 0.340), the Baseline's decline is its ε schedule, and the late gap is 0.008 vs the paper's 0.028. Manifest `artifacts/figures/papers/ravivarapu/4/manifest_4a.json`; notes [4a.md](../../docs/figures/ravivarapu/4a.md).
 
 <!-- gates-4a:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4a.json`; **`shape_pass`**: no, **`pass`**: no, 2026-10-12). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
@@ -102,15 +102,15 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4a/plot.p
 
 ### Replication
 
-![Replication Fig 4b](images/4b/training_reward_v18.png)
+![Replication Fig 4b](images/4b/training_reward_v19.png)
 
 <!-- caption-4b:start -->
-**Caption:** Training episode reward vs episode (seed 0); mean Eq. (7) reward per step; paired with Fig 4a cache; display roll10 (gates on raw). (v18)
+**Caption:** Training episode reward vs episode (seed 0); mean Eq. (7) reward per step; paired with Fig 4a cache; display roll10 (gates on raw). (v19)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/4/manifest_4b.json`
 <!-- caption-4b:end -->
 
-**Status:** Fail (rep v18) — 11 of 19 gates. Mean Eq. (7) reward per step (the paper's y-range is one step's reward), compared to the paper in absolute units. Fails: SEA-DBS rise timing / steepness / gradual rise, both Pearson, `shared_start_near_paper` and both rise-vs-paper gates (both curves start at −0.4 to −0.5 instead of the paper's −0.9, because a randomly initialized policy already stimulates about half the time). See [4a.md](../../docs/figures/ravivarapu/4a.md).
+**Status:** Fail (rep v19) — 11 of 19 gates. Mean Eq. (7) reward per step (the paper's y-range is one step's reward), compared to the paper in absolute units. Fails: SEA-DBS rise timing / steepness / gradual rise, both Pearson, `shared_start_near_paper` and both rise-vs-paper gates (both curves start at −0.4 to −0.5 instead of the paper's −0.9, because a randomly initialized policy already stimulates about half the time). See [4a.md](../../docs/figures/ravivarapu/4a.md).
 
 <!-- gates-4b:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/4/manifest_4b.json`; **`shape_pass`**: no, **`pass`**: no, 2026-10-12). Phase 1: **`shape_pass`** (trajectory shape / ordering). Ship exit: **`pass`** (adds digitization level polish).
@@ -163,15 +163,15 @@ Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_db
 
 ### Replication
 
-![Replication Fig 5a](images/5a/inference_50hz_v22.png)
+![Replication Fig 5a](images/5a/inference_50hz_v23.png)
 
 <!-- caption-5a:start -->
-**Caption:** Inference GPi beta PSD vs step @ 50 Hz (seed 0, argmax actions, training plant setup); pass=False; Baseline vs SEA-DBS. (v22)
+**Caption:** Inference GPi beta PSD vs step @ 50 Hz (seed 0, argmax actions, training plant setup); pass=False; Baseline vs SEA-DBS. (v23)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/5a/manifest.json`
 <!-- caption-5a:end -->
 
-**Status:** Fail (rep v22) — 12 of 17 gates. Baseline and SEA-DBS both stimulate on all 10 steps, so the traces coincide (0.449 falling to 0.295 at step 10 as the 10-sample window fills; paper SEA 0.462 → 0.309, Baseline 0.461 → 0.354). Fails: the three Baseline–SEA split gates, SEA steps 3–5 MAE and steps 4–10 MAE (a straight ramp vs the paper's fast-then-slow SEA curve). Manifest `artifacts/figures/papers/ravivarapu/5a/manifest.json`; notes [5a.md](../../docs/figures/ravivarapu/5a.md).
+**Status:** Fail (rep v23) — 12 of 17 gates. Baseline and SEA-DBS both stimulate on all 10 steps, so the traces coincide (0.449 falling to 0.295 at step 10 as the 10-sample window fills; paper SEA 0.462 → 0.309, Baseline 0.461 → 0.354). Fails: the three Baseline–SEA split gates, SEA steps 3–5 MAE and steps 4–10 MAE (a straight ramp vs the paper's fast-then-slow SEA curve). Manifest `artifacts/figures/papers/ravivarapu/5a/manifest.json`; notes [5a.md](../../docs/figures/ravivarapu/5a.md).
 
 <!-- gates-5a:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/5a/manifest.json`; overall **`pass`**: no, 2026-10-12). Every row is required for exit.
@@ -220,15 +220,15 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 
 ### Replication
 
-![Replication Fig 5b](images/5b/inference_30hz_v22.png)
+![Replication Fig 5b](images/5b/inference_30hz_v23.png)
 
 <!-- caption-5b:start -->
-**Caption:** Inference GPi beta PSD vs step @ 30 Hz (seed 0, argmax actions, training plant setup); pass=False; Baseline vs SEA-DBS. (v22)
+**Caption:** Inference GPi beta PSD vs step @ 30 Hz (seed 0, argmax actions, training plant setup); pass=False; Baseline vs SEA-DBS. (v23)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/5b/manifest.json`
 <!-- caption-5b:end -->
 
-**Status:** Fail (rep v22) — 7 of 18 gates. On Kumaravelu 30 Hz raises beta, so both always-on policies climb 0.449 → 0.607 (paper: both decline to ~0.39–0.40). Manifest `artifacts/figures/papers/ravivarapu/5b/manifest.json`; notes [5b.md](../../docs/figures/ravivarapu/5b.md).
+**Status:** Fail (rep v23) — 7 of 18 gates. On Kumaravelu 30 Hz raises beta, so both always-on policies climb 0.449 → 0.607 (paper: both decline to ~0.39–0.40). Manifest `artifacts/figures/papers/ravivarapu/5b/manifest.json`; notes [5b.md](../../docs/figures/ravivarapu/5b.md).
 
 <!-- gates-5b:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/5b/manifest.json`; overall **`pass`**: no, 2026-10-12). Every row is required for exit.
@@ -278,15 +278,15 @@ QAT is **out of scope** for SEA-DBS (not reported).
 
 ### Replication
 
-![Replication Fig 6](images/6/ptq_fp16_50hz_v22.png)
+![Replication Fig 6](images/6/ptq_fp16_50hz_v23.png)
 
 <!-- caption-6:start -->
-**Caption:** FP16 PTQ inference GPi beta PSD vs step @ 50 Hz (seed 0, argmax actions, plain .half() cast); pass=False; Baseline/SEA-DBS fp32 + PTQ; SEA-DBS networks 52 KB → 26 KB. (v22)
+**Caption:** FP16 PTQ inference GPi beta PSD vs step @ 50 Hz (seed 0, argmax actions, plain .half() cast); pass=False; Baseline/SEA-DBS fp32 + PTQ; SEA-DBS networks 52 KB → 26 KB. (v23)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/6/manifest.json`
 <!-- caption-6:end -->
 
-**Status:** Fail (rep v22) — 8 of 11 gates. All four series coincide: both policies stimulate every step and a plain fp16 cast flips no action. Fails: SEA below Baseline (fp32 and PTQ) and `ptq_traces_distinct`. Manifest `artifacts/figures/papers/ravivarapu/6/manifest.json`; notes [6.md](../../docs/figures/ravivarapu/6.md).
+**Status:** Fail (rep v23) — 8 of 11 gates. All four series coincide: both policies stimulate every step and a plain fp16 cast flips no action. Fails: SEA below Baseline (fp32 and PTQ) and `ptq_traces_distinct`. Manifest `artifacts/figures/papers/ravivarapu/6/manifest.json`; notes [6.md](../../docs/figures/ravivarapu/6.md).
 
 <!-- gates-6:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/6/manifest.json`; overall **`pass`**: no, 2026-10-12). Every row is required for exit.
@@ -329,15 +329,15 @@ Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper` ([se
 
 ### Replication
 
-![Replication Fig 7](images/7/ablation_psd_v27.png)
+![Replication Fig 7](images/7/ablation_psd_v28.png)
 
 <!-- caption-7:start -->
-**Caption:** Ablation GPi beta PSD over 10 steps @ 50 Hz (seed 0, argmax actions); pass=False; Baseline vs +PM vs +GS vs SEA-DBS, one shared training config. (v27)
+**Caption:** Ablation GPi beta PSD over 10 steps @ 50 Hz (seed 0, argmax actions); pass=False; Baseline vs +PM vs +GS vs SEA-DBS, one shared training config. (v28)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/7/manifest.json`
 <!-- caption-7:end -->
 
-**Status:** Fail (rep v27) — 6 of 10 gates. All four variants deploy as always-on, so the traces tie; fails `baseline_above_pm_early` and the three tail-ordering gates. Manifest `artifacts/figures/papers/ravivarapu/7/manifest.json`; notes [7.md](../../docs/figures/ravivarapu/7.md).
+**Status:** Fail (rep v28) — 6 of 10 gates. All four variants deploy as always-on, so the traces tie; fails `baseline_above_pm_early` and the three tail-ordering gates. Manifest `artifacts/figures/papers/ravivarapu/7/manifest.json`; notes [7.md](../../docs/figures/ravivarapu/7.md).
 
 <!-- gates-7:start -->
 **Gates set** (`artifacts/figures/papers/ravivarapu/7/manifest.json`; overall **`pass`**: no, 2026-10-12). Every row is required for exit.
