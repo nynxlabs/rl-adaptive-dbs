@@ -280,6 +280,8 @@ def train_paper(
     log: Callable[[str], None] = _log,
     extra: dict[str, Any] | None = None,
     qat_freeze_observer_after: int | None = None,
+    critic_on_softmax: bool = False,
+    actor_lr: float = ACTOR_LR,
     episode_hook: Callable[[SimpleNamespace, int], None] | None = None,
     trainer_hook: Callable[[SimpleNamespace], None] | None = None,
 ) -> dict[str, Any]:
@@ -290,6 +292,9 @@ def train_paper(
     ``trainer_hook(agent)`` runs once before episode 0 and
     ``episode_hook(agent, episode)`` after each episode (probe diagnostics);
     ``agent`` holds ``actor``, ``actor_target``, ``critic``, ``critic_target``.
+    ``critic_on_softmax`` is a **deviation** for probes only: the critic scores
+    the per-pulse softmax of the logits instead of the logits Fig 3b names.
+    ``actor_lr`` other than the paper's $5\\times10^{-4}$ is a deviation too.
     """
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -301,12 +306,19 @@ def train_paper(
     hard_update(critic_t, critic)
     # Fused Adam: the same update as the default implementation, ~6x faster on
     # the 46M-weight logit head and action branch.
-    opt_a = torch.optim.Adam(actor.parameters(), lr=ACTOR_LR, fused=True)
+    opt_a = torch.optim.Adam(actor.parameters(), lr=actor_lr, fused=True)
     opt_c = torch.optim.Adam(critic.parameters(), lr=CRITIC_LR, fused=True)
     buf = Replay(BUFFER_CAPACITY, seed)
     plant = PythonPlant(config=plant_config())
     tracker = StateTracker(knobs.state_sample_ms)
     noise_rng = torch.Generator().manual_seed(seed)
+
+    def crit_in(logits: torch.Tensor) -> torch.Tensor:
+        if not critic_on_softmax:
+            return logits
+        grid = logits.reshape(-1, space.n_pulses, space.n_slots)
+        return F.softmax(grid, dim=-1).reshape(logits.shape)
+
     agent = SimpleNamespace(actor=actor, actor_target=actor_t, critic=critic, critic_target=critic_t)
     if trainer_hook is not None:
         trainer_hook(agent)
@@ -350,14 +362,14 @@ def train_paper(
             for _ in range(knobs.updates_per_step if len(buf) >= BATCH_SIZE else 0):
                 s, a, r, s2, d = buf.sample(BATCH_SIZE)
                 with torch.no_grad():
-                    q_target = r + knobs.gamma * (1.0 - d) * critic_t(s2, actor_t(s2))
-                critic_loss = F.mse_loss(critic(s, a), q_target)
+                    q_target = r + knobs.gamma * (1.0 - d) * critic_t(s2, crit_in(actor_t(s2)))
+                critic_loss = F.mse_loss(critic(s, crit_in(a)), q_target)
                 opt_c.zero_grad()
                 critic_loss.backward()
                 opt_c.step()
                 for p in critic.parameters():
                     p.requires_grad_(False)
-                actor_loss = -critic(s, actor(s)).mean()
+                actor_loss = -critic(s, crit_in(actor(s))).mean()
                 opt_a.zero_grad()
                 actor_loss.backward()
                 opt_a.step()
