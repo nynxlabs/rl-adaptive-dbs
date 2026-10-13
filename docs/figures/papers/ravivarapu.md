@@ -161,6 +161,8 @@ Do **not** pass a frozen / non-learning Baseline. Do **not** use display hacks t
 | `both_rise` | both (late − early) > 0.3 |
 | **Remove** | `paper_faster_early_rise` comparing first-10% means — **unfaithful** to paper (both start low; SEA does not clearly lead that early) |
 
+**Units (oct 12 2026):** both axes are the mean Eq. (7) reward per step, so `ravivarapu_fig4b_gates` compares levels, rises, and gaps to the digitized paper directly. It used to rescale every paper value by $|b_{\mathrm{early}} / p^{B}_{\mathrm{early}}|$ (our Baseline's early mean over the paper's), which let a run that started far above the paper's −1.3 pass the start and rise gates; `shared_start_near_paper` now checks both variants against the paper.
+
 ---
 
 ## Fig 5a — inference @ 50 Hz
