@@ -15,7 +15,7 @@ Figs **1–2** are schematics — **not** replication targets.
 | Fig 4 | Training reward + episode length | Pass (rep v163) |
 | Fig 5 | CBGT spikes + DBS energy over training | Pass (rep v62) |
 | Fig 6 | α–β + DBS parameters over training | Pass (rep v18) |
-| Fig 7 | 50-episode eval (25 steps) | Fail (`paper_start_near_paper`) |
+| Fig 7 | 50-episode eval (25 steps) | Fail, 13 of 14 (`paper_start_near_paper`; rep v29) |
 <!-- summary:end -->
 
 ---
@@ -254,23 +254,23 @@ Seeded eval of the trained policy: **50** episodes × **25** steps, different se
 
 ### Replication
 
-![Replication Fig 7](images/7/eval_50ep_v28.png)
+![Replication Fig 7](images/7/eval_50ep_v29.png)
 
 <!-- caption-7:start -->
-**Caption:** eval 50×26 steps; mean αβ=161.0; pass=False (v28)
+**Caption:** eval 50×26 steps; mean αβ=151.5; pass=False (v29)
 
 **Manifest:** `artifacts/figures/papers/nguyen/7/manifest.json`
 <!-- caption-7:end -->
 
-**Status:** Open — see manifest gates (`eval_50ep_v28.png`).
+**Status:** Open — see manifest gates (`eval_50ep_v29.png`).
 
 From v24 every point is a plant reading; up to v23 the eval prepended two invented α–β values per episode. See [docs/figures/nguyen/7.md](../../docs/figures/nguyen/7.md) § Correction.
 
-**Parked (Oct 8 2026, re-checked Oct 12 on v27 and v28):** the official run above fails only the three onset gates (`start_near_paper`, `peak_step_timing`, `pearson_shape_ok`): step 0 reads 321 against the paper's 153. Our step 0 is the reset reading, the first 100 ms of a fresh network at the initial 40 Hz / 300 nA/cm² / 0.3 ms setting. That reading does not depend on the policy, and no fresh-network start reads near 153, so no checkpoint and no faithful eval change can close these three gates ([7.md](../../docs/figures/nguyen/7.md) § Onset on the distance-based plant).
+**Adopted (Oct 12 2026): the authors' reset window.** From v29 the eval starts each episode the way the authors' published code does (github.com/howyoubinh/CL-DBS-RL, `MousePDEnv.reset()`): the fresh network's first 100 ms, the step-0 reading, run at 100 Hz / 300 nA/cm² / 0.3 ms, then the agent gets the paper's 40 Hz / 0.3 ms / 300 nA/cm². The paper is silent on what the reset reading runs at, and nothing in the code's reset contradicts it (fresh network and seed per episode, nothing carried over). **Eval only:** `fig4_nguyen_config` and the official checkpoint are unchanged; training with the reset window changed nothing beyond seed noise. On the same checkpoint and seeds, gates go from 11 to 13 of 14: the peak moves to step 2 and $r$ to 0.88. Only `start_near_paper` fails: step 0 reads 197 against the paper's 153 (gate 115–191), because on the ρ = 3 plant the reset pulses recruit less of the STN (the uniform plant reads ~140). `--initial-setting-reset` reproduces the v28 eval. Details: [7.md](../../docs/figures/nguyen/7.md) § Adopted: the authors' reset window.
 
-**Episode-start decision (Oct 12 2026):** the slip + carry start below is **not** adopted as the eval convention. Its reset-order slip runs the first 100 ms at the previous episode's setting, against "Each episode starts with initial DBS parameters" (§IV). Its carried network keeps the previous episode's neurons, against "a random seed for each episode to emulate patient-specific neural responses" (§IV), the Gymnasium reset the paper builds on, and the follow-up's "network connectivity and initial conditions were randomized for each training episode". Adopting it would be a deviation from stated text and needs master's OK. v28 re-gates the same eval with a stricter protocol gate (50 episodes, reset reading + 25 steps each, read off the digitization) and paper-valued gate descriptions; the result is unchanged at 11 of 14 ([7.md](../../docs/figures/nguyen/7.md) § Episode-start convention and gate audit).
+### Earlier best match (superseded Oct 12 2026, kept for the record)
 
-### Best match so far (labelled deviation, not the panel run)
+Superseded by the reset-window eval above, which needs no guesses against stated text. Slip + carry was never adopted: its two episode-start guesses contradict §IV's initial parameters and per-episode seeds ([7.md](../../docs/figures/nguyen/7.md) § Episode-start convention and gate audit).
 
 ![Best Fig 7: official checkpoint, slip + carry](images/7/eval_50ep_slipcarry_v2.png)
 
@@ -290,7 +290,7 @@ The earlier best match (`eval_50ep_slipcarry_v1.png`, seed 4 trained past the $t
 | `paper_eval_protocol_ok` | digitization — 50 episodes, each with the reset reading + 25 steps (paper §IV) | yes |
 | `paper_step_series_finite` | digitization — step series finite | yes |
 | `paper_start_near_paper` | digitization — step 0 within ±25 % of paper (153.2) | no |
-| `paper_peak_step_timing` | digitization — peak step within ±1 of paper (2.1) | no |
+| `paper_peak_step_timing` | digitization — peak step within ±1 of paper (2.1) | yes |
 | `paper_peak_power_near_paper` | digitization — peak within ±25 % of paper (278.4) | yes |
 | `paper_early_mean_near_paper` | digitization — steps 0–5 mean within ±25 % of paper (233.3) | yes |
 | `paper_mid_mean_near_paper` | digitization — steps 6–15 mean within ±25 % of paper (161.0) | yes |
@@ -298,14 +298,14 @@ The earlier best match (`eval_50ep_slipcarry_v1.png`, seed 4 trained past the $t
 | `paper_overall_mean_near_paper` | digitization — overall mean within ±25 % of paper (174.0) | yes |
 | `paper_peak_to_late_drop` | digitization — peak − late within ±50 % of paper (125.5) | yes |
 | `paper_late_peak_ratio_near_paper` | digitization — late / peak within ±30 % of paper (0.55) | yes |
-| `paper_pearson_shape_ok` | digitization — mean-trace Pearson r vs paper ≥ 0.80 | no |
+| `paper_pearson_shape_ok` | digitization — mean-trace Pearson r vs paper ≥ 0.80 | yes |
 | `paper_below_fig3_pd_median` | overall mean below Fig 3 PD On (our median and paper ~295) | yes |
 <!-- gates-7:end -->
 
 **Run:**
 
 ```bash
-# Full eval of the Fig 4 checkpoint (50 episodes × 25 steps), then gates + plot
+# Full eval of the Fig 4 checkpoint (50 episodes × 25 steps, 100 Hz reset window), then gates + plot
 uv run rl-dbs panel run nguyen/7 -- --export-notes --update-report
 # Re-gate and replot from the cached eval
 uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/7/plot.py --plot-only --export-notes --update-report
@@ -327,5 +327,5 @@ Paper-silent settings of the shipped recipe (`fig4_nguyen_config`; detail and so
 | Reward δ, τ | 1, 330 (learning rewards × 1e-4) | convention |
 | Updates | every 128 transitions (paper), 64 minibatches, 1,650-transition warm-up | paper / convention |
 | Plant | one continuous simulation per episode, fresh network per episode; STN recruitment ρ = 3 | follow-up; ρ = 3 approved plant deviation (Oct 11 2026) |
-| Eval episode start | fresh network, reset reading at 40 Hz / 300 nA/cm² / 0.3 ms recorded as step 0 | paper §IV; follow-up Algorithm S1 |
+| Eval episode start | fresh network; reset reading at 100 Hz / 300 nA/cm² / 0.3 ms recorded as step 0, then 40 Hz / 0.3 ms / 300 nA/cm² for the agent (eval only, from v29) | paper §IV; authors' published code (`MousePDEnv.reset()`) |
 | Fig 3 α–β window | 100 ms per sample (one RL step); 500 iterations | paper |
