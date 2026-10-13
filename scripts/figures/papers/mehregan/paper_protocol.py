@@ -119,6 +119,8 @@ class PaperKnobs:
     tau: float = DEFAULT_TAU
     state_sample_ms: int = DEFAULT_STATE_SAMPLE_MS
     updates_per_step: int = DEFAULT_UPDATES_PER_STEP  # Alg. 1 line 15 "update frequency"
+    # Linear anneal of the logit noise to this σ by the last episode (None = constant).
+    logit_noise_end: float | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -128,7 +130,14 @@ class PaperKnobs:
             "tau": self.tau,
             "state_sample_ms": self.state_sample_ms,
             "updates_per_step": self.updates_per_step,
+            "logit_noise_end": self.logit_noise_end,
         }
+
+    def noise_std(self, episode: int, num_episodes: int) -> float:
+        if self.logit_noise_end is None or num_episodes < 2:
+            return self.logit_noise_std
+        frac = episode / (num_episodes - 1)
+        return self.logit_noise_std + frac * (self.logit_noise_end - self.logit_noise_std)
 
 
 _KNOB_TYPES = {
@@ -138,6 +147,7 @@ _KNOB_TYPES = {
     "tau": float,
     "state_sample_ms": int,
     "updates_per_step": int,
+    "logit_noise_end": float,
 }
 
 
@@ -289,8 +299,10 @@ def train_paper(
     actor_t, critic_t = clone_module(actor), clone_module(critic)
     hard_update(actor_t, actor)
     hard_update(critic_t, critic)
-    opt_a = torch.optim.Adam(actor.parameters(), lr=ACTOR_LR)
-    opt_c = torch.optim.Adam(critic.parameters(), lr=CRITIC_LR)
+    # Fused Adam: the same update as the default implementation, ~6x faster on
+    # the 46M-weight logit head and action branch.
+    opt_a = torch.optim.Adam(actor.parameters(), lr=ACTOR_LR, fused=True)
+    opt_c = torch.optim.Adam(critic.parameters(), lr=CRITIC_LR, fused=True)
     buf = Replay(BUFFER_CAPACITY, seed)
     plant = PythonPlant(config=plant_config())
     tracker = StateTracker(knobs.state_sample_ms)
@@ -315,11 +327,12 @@ def train_paper(
         res = plant.integrate(STEP_S, DbsSpec.none(), carry=True)
         state = tracker.push(res.gpi_spikes, float(res.p_beta))
         reset_beta.append(float(state.mean()))
+        noise_std = knobs.noise_std(episode, num_episodes)
         ep_reward = reward_of(state)  # Alg. 1 line 7: reset reward is collected
         for step in range(STEPS_PER_EPISODE):
             with torch.no_grad():
                 logits = actor(torch.as_tensor(state).unsqueeze(0)).squeeze(0)
-                logits = logits + knobs.logit_noise_std * torch.randn(
+                logits = logits + noise_std * torch.randn(
                     logits.shape, generator=noise_rng
                 )
             slots = PulseActor.slots_from_logits(logits, space.n_pulses, space.n_slots)[0].numpy()
