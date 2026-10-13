@@ -930,6 +930,10 @@ def fig6_training_gates(
     ), report)
 
 
+# Paper §IV: "We evaluate our trained model against 50 test episodes".
+PAPER_FIG7_EPISODES = 50
+
+
 def fig7_eval_gates(
     alpha_beta_trajectories: list[list[float]],
     *,
@@ -937,7 +941,11 @@ def fig7_eval_gates(
     rel_tol: float = DEFAULT_REL_TOL,
     ratio_tol: float = DEFAULT_RATIO_TOL,
 ) -> dict[str, Any]:
-    """Fig 7 eval mean α–β trace vs digitized paper average curve."""
+    """Fig 7 eval mean α–β trace vs digitized paper average curve.
+
+    Pass the trajectories as recorded (unpadded): the protocol gate checks that
+    every episode covers the paper's full step range.
+    """
     if not alpha_beta_trajectories:
         return _gate_pack({"trajectories_present": False}, {})
 
@@ -962,6 +970,12 @@ def fig7_eval_gates(
     p_late = window_mean(pax, pay, lo=18.0)
     p_drop = p_peak - p_late
     p_ratio = p_late / max(p_peak, 1e-9)
+    # The band series are traced at integer steps 0..25: reset reading + 25 steps.
+    band_x = [paper[name][0] for name in ("ci_upper", "ci_lower") if name in paper]
+    p_last_step = max(float(np.max(x)) for x in band_x) if band_x else float(np.max(pax))
+    p_n_points = int(round(p_last_step)) + 1
+    p_peak_step = int(round(p_peak_x))
+    min_len = min(len(tr) for tr in alpha_beta_trajectories)
 
     start_val = float(mean_trace[0]) if mean_trace.size else float("nan")
     peak_val = float(np.nanmax(mean_trace)) if mean_trace.size else float("nan")
@@ -974,10 +988,12 @@ def fig7_eval_gates(
     r_shape = pearson_on_ref_x(pax, pay, steps, mean_trace)
 
     gates: dict[str, bool] = {
-        "eval_protocol_ok": len(alpha_beta_trajectories) >= 1 and max_len >= 20,
+        "eval_protocol_ok": bool(
+            len(alpha_beta_trajectories) >= PAPER_FIG7_EPISODES and min_len >= p_n_points
+        ),
         "step_series_finite": bool(np.isfinite(mean_trace).all()),
         "start_near_paper": rel_close(start_val, p_start, tol=rel_tol),
-        "peak_step_timing": peak_step in (1, 2, 3),
+        "peak_step_timing": abs(peak_step - p_peak_step) <= 1,
         "peak_power_near_paper": rel_close(peak_val, p_peak, tol=rel_tol),
         "early_mean_near_paper": rel_close(early, p_early, tol=rel_tol),
         "mid_mean_near_paper": rel_close(mid, p_mid, tol=rel_tol),
@@ -993,7 +1009,10 @@ def fig7_eval_gates(
         "late_below_theta": late <= 165.0,
     }
     if fig3_pd_on_median is not None and np.isfinite(fig3_pd_on_median):
-        gates["below_fig3_pd_median"] = overall_mean < float(fig3_pd_on_median)
+        # Below both our Fig 3 PD On median and the paper's PD On readout.
+        gates["below_fig3_pd_median"] = overall_mean < min(
+            float(fig3_pd_on_median), PAPER_FIG3_PD_ON_MEAN
+        )
 
     return _gate_pack(
         gates,
@@ -1017,7 +1036,11 @@ def fig7_eval_gates(
             "late_peak_ratio": late_peak_ratio,
             "paper_late_peak_ratio": p_ratio,
             "n_episodes": len(alpha_beta_trajectories),
+            "paper_n_episodes": PAPER_FIG7_EPISODES,
             "n_steps": max_len,
+            "min_steps": min_len,
+            "paper_n_steps": p_n_points,
+            "paper_peak_step_rounded": p_peak_step,
             "pearson_mean_trace": r_shape,
             **metrics_extra,
         },
