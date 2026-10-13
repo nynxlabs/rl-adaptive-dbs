@@ -2,7 +2,7 @@
 
 **Primary replication tracker** for the DSQN / closed-loop neuromorphic DBS paper. Spec: [controllers/snn/replication.md](../../docs/controllers/snn/replication.md). Work proceeds **in parallel** with Mehregan ([Mehregan replications](../mehregan/replications.md)): each row is an exit criterion with automated gates, a committed `plot.py` (when present), and side-by-side PNGs.
 
-Plot scripts write replication PNGs to `figures/nguyen/images/`; JSON caches to `artifacts/figures/papers/nguyen/`. Paper panels: `figures/nguyen/images/<panel>/paper.png`. Full composites under `figures/nguyen/images/_full/`.
+Plot scripts write replication PNGs to `figures/nguyen/images/`; JSON caches to `artifacts/figures/papers/nguyen/`. Paper panels: `figures/nguyen/images/<panel>/paper.png`.
 
 Figs **1–2** are schematics — **not** replication targets.
 
@@ -86,7 +86,7 @@ Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init
 
 **Status:** Pass — see manifest gates (`training_reward_length_v163.png`).
 
-From v163 the plant uses distance-based STN recruitment (ρ = 3, `stn_dbs_spread`), a plant deviation master approved on Oct 11 2026: Kumaravelu drives all ten STN neurons with the full DBS current, which keeps the agent's pulse width near 0.3 ms and makes energy fall where the paper's rises. On that plant the paper-silent replay settings were retuned to 64 minibatches per update and a 1,650-transition warm-up. Of 26 seeds, 15 pass every Fig 4 gate and 11 pass every required gate of Figs 4–6; the 13-seed mean curve passes every gate. Shown: seed 1, the lowest-numbered seed passing Figs 4–6 (seed 0 misses Fig 4). See [docs/figures/nguyen/4.md](../../docs/figures/nguyen/4.md) § Retuning for distance-based STN recruitment. Step sizes (5 Hz, 0.1 ms) come from the paper's Fig 6; see [docs/figures/nguyen/6.md](../../docs/figures/nguyen/6.md).
+From v163 the plant uses distance-based STN recruitment (ρ = 3, `stn_dbs_spread`), a labelled plant deviation adopted on Oct 11 2026: Kumaravelu drives all ten STN neurons with the full DBS current, which keeps the agent's pulse width near 0.3 ms and makes energy fall where the paper's rises. On that plant the paper-silent replay settings were retuned to 64 minibatches per update and a 1,650-transition warm-up. Of 26 seeds, 15 pass every Fig 4 gate and 11 pass every required gate of Figs 4–6; the 13-seed mean curve passes every gate. Shown: seed 1, the lowest-numbered seed passing Figs 4–6 (seed 0 misses Fig 4). See [docs/figures/nguyen/4.md](../../docs/figures/nguyen/4.md) § Retuning for distance-based STN recruitment. Step sizes (5 Hz, 0.1 ms) come from the paper's Fig 6; see [docs/figures/nguyen/6.md](../../docs/figures/nguyen/6.md).
 
 <!-- gates-4:start -->
 **Gates set** (`artifacts/figures/papers/nguyen/4/manifest.json`; **`shape_pass`**: yes, **`pass`**: yes, 2026-10-12). **`shape_pass`**: transition timing and ep 0–200 shape. Ship exit: **`pass`** (all required gates, scale-free, anchored to the digitized paper curves). Both subplot groups required; tier-2 rows are logged in the manifest only.
