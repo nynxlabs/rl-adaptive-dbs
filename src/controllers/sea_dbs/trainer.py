@@ -153,6 +153,7 @@ class SEA_DBSTrainer:
             logits = self.actor(state_t).squeeze(0)
             logits_np = logits.cpu().numpy().astype(np.float32)
 
+        logits_backbone = self.config.critic_action_input == "logits"
         if self.config.use_gumbel_softmax:
             # Algorithm 1 lines 5–7 / Fig. 3: perturb logits with Gumbel noise,
             # temperature-scaled softmax (Eqs. 11–13), then sample the action.
@@ -165,7 +166,17 @@ class SEA_DBSTrainer:
                 action = sample_relaxed_action(relaxed)
             else:
                 action = int(action_t.reshape(-1)[0].item())
+            if logits_backbone:
+                # The critic scores the relaxed sample the actor emitted.
+                return action, relaxed.reshape(-1).cpu().numpy().astype(np.float32)
             return action, logits_np
+
+        if logits_backbone:
+            # Mehregan et al. DDPG backbone: Gaussian noise on the logits (the
+            # continuous DDPG action); play argmax of the noisy vector and store it.
+            noisy = logits + torch.randn_like(logits) * float(self.config.logit_noise_std)
+            noisy_np = noisy.cpu().numpy().astype(np.float32)
+            return int(np.argmax(noisy_np)), noisy_np
 
         if self._rng.random() < self.epsilon():
             action = int(self._rng.integers(0, self.config.n_actions))
@@ -185,17 +196,26 @@ class SEA_DBSTrainer:
         r_hat_batch = self._to_tensor(batch.r_hat)
         dw = self._to_tensor(batch.dw)
         action_oh = action_one_hot(actions, cfg.n_actions).to(self.device)
+        logits_backbone = cfg.critic_action_input == "logits"
+        critic_action = self._to_tensor(batch.action_logits) if logits_backbone else action_oh
 
         # Critic target (Eq. 9)
         with torch.no_grad():
             next_logits = self.actor_target(next_states)
-            next_action = torch.argmax(next_logits, dim=-1)
-            next_oh = action_one_hot(next_action, cfg.n_actions).to(self.device)
-            next_q = self.critic_target(next_states, next_oh)
+            if logits_backbone:
+                next_feat = (
+                    gumbel_softmax_sample(next_logits, tau=self.gs_temperature(), hard=False)[0]
+                    if cfg.use_gumbel_softmax
+                    else next_logits
+                )
+            else:
+                next_action = torch.argmax(next_logits, dim=-1)
+                next_feat = action_one_hot(next_action, cfg.n_actions).to(self.device)
+            next_q = self.critic_target(next_states, next_feat)
             pm_term = r_hat_batch if cfg.use_predictive_model else torch.zeros_like(rewards)
             target = rewards + pm_term + cfg.gamma * (1.0 - dw) * next_q
 
-        q_pred = self.critic(states, action_oh)
+        q_pred = self.critic(states, critic_action)
         critic_loss = F.mse_loss(q_pred, target)
         self.critic_optimizer.zero_grad(set_to_none=True)
         critic_loss.backward()
@@ -210,6 +230,8 @@ class SEA_DBSTrainer:
                 hard=False,
             )
             actor_action_oh = relaxed
+        elif logits_backbone:
+            actor_action_oh = logits
         else:
             probs = F.softmax(logits, dim=-1)
             actor_action_oh = probs
