@@ -148,6 +148,24 @@ def test_fig4b_paper_self_passes_full_gates():
 
 
 @needs_paper_curves
+def test_fig4b_compares_absolute_reward_not_rescaled_paper():
+    """A run whose rewards are the paper's shape at 40 % scale must not pass the
+    level gates: the paper is no longer rescaled by our Baseline's early level."""
+    paper = load_curves("fig4b")
+    x_b, y_b = paper["Baseline Reward"]
+    x_s, y_s = paper["SEA-DBS Reward"]
+    episodes = np.arange(150, dtype=float)
+    report = ravivarapu_fig4b_gates(
+        0.4 * np.interp(episodes, x_b, y_b),
+        0.4 * np.interp(episodes, x_s, y_s),
+        n_expected=150,
+    )
+    assert not report["gates"]["shared_start_near_paper"]
+    assert not report["gates"]["baseline_rise_vs_paper"]
+    assert not report["pass"]
+
+
+@needs_paper_curves
 def test_fig4b_rejects_non_rising_baseline():
     episodes = np.arange(150, dtype=float)
     baseline = np.full(150, -40.0)

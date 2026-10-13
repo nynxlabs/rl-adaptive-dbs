@@ -638,7 +638,10 @@ def ravivarapu_fig4b_gates(
     p_gap = ps_late - pb_late
     p_gap_midlate = ps_midlate_w - pb_midlate_w
 
-    scale = abs(b_early / pb_early) if abs(pb_early) > 1e-6 else 1.0
+    # Same units as the paper: both axes are the mean Eq. (7) reward per step
+    # (docs/figures/ravivarapu/4a.md). The paper is never rescaled by our own
+    # Baseline's early level — that hid the start-level gap.
+    scale = 1.0
     pb_scaled_rise = pb_rise * scale
     ps_scaled_rise = ps_rise * scale
     p_gap_scaled = p_gap * scale
@@ -685,7 +688,8 @@ def ravivarapu_fig4b_gates(
             np.isfinite(shape_s) and shape_s >= pearson_sea_min
         ),
         # Full tier
-        "shared_start_near_paper": rel_close(s_early, ps_early * scale, tol=0.30),
+        "shared_start_near_paper": rel_close(s_early, ps_early, tol=0.30)
+        and rel_close(b_early, pb_early, tol=0.30),
         "baseline_rise_vs_paper": bool(
             np.isfinite(b_rise)
             and np.isfinite(pb_scaled_rise)
