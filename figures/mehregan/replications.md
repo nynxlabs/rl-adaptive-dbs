@@ -14,8 +14,8 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Fig 4b | Training reward vs episode | Pass (paired to 4a, rep v49) |
 | Fig 5a | Post-train efficacy @ 45 Hz | Pass (closed loop, Fig 4a model, rep v24) |
 | Fig 5b | Post-train efficacy @ 30 Hz | Pass (closed loop, burst alphabet, rep v25) |
-| Fig 6a | PTQ / QAT @ 45 Hz | Fail (`qat_elevated_vs_fp32`, closed loop, int8 QAT, rep v68) |
-| Fig 6b | PTQ / QAT @ 30 Hz | Fail (`qat_majority_not_below_paper`, closed loop, int8 QAT, rep v46) |
+| Fig 6a | PTQ / QAT @ 45 Hz | Fail (`qat_elevated_vs_fp32`, closed loop, int8 QAT, rep v69) |
+| Fig 6b | PTQ / QAT @ 30 Hz | Fail (`qat_majority_not_below_paper`, closed loop, int8 QAT, rep v47) |
 <!-- summary:end -->
 
 Replication PNGs: `figures/mehregan/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/mehregan/images/<panel>/paper.png` (from paper-note embeds; composite Figs 1/2/4/5/6 split into panels). Full composites under `figures/mehregan/images/_full/`.
@@ -354,10 +354,10 @@ Quantization on the **45 Hz** model (§IV.A.3), same closed-loop eval and seed. 
 
 ### Replication
 
-![Replication Fig 6a](images/6a/ptq_qat_45hz_v68.png)
+![Replication Fig 6a](images/6a/ptq_qat_45hz_v69.png)
 
 <!-- caption-6a:start -->
-**Caption:** 45 Hz paper-protocol eval, eval seed 0, fp32_post=339, QAT median post=299, QAT paper-like 4/15 train seeds, QAT median late/pre 0.59, PTQ tracks fp32, v68, 2026-10-12
+**Caption:** 45 Hz paper-protocol eval, eval seed 0, fp32_post=339, QAT median post=299, QAT paper-like 4/15 train seeds, QAT median late/pre 0.59, PTQ tracks fp32, v69, 2026-10-12
 
 **Manifest:** `artifacts/figures/papers/mehregan/6a/manifest.json`
 <!-- caption-6a:end -->
@@ -405,10 +405,10 @@ Same quantization panel for the **30 Hz** model (§IV.A.3): Fig 5b fp32 checkpoi
 
 ### Replication
 
-![Replication Fig 6b](images/6b/ptq_qat_30hz_v46.png)
+![Replication Fig 6b](images/6b/ptq_qat_30hz_v47.png)
 
 <!-- caption-6b:start -->
-**Caption:** 30 Hz paper-protocol eval, eval seed 0, fp32_post=372, QAT median post=379, QAT paper-like 7/15 train seeds, QAT median late/pre 0.74, PTQ tracks fp32, QAT elevated, v46, 2026-10-12
+**Caption:** 30 Hz paper-protocol eval, eval seed 0, fp32_post=372, QAT median post=379, QAT paper-like 7/15 train seeds, QAT median late/pre 0.74, PTQ tracks fp32, QAT elevated, v47, 2026-10-12
 
 **Manifest:** `artifacts/figures/papers/mehregan/6b/manifest.json`
 <!-- caption-6b:end -->
