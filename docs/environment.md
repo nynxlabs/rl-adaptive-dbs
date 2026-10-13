@@ -174,6 +174,8 @@ See [plant.md](plant.md) §5, §10. **Decide in** plant config; validate biomark
 
 The actor emits logits over a discrete STN pattern set, but §IV.A.1 does not state **cardinality** or **waveform encoding**. **Fixed:** discrete patterns via softmax + argmax. **Open:** alphabet size and per-pattern STN drive semantics. **Decide in** code and keep stable across training, evaluation, and quantization comparisons.
 
+**Correction (Oct 2026):** the §IV.A.1 text is silent, but **Figure 3a is not**: its actor head is "Linear (Action Logits) $1\times f\cdot l\cdot l/1000$ → Reshape $(f\cdot l/1000)\times l$ → Softmax(dim=1) → Argmax(dim=−1)", i.e. one time slot (ms) for each of the $f\cdot l/1000$ pulses of a step — the mean rate fixed by construction, the timing free. The 41-pattern menus below are therefore a deviation from a stated mechanism, not a paper-silent convention. The figure panels still ship on the menu because the per-pulse head (branch `feature/mehregan-fig3-actor`) does not yet reproduce Fig 4a; whether to switch is an open decision for the maintainer. Evidence and the QAT consequence: [figures/mehregan/4a.md](figures/mehregan/4a.md) § QAT tie-break → Second pass (action space).
+
 **Implemented (`envs/mehregan/patterns.py`):** 41 actions → Kumaravelu `pick_dbs_freq` 1…41 (`freqs = 0:5:200`); action `0` is no DBS (`pick_dbs_freq == 1`).
 
 **Fixed-mean pattern mode (`FixedMeanPatternAlphabet`):** 41 patterns at a constant mean rate (paper Option C); pattern 0 = regular train; patterns 1–40 = ±1/3 ISI jitter. Library default; no longer used by the Mehregan figure panels.

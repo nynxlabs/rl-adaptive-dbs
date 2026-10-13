@@ -217,7 +217,7 @@ Hyperparameters with **fixed** values in §IV.A.1 should be **defaults**; open v
 
 ### 1. Discrete pattern alphabet size and encoding
 
-The actor outputs logits over a finite STN pattern set, but the paper does not fix **cardinality** or per-pattern waveform semantics. **Fixed:** discrete control via softmax + argmax; replay stores pattern index $a$ and logits $a_{\mathrm{logit}}$. **Open:** alphabet definition. **Decide in** shared env / Brain config and keep fixed across train, eval, and quantization (see [environment.md](../../environment.md) §4).
+The actor outputs logits over a finite STN pattern set. The text does not fix **cardinality** or per-pattern waveform semantics, but Figure 3a does: one ms slot per pulse ($f\cdot l/1000$ pulses × $l$ slots) — see [environment.md](../../environment.md) § Discrete pattern alphabet → Correction; the shipped 41-pattern menu is an open deviation. **Fixed:** discrete control via softmax + argmax; replay stores pattern index $a$ and logits $a_{\mathrm{logit}}$. **Open:** alphabet definition. **Decide in** shared env / Brain config and keep fixed across train, eval, and quantization (see [environment.md](../../environment.md) §4).
 
 ### 2. CNN actor–critic topology
 
