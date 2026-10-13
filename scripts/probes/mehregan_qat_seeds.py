@@ -10,6 +10,10 @@ pre-quant output range, and the tie at a reference state. Diagnostic only.
 ``--observer`` swaps the activation observer (paper-silent):
 ``ema`` = PyTorch QAT default (moving-average min/max, ``--averaging-constant``
 0.01), ``minmax`` = running min/max that never lags the outputs.
+``--qconfig qnnpack`` instead uses PyTorch's stock qnnpack QAT qconfig
+unchanged (8-bit activations, per-tensor symmetric weights) on the qnnpack
+engine. ``--init-from CKPT`` fine-tunes from a full-precision checkpoint
+(actor, critic and both targets) instead of training QAT from scratch.
 
   uv run python -m rl_adaptive_dbs.run scripts/probes/mehregan_qat_seeds.py \
       --mean-hz 45 --seeds 1-3 --ckpt-dir artifacts/probes/qat45 --out artifacts/probes/qat45_1-3.json
@@ -57,6 +61,31 @@ def _qconfig_factory(observer: str, averaging_constant: float):
     return make
 
 
+def _stock_qnnpack_qconfig() -> torch.ao.quantization.QConfig:
+    torch.backends.quantized.engine = "qnnpack"
+    return torch.ao.quantization.get_default_qat_qconfig("qnnpack")
+
+
+def _init_from(path: Path):
+    """Trainer hook: load fp32 actor/critic weights (fake-quant state starts fresh)."""
+    payload = torch.load(path, map_location="cpu", weights_only=False)
+
+    def hook(trainer: Any) -> None:
+        for module in (trainer.actor, trainer.actor_target):
+            missing, unexpected = quantization.unwrap_actor(module).load_state_dict(
+                payload["actor_state_dict"], strict=False
+            )
+            bad = [k for k in missing if "fake_quant" not in k and "post_process" not in k]
+            if bad or unexpected:
+                raise RuntimeError(f"fp32 → QAT load mismatch: {bad} {unexpected}")
+        trainer.critic.load_state_dict(payload["critic_state_dict"])
+        trainer.critic_target.load_state_dict(
+            payload.get("critic_target_state_dict", payload["critic_state_dict"])
+        )
+
+    return hook
+
+
 def _head_diag(policy: torch.nn.Module) -> dict[str, Any]:
     """Clamp, pre-quant head output and tie at ``REF_STATE`` (observers off)."""
     probe = copy.deepcopy(policy)
@@ -96,10 +125,16 @@ def main() -> int:
     ap.add_argument("--freeze-observer-after", type=int, default=None)
     ap.add_argument("--observer", choices=("ema", "minmax"), default="ema")
     ap.add_argument("--averaging-constant", type=float, default=0.01)
+    ap.add_argument("--qconfig", choices=("int8", "qnnpack"), default="int8")
+    ap.add_argument("--init-from", type=Path, default=None, help="fine-tune from this fp32 ckpt")
     ap.add_argument("--ckpt-dir", type=Path, default=None, help="keep QAT checkpoints here")
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
-    quantization._default_qat_qconfig = _qconfig_factory(args.observer, args.averaging_constant)
+    quantization._default_qat_qconfig = (
+        _stock_qnnpack_qconfig
+        if args.qconfig == "qnnpack"
+        else _qconfig_factory(args.observer, args.averaging_constant)
+    )
     knobs = _PP.apply_overrides(_PP.PaperKnobs(), args.overrides)
     lo, _, hi = args.seeds.partition("-")
     alphabet = _PP.make_alphabet(args.mean_hz, knobs)
@@ -114,6 +149,7 @@ def main() -> int:
                 mean_hz=args.mean_hz, seed=seed, knobs=knobs, variant="qat", checkpoint_path=ckpt,
                 qat_freeze_observer_after=args.freeze_observer_after,
                 episode_hook=lambda tr, ep: diag.append({"episode": ep, **_head_diag(tr.actor)}),
+                trainer_hook=_init_from(args.init_from) if args.init_from else None,
             )
             qat = _PP.load_qat_actor(ckpt)
         for d in diag:
@@ -158,6 +194,8 @@ def main() -> int:
         "observer": args.observer,
         "averaging_constant": args.averaging_constant,
         "freeze_observer_after": args.freeze_observer_after,
+        "qconfig": args.qconfig,
+        "init_from": str(args.init_from) if args.init_from else None,
         "rows": rows,
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)

@@ -224,10 +224,12 @@ def train_paper(
     extra: dict[str, Any] | None = None,
     qat_freeze_observer_after: int | None = None,
     episode_hook: Callable[[DDPGTrainer, int], None] | None = None,
+    trainer_hook: Callable[[DDPGTrainer], None] | None = None,
 ) -> dict[str, Any]:
     """Run Alg. 1 and return the per-step training record.
 
-    ``episode_hook(trainer, episode)`` runs after each episode (probe diagnostics).
+    ``episode_hook(trainer, episode)`` runs after each episode and
+    ``trainer_hook(trainer)`` once before episode 0 (probe diagnostics).
     Returns a JSON-able dict with ``beta_trace`` (``P_beta/1000`` per step),
     ``actions``, ``episode_rewards``, ``step_rewards``, and run metadata.
     """
@@ -238,6 +240,8 @@ def train_paper(
         mean_hz=mean_hz, seed=seed, knobs=knobs, variant=variant, num_episodes=num_episodes
     )
     trainer = DDPGTrainer(env, config)
+    if trainer_hook is not None:
+        trainer_hook(trainer)
     beta_trace: list[float] = []
     actions: list[int] = []
     step_rewards: list[float] = []
