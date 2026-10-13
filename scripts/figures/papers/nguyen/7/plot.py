@@ -39,7 +39,12 @@ _figure_promote = load_script_module("figure_promote", _PROMOTE)
 import matplotlib.pyplot as plt
 import numpy as np
 
-from controllers.snn.config import BIOMARKER_THRESHOLD, EVAL_EPISODES, EVAL_MAX_STEPS
+from controllers.snn.config import (
+    BIOMARKER_THRESHOLD,
+    EVAL_EPISODES,
+    EVAL_MAX_STEPS,
+    parse_config_overrides,
+)
 from controllers.snn.eval import evaluate
 
 FIG4_CACHE = Path("artifacts/figures/papers/nguyen/4")
@@ -190,6 +195,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--no-update-docs", action="store_true")
     parser.add_argument(
+        "--set",
+        dest="config_overrides",
+        action="append",
+        default=None,
+        metavar="FIELD=VALUE",
+        help="Override an SNNConfig field of the checkpoint for this eval (repeatable), "
+        "e.g. --set reset_window_frequency_hz=100",
+    )
+    parser.add_argument(
         "--export-notes",
         action="store_true",
         help="After promote, copy replication PNGs into the notes folder (RL_DBS_NOTES_DIR / export.notes_dir)",
@@ -227,6 +241,7 @@ def main(argv: list[str] | None = None) -> int:
             args.checkpoint,
             episodes=args.episodes,
             max_steps=args.max_steps,
+            overrides=parse_config_overrides(args.config_overrides),
         )
         write_json(args.eval_cache, eval_payload)
 

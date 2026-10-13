@@ -5,7 +5,7 @@ from __future__ import annotations
 from envs.plant.config import PlantConfig
 from envs.plant.dbs import DbsSpec
 from envs.plant.matlab_backend import IntegrateResult
-from envs.plant.network.integrator import NetworkInitDraws, integrate_network
+from envs.plant.network.integrator import SYNAPTIC_DYN_KEYS, NetworkInitDraws, integrate_network
 from envs.plant.network.matlab_rng import load_cached_init_draws
 
 import numpy as np
@@ -50,6 +50,18 @@ class PythonPlant:
             self._rng = np.random.default_rng(seed)
         return self
 
+    def _carried_state(self, restart_synapses: bool) -> dict[str, np.ndarray] | None:
+        """State the next carried segment starts from; optionally with synapses at rest."""
+        if self._dyn is None or not restart_synapses:
+            return self._dyn
+        # Synaptic gating and spike-delay buffers back to their t = 0 values (zero), as
+        # when the authors' simulator restarts each 100 ms call from saved voltages,
+        # gates and calcium only.
+        return {
+            key: np.zeros_like(value) if key in SYNAPTIC_DYN_KEYS else value
+            for key, value in self._dyn.items()
+        }
+
     def integrate(
         self,
         duration_s: float,
@@ -64,6 +76,7 @@ class PythonPlant:
         carry: bool = False,
         record_bg_spikes: bool = False,
         fixed_network: bool = False,
+        restart_synapses: bool = False,
     ) -> IntegrateResult:
         if duration_s <= 0:
             msg = "duration_s must be positive"
@@ -93,7 +106,7 @@ class PythonPlant:
             th_spike_buffer_size=th_spike_buffer_size,
             record_cor_spikes=record_cor_spikes,
             cor_spike_buffer_size=cor_spike_buffer_size,
-            dyn_state=self._dyn if carry else None,
+            dyn_state=self._carried_state(restart_synapses) if carry else None,
             save_dyn=carry,
             record_bg_spikes=record_bg_spikes,
         )

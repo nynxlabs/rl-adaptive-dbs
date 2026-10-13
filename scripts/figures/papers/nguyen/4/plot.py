@@ -62,7 +62,7 @@ import numpy as np
 
 from controllers.snn.adapter import NguyenEnvAdapter
 from controllers.snn.buffer import ReplayBuffer
-from controllers.snn.config import SNNConfig, fig4_nguyen_config
+from controllers.snn.config import SNNConfig, fig4_nguyen_config, parse_config_overrides
 from controllers.snn.networks import DSQN
 from controllers.snn.trainer import (
     DSQNTrainer,
@@ -135,30 +135,6 @@ def _linked_png(path: Path) -> Path:
 def moving_average(y: np.ndarray, window: int) -> np.ndarray:
     """Centred moving average, shrinking at the edges (same smoother as the gates)."""
     return centered_smooth(np.asarray(y, dtype=float), window)
-
-
-def parse_config_overrides(items: list[str] | None) -> dict[str, Any]:
-    """Parse repeatable ``--set field=value`` into typed ``SNNConfig`` overrides."""
-    fields = {f.name: f for f in dataclasses.fields(SNNConfig)}
-    defaults = SNNConfig()
-    out: dict[str, Any] = {}
-    for item in items or []:
-        name, sep, raw = item.partition("=")
-        name = name.strip().replace("-", "_")
-        if not sep or name not in fields:
-            raise SystemExit(f"--set expects FIELD=VALUE with an SNNConfig field, got {item!r}")
-        current = getattr(defaults, name)
-        if isinstance(current, bool):
-            if raw.lower() not in {"true", "false", "1", "0"}:
-                raise SystemExit(f"--set {name}: expected true/false, got {raw!r}")
-            out[name] = raw.lower() in {"true", "1"}
-        elif isinstance(current, int):
-            out[name] = int(raw)
-        elif isinstance(current, float) or current is None:
-            out[name] = float(raw)
-        else:
-            out[name] = raw
-    return out
 
 
 def config_record(cfg: SNNConfig) -> dict[str, Any]:

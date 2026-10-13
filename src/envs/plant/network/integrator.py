@@ -518,6 +518,10 @@ _DYN_KEYS = (
     "spike_idx",
     "spike_n",
 )
+# Synaptic filter states and spike-delay buffers (all zero at t = 0).
+SYNAPTIC_DYN_KEYS = frozenset(
+    key for key in _DYN_KEYS if key.startswith(("S", "Z")) or key in ("spike_idx", "spike_n")
+)
 
 
 def _apply_dyn_state(
