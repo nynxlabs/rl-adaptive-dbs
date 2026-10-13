@@ -112,14 +112,17 @@ class ReplayBuffer:
         )
 
     def state_dict(self) -> dict[str, Any]:
+        # Rows past ``size`` are still empty until the ring wraps; leave them out so a
+        # large, mostly empty buffer (e.g. 100k x 8,000 inputs) doesn't bloat checkpoints.
+        n = self._size if self._size < self.capacity else self.capacity
         return {
-            "states": self._states.copy(),
-            "next_states": self._next_states.copy(),
-            "actions": self._actions.copy(),
-            "rewards": self._rewards.copy(),
-            "done": self._done.copy(),
-            "timeout_episode": self._timeout_episode.copy(),
-            "short_stop_episode": self._short_stop_episode.copy(),
+            "states": self._states[:n].copy(),
+            "next_states": self._next_states[:n].copy(),
+            "actions": self._actions[:n].copy(),
+            "rewards": self._rewards[:n].copy(),
+            "done": self._done[:n].copy(),
+            "timeout_episode": self._timeout_episode[:n].copy(),
+            "short_stop_episode": self._short_stop_episode[:n].copy(),
             "pos": int(self._pos),
             "size": int(self._size),
             "since_update": int(self._since_update),
@@ -127,17 +130,19 @@ class ReplayBuffer:
         }
 
     def load_state_dict(self, state: dict[str, Any]) -> None:
-        self._states[:] = np.asarray(state["states"], dtype=np.float32)
-        self._next_states[:] = np.asarray(state["next_states"], dtype=np.float32)
-        self._actions[:] = np.asarray(state["actions"], dtype=np.int64)
-        self._rewards[:] = np.asarray(state["rewards"], dtype=np.float32)
-        self._done[:] = np.asarray(state["done"], dtype=np.bool_)
+        # Older checkpoints hold every row; newer ones only the filled ones.
+        n = len(state["actions"])
+        self._states[:n] = np.asarray(state["states"], dtype=np.float32)
+        self._next_states[:n] = np.asarray(state["next_states"], dtype=np.float32)
+        self._actions[:n] = np.asarray(state["actions"], dtype=np.int64)
+        self._rewards[:n] = np.asarray(state["rewards"], dtype=np.float32)
+        self._done[:n] = np.asarray(state["done"], dtype=np.bool_)
         if "timeout_episode" in state:
-            self._timeout_episode[:] = np.asarray(state["timeout_episode"], dtype=np.bool_)
+            self._timeout_episode[:n] = np.asarray(state["timeout_episode"], dtype=np.bool_)
         else:
             self._timeout_episode.fill(False)
         if "short_stop_episode" in state:
-            self._short_stop_episode[:] = np.asarray(state["short_stop_episode"], dtype=np.bool_)
+            self._short_stop_episode[:n] = np.asarray(state["short_stop_episode"], dtype=np.bool_)
         else:
             self._short_stop_episode.fill(False)
         self._pos = int(state["pos"])
