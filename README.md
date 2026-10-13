@@ -2,19 +2,19 @@
 
 [![tests](https://github.com/nynxlabs/rl-adaptive-dbs/actions/workflows/tests.yml/badge.svg)](https://github.com/nynxlabs/rl-adaptive-dbs/actions/workflows/tests.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Independent replications of three reinforcement-learning papers on **adaptive deep brain stimulation (DBS)** for Parkinson's disease. All three controllers run on one shared simulated cortex–basal ganglia–thalamus circuit (Kumaravelu et al., 2016), rebuilt from the paper text and figures.
+Independent replications of three reinforcement-learning papers on **adaptive deep brain stimulation (DBS)** for Parkinson's disease. All three controllers run on one shared simulated cortex–basal ganglia–thalamus circuit (Kumaravelu et al., 2016), rebuilt from the paper text and figures (for Nguyen et al., also from the authors' later code release where the paper is silent).
 
-**17 of 20 replicated paper panels pass** their automated qualitative gates. **[See the side-by-side showcase →](docs/figures/replication_showcase.md)**
+Every replicated paper panel is scored against automated qualitative gates; per-paper counts are below. **[See the side-by-side showcase →](docs/figures/replication_showcase.md)**
 
 | Paper | Controller | Panels passing | Tracker |
 |-------|------------|:--------------:|---------|
 | Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning* | DDPG actor–critic, plus PTQ / QAT quantization | 9 / 9 | [mehregan](figures/mehregan/replications.md) |
 | Ravivarapu et al., *Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson's Disease* (SEA-DBS) | Sample-efficient actor–critic | 6 / 6 | [ravivarapu](figures/ravivarapu/replications.md) |
-| Nguyen et al., *Closed-Loop Neuromorphic Deep Brain Stimulation using Deep Spiking Q-Networks* | Deep spiking Q-network | 2 / 5 (Figs 4–6 open) | [nguyen](figures/nguyen/replications.md) |
+| Nguyen et al., *Closed-Loop Neuromorphic Deep Brain Stimulation using Deep Spiking Q-Networks* | Deep spiking Q-network | 4 / 5 (Fig 7: 13 of 14 gates) | [nguyen](figures/nguyen/replications.md) |
 
 | Mehregan Fig. 4a: beta power during training | Ravivarapu Fig. 4a: SEA-DBS vs baseline | Nguyen Fig. 7: 50-episode evaluation |
 |:---:|:---:|:---:|
-| <img src="figures/mehregan/images/4a/training_beta_v40.png" width="280" alt="Mehregan Fig. 4a replication"> | <img src="figures/ravivarapu/images/4a/training_psd_v70.png" width="280" alt="Ravivarapu Fig. 4a replication"> | <img src="figures/nguyen/images/7/eval_50ep_v22.png" width="280" alt="Nguyen Fig. 7 replication"> |
+| <img src="figures/mehregan/images/4a/training_beta_v40.png" width="280" alt="Mehregan Fig. 4a replication"> | <img src="figures/ravivarapu/images/4a/training_psd_v70.png" width="280" alt="Ravivarapu Fig. 4a replication"> | <img src="figures/nguyen/images/7/eval_50ep_v29.png" width="280" alt="Nguyen Fig. 7 replication"> |
 
 > **Status:** active research code. Docs and scripts are still being consolidated, so expect some redundancy.
 

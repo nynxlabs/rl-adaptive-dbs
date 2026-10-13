@@ -2,9 +2,9 @@
 
 This is a short, visual summary of my **qualitative replications** of three adaptive deep brain stimulation (DBS) reinforcement-learning papers, all running on one shared simulated parkinsonian brain circuit. Each section shows the **original paper panel** next to **my reproduction**, with a plain-language note on what I checked. These are still rough. I'm not claiming these are 100% correct, but I wanted to show the progress I've made so far. There's a lot of refactoring, cleaning up, organizing, and small improvements I want to add everywhere, so these will keep getting refined.
 
-I built these from the paper text and figures (no released training or environment source for any of the three). The shared dynamics use the **Kumaravelu et al. (2016)** cortex-basal ganglia-thalamus model. Full run commands, manifests, and internal gates live in the per-paper trackers: [Mehregan](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/figures/mehregan/replications.md), [Nguyen](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/figures/nguyen/replications.md), [Ravivarapu](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/figures/ravivarapu/replications.md).
+I built these from the paper text and figures. Mehregan and Ravivarapu have no released training or environment source; for Nguyen, where the ISCAS paper is silent I follow the same group's June 2026 follow-up paper (its published training loop and hyperparameters) and the code released with it (the Fig. 7 evaluation reset window). The shared dynamics use the **Kumaravelu et al. (2016)** cortex-basal ganglia-thalamus model. Full run commands, manifests, and internal gates live in the per-paper trackers: [Mehregan](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/figures/mehregan/replications.md), [Nguyen](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/figures/nguyen/replications.md), [Ravivarapu](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/figures/ravivarapu/replications.md).
 
-**Status (October 2, 2026):** **17 of 20** replicated panels pass their automated qualitative gates. Mehregan 9/9, Ravivarapu 6/6, Nguyen 2/5 (Figs 4–6 still open).
+**Status:** Mehregan 9/9 and Ravivarapu 6/6 as of October 2, 2026; Nguyen 4/5 as of October 13, 2026 (Fig. 7 passes 13 of its 14 gates). The per-paper trackers have the current gates.
 
 ---
 
@@ -22,10 +22,10 @@ I built these from the paper text and figures (no released training or environme
 | Mehregan | **Fig. 6a** | Quantized policies (PTQ / QAT) @ 45 Hz | Pass |
 | Mehregan | **Fig. 6b** | Quantized policies (PTQ / QAT) @ 30 Hz | Pass |
 | Nguyen | **Fig. 3** | GPi α–β power distribution, PD vs healthy | Pass |
-| Nguyen | **Fig. 4** | Training rewards and episode lengths | Open |
-| Nguyen | **Fig. 5** | Network spikes and DBS energy over training | Open |
-| Nguyen | **Fig. 6** | α–β and DBS parameters over training | Open |
-| Nguyen | **Fig. 7** | 50-episode evaluation of the trained policy | Pass |
+| Nguyen | **Fig. 4** | Training rewards and episode lengths | Pass |
+| Nguyen | **Fig. 5** | Network spikes and DBS energy over training | Pass |
+| Nguyen | **Fig. 6** | α–β and DBS parameters over training | Pass |
+| Nguyen | **Fig. 7** | 50-episode evaluation of the trained policy | Open (13 of 14 gates) |
 | Ravivarapu | **Fig. 4a** | Training beta PSD vs episode, Baseline vs SEA-DBS | Pass |
 | Ravivarapu | **Fig. 4b** | Training reward vs episode, Baseline vs SEA-DBS | Pass |
 | Ravivarapu | **Fig. 5a** | Inference @ 50 Hz carrier | Pass |
@@ -183,17 +183,59 @@ I built these from the paper text and figures (no released training or environme
 
 ---
 
+## Fig. 4: Training rewards and episode lengths
+
+**Paper claim:** Over 500 training episodes, reward rises from about −10⁶ toward 0 and episode length falls from the 25-step limit to about 8 once the agent learns to hold α–β below θ = 150 and end episodes early.
+
+**What I checked:** Timing of the reward and length transitions and their correlation with the digitized smoothed curves, the late episode length, and no late timeouts. Reward gates are scale-free because Eq. (7) leaves δ, τ and the scale of $d$ open.
+
+| Paper | My replication |
+|:-----:|:---------------:|
+| ![Paper Fig. 4](../../figures/nguyen/images/4/paper.png) | ![Replication Fig. 4](../../figures/nguyen/images/4/training_reward_length_v163.png) |
+
+**Notes:** Seed 1; 15 of 26 seeds pass every Fig. 4 gate. One labelled plant deviation: DBS current reaches the STN neurons with a distance-based falloff (ρ = 3) instead of driving all ten at full strength as the Kumaravelu model does. Without it, pulse width has no effect on our plant and the energy curve in Fig. 5 falls where the paper's rises.
+
+---
+
+## Fig. 5: Network spikes and DBS energy
+
+**Paper claim:** From the same training run, network spiking stays roughly flat while DBS energy rises as the agent strengthens stimulation.
+
+**What I checked:** A flat spike trend and a monotonic rise in energy (late more than 1.25× early). Absolute spike and energy levels are reported but not gated, because the paper doesn't define which populations its count includes.
+
+| Paper | My replication |
+|:-----:|:---------------:|
+| ![Paper Fig. 5](../../figures/nguyen/images/5/paper.png) | ![Replication Fig. 5](../../figures/nguyen/images/5/spikes_energy_v62.png) |
+
+**Notes:** The spike count leaves out the stimulated STN and the GPi, which follow the DBS pulses. Late energy (~1,440) sits below the paper's ~2,035 because our agent settles at ~65 Hz / 0.85 ms rather than the paper's ~81 Hz / 1.13 ms.
+
+---
+
+## Fig. 6: α–β and DBS parameters over training
+
+**Paper claim:** GPi α–β starts above θ, drops between episodes 50 and 100, and stays below θ, while stimulation frequency and pulse width climb from the 40 Hz / 0.3 ms start.
+
+**What I checked:** α–β level in each training window against the digitized curve, the size and timing of the drop, and the late frequency level and stability.
+
+| Paper | My replication |
+|:-----:|:---------------:|
+| ![Paper Fig. 6](../../figures/nguyen/images/6/paper.png) | ![Replication Fig. 6](../../figures/nguyen/images/6/alpha_beta_params_v18.png) |
+
+**Notes:** Late pulse width (~0.85 ms vs 1.13) and frequency (~65 Hz vs 81) end below the paper's; on our plant α–β stops improving beyond 0.5–0.6 ms, so the agent has no reason to go further. Pulse width and amplitude are reported, not gated.
+
+---
+
 ## Fig. 7: Evaluation of the trained policy
 
 **Paper panel:** A seeded evaluation of the trained DSQN: **50 episodes** of 25 steps each, with a different seed per episode.
 
-**What I checked:** The same evaluation protocol, with the α–β level and spread across episodes compared against the paper panel.
+**What I checked:** The same protocol on the Fig. 4 checkpoint, with the step-0 reading taken the way the authors' released environment does it (a 100 ms reset window at 100 Hz on a fresh network, then the paper's 40 Hz / 0.3 ms / 300 nA/cm² for the agent). The mean trace is compared against the digitized paper curve: start, peak timing and height, early / mid / late levels, and shape.
 
 | Paper | My replication |
 |:-----:|:---------------:|
-| ![Paper Fig. 7](../../figures/nguyen/images/7/paper.png) | ![Replication Fig. 7](../../figures/nguyen/images/7/eval_50ep_v22.png) |
+| ![Paper Fig. 7](../../figures/nguyen/images/7/paper.png) | ![Replication Fig. 7](../../figures/nguyen/images/7/eval_50ep_v29.png) |
 
-**Open panels (Figs 4–6):** the 500-episode training curves (reward and episode length, spike counts and stimulation energy, α–β and stimulation parameters) have the right overall shape but don't yet match the paper's timing closely enough to pass. Latest attempts are in the [Nguyen tracker](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/figures/nguyen/replications.md).
+**Notes:** 13 of 14 gates pass: the peak comes at step 2 as in the paper, and the mean-trace Pearson $r$ is 0.88. Still open: step 0 reads 197 against the paper's 153 (gate 115–191). The peak (213 vs 278) and late level (128 vs 153) sit low but inside their gates.
 
 <div style="page-break-after: always;"></div>
 
@@ -290,5 +332,5 @@ Every panel has its own `scripts/figures/papers/<paper>/<panel>/plot.py`; `--plo
 
 | Panel set | Topic | Status |
 |-----------|-------|--------|
-| Nguyen Figs 4–6 | DSQN training curves, spikes + DBS energy, α–β + DBS parameters | Open — [figures/nguyen/replications.md](../../figures/nguyen/replications.md) |
+| Nguyen Fig. 7 | Evaluation start: step 0 reads 197 vs the paper's 153 | Open — [figures/nguyen/replications.md](../../figures/nguyen/replications.md) |
 | Cross-controller benchmarking | All three controllers on the same plant metrics | Planned — [docs/benchmarking.md](../benchmarking.md) |
