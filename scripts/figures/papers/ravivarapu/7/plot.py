@@ -104,6 +104,24 @@ def _train_worker(job: _TrainJob) -> dict[str, Any]:
     }
 
 
+def _checkpoint_current(variant: str, seed: int) -> bool:
+    """True when the cached checkpoint was trained with today's shared config.
+
+    A checkpoint from an older ``fig4_ravivarapu_config`` (e.g. another
+    ``n_obs``) must be retrained, not silently evaluated.
+    """
+    from dataclasses import asdict
+
+    from controllers.sea_dbs.checkpoint import load_checkpoint
+    from controllers.sea_dbs.config import config_from_dict, fig4_ravivarapu_config
+
+    path = _ckpt(variant, seed)
+    if not path.is_file():
+        return False
+    saved = asdict(config_from_dict(load_checkpoint(path)["sea_dbs_config"]))
+    return saved == asdict(fig4_ravivarapu_config(seed=seed, variant=variant))
+
+
 def ensure_checkpoints(
     seed: int,
     *,
@@ -123,11 +141,16 @@ def ensure_checkpoints(
             checkpoint_interval=checkpoint_interval,
         )
         for variant in VARIANTS
-        if variant not in FIG4_VARIANTS and (resume or not _ckpt(variant, seed).is_file())
+        if variant not in FIG4_VARIANTS and (resume or smoke or not _checkpoint_current(variant, seed))
     ]
     if jobs:
         _parallel_series.run_series_parallel(jobs, _train_worker, parallel_series)
     for variant in FIG4_VARIANTS:
+        if not smoke and _ckpt(variant, seed).is_file() and not _checkpoint_current(variant, seed):
+            raise SystemExit(
+                f"{_ckpt(variant, seed)} was trained with another config; retrain Fig 4 first "
+                "(scripts/figures/papers/ravivarapu/4a/plot.py)"
+            )
         if not _ckpt(variant, seed).is_file():
             raise SystemExit(
                 f"missing {_ckpt(variant, seed)}; train Fig 4 first "
