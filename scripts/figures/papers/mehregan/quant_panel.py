@@ -8,7 +8,7 @@ actor closed loop.
 
 Fig 6a uses the Fig 4a 45 Hz checkpoint; Fig 6b uses the Fig 5b 30 Hz
 checkpoint. ``--train-qat`` trains the QAT model with ``paper_protocol`` once
-per QAT training seed (``--qat-seeds``, default 0–6, one subprocess per seed).
+per QAT training seed (``--qat-seeds``, default 0–14, one subprocess per seed).
 10-episode int8 QAT does not converge — its logits saturate at the fake-quant
 clamp and the deployed argmax resolves a tie — so the pattern it plays varies
 by training seed. QAT is therefore shown and gated as a seed band (thin line
@@ -47,7 +47,7 @@ _figure_promote = load_script_module("figure_promote", _HERE.parent / "promote.p
 _resume_cli = load_script_module("figure_resume_cli", _HERE.parent / "resume_cli.py")
 
 SERIES = ("fp32", "ptq_int8", "ptq_fp16")
-DEFAULT_QAT_SEEDS = "0-6"
+DEFAULT_QAT_SEEDS = "0-14"
 STIM_ONSET_S = _PP.ONSET_DISPLAY_S
 TIME_MAX_S = _PP.DISPLAY_S
 STYLE = {"figure.facecolor": "white", "axes.facecolor": "white", "font.size": 10}
@@ -334,10 +334,10 @@ def main(cfg: QuantPanel, doc: str | None = None) -> int:
     parser.add_argument("--seed", type=int, default=0, help="Eval seed (shared by all series)")
     parser.add_argument(
         "--qat-seeds", default=DEFAULT_QAT_SEEDS,
-        help="QAT training seeds shown as the QAT band (e.g. 0-6 or 0,2,5)",
+        help="QAT training seeds shown as the QAT band (e.g. 0-14 or 0,2,5)",
     )
     parser.add_argument(
-        "--qat-workers", type=int, default=7,
+        "--qat-workers", type=int, default=3,
         help="QAT seeds trained in parallel (one single-threaded process each)",
     )
     parser.add_argument("--fp32-checkpoint", type=Path, default=cfg.fp32_checkpoint)
