@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, fields, replace
+from typing import Any
 
 # Paper-fixed defaults (replication.md §4–§6).
 STEP_DURATION_MS: float = 100.0
@@ -38,6 +39,21 @@ class SNNConfig:
     # STN DBS recruitment by distance (``PlantConfig.stn_dbs_spread``); 1.0 = Kumaravelu.
     # A plant deviation, not in the paper (docs/figures/nguyen/5.md).
     stn_dbs_spread: float = 1.0
+    # Conventions from the authors' published environment (github.com/howyoubinh/CL-DBS-RL,
+    # docs/figures/nguyen/4.md § Authors' published code). All off by default.
+    # Frequency of the reset window (the 100 ms simulated before the first action). 0 = the
+    # episode's initial frequency (40 Hz). The authors' reset() runs it at 100 Hz / 300 /
+    # 0.3 ms, then sets 40 Hz / 0.3 ms / 300 for the first action.
+    reset_window_frequency_hz: float = 0.0
+    # With plant_carry: restart the STN pulse train at t = 0 of every 100 ms segment (each
+    # segment opens with a pulse) instead of keeping it phase-continuous.
+    plant_pulse_restart: bool = False
+    # With plant_carry: zero synaptic gating and the spike-delay buffers at the start of
+    # every segment; voltages, channel gates and calcium still carry.
+    plant_restart_synapses: bool = False
+    # Training episodes all reset with ``seed`` instead of ``seed + episode`` (the authors'
+    # env draws its seed once and reuses it). Evaluation keeps a new seed per episode.
+    train_fixed_episode_seed: bool = False
     max_episode_steps: int = EVAL_MAX_STEPS
     num_episodes: int = TRAIN_EPISODES
 
@@ -81,6 +97,10 @@ class SNNConfig:
     # No gradient updates until the buffer holds this many transitions (DQN "learning
     # starts"); 0 = start as soon as a batch fits. Paper-silent.
     replay_warmup_transitions: int = 0
+    # Store horizon truncations as terminal (no bootstrap). False bootstraps from the
+    # next state at the horizon, as the authors' published trainer does (only true
+    # termination ends the return).
+    replay_truncation_terminal: bool = True
     batch_size: int = 32
     # Bellman TD loss: ``mse`` or ``huber`` (smooth L1 — dampens timeout Q spikes).
     q_loss_fn: str = "mse"
@@ -354,3 +374,27 @@ def fig4_nguyen_config(
         stn_dbs_spread=3.0,
         log_episodes=True,
     )
+
+
+def parse_config_overrides(items: list[str] | None) -> dict[str, Any]:
+    """Parse repeatable ``--set field=value`` into typed ``SNNConfig`` overrides."""
+    known = {f.name for f in fields(SNNConfig)}
+    defaults = SNNConfig()
+    out: dict[str, Any] = {}
+    for item in items or []:
+        name, sep, raw = item.partition("=")
+        name = name.strip().replace("-", "_")
+        if not sep or name not in known:
+            raise SystemExit(f"--set expects FIELD=VALUE with an SNNConfig field, got {item!r}")
+        current = getattr(defaults, name)
+        if isinstance(current, bool):
+            if raw.lower() not in {"true", "false", "1", "0"}:
+                raise SystemExit(f"--set {name}: expected true/false, got {raw!r}")
+            out[name] = raw.lower() in {"true", "1"}
+        elif isinstance(current, int):
+            out[name] = int(raw)
+        elif isinstance(current, float) or current is None:
+            out[name] = float(raw)
+        else:
+            out[name] = raw
+    return out

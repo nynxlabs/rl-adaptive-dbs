@@ -347,7 +347,8 @@ class DSQNTrainer:
             result = TrainResult(config=cfg, dsqn=self.dsqn)
 
         for episode in range(start_episode, cfg.num_episodes):
-            obs, reset_info = env.reset(seed=cfg.seed + episode)
+            episode_seed = cfg.seed if cfg.train_fixed_episode_seed else cfg.seed + episode
+            obs, reset_info = env.reset(seed=episode_seed)
             episode_reward = 0.0
             # Fig. 5/6 per-episode spikes and energy use env.step() transitions only
             # (same steps as episode_lengths); reset() initial integrate is not counted.
@@ -378,7 +379,7 @@ class DSQNTrainer:
                         action=int(action_index),
                         reward=float(reward),
                         next_state=np.asarray(next_obs, dtype=np.float32).reshape(-1),
-                        done=done,
+                        done=bool(terminated) if not cfg.replay_truncation_terminal else done,
                     )
                 )
                 self.note_step()

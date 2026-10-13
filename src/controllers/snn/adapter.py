@@ -206,7 +206,19 @@ class NguyenEnvAdapter(gym.Env):
 
         self._pulses.reset()
 
-        result = self._integrate_current_dbs()
+        window_hz = float(self.config.reset_window_frequency_hz)
+        if window_hz > 0.0:
+            # Reset window at another frequency (the authors' reset() runs 100 Hz), then the
+            # episode's initial setting for the first action.
+            initial = self._dbs
+            self._dbs = initial.copy()
+            self._dbs.frequency_hz = window_hz
+            try:
+                result = self._integrate_current_dbs()
+            finally:
+                self._dbs = initial
+        else:
+            result = self._integrate_current_dbs()
         obs = self._encode_observation(result)
         alpha_beta = alpha_beta_power(
             self._gpi_spike_trains(result),
@@ -233,6 +245,10 @@ class NguyenEnvAdapter(gym.Env):
         # GPi-only runs keep calling plants that predate the flag.
         return {"record_bg_spikes": True} if self.config.n_regions == 8 else {}
 
+    def _carry_kwargs(self) -> dict[str, bool]:
+        # Same pattern: only pass the synapse-restart flag when it is on.
+        return {"restart_synapses": True} if self.config.plant_restart_synapses else {}
+
     def _integrate_current_dbs(self) -> IntegrateResult:
         duration_s = self.config.step_duration_s
         if not self.config.plant_carry:
@@ -244,6 +260,9 @@ class NguyenEnvAdapter(gym.Env):
                 record_cor_spikes=True,
                 **self._bg_kwargs(),
             )
+        if self.config.plant_pulse_restart:
+            # Every segment opens with a pulse at t = 0 (the authors' per-call creatdbs).
+            self._pulses.reset()
         idbs, pulse_state = self._pulses.segment(
             frequency_hz=self._dbs.frequency_hz,
             pulse_width_ms=self._dbs.pulse_width_ms,
@@ -260,6 +279,7 @@ class NguyenEnvAdapter(gym.Env):
             carry=True,
             fixed_network=self.config.plant_fixed_network,
             **self._bg_kwargs(),
+            **self._carry_kwargs(),
         )
         # Advance the pulse clock only after the plant accepted the segment.
         self._pulses.commit(pulse_state)

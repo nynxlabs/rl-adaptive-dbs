@@ -32,6 +32,7 @@ def evaluate(
     plant: Any | None = None,
     episodes: int | None = None,
     max_steps: int | None = None,
+    overrides: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Roll out a trained DSQN; returns summary metrics + per-episode traces.
 
@@ -44,6 +45,9 @@ def evaluate(
     cfg = (config or (saved if isinstance(saved, SNNConfig) else SNNConfig())).with_variant_defaults()
     if max_steps is not None:
         cfg = replace(cfg, max_episode_steps=int(max_steps))
+    if overrides:
+        # Eval-time changes on top of the checkpoint's config (e.g. the reset window).
+        cfg = replace(cfg, **overrides)
 
     dsqn = DSQN(cfg)
     dsqn.load_state_dict(payload["dsqn_state_dict"])
@@ -99,4 +103,5 @@ def evaluate(
         "alpha_beta_mean": float(np.mean(alpha_beta_final)) if alpha_beta_final else 0.0,
         "p_beta_mean": float(np.mean(alpha_beta_final)) if alpha_beta_final else 0.0,
         "n_episodes": len(episode_rewards),
+        "config_overrides": dict(overrides or {}),
     }
