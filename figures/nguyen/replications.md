@@ -254,19 +254,21 @@ Seeded eval of the trained policy: **50** episodes × **25** steps, different se
 
 ### Replication
 
-![Replication Fig 7](images/7/eval_50ep_v27.png)
+![Replication Fig 7](images/7/eval_50ep_v28.png)
 
 <!-- caption-7:start -->
-**Caption:** eval 50×26 steps; mean αβ=161.0; pass=False (v27)
+**Caption:** eval 50×26 steps; mean αβ=161.0; pass=False (v28)
 
 **Manifest:** `artifacts/figures/papers/nguyen/7/manifest.json`
 <!-- caption-7:end -->
 
-**Status:** Open — see manifest gates (`eval_50ep_v27.png`).
+**Status:** Open — see manifest gates (`eval_50ep_v28.png`).
 
 From v24 every point is a plant reading; up to v23 the eval prepended two invented α–β values per episode. See [docs/figures/nguyen/7.md](../../docs/figures/nguyen/7.md) § Correction.
 
-**Parked (Oct 8 2026, re-checked Oct 12 on v27):** the official run above fails only the three onset gates (`start_near_paper`, `peak_step_timing`, `pearson_shape_ok`): step 0 reads 321 against the paper's 153. Our step 0 is the reset reading, the first 100 ms of a fresh network at the initial 40 Hz / 300 nA/cm² / 0.3 ms setting. No fresh-network start reads near 153, so no faithful eval change closes the gap ([7.md](../../docs/figures/nguyen/7.md) § Onset on the distance-based plant). Fig 7 stays parked with the best match below.
+**Parked (Oct 8 2026, re-checked Oct 12 on v27 and v28):** the official run above fails only the three onset gates (`start_near_paper`, `peak_step_timing`, `pearson_shape_ok`): step 0 reads 321 against the paper's 153. Our step 0 is the reset reading, the first 100 ms of a fresh network at the initial 40 Hz / 300 nA/cm² / 0.3 ms setting. That reading does not depend on the policy, and no fresh-network start reads near 153, so no checkpoint and no faithful eval change can close these three gates ([7.md](../../docs/figures/nguyen/7.md) § Onset on the distance-based plant).
+
+**Episode-start decision (Oct 12 2026):** the slip + carry start below is **not** adopted as the eval convention. Its reset-order slip runs the first 100 ms at the previous episode's setting, against "Each episode starts with initial DBS parameters" (§IV). Its carried network keeps the previous episode's neurons, against "a random seed for each episode to emulate patient-specific neural responses" (§IV), the Gymnasium reset the paper builds on, and the follow-up's "network connectivity and initial conditions were randomized for each training episode". Adopting it would be a deviation from stated text and needs master's OK. v28 re-gates the same eval with a stricter protocol gate (50 episodes, reset reading + 25 steps each, read off the digitization) and paper-valued gate descriptions; the result is unchanged at 11 of 14 ([7.md](../../docs/figures/nguyen/7.md) § Episode-start convention and gate audit).
 
 ### Best match so far (labelled deviation, not the panel run)
 
@@ -285,40 +287,45 @@ The earlier best match (`eval_50ep_slipcarry_v1.png`, seed 4 trained past the $t
 | Key | Description | Pass |
 |-----|-------------|------|
 | `checkpoint_lineage_ok` | Fig 4 train passed | yes |
-| `paper_eval_protocol_ok` | digitization — ≥50 episodes × ≥20 steps | yes |
+| `paper_eval_protocol_ok` | digitization — 50 episodes, each with the reset reading + 25 steps (paper §IV) | yes |
 | `paper_step_series_finite` | digitization — step series finite | yes |
-| `paper_start_near_paper` | digitization — step 0 start near paper (~160.4) | no |
-| `paper_peak_step_timing` | digitization — peak power timing (step 1–3) | no |
-| `paper_peak_power_near_paper` | digitization — peak power near paper (~278.4) | yes |
-| `paper_early_mean_near_paper` | digitization — early mean near paper (steps 0–5) | yes |
-| `paper_mid_mean_near_paper` | digitization — mid mean near paper (steps 6–15) | yes |
-| `paper_late_mean_near_paper` | digitization — late mean near paper (steps 18–25) | yes |
-| `paper_overall_mean_near_paper` | digitization — overall mean near paper (~174.0) | yes |
-| `paper_peak_to_late_drop` | digitization — peak to late drop near paper (~125.5) | yes |
-| `paper_late_peak_ratio_near_paper` | digitization — late/peak ratio near paper (~0.55) | yes |
-| `paper_pearson_shape_ok` | digitization — Pearson shape correlation (r ≥ 0.80) | no |
-| `paper_below_fig3_pd_median` | digitization — below Fig 3 PD On median | yes |
+| `paper_start_near_paper` | digitization — step 0 within ±25 % of paper (153.2) | no |
+| `paper_peak_step_timing` | digitization — peak step within ±1 of paper (2.1) | no |
+| `paper_peak_power_near_paper` | digitization — peak within ±25 % of paper (278.4) | yes |
+| `paper_early_mean_near_paper` | digitization — steps 0–5 mean within ±25 % of paper (233.3) | yes |
+| `paper_mid_mean_near_paper` | digitization — steps 6–15 mean within ±25 % of paper (161.0) | yes |
+| `paper_late_mean_near_paper` | digitization — steps 18–25 mean within ±25 % of paper (152.9) | yes |
+| `paper_overall_mean_near_paper` | digitization — overall mean within ±25 % of paper (174.0) | yes |
+| `paper_peak_to_late_drop` | digitization — peak − late within ±50 % of paper (125.5) | yes |
+| `paper_late_peak_ratio_near_paper` | digitization — late / peak within ±30 % of paper (0.55) | yes |
+| `paper_pearson_shape_ok` | digitization — mean-trace Pearson r vs paper ≥ 0.80 | no |
+| `paper_below_fig3_pd_median` | overall mean below Fig 3 PD On (our median and paper ~295) | yes |
 <!-- gates-7:end -->
 
-**Run (planned):**
+**Run:**
 
 ```bash
-uv run rl-dbs eval --controller snn --checkpoint artifacts/figures/papers/nguyen/4/checkpoint.pt
-uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/7/plot.py --plot-only
+# Full eval of the Fig 4 checkpoint (50 episodes × 25 steps), then gates + plot
+uv run rl-dbs panel run nguyen/7 -- --export-notes --update-report
+# Re-gate and replot from the cached eval
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/7/plot.py --plot-only --export-notes --update-report
 ```
 
 ---
 
-## Conventions (v1)
+## Conventions
 
-Paper-silent knobs — see [snn/replication.md](../../docs/controllers/snn/replication.md) §12 and `SNNConfig`:
+Paper-silent settings of the shipped recipe (`fig4_nguyen_config`; detail and sources in [docs/figures/nguyen/4.md](../../docs/figures/nguyen/4.md) and [snn/replication.md](../../docs/controllers/snn/replication.md)):
 
-| Knob | v1 choice |
-|------|-----------|
-| Observation | GPi-only binary spike matrix |
-| Action head | `factored` (3× ternary argmax) |
-| Early-stop streak $t_u$ | 3 |
-| LIF θ_th | 1.0 |
-| Target net | hard copy on a fixed period |
-| Reward coeffs δ, τ | `energy_penalty=0.01`, `threshold_reward=1.0` |
-| Fig 3 α–β window | **100 ms** per sample (Nguyen RL step); 500 iterations |
+| Setting | Choice | Source |
+|------|-----------|--------|
+| Observation | binary spikes of all eight CBGT populations (80 neurons × 10 bins) | follow-up (arXiv 2606.28600) |
+| Action head | `factored` (3× ternary); ties go to the higher output membrane | convention; follow-up uses membrane argmax |
+| Steps per action | 5 Hz / 0.1 ms / 10 nA/cm² | frequency and pulse width read off Fig 6; amplitude convention |
+| Early-stop streak $t_u$ | 3 | convention |
+| Target net, loss, optimizer | soft target τ 0.005, SmoothL1, AdamW, value clip 100 | follow-up |
+| Reward δ, τ | 1, 330 (learning rewards × 1e-4) | convention |
+| Updates | every 128 transitions (paper), 64 minibatches, 1,650-transition warm-up | paper / convention |
+| Plant | one continuous simulation per episode, fresh network per episode; STN recruitment ρ = 3 | follow-up; ρ = 3 approved plant deviation (Oct 11 2026) |
+| Eval episode start | fresh network, reset reading at 40 Hz / 300 nA/cm² / 0.3 ms recorded as step 0 | paper §IV; follow-up Algorithm S1 |
+| Fig 3 α–β window | 100 ms per sample (one RL step); 500 iterations | paper |
