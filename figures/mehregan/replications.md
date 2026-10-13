@@ -14,8 +14,8 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Fig 4b | Training reward vs episode | Pass (paired to 4a, rep v49) |
 | Fig 5a | Post-train efficacy @ 45 Hz | Pass (closed loop, Fig 4a model, rep v24) |
 | Fig 5b | Post-train efficacy @ 30 Hz | Pass (closed loop, burst alphabet, rep v25) |
-| Fig 6a | PTQ / QAT @ 45 Hz | Fail (`qat_majority_not_below_paper`, closed loop, int8 QAT, rep v66) |
-| Fig 6b | PTQ / QAT @ 30 Hz | Fail (`qat_elevated_vs_fp32`, closed loop, int8 QAT, rep v45) |
+| Fig 6a | PTQ / QAT @ 45 Hz | Fail (`qat_elevated_vs_fp32`, closed loop, int8 QAT, rep v68) |
+| Fig 6b | PTQ / QAT @ 30 Hz | Fail (`qat_majority_not_below_paper`, closed loop, int8 QAT, rep v46) |
 <!-- summary:end -->
 
 Replication PNGs: `figures/mehregan/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/mehregan/images/<panel>/paper.png` (from paper-note embeds; composite Figs 1/2/4/5/6 split into panels). Full composites under `figures/mehregan/images/_full/`.
@@ -354,69 +354,18 @@ Quantization on the **45 Hz** model (§IV.A.3), same closed-loop eval and seed. 
 
 ### Replication
 
-![Replication Fig 6a](images/6a/ptq_qat_45hz_v66.png)
+![Replication Fig 6a](images/6a/ptq_qat_45hz_v68.png)
 
 <!-- caption-6a:start -->
-**Caption:** 45 Hz paper-protocol eval, eval seed 0, fp32_post=339, QAT median post=353, QAT paper-like 3/7 train seeds, QAT median late/pre 0.69, PTQ tracks fp32, QAT elevated, v66, 2026-10-12
+**Caption:** 45 Hz paper-protocol eval, eval seed 0, fp32_post=339, QAT median post=299, QAT paper-like 4/15 train seeds, QAT median late/pre 0.59, PTQ tracks fp32, v68, 2026-10-12
 
 **Manifest:** `artifacts/figures/papers/mehregan/6a/manifest.json`
 <!-- caption-6a:end -->
 
-**Status:** Fail (QAT seed band) — fp32 / PTQ fp16 / PTQ int8 all 339 (late/pre 0.67; every fp32/PTQ gate passes). QAT is now 7 training seeds shown as a band: 3/7 paper-like (late/pre 1.26, 1.26, 0.89), 4/7 suppress (0.59 ×3, 0.69); median late/pre 0.69 vs digitized 0.995, so `qat_majority_not_below_paper` and `qat_median_near_paper` fail. 10-episode int8 QAT never converges — the logit head saturates at its fake-quant clamp, 15–20 logits tie and `argmax` plays the lowest tied pattern — so the paper's pre-stim QAT trace is one draw of that tie-break. No faithful recipe tested makes it robust; a non-lagging observer makes QAT converge and suppress like fp32. See [4a.md](../../docs/figures/mehregan/4a.md) § QAT tie-break → Seed robustness.
+**Status:** Fail (QAT seed band, 15 seeds) — fp32 / PTQ fp16 / PTQ int8 all 339 (late/pre 0.67; every fp32/PTQ gate passes). QAT over 15 training seeds (0–14, count fixed before seeds 7–14 ran): 4/15 paper-like (1.26 ×2, 0.89 ×2), 11/15 suppress (0.59 ×9 on the regular train, 0.68–0.69); median late/pre 0.59 vs digitized 0.995 and median QAT late (299) below fp32 (339), so `qat_elevated_vs_fp32`, `qat_majority_not_below_paper` and `qat_median_near_paper` fail. 10-episode int8 QAT never converges — its logit head saturates at the fake-quant clamp and `argmax` plays the lowest tied pattern — and about half the 41-pattern menu suppresses. Fine-tuning from fp32 and PyTorch's stock qnnpack qconfig were tested and do not help. Root cause is the action space: Figure 3a specifies one ms slot per pulse, where any non-learned actor sits at the pre-stim level (random placements 0.89–1.06) — not shipped because that head fails Fig 4a; decision open. See [4a.md](../../docs/figures/mehregan/4a.md) § QAT tie-break → Second pass.
 
 <!-- gates-6a:start -->
 **Gates set** (`fig6_quant_gates` → manifest `gates`). Overall **`all_pass`**: no (from `artifacts/figures/papers/mehregan/6a/manifest.json`, 2026-10-12). Every row is required for exit.
-
-| Key | Description | Pass |
-|-----|-------------|------|
-| `all_closed_loop` | fp32, PTQ and every QAT seed each run their own actor closed loop | yes |
-| `prestim_shared` | all series and QAT seeds share the pre-onset level (spread ≤ 1%) | yes |
-| `fp32_suppresses_vs_baseline` | fp32 late mean (t ≥ 4 s) < its pre-onset mean | yes |
-| `ptq_fp16_near_fp32` | PTQ fp16 late mean within 15% of fp32 | yes |
-| `ptq_int8_near_fp32` | PTQ int8 late mean within 20% of fp32 | yes |
-| `qat_elevated_vs_fp32` | median-seed QAT late mean > fp32 | yes |
-| `fp32_level_near_paper` | fp32 late/pre within 20% of digitized paper | yes |
-| `ptq_fp16_level_near_paper` | PTQ fp16 late/pre within 20% of digitized paper | yes |
-| `ptq_int8_level_near_paper` | PTQ int8 late/pre within 20% of digitized paper | yes |
-| `qat_majority_not_below_paper` | QAT late/pre ≥ 80% of digitized paper in a strict majority of QAT training seeds | no |
-| `qat_median_near_paper` | median-seed QAT late/pre within 20% of digitized paper (figure: same range) | no |
-| `qat_late_sustained` | median QAT trace [10,12] s mean ≥ 90% of its [2,8] s mean (no late fade) | yes |
-<!-- gates-6a:end -->
-
-**Run:**
-
-```bash
-uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/6a/plot.py --train-qat --export-notes --update-report   # 7 QAT seeds in parallel
-uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/6a/plot.py --export-notes --update-report      # re-eval existing QAT seed checkpoints
-uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/6a/plot.py --plot-only --export-notes --update-report
-```
-
-**Defaults:** fp32 `artifacts/figures/papers/mehregan/4a/checkpoint.pt`, QAT `artifacts/figures/papers/mehregan/6a/qat/qat_checkpoint_seed{0..6}.pt` (train seeds `0-6`, `--qat-seeds`), eval seed `0`. Shared code: `scripts/figures/papers/mehregan/quant_panel.py`.
-
----
-
-## Fig 6b — PTQ / QAT @ 30 Hz
-
-Same quantization panel for the **30 Hz** model (§IV.A.3): Fig 5b fp32 checkpoint, PTQ fp16 / int8, and a 10-episode QAT run with the same recipe.
-
-### Paper (Mehregan et al.)
-
-![Paper Fig 6b](images/6b/paper.png)
-
-### Replication
-
-![Replication Fig 6b](images/6b/ptq_qat_30hz_v45.png)
-
-<!-- caption-6b:start -->
-**Caption:** 30 Hz paper-protocol eval, eval seed 0, fp32_post=372, QAT median post=349, QAT paper-like 2/7 train seeds, QAT median late/pre 0.69, PTQ tracks fp32, v45, 2026-10-12
-
-**Manifest:** `artifacts/figures/papers/mehregan/6b/manifest.json`
-<!-- caption-6b:end -->
-
-**Status:** Fail (QAT seed band) — fp32 / PTQ fp16 / PTQ int8 372 (late/pre 0.73; every fp32/PTQ gate passes). QAT over 7 training seeds: 2/7 paper-like (1.17, 1.25), 5/7 suppress (0.68–0.74); median late/pre 0.69 vs digitized 0.974 and median QAT late below fp32, so `qat_elevated_vs_fp32`, `qat_majority_not_below_paper` and `qat_median_near_paper` fail. Same mechanism as Fig 6a (tie-break of saturated int8 logits).
-
-<!-- gates-6b:start -->
-**Gates set** (`fig6_quant_gates` → manifest `gates`). Overall **`all_pass`**: no (from `artifacts/figures/papers/mehregan/6b/manifest.json`, 2026-10-12). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -432,13 +381,64 @@ Same quantization panel for the **30 Hz** model (§IV.A.3): Fig 5b fp32 checkpoi
 | `qat_majority_not_below_paper` | QAT late/pre ≥ 80% of digitized paper in a strict majority of QAT training seeds | no |
 | `qat_median_near_paper` | median-seed QAT late/pre within 20% of digitized paper (figure: same range) | no |
 | `qat_late_sustained` | median QAT trace [10,12] s mean ≥ 90% of its [2,8] s mean (no late fade) | yes |
+<!-- gates-6a:end -->
+
+**Run:**
+
+```bash
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/6a/plot.py --train-qat --export-notes --update-report   # 15 QAT seeds, 3 at a time
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/6a/plot.py --export-notes --update-report      # re-eval existing QAT seed checkpoints
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/6a/plot.py --plot-only --export-notes --update-report
+```
+
+**Defaults:** fp32 `artifacts/figures/papers/mehregan/4a/checkpoint.pt`, QAT `artifacts/figures/papers/mehregan/6a/qat/qat_checkpoint_seed{0..14}.pt` (train seeds `0-14`, `--qat-seeds`), eval seed `0`. Shared code: `scripts/figures/papers/mehregan/quant_panel.py`.
+
+---
+
+## Fig 6b — PTQ / QAT @ 30 Hz
+
+Same quantization panel for the **30 Hz** model (§IV.A.3): Fig 5b fp32 checkpoint, PTQ fp16 / int8, and a 10-episode QAT run with the same recipe.
+
+### Paper (Mehregan et al.)
+
+![Paper Fig 6b](images/6b/paper.png)
+
+### Replication
+
+![Replication Fig 6b](images/6b/ptq_qat_30hz_v46.png)
+
+<!-- caption-6b:start -->
+**Caption:** 30 Hz paper-protocol eval, eval seed 0, fp32_post=372, QAT median post=379, QAT paper-like 7/15 train seeds, QAT median late/pre 0.74, PTQ tracks fp32, QAT elevated, v46, 2026-10-12
+
+**Manifest:** `artifacts/figures/papers/mehregan/6b/manifest.json`
+<!-- caption-6b:end -->
+
+**Status:** Fail (QAT seed band, 15 seeds) — fp32 / PTQ fp16 / PTQ int8 372 (late/pre 0.73; every fp32/PTQ gate passes). QAT over 15 training seeds: 7/15 paper-like (1.17–1.25 ×6, 0.82), 8/15 suppress (0.68–0.74); median late/pre 0.74 vs digitized 0.974, so `qat_majority_not_below_paper` and `qat_median_near_paper` fail (median QAT late 379 now sits just above fp32 372, so `qat_elevated_vs_fp32` passes). Same mechanism and same action-space root cause as Fig 6a; random Fig 3a slot placements give 0.91–1.05 at 30 Hz.
+
+<!-- gates-6b:start -->
+**Gates set** (`fig6_quant_gates` → manifest `gates`). Overall **`all_pass`**: no (from `artifacts/figures/papers/mehregan/6b/manifest.json`, 2026-10-12). Every row is required for exit.
+
+| Key | Description | Pass |
+|-----|-------------|------|
+| `all_closed_loop` | fp32, PTQ and every QAT seed each run their own actor closed loop | yes |
+| `prestim_shared` | all series and QAT seeds share the pre-onset level (spread ≤ 1%) | yes |
+| `fp32_suppresses_vs_baseline` | fp32 late mean (t ≥ 4 s) < its pre-onset mean | yes |
+| `ptq_fp16_near_fp32` | PTQ fp16 late mean within 15% of fp32 | yes |
+| `ptq_int8_near_fp32` | PTQ int8 late mean within 20% of fp32 | yes |
+| `qat_elevated_vs_fp32` | median-seed QAT late mean > fp32 | yes |
+| `fp32_level_near_paper` | fp32 late/pre within 20% of digitized paper | yes |
+| `ptq_fp16_level_near_paper` | PTQ fp16 late/pre within 20% of digitized paper | yes |
+| `ptq_int8_level_near_paper` | PTQ int8 late/pre within 20% of digitized paper | yes |
+| `qat_majority_not_below_paper` | QAT late/pre ≥ 80% of digitized paper in a strict majority of QAT training seeds | no |
+| `qat_median_near_paper` | median-seed QAT late/pre within 20% of digitized paper (figure: same range) | no |
+| `qat_late_sustained` | median QAT trace [10,12] s mean ≥ 90% of its [2,8] s mean (no late fade) | yes |
 <!-- gates-6b:end -->
 
 **Run:**
 
 ```bash
-uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/6b/plot.py --train-qat --export-notes --update-report   # 7 QAT seeds in parallel
+uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/6b/plot.py --train-qat --export-notes --update-report   # 15 QAT seeds, 3 at a time
 uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/6b/plot.py --plot-only --export-notes --update-report
 ```
 
-**Defaults:** fp32 `artifacts/figures/papers/mehregan/5b/checkpoint.pt`, QAT `artifacts/figures/papers/mehregan/6b/qat/qat_checkpoint_seed{0..6}.pt` (train seeds `0-6`, `--qat-seeds`), eval seed `0`.
+**Defaults:** fp32 `artifacts/figures/papers/mehregan/5b/checkpoint.pt`, QAT `artifacts/figures/papers/mehregan/6b/qat/qat_checkpoint_seed{0..14}.pt` (train seeds `0-14`, `--qat-seeds`), eval seed `0`.
