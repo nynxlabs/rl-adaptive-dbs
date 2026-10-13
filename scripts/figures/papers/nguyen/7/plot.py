@@ -4,6 +4,12 @@
 Loads the Fig. 4 checkpoint and rolls out greedy policy; compares mean step trace
 to digitized paper Fig. 7 and Fig. 3 PD On reference.
 
+The eval starts each episode the way the authors' published environment does: the
+fresh network's 100 ms reset window runs at 100 Hz / 300 nA/cm² / 0.3 ms, then the
+agent's settings are 40 Hz / 0.3 ms / 300 (``reset_window_frequency_hz=100``). This is
+eval-only; the checkpoint's training config is unchanged. ``--initial-setting-reset``
+runs the reset window at the initial 40 Hz instead (the eval up to v28).
+
 Run:
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/7/plot.py
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/7/plot.py --plot-only
@@ -55,6 +61,10 @@ CACHE_DIR = Path("artifacts/figures/papers/nguyen/7")
 DEFAULT_EVAL = CACHE_DIR / "eval.json"
 DEFAULT_MANIFEST = CACHE_DIR / "manifest.json"
 OUT_STEM = "eval_50ep"
+# Eval-start convention from the authors' published environment (MousePDEnv.reset runs
+# the reset window at the simulator defaults, 100 Hz / 300 / 0.3 ms). Applied on top of
+# the checkpoint's config for the eval only; --set overrides it.
+EVAL_RESET_OVERRIDES: dict[str, Any] = {"reset_window_frequency_hz": 100.0}
 
 STYLE = {
     "figure.facecolor": "white",
@@ -204,6 +214,12 @@ def main(argv: list[str] | None = None) -> int:
         "e.g. --set reset_window_frequency_hz=100",
     )
     parser.add_argument(
+        "--initial-setting-reset",
+        action="store_true",
+        help="Run the reset window at the initial 40 Hz setting instead of the authors' "
+        "100 Hz (the Fig 7 eval up to v28)",
+    )
+    parser.add_argument(
         "--export-notes",
         action="store_true",
         help="After promote, copy replication PNGs into the notes folder (RL_DBS_NOTES_DIR / export.notes_dir)",
@@ -236,12 +252,15 @@ def main(argv: list[str] | None = None) -> int:
         if not args.checkpoint.is_file():
             print(f"missing checkpoint: {args.checkpoint}", file=sys.stderr)
             return 2
-        # The checkpoint's own training config (network shape, observation, plant).
+        # The checkpoint's own training config (network shape, observation, plant),
+        # plus the eval-start convention unless --initial-setting-reset.
+        overrides = {} if args.initial_setting_reset else dict(EVAL_RESET_OVERRIDES)
+        overrides.update(parse_config_overrides(args.config_overrides))
         eval_payload = evaluate(
             args.checkpoint,
             episodes=args.episodes,
             max_steps=args.max_steps,
-            overrides=parse_config_overrides(args.config_overrides),
+            overrides=overrides,
         )
         write_json(args.eval_cache, eval_payload)
 
@@ -266,6 +285,7 @@ def main(argv: list[str] | None = None) -> int:
         "out": args.out.as_posix(),
         "eval_cache": args.eval_cache.as_posix(),
         "checkpoint": args.checkpoint.as_posix(),
+        "eval_config_overrides": eval_payload.get("config_overrides", {}),
         "gates": gates,
         "panel_stats": panel,
         "fig3_pd_on_median": fig3_median,
