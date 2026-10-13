@@ -251,3 +251,46 @@ def test_continuous_plant_integration_differs_from_disconnected() -> None:
     finally:
         disc.close()
         cont.close()
+
+
+@pytest.mark.parametrize("variant", ["baseline", "paper"])
+def test_logits_critic_stores_the_scored_action_vector(variant: str) -> None:
+    """``critic_action_input='logits'`` (Mehregan et al. DDPG backbone): the
+    Baseline plays argmax of its noisy logits and stores that vector; GS variants
+    store their Eq. (11) relaxed sample. Updates run on those stored vectors."""
+
+    class _FakePlant:
+        def reset(self, seed=None):
+            return self
+
+        def integrate(self, duration_s, dbs_spec=None, *, record_spikes=True):
+            from types import SimpleNamespace
+
+            stim = bool(dbs_spec is not None and (dbs_spec.frequency_hz or 0.0) > 0.0)
+            return SimpleNamespace(p_beta=150.0 if stim else 220.0)
+
+        def close(self):
+            return None
+
+    cfg = SEADBSConfig(
+        variant=variant, critic_action_input="logits", logit_noise_std=1.0
+    ).for_smoke(episodes=2, max_steps=8)
+    env = SEA_DBSEnvAdapter(plant=_FakePlant(), config=cfg)
+    try:
+        trainer = SEA_DBSTrainer(env, cfg)
+        trainer.train_episodes()
+        n = len(trainer.buffer)
+        vectors = trainer.buffer._logits[:n]
+        actions = trainer.buffer._actions[:n]
+        if variant == "baseline":
+            assert np.array_equal(np.argmax(vectors, axis=1), actions)
+        else:
+            assert np.allclose(vectors.sum(axis=1), 1.0, atol=1e-5)
+        assert trainer._update_count > 0
+    finally:
+        env.close()
+
+
+def test_unknown_critic_action_input_rejected() -> None:
+    with pytest.raises(ValueError):
+        SEADBSConfig(critic_action_input="bogus").with_variant_defaults()  # type: ignore[arg-type]

@@ -44,6 +44,7 @@ INFERENCE_PSD_SAMPLES: int = ABLATION_EVAL_STEPS + 1
 
 PlantIntegrationMode = Literal["disconnected", "continuous"]
 GumbelActionSampling = Literal["relaxed", "hard"]
+CriticActionInput = Literal["one_hot", "logits"]
 
 
 @dataclass(frozen=True)
@@ -103,6 +104,18 @@ class SEADBSConfig:
     epsilon_start: float = 1.0
     epsilon_end: float = 0.05
 
+    # What the critic scores as "the action" (Algorithm 1 stores a_logits next
+    # to a_t; the paper does not say which one Q_phi reads). ``one_hot``: the
+    # executed binary action; the non-GS actor maximizes the softmax expectation
+    # and explores epsilon-greedy. ``logits``: the DDPG backbone of Mehregan et
+    # al. (same group, same Table I values), whose critic scores the actor's
+    # continuous logit vector — non-GS variants add Gaussian noise
+    # (``logit_noise_std``) to the logits, play argmax of the noisy vector, and
+    # store that vector; GS variants store and score their Eq. (11) relaxed
+    # sample. The actor maximizes Q(s, mu(s)) (or Q(s, GS(mu(s)))).
+    critic_action_input: CriticActionInput = "one_hot"
+    logit_noise_std: float = 1.0
+
     # MLP topology (§14.9 — open)
     hidden_size: int = 64
 
@@ -152,6 +165,9 @@ class SEADBSConfig:
         return self.seed + episode
 
     def with_variant_defaults(self) -> SEADBSConfig:
+        if self.critic_action_input not in {"one_hot", "logits"}:
+            msg = f"unknown critic_action_input {self.critic_action_input!r}"
+            raise ValueError(msg)
         if self.variant in {"baseline", "baseline-pm", "baseline-gs", "paper"}:
             return self
         msg = f"unknown sea_dbs variant {self.variant!r}"
