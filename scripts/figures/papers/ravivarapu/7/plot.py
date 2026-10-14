@@ -53,6 +53,7 @@ _overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
 CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/7")
+FIG5A_SERIES = Path("artifacts/figures/papers/ravivarapu/5a/series.json")
 FIGURES_DIR = Path("figures/ravivarapu/images/7")
 OUT_STEM = "ablation_psd"
 VARIANTS = ("baseline", "baseline-pm", "baseline-gs", "paper")
@@ -158,8 +159,15 @@ def ensure_checkpoints(
             )
 
 
+def _fig5a_traces() -> dict[str, list[float]] | None:
+    """Fig 5a rollout (the paper plots the same Baseline / SEA-DBS curves in Figs 5a, 6, 7)."""
+    if not FIG5A_SERIES.is_file():
+        return None
+    return json.loads(FIG5A_SERIES.read_text(encoding="utf-8")).get("traces")
+
+
 def evaluate_gates(traces: dict[str, list[float]]) -> dict[str, Any]:
-    dig = ravivarapu_fig7_gates(traces)
+    dig = ravivarapu_fig7_gates(traces, fig5a_traces=_fig5a_traces())
     n = min(len(v) for v in traces.values()) if traces else 0
     return merge_gate_report(dig, {"n_steps": n})
 

@@ -74,7 +74,13 @@ def evaluate_gates(series: dict[str, Any]) -> dict[str, Any]:
         return {"pass": False, "shape_pass": False, "smoke_override": True}
     baseline = _per_step_rewards(series, "baseline")
     sea = _per_step_rewards(series, "paper")
-    dig = ravivarapu_fig4b_gates(baseline, sea, n_expected=150)
+    dig = ravivarapu_fig4b_gates(
+        baseline,
+        sea,
+        n_expected=150,
+        baseline_psd=series["variants"]["baseline"]["episode_psd"],
+        sea_psd=series["variants"]["paper"]["episode_psd"],
+    )
     merged = merge_gate_report(dig, {"n_episodes": min(len(baseline), len(sea))})
     return ravivarapu_fig4b_attach_tiered_pass(merged)
 
