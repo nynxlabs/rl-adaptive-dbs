@@ -77,7 +77,7 @@ Values from **§V.A (Experiment setup)** unless noted.
 
 The shared repo environment spec follows **Mehregan timing** for a single Gym API. **SEA-DBS replication requires either** (i) a **sea_dbs-specific env config** / adapter that subsamples or re-integrates at **2 ms** RL steps, or (ii) an agreed project convention that maps Ravivarapu steps onto longer segments—**intentionally open** until `envs/` implements both profiles; do not silently use 2 s steps while claiming SEA-DBS parity.
 
-**Repo convention (all Ravivarapu panels):** Ravivarapu reports **2 ms** RL cadence (Table I / §V.A), but multitaper GPi $P_\beta$ on the Kumaravelu plant needs ≳100 ms of spike data per integrate. `SEA_DBSEnvAdapter` therefore integrates **`biomarker_window_s = 0.15`** per RL step while logging **`step_duration_ms = 2`** for paper metadata. Episode length remains **30 steps**; simulated time per episode is **4.5 s** (not 60 ms). Each step is an **independent plant shot** from the episode IC (`plant_integration_mode="disconnected"`, the Mehregan-style env); a stimulating step runs the carrier for the whole window.
+**Repo convention (all Ravivarapu panels):** Ravivarapu reports **2 ms** RL cadence (Table I / §V.A), but multitaper GPi $P_\beta$ on the Kumaravelu plant needs ≳100 ms of spike data per integrate. `SEA_DBSEnvAdapter` therefore integrates **`biomarker_window_s = 0.15`** per RL step while logging **`step_duration_ms = 2`** for paper metadata. Episode length remains **30 steps**; simulated time per episode is **4.5 s** (not 60 ms). Each step is an **independent plant shot** from the episode IC (`plant_integration_mode="disconnected"`, the Mehregan-style env); a stimulating step runs the carrier for the whole window. The plant integrates at **`plant_dt_ms = 0.01`**, not the paper's 0.02 ms (the bundled Kumaravelu reference step); this is a repo convention, not a paper value.
 
 Why 150 ms: it is the shortest window in which the paper's 50 Hz stimulation suppresses GPi beta on Kumaravelu. Stim / untreated $P_\beta$ over plant seeds 0–9 (`scripts/probes/ravivarapu_plant_levels.py`):
 
@@ -232,7 +232,7 @@ Trained **actor** $\pi^* \approx \pi_\theta$ for closed-loop pulse decisions. Op
 | Experiment | Notes |
 |------------|--------|
 | **Training curves** | Beta PSD and cumulative reward vs. **DDPG baseline** (Fig. 4) |
-| **Seed change interval** | $n \in \{10,20,50,75\}$ steps — Table II (avg PSD ↓, reward ↑) |
+| **Seed change interval** | $n \in \{10,20,50,75\}$ steps — Table II (avg PSD ↓, reward ↑); protocol convention §14.13, panel `scripts/figures/papers/ravivarapu/table2/plot.py` |
 | **Stimulation carrier frequency** | **50 Hz** vs **30 Hz** inference comparison (Fig. 5)—adapter/plant must expose frequency as a fixed eval setting, not necessarily a per-step RL action |
 | **Ablation (10 steps)** | Baseline, +PM, +GS, full SEA-DBS (Fig. 7); PM early noise with **~4,500** samples cited |
 | **FP16 PTQ** | Post-training; compare PSD over **10** stimulation steps (Fig. 6) |
@@ -328,6 +328,10 @@ $\beta_t = 0.35$ implies consistent scaling of $\bar{P}_\beta$ between observati
 ### 12. Observation window on reset
 
 Eq. (4) makes the state a window of the last $n_{\mathrm{obs}}$ beta estimates. **Chosen:** $n_{\mathrm{obs}} = 10$ and, on reset, the window holds $n_{\mathrm{obs}}$ untreated samples (the history before the episode; `prefill_obs_window=True`), in training and eval alike. Ten is the paper's inference horizon (Figs 5–7 plot 10 stimulation steps). Each step is an independent plant shot, so the window mean reaches its floor exactly at step $n_{\mathrm{obs}}$: with $n_{\mathrm{obs}} = 5$ every inference trace was flat after step 5, while the digitized Figs 5–7 keep falling through step 10. Screen (always-on 50 Hz, seed 0, Fig 5a gates): $n_{\mathrm{obs}} = 5 / 6 / 8 / 10 / 12$ pass $8 / 11 / 12 / 12 / 12$ of 17; 10 is the only value that passes both early-MAE gates of Figs 6 and 7 too. Fig 4 training with 5 and 10 gives the same gate count ([docs/figures/ravivarapu/4a.md](../../figures/ravivarapu/4a.md) § Convention screen).
+
+### 13. Table II protocol
+
+§V.B says only that the environment seed changes every $n \in \{10, 20, 50, 75\}$ steps and that Table II reports average PSD and average reward. **Fixed:** the four intervals; Avg Reward is Eq. (7) of Avg PSD / 1000 (true of all eight published cells), so only PSD is gated. **Chosen (oct 14 2026):** `evaluate_reseeded` rolls each Fig 4 actor out for **300** argmax steps at **50 Hz** on its training plant setup (300 is the least common multiple of the four intervals, so every $n$ sees whole blocks) and resets the plant every $n$ steps with the next seed (`seed`, `seed + 1`, …). A reset re-prefills the Eq. (5) window with that seed's untreated level, so short intervals spend more steps with untreated samples in the window. Avg PSD is the mean Eq. (5) observation × 1000. **Open:** the paper's horizon, checkpoint, action mode, and what the "environment seed" controls.
 
 ---
 
