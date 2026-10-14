@@ -149,3 +149,87 @@ def evaluate_ablation_steps(
         use_fp16_ptq=use_fp16_ptq,
         action_mode="argmax",
     )
+
+
+# Table II (paper §V.B): "changing the environment seed every n ∈ {10, 20, 50,
+# 75} step". Convention (paper silent on the rest — replication.md §14.13):
+# one deterministic rollout of TABLE2_HORIZON_STEPS steps (the least common
+# multiple of the four intervals, so every n sees whole blocks); every n steps
+# the plant is reset with the next seed (cfg.seed, cfg.seed + 1, …), which also
+# re-prefills the Eq. (5) window with that seed's untreated level. Avg PSD is
+# the mean Eq. (5) observation over all steps.
+TABLE2_RESEED_INTERVALS = (10, 20, 50, 75)
+TABLE2_HORIZON_STEPS = 300
+
+
+def evaluate_reseeded(
+    checkpoint: str | Path,
+    *,
+    reseed_every: int,
+    config: SEADBSConfig | None = None,
+    plant: Any | None = None,
+    horizon: int = TABLE2_HORIZON_STEPS,
+    carrier_hz: float | None = None,
+) -> dict[str, Any]:
+    """Argmax rollout with the plant reseeded every ``reseed_every`` steps (Table II)."""
+    from controllers.sea_dbs.reward import sea_dbs_reward
+
+    n = int(reseed_every)
+    if n <= 0 or int(horizon) % n:
+        raise ValueError(f"horizon {horizon} must be a positive multiple of reseed_every {n}")
+    device = (config or SEADBSConfig()).device
+    payload = load_checkpoint(checkpoint, device=device)
+    actor, ckpt_cfg = load_actor_from_payload(payload, device=device)
+    cfg = ckpt_cfg
+    if config is not None:
+        cfg = replace(cfg, variant=config.variant, seed=config.seed, device=config.device)
+    hz = float(carrier_hz if carrier_hz is not None else INFERENCE_CARRIER_50HZ)
+    # The adapter truncates at max_episode_steps; each block is n steps.
+    cfg = replace(cfg, carrier_hz=hz, max_episode_steps=n)
+
+    env = SEA_DBSEnvAdapter(plant=plant, config=cfg)
+    env.set_carrier_hz(hz)
+    p_beta: list[float] = []
+    rewards: list[float] = []
+    actions: list[int] = []
+    block_seeds: list[int] = []
+    try:
+        for block in range(int(horizon) // n):
+            seed = int(cfg.seed) + block
+            block_seeds.append(seed)
+            state, _info = env.reset(seed=seed)
+            for _step in range(n):
+                state_t = torch.as_tensor(state, dtype=torch.float32, device=cfg.device).unsqueeze(0)
+                with torch.no_grad():
+                    action_t, _ = Actor.select_action(actor(state_t).float())
+                action = int(action_t.reshape(-1)[0].item())
+                state, reward, _term, _trunc, step_info = env.step(action)
+                p_beta.append(float(step_info["p_beta_norm"]))
+                rewards.append(float(reward))
+                actions.append(action)
+    finally:
+        env.close()
+
+    avg_p = float(np.mean(p_beta))
+    return {
+        "protocol": "sea_dbs_table2_reseed",
+        "variant": cfg.variant,
+        "seed": cfg.seed,
+        "carrier_hz": hz,
+        "reseed_every": n,
+        "horizon": int(horizon),
+        "block_seeds": block_seeds,
+        "p_beta_norm": p_beta,
+        "rewards": rewards,
+        "actions": actions,
+        "avg_p_beta_norm": avg_p,
+        "avg_reward": float(np.mean(rewards)),
+        "reward_of_avg_psd": float(
+            sea_dbs_reward(avg_p, beta_threshold=cfg.beta_threshold, reward_scale=cfg.reward_scale)
+        ),
+        "stim_frac": float(np.mean(actions)),
+        "biomarker_window_s": cfg.biomarker_window_s,
+        "n_obs": cfg.n_obs,
+        "prefill_obs_window": cfg.prefill_obs_window,
+        "plant_integration_mode": cfg.plant_integration_mode,
+    }

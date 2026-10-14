@@ -294,3 +294,37 @@ def test_logits_critic_stores_the_scored_action_vector(variant: str) -> None:
 def test_unknown_critic_action_input_rejected() -> None:
     with pytest.raises(ValueError):
         SEADBSConfig(critic_action_input="bogus").with_variant_defaults()  # type: ignore[arg-type]
+
+
+def test_table2_reseed_resets_plant_every_n_steps(tmp_path) -> None:
+    """Table II: the plant is reset with the next seed every n steps (Eq. (5) window re-prefilled)."""
+    from types import SimpleNamespace
+
+    from controllers.sea_dbs.checkpoint import save_checkpoint
+    from controllers.sea_dbs.eval import evaluate_reseeded
+    from controllers.sea_dbs.networks import Actor, Critic
+
+    resets: list[int | None] = []
+
+    class _FakePlant:
+        def reset(self, seed: int | None = None) -> None:
+            resets.append(seed)
+
+        def integrate(self, duration_s, dbs_spec=None, *, record_spikes: bool = True):
+            return SimpleNamespace(p_beta=400.0)
+
+        def close(self) -> None:
+            return None
+
+    cfg = SEADBSConfig(seed=3, observation_scale=1000.0, n_obs=4, prefill_obs_window=True)
+    actor = Actor(state_dim=cfg.state_dim, n_actions=cfg.n_actions, hidden_size=cfg.hidden_size)
+    critic = Critic(state_dim=cfg.state_dim, n_actions=cfg.n_actions, hidden_size=cfg.hidden_size)
+    ckpt = save_checkpoint(tmp_path / "a.pt", actor=actor, critic=critic, config=cfg)
+    out = evaluate_reseeded(ckpt, reseed_every=5, horizon=20, plant=_FakePlant(), config=cfg)
+    assert resets == [3, 4, 5, 6]
+    assert out["block_seeds"] == [3, 4, 5, 6]
+    assert len(out["p_beta_norm"]) == 20
+    assert out["avg_p_beta_norm"] == pytest.approx(0.4)
+    assert out["reward_of_avg_psd"] == pytest.approx(sea_dbs_reward(0.4))
+    with pytest.raises(ValueError):
+        evaluate_reseeded(ckpt, reseed_every=7, horizon=20, plant=_FakePlant(), config=cfg)

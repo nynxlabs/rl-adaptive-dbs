@@ -2116,6 +2116,23 @@ def _promote_ravivarapu_inference(
     return {"png": str(png_path), "caption": caption, "doc": str(PAPER_RAVIVARAPU_DOC)}
 
 
+PAPER_RAVIVARAPU_T2_PNG = "figures/ravivarapu/images/table2/avg_psd.png"
+
+
+def promote_ravivarapu_table2(
+    *, manifest: dict[str, Any], png_path: Path, update_docs: bool = True
+) -> dict[str, str]:
+    return _promote_ravivarapu_inference(
+        manifest=manifest,
+        png_path=png_path,
+        panel="table2",
+        caption_marker="caption-t2",
+        replication_alt="Replication Table II",
+        ship_alias=PAPER_RAVIVARAPU_T2_PNG,
+        update_docs=update_docs,
+    )
+
+
 def promote_ravivarapu_5a(*, manifest: dict[str, Any], png_path: Path, update_docs: bool = True) -> dict[str, str]:
     return _promote_ravivarapu_inference(
         manifest=manifest,
