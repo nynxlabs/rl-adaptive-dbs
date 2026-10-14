@@ -58,6 +58,7 @@ _overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
 CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/6")
+FIG5A_SERIES = Path("artifacts/figures/papers/ravivarapu/5a/series.json")
 FIGURES_DIR = Path("figures/ravivarapu/images/6")
 OUT_STEM = "ptq_fp16_50hz"
 SERIES = (
@@ -106,8 +107,15 @@ def _max_fp16_logit_error(ckpt: Path, states: np.ndarray) -> float:
         return float((actor(x) - half(x).float()).abs().max())
 
 
+def _fig5a_traces() -> dict[str, list[float]] | None:
+    """Fig 5a rollout (the paper plots the same Baseline / SEA-DBS curves in Figs 5a, 6, 7)."""
+    if not FIG5A_SERIES.is_file():
+        return None
+    return json.loads(FIG5A_SERIES.read_text(encoding="utf-8")).get("traces")
+
+
 def evaluate_gates(traces: dict[str, list[float]]) -> dict[str, Any]:
-    dig = ravivarapu_fig6_gates(traces)
+    dig = ravivarapu_fig6_gates(traces, fig5a_traces=_fig5a_traces())
     n = min(len(v) for v in traces.values())
     return merge_gate_report(dig, {"n_steps": n})
 

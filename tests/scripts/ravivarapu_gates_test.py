@@ -1,4 +1,4 @@
-"""Tests for Ravivarapu Fig. 4a digitization gates."""
+"""Tests for Ravivarapu digitization gates (Figs 4–7, Table II)."""
 from __future__ import annotations
 
 import sys
@@ -49,7 +49,8 @@ def test_fig4a_paper_self_passes_full_shape_gates():
     assert report["pass"]
     assert report["gates"]["gradual_decline_baseline"]
     assert report["gates"]["gradual_decline_sea"]
-    assert report["gates"]["late_gap_substantial"]
+    assert report["gates"]["shared_start_near_paper"]
+    assert report["gates"]["baseline_late_near_paper"]
     assert report["gates"]["sea_steeper_drop_than_baseline"]
     assert report["gates"]["pearson_baseline_min"]
     assert report["gates"]["pearson_sea_min"]
@@ -85,27 +86,39 @@ def test_fig4a_paper_self_passes_endpoint_separation_gates():
     assert np.isfinite(report["metrics"]["late_gap"])
 
 
-@needs_paper_curves
-def test_fig4a_requires_substantial_late_gap():
+def _paper_4a() -> tuple[np.ndarray, np.ndarray]:
+    paper = load_curves("fig4a")
     episodes = np.arange(150, dtype=float)
-    baseline = np.linspace(0.48, 0.40, episodes.size)
-    sea = np.linspace(0.47, 0.35, episodes.size)
-
-    report = ravivarapu_fig4a_gates(baseline, sea, n_expected=150)
-
-    assert report["gates"]["late_gap_substantial"]
-    assert report["metrics"]["late_gap"] >= 0.02
+    return (
+        np.interp(episodes, *paper["Baseline"]),
+        np.interp(episodes, *paper["SEA-DBS"]),
+    )
 
 
 @needs_paper_curves
 def test_fig4a_rejects_barely_separated_final_means():
-    episodes = np.arange(150, dtype=float)
-    baseline = np.linspace(0.48, 0.36, episodes.size)
-    sea = np.linspace(0.47, 0.355, episodes.size)
+    baseline, _sea = _paper_4a()
+    report = ravivarapu_fig4a_gates(baseline, baseline - 0.003, n_expected=150)
+    assert not report["gates"]["late_gap_near_paper"]
+    assert not report["gates"]["sea_steeper_drop_than_baseline"]
 
-    report = ravivarapu_fig4a_gates(baseline, sea, n_expected=150)
 
-    assert not report["gates"]["late_gap_substantial"]
+@needs_paper_curves
+def test_fig4a_rejects_flat_baseline():
+    """A Baseline that never declines failed only the drop gates before; the
+    late/early ratio (0.30 tol) and missing Baseline level gates let it through."""
+    baseline, sea = _paper_4a()
+    flat = np.full(150, float(baseline[:15].mean()))
+    report = ravivarapu_fig4a_gates(flat, sea, n_expected=150)
+    assert not report["gates"]["late_early_ratio_baseline_near_paper"]
+    assert not report["gates"]["baseline_late_near_paper"]
+
+
+@needs_paper_curves
+def test_fig4a_rejects_start_offset():
+    baseline, sea = _paper_4a()
+    report = ravivarapu_fig4a_gates(baseline - 0.05, sea - 0.05, n_expected=150)
+    assert not report["gates"]["shared_start_near_paper"]
 
 
 def test_fig4a_tiered_pass_full_implies_shape_pass():
@@ -132,12 +145,17 @@ def test_fig4b_paper_self_passes_full_gates():
     x_b, y_b = paper["Baseline Reward"]
     x_s, y_s = paper["SEA-DBS Reward"]
     episodes = np.arange(150, dtype=float)
+    psd_b, psd_s = _paper_4a()
     report = ravivarapu_fig4b_gates(
         np.interp(episodes, x_b, y_b),
         np.interp(episodes, x_s, y_s),
         n_expected=150,
+        baseline_psd=psd_b,
+        sea_psd=psd_s,
     )
-    assert report["pass"]
+    assert report["pass"], report["gates"]
+    assert report["gates"]["eq7_consistent_with_4a"]
+    assert report["gates"]["sea_faster_initial_rise"]
     assert report["gates"]["baseline_rises"]
     assert report["gates"]["sea_rises"]
     assert report["gates"]["sea_above_baseline_late"]
@@ -184,6 +202,34 @@ def test_fig4b_rejects_inverted_late_order():
     assert not report["gates"]["sea_above_baseline_late"]
     assert not report["gates"]["sea_steeper_rise_than_baseline"]
     assert not report["pass"]
+
+
+@needs_paper_curves
+def test_fig4b_eq7_gate_fails_closed_without_psd():
+    paper = load_curves("fig4b")
+    episodes = np.arange(150, dtype=float)
+    report = ravivarapu_fig4b_gates(
+        np.interp(episodes, *paper["Baseline Reward"]),
+        np.interp(episodes, *paper["SEA-DBS Reward"]),
+        n_expected=150,
+    )
+    assert not report["gates"]["eq7_consistent_with_4a"]
+
+
+@needs_paper_curves
+def test_fig4b_eq7_gate_rejects_reward_off_its_psd():
+    """Mean step reward 0.1 above Eq. (7) of the episode PSD (our run's gap)."""
+    from ravivarapu_gates import eq7_reward
+
+    psd_b, psd_s = _paper_4a()
+    report = ravivarapu_fig4b_gates(
+        eq7_reward(psd_b) + 0.1,
+        eq7_reward(psd_s) + 0.1,
+        n_expected=150,
+        baseline_psd=psd_b,
+        sea_psd=psd_s,
+    )
+    assert not report["gates"]["eq7_consistent_with_4a"]
 
 
 def test_fig4b_tiered_pass_full_implies_shape_pass():
@@ -261,6 +307,29 @@ def test_inference_shape_gates_reject_rise():
 
 
 @needs_paper_curves
+def test_inference_5b_rising_30hz_is_not_weaker_suppression():
+    """30 Hz traces that rise above onset must not count as 'weaker than 50 Hz'."""
+    b50 = _paper_steps("fig5a", "Baseline 50Hz")
+    s50 = _paper_steps("fig5a", "SEA-DBS 50Hz")
+    rising = list(np.linspace(0.4485, 0.6067, 11))
+    report = ravivarapu_inference_gates(
+        rising, rising, carrier_hz=30.0, sea_trace_50hz=s50, baseline_trace_50hz=b50
+    )
+    assert not report["gates"]["weaker_than_50hz_sea"]
+    assert not report["gates"]["weaker_than_50hz_baseline"]
+
+
+@needs_paper_curves
+def test_inference_50hz_rejects_near_tie():
+    """SEA-DBS 0.0005 below Baseline used to pass every ordering gate."""
+    b = np.asarray(_paper_steps("fig5a", "Baseline 50Hz"))
+    sea = b - np.r_[0.0, np.full(10, 5e-4)]
+    report = ravivarapu_inference_gates(b, sea, carrier_hz=50.0)
+    assert not report["gates"]["tail_gap_near_paper"]
+    assert not report["pass"]
+
+
+@needs_paper_curves
 def test_inference_5b_weaker_than_50hz():
     b30 = [0.461, 0.466, 0.468, 0.460, 0.452, 0.445, 0.438, 0.430, 0.424, 0.418, 0.412]
     s30 = [0.461, 0.455, 0.448, 0.441, 0.434, 0.427, 0.420, 0.413, 0.406, 0.400, 0.393]
@@ -273,7 +342,6 @@ def test_inference_5b_weaker_than_50hz():
         sea_trace_50hz=s50,
         baseline_trace_50hz=b50,
     )
-    assert report["pass"]
     assert report["gates"]["weaker_than_50hz_sea"]
     assert report["gates"]["weaker_than_50hz_baseline"]
     assert report["gates"]["early_baseline_rises"]
@@ -419,61 +487,93 @@ def test_inference_mid_window_rejects_onset_fill():
     assert not report["pass"]
 
 
-def test_fig6_gates_pass():
-    from ravivarapu_gates import ravivarapu_fig6_gates
-
-    traces = {
-        "Baseline": [0.4606, 0.4606, 0.4376, 0.4376, 0.4146, 0.3916, 0.3686, 0.3456, 0.3456, 0.3456, 0.3456],
-        "Baseline + PTQ(fp16)": [0.4606, 0.4606, 0.4606, 0.4606, 0.4376, 0.4146, 0.3916, 0.3686, 0.3686, 0.3686, 0.3686],
-        "SEA-DBS": [0.4606, 0.4376, 0.4146, 0.3916, 0.3686, 0.3456, 0.3226, 0.3226, 0.3226, 0.3226, 0.3226],
-        "SEA-DBS + PTQ(fp16)": [0.4606, 0.4376, 0.4146, 0.4146, 0.3916, 0.3686, 0.3456, 0.3456, 0.3456, 0.3226, 0.3226],
+def _fig5a_paper() -> dict[str, list[float]]:
+    return {
+        "baseline": _paper_steps("fig5a", "Baseline 50Hz"),
+        "paper": _paper_steps("fig5a", "SEA-DBS 50Hz"),
     }
-    report = ravivarapu_fig6_gates(traces)
-    assert report["pass"]
-    assert report["gates"]["shared_start_near_paper"]
-    assert report["gates"]["sea_below_baseline"]
-    assert report["gates"]["sea_ptq_below_baseline"]
 
 
-def test_fig7_gates_pass():
-    from ravivarapu_gates import ravivarapu_fig7_gates
-
-    traces = {
-        "baseline": [0.4606, 0.4606, 0.4385, 0.4385, 0.4164, 0.3943, 0.3721, 0.3500, 0.3500, 0.3500, 0.3500],
-        "baseline-pm": [0.4606, 0.4385, 0.4164, 0.3943, 0.3721, 0.3721, 0.3500, 0.3500, 0.3500, 0.3500, 0.3500],
-        "baseline-gs": [0.4606, 0.4606, 0.4606, 0.4385, 0.4385, 0.4164, 0.3943, 0.3943, 0.3943, 0.3943, 0.3943],
-        "paper": [0.4606, 0.4385, 0.4164, 0.3943, 0.3721, 0.3500, 0.3279, 0.3279, 0.3279, 0.3279, 0.3279],
-    }
-    report = ravivarapu_fig7_gates(traces)
-    assert report["pass"]
-    assert report["gates"]["shared_start_near_paper"]
-    assert report["gates"]["sea_dbs_lowest_tail"]
-    assert report["gates"]["pm_not_sea"]
-    # Baseline must be above or equal to Baseline+PM across steps 0-4
-    assert all(b >= pm for b, pm in zip(traces["baseline"][:5], traces["baseline-pm"][:5]))
+_FIG6_NAMES = ("Baseline", "Baseline + PTQ(fp16)", "SEA-DBS", "SEA-DBS + PTQ(fp16)")
+_FIG7_NAMES = {
+    "baseline": "Baseline",
+    "baseline-pm": "Baseline + PM",
+    "baseline-gs": "Baseline + GS",
+    "paper": "SEA-DBS",
+}
 
 
 @needs_paper_curves
 def test_fig6_paper_self_passes():
     from ravivarapu_gates import ravivarapu_fig6_gates
 
-    names = ("Baseline", "Baseline + PTQ(fp16)", "SEA-DBS", "SEA-DBS + PTQ(fp16)")
-    report = ravivarapu_fig6_gates({n: _paper_steps("fig6", n) for n in names})
+    report = ravivarapu_fig6_gates(
+        {n: _paper_steps("fig6", n) for n in _FIG6_NAMES}, fig5a_traces=_fig5a_paper()
+    )
     assert report["pass"], report["gates"]
+
+
+@needs_paper_curves
+def test_fig6_ptq_identical_to_fp32_is_not_a_fail():
+    """The paper claims PTQ tracks fp32; an unchanged PTQ trace is not a defect."""
+    from ravivarapu_gates import ravivarapu_fig6_gates
+
+    traces = {n: _paper_steps("fig6", n) for n in _FIG6_NAMES}
+    traces["SEA-DBS + PTQ(fp16)"] = list(traces["SEA-DBS"])
+    report = ravivarapu_fig6_gates(traces, fig5a_traces=_fig5a_paper())
+    assert report["gates"]["sea_ptq_tracks_fp32"]
+    assert "ptq_traces_distinct" not in report["gates"]
+
+
+@needs_paper_curves
+def test_fig6_rejects_ptq_17pct_worse():
+    from ravivarapu_gates import ravivarapu_fig6_gates
+
+    traces = {n: np.asarray(_paper_steps("fig6", n)) for n in _FIG6_NAMES}
+    sea = traces["SEA-DBS"]
+    traces["SEA-DBS + PTQ(fp16)"] = np.r_[sea[:5], sea[5:] * 1.17]
+    report = ravivarapu_fig6_gates(traces, fig5a_traces=_fig5a_paper())
+    assert not report["gates"]["sea_ptq_tracks_fp32"]
+    assert not report["pass"]
+
+
+@needs_paper_curves
+def test_fig6_fails_closed_without_fig5a():
+    from ravivarapu_gates import ravivarapu_fig6_gates
+
+    report = ravivarapu_fig6_gates({n: _paper_steps("fig6", n) for n in _FIG6_NAMES})
+    assert not report["gates"]["fp32_matches_fig5a"]
+
+
+def test_fig6_rejects_ten_samples():
+    from ravivarapu_gates import ravivarapu_fig6_gates
+
+    y = list(np.linspace(0.46, 0.32, 10))
+    report = ravivarapu_fig6_gates({n: y for n in _FIG6_NAMES})
+    assert not report["gates"]["n_steps_ok"]
 
 
 @needs_paper_curves
 def test_fig7_paper_self_passes():
     from ravivarapu_gates import ravivarapu_fig7_gates
 
-    names = {
-        "baseline": "Baseline",
-        "baseline-pm": "Baseline + PM",
-        "baseline-gs": "Baseline + GS",
-        "paper": "SEA-DBS",
-    }
-    report = ravivarapu_fig7_gates({k: _paper_steps("fig7", v) for k, v in names.items()})
+    report = ravivarapu_fig7_gates(
+        {k: _paper_steps("fig7", v) for k, v in _FIG7_NAMES.items()}, fig5a_traces=_fig5a_paper()
+    )
     assert report["pass"], report["gates"]
+
+
+@needs_paper_curves
+def test_fig7_rejects_flat_gs():
+    """+GS flat at the untreated level used to pass as 'highest tail'."""
+    from ravivarapu_gates import ravivarapu_fig7_gates
+
+    traces = {k: _paper_steps("fig7", v) for k, v in _FIG7_NAMES.items()}
+    traces["baseline-gs"] = [traces["baseline"][0]] * 11
+    report = ravivarapu_fig7_gates(traces, fig5a_traces=_fig5a_paper())
+    assert report["gates"]["gs_highest_tail"]
+    assert not report["gates"]["mae_gs"]
+    assert not report["gates"]["gs_tail_near_paper"]
 
 
 def test_fig7_rejects_gs_not_highest():
@@ -499,3 +599,28 @@ def test_fig7_rejects_identical_variants():
     assert not report["gates"]["sea_dbs_lowest_tail"]
     assert not report["gates"]["gs_highest_tail"]
     assert not report["gates"]["pm_not_sea"]
+
+
+def test_table2_paper_self_passes():
+    from ravivarapu_gates import TABLE2_PAPER_PSD, ravivarapu_table2_gates
+
+    rows = {n: {"baseline_psd": b, "sea_psd": s} for n, (b, s) in TABLE2_PAPER_PSD.items()}
+    report = ravivarapu_table2_gates(rows)
+    assert report["pass"], report["gates"]
+
+
+def test_table2_rejects_tie():
+    from ravivarapu_gates import TABLE2_PAPER_PSD, ravivarapu_table2_gates
+
+    rows = {n: {"baseline_psd": s, "sea_psd": s} for n, (_b, s) in TABLE2_PAPER_PSD.items()}
+    report = ravivarapu_table2_gates(rows)
+    assert not report["gates"]["sea_below_baseline_every_n"]
+    assert not report["gates"]["gap_near_paper_every_n"]
+    assert not report["pass"]
+
+
+def test_table2_rejects_missing_interval():
+    from ravivarapu_gates import ravivarapu_table2_gates
+
+    report = ravivarapu_table2_gates({10: {"baseline_psd": 364.0, "sea_psd": 326.0}})
+    assert not report["pass"]

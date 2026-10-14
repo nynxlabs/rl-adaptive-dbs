@@ -19,53 +19,55 @@ if str(_DIG) not in sys.path:
 RAVIVARAPU_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
     "4a": [
         ("n_episodes_ok", "≥ 150 training episodes"),
-        ("shared_start", "baseline and SEA-DBS agree at episode start"),
-        ("baseline_declines", "baseline PSD declines over training"),
-        ("sea_declines", "SEA-DBS PSD declines over training"),
-        ("sea_below_baseline_mid", "SEA-DBS mid PSD below baseline"),
+        ("shared_start", "baseline and SEA-DBS agree at episode start (ep 0–15, ≤ 0.05)"),
+        ("baseline_declines", "baseline PSD declines over training (≥ 0.02)"),
+        ("sea_below_baseline_mid", "SEA-DBS ep 40–80 PSD below baseline"),
         ("sea_below_baseline_midlate", "SEA-DBS ep 70–110 PSD below baseline"),
-        ("sea_below_baseline_late", "SEA-DBS late PSD below baseline"),
+        ("sea_below_baseline_late", "SEA-DBS ep 120–150 PSD below baseline"),
         ("sea_steeper_drop_than_baseline", "SEA-DBS drop steeper than baseline"),
         ("gap_widens_over_training", "baseline − SEA-DBS gap widens over training"),
-        ("late_gap_substantial", "late baseline − SEA-DBS gap in [0.015, 0.050]"),
-        ("drop_timing_baseline", "baseline drop not front-loaded by ep 50"),
-        ("drop_timing_sea", "SEA-DBS drop not front-loaded by ep 50"),
-        ("gradual_decline_baseline", "gradual baseline mid→late drop"),
-        ("gradual_decline_sea", "gradual SEA-DBS mid→late drop"),
-        ("pearson_baseline_min", "baseline trajectory shape (Pearson r)"),
-        ("pearson_sea_min", "SEA-DBS trajectory shape (Pearson r)"),
-        ("shared_start_near_paper", "shared start vs paper"),
-        ("baseline_drop_vs_paper", "baseline drop vs paper"),
-        ("sea_drop_vs_paper", "SEA-DBS drop vs paper"),
-        ("sea_mid_near_paper", "SEA-DBS mid-training level vs paper"),
-        ("sea_midlate_near_paper", "SEA-DBS ep 70–110 level vs paper"),
-        ("sea_late_near_paper", "SEA-DBS late level vs paper"),
-        ("mid_gap_near_paper", "mid-training gap vs paper (bounded)"),
-        ("midlate_gap_near_paper", "ep 70–110 gap vs paper (bounded)"),
-        ("late_gap_near_paper", "late gap vs paper (bounded)"),
-        ("late_early_ratio_baseline_near_paper", "baseline late/early ratio vs paper"),
-        ("late_early_ratio_sea_near_paper", "SEA-DBS late/early ratio vs paper"),
+        ("drop_timing_baseline", "baseline drop not front-loaded by ep 50 vs paper"),
+        ("drop_timing_sea", "SEA-DBS drop not front-loaded by ep 50 vs paper"),
+        ("gradual_decline_baseline", "baseline mid→late drop ≥ 30 % of paper's"),
+        ("gradual_decline_sea", "SEA-DBS mid→late drop ≥ 30 % of paper's"),
+        ("pearson_baseline_min", "baseline trajectory shape vs paper (Pearson r ≥ 0.58)"),
+        ("pearson_sea_min", "SEA-DBS trajectory shape vs paper (Pearson r ≥ 0.58)"),
+        ("shared_start_near_paper", "ep 0–15 level within 0.02 of paper (0.443 / 0.448)"),
+        ("baseline_drop_vs_paper", "baseline early→late drop ≥ 40 % of paper's"),
+        ("sea_drop_vs_paper", "SEA-DBS early→late drop ≥ 40 % of paper's"),
+        ("baseline_mid_near_paper", "baseline ep 40–80 level within 12 % of paper"),
+        ("baseline_midlate_near_paper", "baseline ep 70–110 level within 12 % of paper"),
+        ("baseline_late_near_paper", "baseline ep 120–150 level within 12 % of paper"),
+        ("sea_mid_near_paper", "SEA-DBS ep 40–80 level within 12 % of paper"),
+        ("sea_midlate_near_paper", "SEA-DBS ep 70–110 level within 12 % of paper"),
+        ("sea_late_near_paper", "SEA-DBS ep 120–150 level within 12 % of paper"),
+        ("mid_gap_near_paper", "ep 40–80 gap in [0.40, 1.80] × paper"),
+        ("midlate_gap_near_paper", "ep 70–110 gap in [0.40, 1.75] × paper"),
+        ("late_gap_near_paper", "ep 120–150 gap in [0.50, 1.60] × paper (0.028)"),
+        ("late_early_ratio_baseline_near_paper", "baseline late/early ratio within 8 % of paper (0.833)"),
+        ("late_early_ratio_sea_near_paper", "SEA-DBS late/early ratio within 8 % of paper (0.762)"),
     ],
     "4b": [
         ("n_episodes_ok", "≥ 150 training episodes"),
-        ("shared_start", "baseline and SEA-DBS agree at episode start"),
-        ("baseline_rises", "baseline reward rises over training"),
-        ("sea_rises", "SEA-DBS reward rises over training"),
-        ("sea_above_baseline_late", "SEA-DBS late reward above baseline"),
-        ("sea_steeper_rise_than_baseline", "SEA-DBS rise steeper than baseline"),
-        ("paper_pull_ahead_mid", "SEA-DBS ahead in mid training window"),
-        ("late_gap_substantial", "late SEA-DBS − baseline gap substantial"),
-        ("rise_timing_baseline", "baseline rise not front-loaded by ep 50"),
-        ("rise_timing_sea", "SEA-DBS rise not front-loaded by ep 50"),
-        ("gradual_rise_baseline", "gradual baseline mid→late rise"),
-        ("gradual_rise_sea", "gradual SEA-DBS mid→late rise"),
-        ("pearson_baseline_min", "baseline trajectory shape (Pearson r)"),
-        ("pearson_sea_min", "SEA-DBS trajectory shape (Pearson r)"),
-        ("shared_start_near_paper", "shared start vs paper"),
-        ("baseline_rise_vs_paper", "baseline rise vs paper"),
-        ("sea_rise_vs_paper", "SEA-DBS rise vs paper"),
-        ("late_gap_near_paper", "late gap vs paper (scaled)"),
-        ("midlate_gap_near_paper", "ep 70–110 gap vs paper (scaled)"),
+        ("shared_start", "baseline and SEA-DBS agree at episode start (ep 0–15, ≤ 25 %)"),
+        ("baseline_rises", "baseline reward rises ≥ 25 % of paper's rise"),
+        ("sea_rises", "SEA-DBS reward rises ≥ 25 % of paper's rise"),
+        ("sea_above_baseline_late", "SEA-DBS ep 90–150 reward above baseline"),
+        ("sea_steeper_rise_than_baseline", "SEA-DBS rise to ep 90–150 steeper than baseline"),
+        ("paper_pull_ahead_mid", "SEA-DBS ahead in ep 40–80"),
+        ("sea_faster_initial_rise", "SEA-DBS covers more of its rise by ep 40–80 (paper 0.79 vs 0.66)"),
+        ("rise_timing_baseline", "baseline rise not front-loaded by ep 50 vs paper"),
+        ("rise_timing_sea", "SEA-DBS rise not front-loaded by ep 50 vs paper"),
+        ("gradual_rise_baseline", "baseline mid→late rise ≥ 25 % of paper's"),
+        ("gradual_rise_sea", "SEA-DBS mid→late rise ≥ 25 % of paper's"),
+        ("pearson_baseline_min", "baseline trajectory shape vs paper (Pearson r ≥ 0.55)"),
+        ("pearson_sea_min", "SEA-DBS trajectory shape vs paper (Pearson r ≥ 0.55)"),
+        ("eq7_consistent_with_4a", "reward = Eq. (7) of the Fig 4a PSD, episode by episode (≤ 0.05; paper 0.038)"),
+        ("shared_start_near_paper", "ep 0–15 reward within 30 % of paper (−0.88 / −0.94)"),
+        ("baseline_rise_vs_paper", "baseline rise ≥ 40 % of paper's"),
+        ("sea_rise_vs_paper", "SEA-DBS rise ≥ 40 % of paper's"),
+        ("late_gap_near_paper", "ep 90–150 gap ≥ 35 % of paper's (0.081)"),
+        ("midlate_gap_near_paper", "ep 70–110 gap ≥ 40 % of paper's (0.144)"),
     ],
     "5a": [
         ("n_steps_ok", "11 PSD samples (t=0 + 10 stim steps)"),
@@ -75,16 +77,19 @@ RAVIVARAPU_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
         ("paper_end_below_baseline", "SEA-DBS end PSD below baseline"),
         ("paper_steeper_drop", "SEA-DBS drop steeper than baseline"),
         ("carrier_hz_ok", "carrier frequency 50 Hz"),
-        ("shared_start_near_paper", "shared start vs paper ~462.5"),
-        ("early_mae_baseline", "steps 0–5 MAE vs digitized Baseline ≤ 0.03"),
-        ("early_mae_sea", "steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03"),
-        ("early_mae_sea_3_5", "steps 3–5 MAE vs digitized SEA-DBS ≤ 0.015"),
-        ("early_sea_declines", "SEA-DBS drop steps 0→5 > 0.05"),
+        ("shared_start_near_paper", "step 0 within 0.02 of paper (~0.46)"),
+        ("early_mae_baseline", "steps 0–5 MAE vs paper Baseline ≤ 20 % of its drop (0.021)"),
+        ("early_mae_sea", "steps 0–5 MAE vs paper SEA-DBS ≤ 20 % of its drop (0.030)"),
+        ("baseline_drop_near_paper", "Baseline step 0→10 drop in [0.5, 1.5] × paper (0.104)"),
+        ("sea_drop_near_paper", "SEA-DBS step 0→10 drop in [0.5, 1.5] × paper (0.148)"),
+        ("tail_gap_near_paper", "steps 6–10 Baseline − SEA-DBS gap in [0.5, 1.6] × paper (0.056)"),
+        ("early_mae_sea_3_5", "steps 3–5 MAE vs paper SEA-DBS ≤ 10 % of its drop (0.015)"),
+        ("early_sea_declines", "SEA-DBS drop steps 0→5 ≥ 40 % of paper's (0.048)"),
         ("early_baseline_declines", "Baseline drop steps 0→5"),
         ("early_sea_below_baseline", "SEA-DBS below Baseline at every step 1–5"),
+        ("mid_mae_sea", "steps 4–10 MAE vs paper SEA-DBS ≤ 10 % of its drop (0.015)"),
         ("late_baseline_declines", "Baseline keeps declining steps 5→10"),
         ("late_sea_declines", "SEA-DBS keeps declining steps 5→10"),
-        ("mid_mae_sea", "steps 4–10 MAE vs digitized SEA-DBS ≤ 0.012"),
     ],
     "5b": [
         ("n_steps_ok", "11 PSD samples (t=0 + 10 stim steps)"),
@@ -94,42 +99,65 @@ RAVIVARAPU_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
         ("paper_end_below_baseline", "SEA-DBS end PSD below baseline"),
         ("paper_steeper_drop", "SEA-DBS drop steeper than baseline"),
         ("carrier_hz_ok", "carrier frequency 30 Hz"),
-        ("weaker_than_50hz_sea", "30 Hz SEA-DBS weaker suppression than 50 Hz panel"),
-        ("weaker_than_50hz_baseline", "30 Hz baseline weaker suppression than 50 Hz panel"),
+        ("shared_start_near_paper", "step 0 within 0.02 of paper (~0.46)"),
+        ("early_mae_baseline", "steps 0–5 MAE vs paper Baseline ≤ 20 % of its drop (0.012)"),
+        ("early_mae_sea", "steps 0–5 MAE vs paper SEA-DBS ≤ 20 % of its drop (0.014)"),
+        ("baseline_drop_near_paper", "Baseline step 0→10 drop in [0.5, 1.5] × paper (0.062)"),
+        ("sea_drop_near_paper", "SEA-DBS step 0→10 drop in [0.5, 1.5] × paper (0.072)"),
+        ("tail_gap_near_paper", "steps 6–10 Baseline − SEA-DBS gap in [0.5, 1.6] × paper (0.014)"),
+        ("weaker_than_50hz_baseline", "Baseline 30 Hz drop positive but smaller than its 50 Hz drop"),
+        ("weaker_than_50hz_sea", "SEA-DBS 30 Hz drop positive but smaller than its 50 Hz drop"),
         ("early_baseline_rises", "baseline PSD initial rise at step 1-2"),
         ("early_sea_plateau", "SEA-DBS delayed drop / plateau on steps 0-2"),
-        ("early_sea_below_baseline", "SEA-DBS below baseline on steps 1-5 (mean; ≤0.003 crossing)"),
-        ("early_mae_baseline", "steps 0–5 MAE vs digitized baseline ≤ 0.025"),
-        ("early_mae_sea", "steps 0–5 MAE vs digitized SEA-DBS ≤ 0.025"),
-        ("late_baseline_declines", "baseline keeps declining steps 5→10"),
-        ("late_sea_declines", "SEA-DBS keeps declining steps 5→10"),
+        ("early_sea_below_baseline", "SEA-DBS below baseline on steps 1-5 (mean; ≤ 0.006 crossing)"),
         ("pearson_baseline_min", "baseline trajectory correlation vs paper (r ≥ 0.70)"),
         ("pearson_sea_min", "SEA-DBS trajectory correlation vs paper (r ≥ 0.70)"),
+        ("late_baseline_declines", "baseline keeps declining steps 5→10"),
+        ("late_sea_declines", "SEA-DBS keeps declining steps 5→10"),
     ],
     "6": [
         ("four_series_present", "fp32 + PTQ for baseline and SEA-DBS"),
         ("n_steps_ok", "11 PSD samples (t=0 + 10 stim steps)"),
         ("shared_start", "paired series share pre-stim level"),
-        ("shared_start_near_paper", "shared start vs paper ~462.5"),
-        ("early_mae_baseline", "steps 0–5 MAE vs digitized Baseline ≤ 0.03"),
-        ("early_mae_sea", "steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03"),
-        ("sea_below_baseline", "SEA-DBS fp32 below baseline fp32 late"),
-        ("sea_ptq_below_baseline", "SEA-DBS PTQ below baseline fp32 late"),
-        ("sea_ptq_tracks_fp32", "SEA-DBS PTQ tracks fp32"),
-        ("baseline_ptq_near_or_above_baseline", "baseline PTQ near/above baseline fp32"),
-        ("ptq_traces_distinct", "PTQ traces not identical to paired fp32"),
+        ("shared_start_near_paper", "step 0 within 0.02 of paper (~0.46)"),
+        ("early_mae_baseline", "steps 0–5 MAE vs paper Baseline ≤ 20 % of its drop (0.021)"),
+        ("early_mae_sea", "steps 0–5 MAE vs paper SEA-DBS ≤ 20 % of its drop (0.030)"),
+        ("fp32_matches_fig5a", "fp32 traces equal the Fig 5a rollout (≤ 0.005; paper 0.0024)"),
+        ("sea_below_baseline", "SEA-DBS fp32 tail below baseline fp32"),
+        ("sea_ptq_below_baseline", "SEA-DBS PTQ tail below baseline fp32"),
+        ("sea_ptq_tracks_fp32", "SEA-DBS PTQ within 0.03 of fp32 (tail) and 0.04 (any step)"),
+        ("baseline_ptq_tracks_fp32", "Baseline PTQ within 0.03 of fp32 (tail) and 0.04 (any step)"),
+        ("baseline_tail_near_paper", "Baseline fp32 steps 6–10 within 0.02 of paper (0.380)"),
+        ("sea_tail_near_paper", "SEA-DBS fp32 steps 6–10 within 0.02 of paper (0.322)"),
+        ("baseline_ptq_tail_near_paper", "Baseline PTQ steps 6–10 within 0.02 of paper (0.391)"),
+        ("sea_ptq_tail_near_paper", "SEA-DBS PTQ steps 6–10 within 0.02 of paper (0.314)"),
     ],
     "7": [
         ("four_variants_present", "baseline / +PM / +GS / SEA-DBS"),
         ("n_steps_ok", "11 PSD samples (t=0 + 10 stim steps)"),
         ("shared_start", "baseline and SEA-DBS agree at step 0"),
-        ("shared_start_near_paper", "shared start vs paper ~462.5"),
-        ("early_mae_baseline", "steps 0–5 MAE vs digitized Baseline ≤ 0.03"),
-        ("early_mae_sea", "steps 0–5 MAE vs digitized SEA-DBS ≤ 0.03"),
+        ("shared_start_near_paper", "step 0 within 0.02 of paper (~0.46)"),
+        ("early_mae_baseline", "steps 0–5 MAE vs paper Baseline ≤ 20 % of its drop (0.021)"),
+        ("early_mae_sea", "steps 0–5 MAE vs paper SEA-DBS ≤ 20 % of its drop (0.030)"),
+        ("mae_pm", "steps 0–10 MAE vs paper +PM ≤ 20 % of its drop (0.020)"),
+        ("mae_gs", "steps 0–10 MAE vs paper +GS ≤ 20 % of its drop (0.012)"),
+        ("fp32_matches_fig5a", "Baseline / SEA-DBS equal the Fig 5a rollout (≤ 0.005)"),
         ("baseline_above_pm_early", "Baseline above Baseline+PM early (steps 0-4)"),
         ("sea_dbs_lowest_tail", "SEA-DBS tail ≥ 0.005 below every other variant"),
-        ("gs_highest_tail", "Baseline+GS tail ≥ 0.005 above every other variant (paper 0.419 vs ≤ 0.380)"),
+        ("gs_highest_tail", "Baseline+GS tail ≥ 0.005 above every other variant"),
         ("pm_not_sea", "PM closer to baseline than to SEA-DBS"),
+        ("baseline_tail_near_paper", "Baseline steps 6–10 within 0.02 of paper (0.380)"),
+        ("pm_tail_near_paper", "+PM steps 6–10 within 0.02 of paper (0.373)"),
+        ("gs_tail_near_paper", "+GS steps 6–10 within 0.02 of paper (0.419)"),
+        ("sea_tail_near_paper", "SEA-DBS steps 6–10 within 0.02 of paper (0.323)"),
+    ],
+    "t2": [
+        ("all_intervals_present", "rows for n = 10, 20, 50, 75"),
+        ("sea_below_baseline_every_n", "SEA-DBS avg PSD below Baseline at every n"),
+        ("gap_near_paper_every_n", "Baseline − SEA-DBS gap in [0.5, 1.6] × paper (38 / 57 / 28 / 26)"),
+        ("baseline_near_paper_every_n", "Baseline avg PSD within 20 of paper (364 / 366 / 332 / 328)"),
+        ("sea_near_paper_every_n", "SEA-DBS avg PSD within 20 of paper (326 / 309 / 304 / 302)"),
+        ("psd_falls_with_interval", "avg PSD lower at n = 75 than n = 10 (both)"),
     ],
 }
 
@@ -140,6 +168,7 @@ RAVIVARAPU_MANIFEST_BY_PANEL: dict[str, str] = {
     "5b": "artifacts/figures/papers/ravivarapu/5b/manifest.json",
     "6": "artifacts/figures/papers/ravivarapu/6/manifest.json",
     "7": "artifacts/figures/papers/ravivarapu/7/manifest.json",
+    "t2": "artifacts/figures/papers/ravivarapu/table2/manifest.json",
 }
 
 RAVIVARAPU_SUMMARY_ROWS: tuple[tuple[str, str, str], ...] = (
@@ -149,10 +178,8 @@ RAVIVARAPU_SUMMARY_ROWS: tuple[tuple[str, str, str], ...] = (
     ("5b", "Fig 5b", "Inference @ 30 Hz"),
     ("6", "Fig 6", "FP16 PTQ @ 50 Hz"),
     ("7", "Fig 7", "Ablation (Baseline / +PM / +GS / SEA-DBS)"),
+    ("t2", "Table II", "Avg PSD with the plant reseeded every n steps"),
 )
-
-RAVIVARAPU_STATUS_NOTES: dict[str, str] = {}
-
 
 def _fig_gate_tier(panel: str) -> dict[str, str]:
     if panel == "4a":
@@ -317,34 +344,16 @@ def render_gate_block(status: PanelGateStatus) -> str:
     return "\n".join(lines)
 
 
-def _summary_status_line(status: PanelGateStatus, note: str = "") -> str:
-    if status.panel in ("4a", "4b"):
-        if status.overall:
-            return f"Pass ({note})" if note else "Pass"
-        if status.shape_overall and status.overall is False:
-            return f"Shape OK (full open){f', {note}' if note else ''}"
-        failed = [key for key, value in status.gates.items() if value is False]
-        if failed:
-            tier = _fig_gate_tier(status.panel).get(failed[0], "full")
-            prefix = "shape" if tier == "shape" else "full"
-            detail = f"`{failed[0]}` ({prefix})"
-            if note:
-                detail = f"{detail}, {note}"
-            return f"Fail ({detail})"
-        if status.overall is False:
-            return f"Fail ({note})" if note else "Fail"
-        return "Open"
+def _summary_status_line(status: PanelGateStatus, version: Any = None) -> str:
+    """``Pass`` / ``Fail — 15/28 gates pass`` with the replication version."""
+    rep = f" (rep v{version})" if version is not None else ""
+    if not status.gates:
+        return f"Open{rep}"
+    n_pass = sum(1 for value in status.gates.values() if value)
+    count = f"{n_pass}/{len(status.gates)} gates pass"
     if status.overall:
-        return f"Pass ({note})" if note else "Pass"
-    failed = [key for key, value in status.gates.items() if value is False]
-    if failed:
-        detail = f"`{failed[0]}`"
-        if note:
-            detail = f"{detail}, {note}"
-        return f"Fail ({detail})"
-    if status.overall is False:
-        return f"Fail ({note})" if note else "Fail"
-    return "Open"
+        return f"Pass — {count}{rep}"
+    return f"Fail — {count}{rep}"
 
 
 def render_summary_table(statuses: dict[str, PanelGateStatus]) -> str:
@@ -354,17 +363,11 @@ def render_summary_table(statuses: dict[str, PanelGateStatus]) -> str:
     ]
     for panel_key, label, description in RAVIVARAPU_SUMMARY_ROWS:
         status = statuses[panel_key]
-        note = RAVIVARAPU_STATUS_NOTES.get(panel_key, "")
-        if panel_key in ("4a", "4b"):
-            manifest_path = _REPO / RAVIVARAPU_MANIFEST_BY_PANEL[panel_key]
-            if manifest_path.is_file():
-                manifest = _load_json(manifest_path)
-                version = manifest.get("png_version") if manifest else None
-                if version is not None:
-                    note = f"v{version}"
-        lines.append(
-            f"| {label} | {description} | {_summary_status_line(status, note)} |"
-        )
+        version = None
+        manifest_path = _REPO / RAVIVARAPU_MANIFEST_BY_PANEL[panel_key]
+        if manifest_path.is_file():
+            version = _load_json(manifest_path).get("png_version")
+        lines.append(f"| {label} | {description} | {_summary_status_line(status, version)} |")
     return "\n".join(lines)
 
 
