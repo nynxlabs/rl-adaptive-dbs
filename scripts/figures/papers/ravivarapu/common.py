@@ -57,9 +57,16 @@ def linked_png(path: Path, promote_module: Any, *, promote: bool = True) -> Path
     roots.append(Path.cwd())
     for root in roots:
         paper = root / path.parent / "paper.png"
-        if not paper.is_symlink():
-            continue
-        linked_dir = paper.resolve().parent
+        if paper.is_symlink():
+            linked_dir = paper.resolve().parent
+        else:
+            # Panels without a paper crop (Table II): map through a sibling
+            # panel's paper.png link to the same notes images folder.
+            siblings = sorted((root / path.parent.parent).glob("*/paper.png"))
+            linked = [s for s in siblings if s.is_symlink()]
+            if not linked:
+                continue
+            linked_dir = linked[0].resolve().parent.parent / path.parent.name
         linked_target = linked_dir / path.name
         local = path if path.is_absolute() else Path.cwd() / path
         local.parent.mkdir(parents=True, exist_ok=True)

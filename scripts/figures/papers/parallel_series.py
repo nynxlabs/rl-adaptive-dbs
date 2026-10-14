@@ -132,3 +132,31 @@ def ravivarapu_inference_eval_worker(job: RavivarapuInferenceEvalJob) -> Ravivar
         eval_meta=eval_meta,
         label=job.label,
     )
+
+
+@dataclass(frozen=True)
+class RavivarapuTable2Job:
+    """One Ravivarapu Table II cell: variant × reseed interval."""
+
+    variant: str
+    seed: int
+    checkpoint: str
+    reseed_every: int
+    horizon: int
+    carrier_hz: float
+
+
+def ravivarapu_table2_worker(job: RavivarapuTable2Job) -> dict[str, Any]:
+    bootstrap_worker_threads()
+    from controllers.sea_dbs.config import SEADBSConfig
+    from controllers.sea_dbs.eval import evaluate_reseeded
+
+    out = evaluate_reseeded(
+        Path(job.checkpoint),
+        config=SEADBSConfig(variant=job.variant, seed=job.seed),
+        reseed_every=job.reseed_every,
+        horizon=job.horizon,
+        carrier_hz=job.carrier_hz,
+    )
+    out["checkpoint"] = job.checkpoint
+    return out
