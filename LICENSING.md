@@ -35,7 +35,7 @@ This file maps each part of the repository to its license status. It is a statem
 
 ## Native Python port of the model
 
-These files translate the Kumaravelu MATLAB model into Python, or carry its parameters and conventions. Our own work in them (structure, Numba/NumPy implementation, caching, API) is ours. The model expressions and constants they translate are covered by the pending permission above, not by our MIT License:
+These files translate the Kumaravelu MATLAB model into Python, or carry its parameters and conventions. Our own work in them (structure, Numba/NumPy implementation, caching, API) is ours. The scientific model itself (its equations, parameter values, and methods) is not what is at issue here. The open question is how far our implementation follows the MATLAB source code's own expression (its structure, naming, and ordering), since it was produced by translating that code. Until permission is settled, we do not offer the source-derived parts of these files under our MIT License:
 
 - `src/envs/plant/network/integrator.py`, `gating.py`, `synapses.py`, `numba_loop.py`
 - `src/envs/plant/dbs.py`, `spikes.py`, `config.py`, `python_backend.py`
@@ -57,7 +57,7 @@ The crops come from the published IEEE versions. They are the publishers' materi
 
 ## Other sources we cite
 
-- **CL-DBS-RL** ([howyoubinh/CL-DBS-RL](https://github.com/howyoubinh/CL-DBS-RL), MIT, Copyright (c) 2026 Binh Nguyen) — the Nguyen group's follow-up code release. We take conventions from it where the Nguyen et al. paper is silent, and `scripts/probes/nguyen_fig7_reset_reading.py` re-implements its spectrum readout for comparison. No CL-DBS-RL source is included here. Its MIT license covers the authors' own code; it does not license the Kumaravelu model, which it also ports.
+- **CL-DBS-RL** ([howyoubinh/CL-DBS-RL](https://github.com/howyoubinh/CL-DBS-RL), MIT, Copyright (c) 2026 Binh Nguyen) — the Nguyen group's follow-up code release. We take conventions from it where the Nguyen et al. paper is silent, and `scripts/probes/nguyen_fig7_reset_reading.py` re-implements its spectrum readout for comparison. A targeted provenance review (October 2026) found no CL-DBS-RL source copied into this repository; that is a finding of that review, not a legal clearance. Its MIT license covers the authors' own code; it does not license the Kumaravelu model, which it also ports.
 - **Python dependencies** are installed from their own distributions and are not included in this repository; each keeps its own license.
 - **MATLAB** and the MATLAB Engine for Python are proprietary MathWorks products, used optionally for reference checks and not included here.
 

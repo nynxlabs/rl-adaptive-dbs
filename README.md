@@ -2,7 +2,7 @@
 
 [![license: MIT + third-party](https://img.shields.io/badge/license-MIT%20%2B%20third--party-blue.svg)](LICENSING.md)
 
-Independent replications of three reinforcement-learning papers on **adaptive deep brain stimulation (DBS)** for Parkinson's disease. All three controllers run on one shared simulated cortex–basal ganglia–thalamus circuit (Kumaravelu et al., 2016), rebuilt from the paper text and figures (for Nguyen et al., also from the authors' later code release where the paper is silent).
+Independent replications of three reinforcement-learning papers on **adaptive deep brain stimulation (DBS)** for Parkinson's disease. The three controllers are rebuilt from each paper's text and figures (for Nguyen et al., also from the authors' later code release where the paper is silent). All three run on one shared simulated cortex–basal ganglia–thalamus circuit, the Kumaravelu et al. (2016) model, whose Python implementation is translated from the authors' MATLAB reference code rather than rebuilt from the paper; see [LICENSING.md](LICENSING.md) for its license status.
 
 Every paper panel is scored against automated gates, and a panel counts as replicated only when all of its gates pass. Per-paper counts are below; the trackers have every gate. **[See the side-by-side showcase →](docs/figures/replication_showcase.md)**
 
