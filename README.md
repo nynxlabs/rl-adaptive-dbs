@@ -1,6 +1,6 @@
 # rl-adaptive-dbs
 
-[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![license: MIT + third-party](https://img.shields.io/badge/license-MIT%20%2B%20third--party-blue.svg)](LICENSING.md)
 
 Independent replications of three reinforcement-learning papers on **adaptive deep brain stimulation (DBS)** for Parkinson's disease. All three controllers run on one shared simulated cortex–basal ganglia–thalamus circuit (Kumaravelu et al., 2016), rebuilt from the paper text and figures (for Nguyen et al., also from the authors' later code release where the paper is silent).
 
@@ -101,7 +101,7 @@ Python packages live under **`src/`** (editable install via `uv sync`):
 - `figures/<paper>/replications.md` — ship trackers (Mehregan / Nguyen / Ravivarapu).
 - `reports/` — dated progress reports (`YYYY-MM-DD.md` + PDF); snapshots, not the current state.
 - `results/` — benchmark outputs from `rl-dbs benchmark` (local, gitignored).
-- `reference-material/` — Third-party models and scripts. Kumaravelu et al. (2016) MATLAB network: `reference-material/KumaraveluEtAl2016/` ([`readme.txt`](reference-material/KumaraveluEtAl2016/readme.txt) for citation and provenance).
+- `reference-material/` — Third-party models and scripts, **not** under this project's MIT License. Kumaravelu et al. (2016) MATLAB network: `reference-material/KumaraveluEtAl2016/` ([`readme.txt`](reference-material/KumaraveluEtAl2016/readme.txt) for citation and provenance; license status in [LICENSING.md](LICENSING.md)).
 - `scripts/` — layout in [`scripts/README.md`](scripts/README.md): panel ship scripts under **`scripts/figures/papers/`**, digitization/gates, MATLAB/plant helpers; **`scripts/probes/`** keeps only reusable extension diagnostics (see [`scripts/probes/README.md`](scripts/probes/README.md)).
 
 ```python
@@ -134,9 +134,16 @@ Cross-controller comparison uses **per-paper eval suites** plus an optional **sa
 
 ### Biophysical plant model
 
-- **Kumaravelu, K., Brocker, D. T., Grill, W. M.** (2016). *A biophysical model of the cortex–basal ganglia–thalamus network in the 6-OHDA lesioned rat model of Parkinson’s disease.* *Journal of Computational Neuroscience*, 40, 207–229. Spec: [docs/plant.md](docs/plant.md). Upstream MATLAB: [ModelDBRepository/206232](https://github.com/ModelDBRepository/206232) (vendored: [reference-material/KumaraveluEtAl2016/](reference-material/KumaraveluEtAl2016/); see `readme.txt` for citation and provenance).
+- **Kumaravelu, K., Brocker, D. T., Grill, W. M.** (2016). *A biophysical model of the cortex–basal ganglia–thalamus network in the 6-OHDA lesioned rat model of Parkinson’s disease.* *Journal of Computational Neuroscience*, 40, 207–229. Spec: [docs/plant.md](docs/plant.md). Upstream MATLAB: [ModelDBRepository/206232](https://github.com/ModelDBRepository/206232) (vendored: [reference-material/KumaraveluEtAl2016/](reference-material/KumaraveluEtAl2016/); see `readme.txt` for citation and provenance, and [LICENSING.md](LICENSING.md) for license status).
 
 ## License
 
-Code is released under the [MIT License](LICENSE). If you use it, please cite it using [CITATION.cff](CITATION.cff). The vendored Kumaravelu et al. (2016) model under `reference-material/` keeps its original terms; see its `readme.txt`.
+Our original code is released under the [MIT License](LICENSE). If you use it, please cite it using [CITATION.cff](CITATION.cff).
+
+Not everything in this repository is ours or MIT-licensed. [LICENSING.md](LICENSING.md) maps each part to its status:
+
+- **Kumaravelu et al. (2016) model** (`reference-material/KumaraveluEtAl2016/`) — no license found; permission from the rights holder is pending. It is not covered by our MIT License.
+- **Native Python port of that model** (`src/envs/plant/`) — translated from the model, so the same permission is pending for the translated parts.
+- **Chronux multitaper helpers** inside the MATLAB files — GNU GPL v2 ([CHRONUX_LICENSE.txt](reference-material/KumaraveluEtAl2016/CHRONUX_LICENSE.txt)).
+- **Figures cropped from the replicated papers** (`figures/*/images/*/paper.png` and the reports that embed them) — the publishers' copyright, not MIT; reuse permission not yet assessed.
 

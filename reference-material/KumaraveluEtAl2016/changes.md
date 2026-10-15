@@ -2,6 +2,8 @@
 
 Upstream: [ModelDB 206232](https://github.com/ModelDBRepository/206232). Citation and provenance: [`readme.txt`](readme.txt).
 
+**Licensing.** No license has been found for the upstream model, and it is not covered by this project's MIT License; permission is pending. The inlined Chronux routines (§ 5 and the end of `simulate_network_model.m`) are GNU GPL v2 — [`CHRONUX_LICENSE.txt`](CHRONUX_LICENSE.txt). See [LICENSING.md](../../LICENSING.md).
+
 **rl-adaptive-dbs** keeps upstream dynamics; these edits support **base MATLAB** and the Phase 2 plant bridge. Do not merge back to ModelDB without review.
 
 ---

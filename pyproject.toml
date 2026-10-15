@@ -7,8 +7,8 @@ name = "rl-adaptive-dbs"
 version = "0.1.0"
 description = "Exploration of reinforcement learning for adaptive deep brain stimulation."
 readme = "README.md"
-license = "MIT"
-license-files = ["LICENSE"]
+license = "MIT AND LicenseRef-Kumaravelu-2016-Pending"
+license-files = ["LICENSE", "LICENSING.md"]
 requires-python = ">=3.11"
 dependencies = [
     "gymnasium>=1.3.0",
@@ -49,6 +49,11 @@ markers = [
 
 [tool.hatch.build]
 dev-mode-dirs = ["src"]
+
+# The vendored MATLAB model, paper figure crops, reports, and model-generated
+# test fixtures stay out of built distributions (see LICENSING.md).
+[tool.hatch.build.targets.sdist]
+only-include = ["src"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/envs", "src/controllers", "src/benchmarks", "src/rl_adaptive_dbs"]

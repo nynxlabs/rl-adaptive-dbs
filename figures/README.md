@@ -2,6 +2,8 @@
 
 Replication PNGs and paper crops: **`figures/<paper>/images/<panel>/`**. Trackers: **`figures/<paper>/replications.md`**.
 
+The paper crops (`paper.png`) are reproduced from the published papers and remain the publishers' material; they are not covered by this project's MIT License. See [LICENSING.md](../LICENSING.md).
+
 Panel trackers:
 
 | Paper | Tracker |

@@ -1,4 +1,9 @@
-"""Shared biophysical plant (Kumaravelu et al., 2016)."""
+"""Shared biophysical plant (Kumaravelu et al., 2016).
+
+Parts of this package are translated from the Kumaravelu et al. (2016) MATLAB
+model, whose license is pending; those parts are not covered by the project's
+MIT License. See LICENSING.md at the repository root.
+"""
 
 from envs.plant.biomarkers import (
     MEHREGAN_BETA_BAND_HZ,
