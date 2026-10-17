@@ -113,23 +113,22 @@ Average **beta-band PSD** across **training episodes** for **Baseline (DDPG)** v
 | **Shape** | `n_episodes_ok` | $N \ge 150$ episodes for both variants |
 | **Shape** | `shared_start` | $\|b_{\mathrm{early}} - s_{\mathrm{early}}\| \le 0.05$ |
 | **Shape** | `baseline_declines` | $b_{\mathrm{early}} - b_{\mathrm{late}} \ge 0.02$ |
-| **Shape** | `sea_declines` | $s_{\mathrm{early}} - s_{\mathrm{late}} \ge 0.04$ |
 | **Shape** | `sea_below_baseline_mid` / `_midlate` / `_late` | SEA window mean below Baseline in each window |
 | **Shape** | `sea_steeper_drop_than_baseline` | SEA early→late drop larger than Baseline's |
 | **Shape** | `gap_widens_over_training` | Baseline − SEA gap does not close from mid → mid-late → late (−0.005 / −0.008 slack) |
-| **Shape** | `late_gap_substantial` | late gap in $[0.015, 0.050]$ |
 | **Shape** | `drop_timing_baseline` / `_sea` | share of the drop reached by ep 50 ≤ max(1.55 × paper, paper + 0.10) |
 | **Shape** | `gradual_decline_baseline` / `_sea` | mid − late ≥ 30 % of paper's mid − late |
 | **Shape** | `pearson_baseline_min` / `_sea_min` | Pearson $r \ge 0.58$ vs the digitized curve |
-| **Full** | `shared_start_near_paper` | both early means within 25 % of paper |
+| **Full** | `shared_start_near_paper` | both ep 0–15 means within 0.02 of paper |
 | **Full** | `baseline_drop_vs_paper` / `sea_drop_vs_paper` | drop ≥ 40 % of paper's |
+| **Full** | `baseline_mid_near_paper` / `_midlate_` / `_late_` | Baseline window means within 12 % of paper |
 | **Full** | `sea_mid_near_paper` / `_midlate_` / `_late_` | SEA window means within 12 % of paper |
 | **Full** | `mid_gap_near_paper` | mid gap in $[0.40, 1.80] \times$ paper |
 | **Full** | `midlate_gap_near_paper` | mid-late gap in $[0.40, 1.75] \times$ paper |
 | **Full** | `late_gap_near_paper` | late gap in $[0.50, 1.60] \times$ paper |
-| **Full** | `late_early_ratio_baseline_near_paper` / `_sea_` | late/early ratio within 30 % of paper's |
+| **Full** | `late_early_ratio_baseline_near_paper` / `_sea_` | late/early ratio within 8 % of paper's |
 
-These are the thresholds of the 23-gate suite before Aug 31 2026; a later commit widened the gap bands, level tolerances, and Pearson floor to admit shortcut-tuned runs and was reverted in the honest-replication pass.
+28 gates, as set by the oct 14 2026 gate audit ([4a.md](../ravivarapu/4a.md) § Gate audit), which dropped `sea_declines` and `late_gap_substantial` as duplicates and tightened the start and late/early-ratio tolerances. The live table with pass/fail is in [replications.md](../../../figures/ravivarapu/replications.md) § Fig 4a.
 
 Do **not** pass a frozen / non-learning Baseline. Do **not** use display hacks to force these levels.
 
@@ -152,14 +151,7 @@ Do **not** pass a frozen / non-learning Baseline. Do **not** use display hacks t
 | 5 | **Paired with Fig 4a** | Same `series.json` / checkpoints | Different train |
 | 6 | **Reward–PSD consistency** | Reward ↑ as PSD ↓ | Opposite with no note |
 
-**Proposed automated mirrors:**
-
-| Key | Rule |
-|-----|------|
-| `paper_above_baseline_late` | $p_{\mathrm{late}} > b_{\mathrm{late}}$ |
-| `paper_pull_ahead_mid` | mean(SEA[40:80]) > mean(Baseline[40:80]) (or frac equivalents) |
-| `both_rise` | both (late − early) > 0.3 |
-| **Remove** | `paper_faster_early_rise` comparing first-10% means — **unfaithful** to paper (both start low; SEA does not clearly lead that early) |
+**Automated gates:** 20 keys (ordering, rise, timing, Pearson, absolute start and rise levels, and `eq7_consistent_with_4a`); the live table is in [replications.md](../../../figures/ravivarapu/replications.md) § Fig 4b, thresholds from the oct 14 2026 audit ([4a.md](../ravivarapu/4a.md) § Gate audit).
 
 **Units (oct 12 2026):** both axes are the mean Eq. (7) reward per step, so `ravivarapu_fig4b_gates` compares levels, rises, and gaps to the digitized paper directly. It used to rescale every paper value by $|b_{\mathrm{early}} / p^{B}_{\mathrm{early}}|$ (our Baseline's early mean over the paper's), which let a run that started far above the paper's −1.3 pass the start and rise gates; `shared_start_near_paper` now checks both variants against the paper.
 
@@ -179,9 +171,9 @@ Post-train **inference** at **50 Hz** over **10 steps** (Fig. 5(a)).
 | 4 | **SEA steeper / lower end** | SEA end ≪ Baseline end; drop ~1.7–2× | SEA ≥ Baseline end or similar drop |
 | 5 | **vs Fig 5b** | 50 Hz stronger than 30 Hz | 30 Hz beats 50 Hz |
 | 6 | **Checkpoints** | From Fig 4 train | Untrained / mismatched |
-| 7 | **Steps 0–5** | Early window near digitized paper (MAE ≤ 0.03) | 4-pulse 50 Hz floor stuck ~0.43 |
+| 7 | **Steps 0–5** | Early window near the digitized paper | Early MAE above 20 % of the paper's 0→10 drop |
 
-**Automated shape gates** (normalized `p_beta_norm`; overlay ÷1000 from paper crop ~300–480): `n_steps_ok` = **11 PSD samples** (t=0 untreated + 10 stim actions); `shared_start`; any net drop on both traces (`baseline_declines` / `paper_declines`); `paper_end_below_baseline`; `paper_steeper_drop`; `carrier_hz_ok`; generous steps 0–5 vs digitization (`early_mae_*` ≤ 0.03, SEA drop 0→5 > 0.05). Digitized 50 Hz 10-step drops (~0.10 Baseline / ~0.15 SEA) are not 10-step polish thresholds. Fig 5a eval burst is 100 ms (five 50 Hz pulses); Fig 4a train stays 62 ms @ 130 Hz.
+**Automated gates:** 20 keys — 11 PSD samples, shared start, both decline, SEA-DBS below and steeper than the Baseline, step 0→10 drops in $[0.5, 1.5] 	imes$ paper (0.104 / 0.148), a tail-gap band, early / mid MAE capped at a share of each paper series' drop, carrier. Live table: [replications.md](../../../figures/ravivarapu/replications.md) § Fig 5a. The eval uses the training plant setup (150 ms full-window 50 Hz shots).
 
 ---
 
@@ -196,12 +188,15 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 - `early_baseline_rises`: Baseline rises or stays elevated at steps 1–2 ($b_1 \ge b_0 - 0.002$).
 - `early_sea_plateau`: SEA-DBS delayed drop / plateau on steps 0–2 ($s_0 - s_1 \le 0.015$, $s_0 - s_2 \le 0.025$).
 - `early_sea_below_baseline`: SEA-DBS below Baseline across early steps 1–5.
-- `early_mae_*`: Steps 0–5 MAE $\le 0.025$ vs digitized paper curves.
+- `early_mae_*`: Steps 0–5 MAE vs the digitized curves capped at 20 % of each paper series' step 0→10 drop.
+- `*_drop_near_paper`: step 0→10 drops in $[0.5, 1.5] \times$ paper (0.062 Baseline / 0.072 SEA-DBS); `tail_gap_near_paper`: SEA-below-Baseline tail gap band (a 0.0005 split fails).
 - `late_*_declines`: Both traces keep declining through steps 5–10.
 - `paper_end_below_baseline`: SEA-DBS ends below Baseline ($s_{10} < b_{10}$).
 - `paper_steeper_drop`: Overall SEA-DBS drop exceeds Baseline drop.
 - `pearson_*_min`: Pearson correlation $r \ge 0.70$ vs digitized paper trajectories.
-- `weaker_than_50hz_*`: Both 30 Hz variants end higher than the 50 Hz panel.
+- `weaker_than_50hz_*`: each 30 Hz variant has a positive drop smaller than its 50 Hz drop (a rising 30 Hz trace fails).
+
+Thresholds as set by the oct 14 2026 audit ([4a.md](../ravivarapu/4a.md) § Gate audit); the early-ordering checks allow a 0.006 crossing because the paper's own SEA-DBS sits 0.003 above its Baseline at step 4. Live table: [replications.md](../../../figures/ravivarapu/replications.md) § Fig 5b.
 
 ---
 
@@ -219,7 +214,7 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 | 4 | **PTQ tracks FP32 (SEA)** | SEA+PTQ follows SEA (allow mid-run PTQ volatility) | Systematic divergence to Baseline |
 | 5 | **Baseline+PTQ** | Slightly worse / above Baseline late (paper) | Required only as soft/report unless we harden |
 
-**Proposed automated mirrors:** four keys present; `sea_below_baseline`; `sea_ptq_below_baseline`; `sea_ptq_tracks_fp32` (rel gap threshold, tolerate mid volatility); optional `baseline_ptq_above_or_near_baseline`.
+**Automated gates:** 15 keys — four series with 11 samples, shared start, SEA-DBS (fp32 and PTQ) below the Baseline, PTQ tracking fp32 for both variants as a two-sided band (tails ≤ 0.03, any step ≤ 0.04), all four tails within 0.02 of the paper, early MAE, and `fp32_matches_fig5a` (the paper plots one rollout in Figs 5a / 6 / 7). Live table: [replications.md](../../../figures/ravivarapu/replications.md) § Fig 6.
 
 ---
 
@@ -237,7 +232,7 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 | 4 | **+PM ≈ Baseline class** | +PM near Baseline, not SEA | +PM identical to full SEA |
 | 5 | **Shared start + 10 steps** | — | Wrong protocol |
 
-**Proposed automated mirrors:** `sea_dbs_lowest_tail`; `gs_highest_or_near_highest_tail`; `pm_not_sea` (PM late mean closer to Baseline than to SEA).
+**Automated gates:** 17 keys — `sea_dbs_lowest_tail`, `gs_highest_tail`, `pm_not_sea`, `baseline_above_pm_early`, tails within 0.02 of the paper for each variant, full-trace MAE for +PM / +GS, early MAE, and `fp32_matches_fig5a`. Live table: [replications.md](../../../figures/ravivarapu/replications.md) § Fig 7.
 
 ---
 
@@ -253,4 +248,5 @@ Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b
 | Full SEA-DBS | `paper` — PM + GS |
 | Inference carrier | Fixed **50 Hz** or **30 Hz** eval knob (not RL action) |
 | PTQ | **FP16 PTQ only** (no QAT) |
-| Gate redesign source | Digitized `paper.png` crops (this doc + `paper_digitization/curves.json`) |
+| Plant integration step | **0.02 ms** (§V.A; 0.01 ms before oct 17 2026, same levels) |
+| Gate source | Refined WebPlotDigitizer curves `paper_digitization/curves_fig*.json` |
