@@ -6,7 +6,7 @@
 
 ## 1. Deeper spiking network architectures
 
-The replication uses a three-layer LIF network (input → 128 hidden → 9 output). Extensions:
+The replication uses the paper's LIF network: input → one hidden layer of 128 → 9 outputs. Extensions:
 
 - **Deeper SNNs** — add hidden layers to increase representational capacity; study how depth affects spike efficiency and learning stability.
 - **Recurrent spiking layers** (e.g. SRNN) to capture temporal dynamics in spike trains without explicit observation windowing.
