@@ -57,16 +57,31 @@ class LIFLayer(nn.Module):
         threshold: float = 1.0,
         unroll_steps: int = 5,
         surrogate: str = "none",
+        reset: str = "post",
     ) -> None:
         super().__init__()
+        if reset not in ("post", "eq2"):
+            msg = f"lif_reset must be 'post' or 'eq2', got {reset!r}"
+            raise ValueError(msg)
         self.linear = nn.Linear(in_features, out_features)
         self.leak = leak
         self.threshold = threshold
         self.unroll_steps = unroll_steps
         self.surrogate = surrogate
+        self.reset = reset
 
     def step(self, x: torch.Tensor, membrane: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        """One LIF step: leak, integrate, spike, reset by subtraction (reset not differentiated)."""
+        """One LIF step: leak, integrate, spike, reset by subtraction (reset not differentiated).
+
+        ``reset="eq2"`` carries U[t] itself and subtracts the previous step's spike on the
+        next step, U[t] = βU[t−1] + WX[t] − S[t−1]θ (Eq. 2), with S[t−1] recomputed from
+        U[t−1]. ``"post"`` stores U − Sθ, which the next step then leaks.
+        """
+        if self.reset == "eq2":
+            prev_spikes = (membrane > self.threshold).to(membrane.dtype)
+            membrane = self.leak * membrane + self.linear(x) - prev_spikes * self.threshold
+            spikes = _spike(membrane - self.threshold, self.surrogate)
+            return spikes, membrane
         membrane = self.leak * membrane + self.linear(x)
         spikes = _spike(membrane - self.threshold, self.surrogate)
         return spikes, membrane - spikes.detach() * self.threshold
@@ -95,7 +110,11 @@ class LIFLayer(nn.Module):
 
 
 class DSQN(nn.Module):
-    """Three-layer LIF DSQN: input → hidden (128) → 9 action outputs."""
+    """LIF DSQN: input → ``hidden_layers`` × hidden (128) → 9 action outputs.
+
+    §III.B states one hidden layer (``hidden_layers=1``); ``hidden_layers=2`` is the
+    pre-Oct 17 2026 topology (``input_layer`` + ``hidden_layer``), kept for old checkpoints.
+    """
 
     def __init__(self, config: SNNConfig | None = None) -> None:
         super().__init__()
@@ -109,30 +128,27 @@ class DSQN(nn.Module):
         in_features = cfg.flat_observation_dim
         if cfg.snn_input_mode == "sequence":
             in_features = cfg.observation_shape[1]
-        self.input_layer = LIFLayer(
-            in_features,
-            cfg.hidden_size,
-            leak=cfg.lif_leak,
-            threshold=cfg.lif_threshold,
-            unroll_steps=cfg.internal_unroll_steps,
-            surrogate=cfg.surrogate_gradient,
+        if cfg.hidden_layers not in (1, 2):
+            msg = f"hidden_layers must be 1 or 2, got {cfg.hidden_layers!r}"
+            raise ValueError(msg)
+        lif = {
+            "leak": cfg.lif_leak,
+            "threshold": cfg.lif_threshold,
+            "unroll_steps": cfg.internal_unroll_steps,
+            "surrogate": cfg.surrogate_gradient,
+            "reset": cfg.lif_reset,
+        }
+        self.input_layer = LIFLayer(in_features, cfg.hidden_size, **lif)
+        self.hidden_layer = (
+            LIFLayer(cfg.hidden_size, cfg.hidden_size, **lif) if cfg.hidden_layers == 2 else None
         )
-        self.hidden_layer = LIFLayer(
-            cfg.hidden_size,
-            cfg.hidden_size,
-            leak=cfg.lif_leak,
-            threshold=cfg.lif_threshold,
-            unroll_steps=cfg.internal_unroll_steps,
-            surrogate=cfg.surrogate_gradient,
-        )
-        self.output_layer = LIFLayer(
-            cfg.hidden_size,
-            cfg.n_action_outputs,
-            leak=cfg.lif_leak,
-            threshold=cfg.lif_threshold,
-            unroll_steps=cfg.internal_unroll_steps,
-            surrogate=cfg.surrogate_gradient,
-        )
+        self.output_layer = LIFLayer(cfg.hidden_size, cfg.n_action_outputs, **lif)
+
+    @property
+    def layers(self) -> tuple[LIFLayer, ...]:
+        if self.hidden_layer is None:
+            return (self.input_layer, self.output_layer)
+        return (self.input_layer, self.hidden_layer, self.output_layer)
 
     def forward(self, observation: torch.Tensor) -> LIFOutput:
         """Forward pass from flattened spike observation to action-head outputs."""
@@ -148,15 +164,16 @@ class DSQN(nn.Module):
 
         if self.config.snn_input_mode == "sequence":
             return self._forward_sequence(observation)
-        hidden_input = self.input_layer(observation)
-        hidden = self.hidden_layer(hidden_input.spike_counts)
-        return self.output_layer(hidden.spike_counts)
+        out = self.input_layer(observation)
+        for layer in self.layers[1:]:
+            out = layer(out.spike_counts)
+        return out
 
     def _forward_sequence(self, observation: torch.Tensor) -> LIFOutput:
         """Row t of the (n × N) spike matrix drives step t; all layers step together."""
         steps, n_neurons = self.config.observation_shape
         x = observation.reshape(observation.shape[0], steps, n_neurons)
-        layers = (self.input_layer, self.hidden_layer, self.output_layer)
+        layers = self.layers
         membranes = [
             torch.zeros(x.shape[0], layer.linear.out_features, device=x.device, dtype=x.dtype)
             for layer in layers

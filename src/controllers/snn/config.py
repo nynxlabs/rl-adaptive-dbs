@@ -85,6 +85,16 @@ class SNNConfig:
     # and each layer passes spike counts on. "sequence": row t of the matrix drives SNN step t
     # (n steps) and spikes propagate through all layers every step.
     snn_input_mode: str = "static"
+    # Linear+LIF stages of hidden_size neurons before the output stage. §III.B: "a
+    # three-layer spiking neural network with a single hidden layer of 128 LIF neurons"
+    # (input → 128 → 9) is 1. The default 2 (input → 128 → 128 → 9) is what every run
+    # before Oct 17 2026 trained; kept so their checkpoints load.
+    hidden_layers: int = 2
+    # LIF reset. "eq2": Eq. (2) as written, U[t] = βU[t−1] + WX[t] − S[t−1]θ, and the
+    # membrane read out (the Q-value) is U[t] before the subtraction (snnTorch "subtract").
+    # "post" (legacy default): the stored membrane is U − Sθ and the next step leaks it,
+    # so the reset is βθ, and the readout is the post-reset membrane.
+    lif_reset: str = "post"
 
     # DQN / replay (open stabilizers documented beside code)
     gamma: float = 0.99
