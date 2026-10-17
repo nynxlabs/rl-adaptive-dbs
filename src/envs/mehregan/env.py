@@ -158,6 +158,7 @@ class MehreganEnv(gym.Env):
             observation,
             beta_threshold=self.config.beta_threshold,
             reward_scale=self.config.reward_scale,
+            below_threshold=self.config.reward_below_threshold,
         )
         info = self._segment_info(result, reset_spec)
         info["reward"] = reward
@@ -178,6 +179,7 @@ class MehreganEnv(gym.Env):
             observation,
             beta_threshold=self.config.beta_threshold,
             reward_scale=self.config.reward_scale,
+            below_threshold=self.config.reward_below_threshold,
         )
         self._step_count += 1
         truncated = self._step_count >= self.config.max_episode_steps
