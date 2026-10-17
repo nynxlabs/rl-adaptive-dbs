@@ -1,0 +1,48 @@
+name: notify site
+
+# The nynxlabs site renders this repo's README and docs as web pages. After every push
+# to main, ask the site repo to rebuild those pages at the pushed commit (its docs-mirror
+# workflow, triggered by a repository_dispatch).
+#
+# Settings (repo → Settings → Secrets and variables → Actions):
+#   secret   SITE_DISPATCH_TOKEN  fine-grained token for the site repo only, Contents: read and write.
+#                                 While it's unset, the dispatch step is skipped and the run still passes.
+#   variable SITE_REPO            owner/name of the site repo (default nynxlabs/site-draft).
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Dispatch docs mirror
+    if: github.repository == 'nynxlabs/rl-adaptive-dbs'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      HAS_TOKEN: ${{ secrets.SITE_DISPATCH_TOKEN != '' }}
+      SITE_REPO: ${{ vars.SITE_REPO || 'nynxlabs/site-draft' }}
+    steps:
+      - name: Dispatch is off (no SITE_DISPATCH_TOKEN)
+        if: env.HAS_TOKEN != 'true'
+        run: |
+          echo "::notice::SITE_DISPATCH_TOKEN is not set, so the site docs mirror was not asked to rebuild."
+          echo "Site docs mirror dispatch is off: the SITE_DISPATCH_TOKEN secret is not set." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Ask ${{ env.SITE_REPO }} to rebuild the docs mirror
+        if: env.HAS_TOKEN == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.SITE_DISPATCH_TOKEN }}
+          SHA: ${{ github.sha }}
+        run: |
+          gh api --method POST "repos/$SITE_REPO/dispatches" \
+            -f event_type=docs-mirror \
+            -f "client_payload[sha]=$SHA" \
+            -f "client_payload[repo]=$GITHUB_REPOSITORY" > /dev/null
+          echo "Asked $SITE_REPO to rebuild the docs mirror at $SHA." >> "$GITHUB_STEP_SUMMARY"
