@@ -347,7 +347,7 @@ class SEA_DBSTrainer:
                         )
                         r_hat = float(self.predictive_model(state_t, a_oh).item())
 
-                dw = float(step_info.get("dw", 1.0 if truncated else 0.0))
+                dw = float(step_info.get("dw", 1.0 if (truncated and cfg.mask_episode_end) else 0.0))
                 self.buffer.add(
                     Transition(
                         state=np.asarray(state, dtype=np.float32),
