@@ -107,7 +107,10 @@ class MehreganEnv(gym.Env):
     def _integrate_segment(self, dbs_spec: DbsSpec) -> IntegrateResult:
         kwargs: dict[str, Any] = {}
         if self._is_continuous():
+            # One episode is one continuous simulation of one network: keep the wiring
+            # and conductances drawn by the first segment until the next reset().
             kwargs["carry"] = True
+            kwargs["fixed_network"] = True
         result = self._plant.integrate(
             self.config.step_duration_s,
             dbs_spec,

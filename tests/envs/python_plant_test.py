@@ -114,7 +114,7 @@ def test_carried_segments_keep_one_network() -> None:
 
 
 def test_carry_without_fixed_network_redraws_each_segment() -> None:
-    """Default carried segments (Mehregan continuous mode) keep the per-segment draws."""
+    """Plant default: carried segments without ``fixed_network`` redraw per segment."""
     plant = PythonPlant()
     plant.reset(seed=123_456)
     plant.integrate(0.01, DbsSpec.none(), carry=True)
