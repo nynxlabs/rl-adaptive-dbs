@@ -262,6 +262,8 @@ PAPER_4B_MANIFEST = "artifacts/figures/papers/mehregan/4b/manifest.json"
 PAPER_1B_REF = "figures/mehregan/images/1b/paper.png"
 PAPER_2A_REF = "figures/mehregan/images/2a/paper.png"
 PAPER_2B_REF = "figures/mehregan/images/2b/paper.png"
+PAPER_1B_REPLICATION_ALT = "Replication Fig 1b"
+PAPER_2A_REPLICATION_ALT = "Replication Fig 2a"
 PAPER_2B_REPLICATION_ALT = "Replication Fig 2b"
 PAPER_4A_REF = "figures/mehregan/images/4a/paper.png"
 PAPER_4A_REPLICATION_ALT = "Replication Fig 4a"
@@ -402,23 +404,60 @@ def _today() -> str:
     return date.today().isoformat()
 
 
+def _fmt_metric(value: Any, digits: int = 1) -> str:
+    """Format a gate metric for a caption; ``n/a`` when missing or not finite."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return "n/a"
+    if number != number or number in (float("inf"), float("-inf")):
+        return "n/a"
+    return f"{number:.{digits}f}"
+
+
 def _caption_1b(manifest: dict[str, Any]) -> str:
-    seeds = manifest.get("seeds", [])
+    seeds = [int(s) for s in (manifest.get("seeds") or [])]
     if not seeds:
-        seed_note = "see manifest"
+        seed_note = "seeds n/a"
     elif len(seeds) == 1:
         seed_note = f"seed {seeds[0]}"
-    else:
+    elif seeds == list(range(seeds[0], seeds[-1] + 1)):
         seed_note = f"seeds {seeds[0]}–{seeds[-1]} mean"
-    duration = manifest.get("duration_s", 10)
-    return f"{seed_note}, {duration:.0f} s segment ({_today()})"
+    else:
+        seed_note = f"seeds {','.join(map(str, seeds))} mean"
+    duration = _fmt_metric(manifest.get("duration_s", 10.0), 0)
+    panel = manifest.get("panel") or {}
+    metrics = manifest.get("paper_gate_metrics") or panel.get("paper_gate_metrics") or {}
+    beta_ours = metrics.get("beta_ours") or {}
+    beta_paper = metrics.get("beta_paper") or {}
+    peak_ours = metrics.get("peak_hz_ours") or {}
+    peak_paper = metrics.get("peak_hz_paper") or {}
+    band_keys = ("healthy", "pd", "pd_130hz")
+    ours = "/".join(_fmt_metric(beta_ours.get(k)) for k in band_keys)
+    paper = "/".join(_fmt_metric(beta_paper.get(k)) for k in band_keys)
+    head = f"GPi PSD, {duration} s sim, {seed_note}"
+    beta_part = f"β[13–35 Hz] healthy/PD/130 Hz = {ours} (paper {paper})"
+    peak_part = (
+        f"PD peak {_fmt_metric(peak_ours.get('pd'), 0)} Hz "
+        f"(paper {_fmt_metric(peak_paper.get('pd'), 0)})"
+    )
+    version = manifest.get("png_version")
+    version_part = f"v{version}, " if version is not None else ""
+    return f"{head}; {beta_part}; {peak_part}, {version_part}{_today()}"
 
 
 def _caption_2a(manifest: dict[str, Any]) -> str:
     seeds = manifest.get("seeds", [])
     seed_note = f"seed {seeds[0]}" if len(seeds) == 1 else f"seeds {','.join(map(str, seeds))}"
     sampling = manifest.get("sampling", "trailing")
-    if sampling == "segment":
+    if manifest.get("protocol") == "eval" and sampling != "segment":
+        step = manifest.get("step_s", 0.2)
+        window = manifest.get("window_s", 2.0)
+        protocol = (
+            "Fig 5a eval protocol (2 s pre-roll, 2 s reset, five 2 s carried steps; "
+            f"{step:g} s trailing / {window:g} s window)"
+        )
+    elif sampling == "segment":
         seg = manifest.get("segment_s", 2)
         protocol = f"{seg:.0f} s whole-segment bins"
     else:
@@ -1131,10 +1170,14 @@ def promote_1b(
     png_path: Path,
     update_docs: bool = True,
 ) -> dict[str, str]:
-    """Refresh Fig 1b caption in ``figures/mehregan/replications.md``."""
+    """Refresh Fig 1b caption + replication image link in ``figures/mehregan/replications.md``."""
     caption = _caption_1b(manifest)
+    repo_rel = repo_rel_posix(png_path)
     if update_docs:
         _ensure_paper_1_doc(caption_1b=caption, caption_2a=None, caption_2b=None)
+        text = PAPER_1_DOC.read_text()
+        text = _set_markdown_image_link(text, alt=PAPER_1B_REPLICATION_ALT, repo_rel=repo_rel)
+        PAPER_1_DOC.write_text(text)
     refresh_mehregan_gate_tables(update_docs=update_docs)
     materialize_ship_png(png_path, PAPER_1B_PNG)
     _after_promote_publish(png_path, update_docs=update_docs)
@@ -1154,10 +1197,14 @@ def promote_2a(
     png_path: Path,
     update_docs: bool = True,
 ) -> dict[str, str]:
-    """Refresh Fig 2a caption in ``figures/mehregan/replications.md``."""
+    """Refresh Fig 2a caption + replication image link in ``figures/mehregan/replications.md``."""
     caption = _caption_2a(manifest)
+    repo_rel = repo_rel_posix(png_path)
     if update_docs:
         _ensure_paper_1_doc(caption_1b=None, caption_2a=caption, caption_2b=None)
+        text = PAPER_1_DOC.read_text()
+        text = _set_markdown_image_link(text, alt=PAPER_2A_REPLICATION_ALT, repo_rel=repo_rel)
+        PAPER_1_DOC.write_text(text)
     refresh_mehregan_gate_tables(update_docs=update_docs)
     materialize_ship_png(png_path, PAPER_2A_PNG)
     _after_promote_publish(png_path, update_docs=update_docs)

@@ -7,20 +7,26 @@ Replicates the paper panel showing GPi beta power (Eq. 1, 13–35 Hz) during a
   - 0–2 s: no STN DBS (shared baseline for both traces)
   - 2–12 s: either no treatment (red) or 130 Hz conventional cDBS (blue)
 
-**Default (dense trailing):** integrate **14 s** (2 s pre-roll + 12 s display). Plot
-axis is simulation time **minus 2 s**. STN DBS at **sim 4 s** (= display **2 s**).
-**0.2 s** samples with a **2 s** trailing $P_\\beta$ window (overlapping, not step
-bins). Biomarker windows end at **sim 14 s** (= display **12 s**); last window
-``[12, 14]``. Fig 2a passes a larger Numba GPI spike buffer so recording is not
-truncated before sim 14.
+**Default protocol (``--protocol eval``):** the Fig 5a closed-loop eval protocol
+(``paper_protocol.run_condition``): 2 s no-stim pre-roll, 2 s reset, then five 2 s steps
+carried on one plant state; 130 Hz cDBS applies from display **2 s** (sim 4 s) in the
+treated trace. Trailing 2 s $P_\\beta$ every **0.2 s**; plot axis is simulation time
+**minus 2 s**. Why this protocol: the digitized paper Fig 2a curves are the same
+realization as the paper's Fig 5a "PD no stim" and "Periodic 130Hz" curves (r 0.987 /
+0.999), so Fig 2a was drawn from the Fig 5 eval protocol, not from a single 14 s integrate.
 
-**Paper segment mode:** ``--sampling segment`` — six whole-segment 2 s bins
-(Mehregan §IV.A.1) as a step plot.
+**``--protocol single``:** the earlier one-shot path, kept unchanged: integrate **14 s**
+(2 s pre-roll + 12 s display) in one plant run, STN DBS at **sim 4 s**, trailing windows
+ending at **sim 14 s** (last window ``[12, 14]``), with a larger Numba GPI spike buffer.
+
+**Paper segment mode:** ``--sampling segment`` (``--protocol single`` only) — six
+whole-segment 2 s bins (Mehregan §IV.A.1) as a step plot.
 
 Run:
   uv run python scripts/figures/papers/mehregan/2a/plot.py
   uv run python scripts/figures/papers/mehregan/2a/plot.py --plot-only
-  uv run python scripts/figures/papers/mehregan/2a/plot.py --sampling segment
+  uv run python scripts/figures/papers/mehregan/2a/plot.py --protocol single
+  uv run python scripts/figures/papers/mehregan/2a/plot.py --sampling segment --protocol single
   uv run python scripts/figures/papers/mehregan/2a/plot.py --no-update-docs  # skip figures/mehregan/replications.md refresh
 
 Plant efficacy simulation only — no RL training; checkpoint resume is not applicable.
@@ -32,6 +38,7 @@ from rl_adaptive_dbs.panel import load_script_module
 from rl_adaptive_dbs import panel as _panel
 
 import argparse
+import functools
 import json
 import sys
 import time
@@ -60,8 +67,9 @@ _paper_overlay = _overlay_import.load_paper_overlay()
 FIGURES_DIR = Path("figures/mehregan/images/2a")
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/2a")
 DEFAULT_SERIES = CACHE_DIR / "series.json"
-DEFAULT_OUT = FIGURES_DIR / "beta_power.png"
+OUT_STEM = "beta_power"  # versioned as beta_power_vN.png; promote ships beta_power.png
 DEFAULT_MANIFEST = CACHE_DIR / "manifest.json"
+_PAPER_PROTOCOL_PATH = Path(__file__).resolve().parents[1] / "paper_protocol.py"
 DISPLAY_S = 12.0
 DBS_ONSET_S = 2.0
 WARMUP_S = 2.0
@@ -85,6 +93,9 @@ def fig2a_gpi_spike_buffer_size(*, integrate_s: float = INTEGRATE_S) -> int:
     )
 
 SamplingMode = Literal["trailing", "segment"]
+Protocol = Literal["eval", "single"]
+PROTOCOLS: tuple[str, ...] = ("eval", "single")
+DEFAULT_PROTOCOL: Protocol = "eval"
 
 STYLE = {
     "figure.facecolor": "white",
@@ -148,6 +159,32 @@ def dbs_spec_with_onset(
 def _log(msg: str, *, verbose: bool) -> None:
     if verbose:
         print(msg, file=sys.stderr, flush=True)
+
+
+@functools.lru_cache(maxsize=1)
+def _paper_protocol() -> Any:
+    """Fig 5 eval protocol (``paper_protocol.py``), loaded lazily.
+
+    paper_protocol.py loads this file at import time, so it cannot be imported at module load here.
+    """
+    return load_script_module("mehregan_paper_protocol", _PAPER_PROTOCOL_PATH)
+
+
+def _linked_png(path: Path) -> Path:
+    path = Path(path)
+    paper = path.parent / "paper.png"
+    if not paper.is_symlink():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+    linked_dir = paper.resolve().parent
+    linked_target = linked_dir / path.name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists() or path.is_symlink():
+        return path
+    if not linked_target.exists():
+        linked_target.touch()
+    path.symlink_to(linked_target)
+    return path
 
 
 def segment_edges(duration_s: float, segment_s: float) -> np.ndarray:
@@ -456,6 +493,50 @@ def simulate_seed(
     return row
 
 
+def simulate_seed_eval(seed: int, *, verbose: bool = True) -> dict[str, Any]:
+    """One seed under the Fig 5a eval protocol: no-stim and 130 Hz traces on the same plant seed.
+
+    Conditions are built exactly as ``efficacy_panel.run_eval`` builds ``no_stim`` / ``cdbs_130``.
+    """
+    pp = _paper_protocol()
+    if pp.SAMPLE_S != STEP_S or pp.WINDOW_S != WINDOW_S:
+        msg = "paper_protocol SAMPLE_S/WINDOW_S no longer match Fig 2a STEP_S/WINDOW_S"
+        raise RuntimeError(msg)
+    alphabet = pp.make_alphabet(45.0, pp.PaperKnobs())
+    _log(f"  seed {seed}: condition 1/2 — PD no treatment (eval protocol)", verbose=verbose)
+    no_stim = pp.run_condition(seed=seed, alphabet=alphabet)
+    _log(f"  seed {seed}: condition 2/2 — PD 130 Hz cDBS (eval protocol)", verbose=verbose)
+    cdbs = pp.run_condition(
+        seed=seed,
+        alphabet=alphabet,
+        fixed_spec=DbsSpec.from_frequency_hz(130.0),
+    )
+    times = np.asarray(no_stim["time_s"], dtype=float)
+    if not np.array_equal(times, np.asarray(cdbs["time_s"], dtype=float)):
+        msg = "eval protocol conditions returned different time axes"
+        raise RuntimeError(msg)
+    p_none = np.asarray(no_stim["trace"], dtype=float)
+    p_130 = np.asarray(cdbs["trace"], dtype=float)
+    onset_idx = int(round(DBS_ONSET_S / float(times[1] - times[0])))
+    _log(
+        f"  seed {seed}: done "
+        f"(t=0 P_beta={p_none[0]:.1f}; t={DBS_ONSET_S:.0f}s "
+        f"no_tx={p_none[onset_idx]:.1f} hz130={p_130[onset_idx]:.1f}; "
+        f"t={DISPLAY_S:.0f}s no_tx={p_none[-1]:.1f} hz130={p_130[-1]:.1f})",
+        verbose=verbose,
+    )
+    return {
+        "seed": seed,
+        "time_s": times.tolist(),
+        "pd_no_treatment": p_none.tolist(),
+        "pd_130hz": p_130.tolist(),
+        "segment_p_beta": {
+            "pd_no_treatment": [float(v) for v in no_stim["segment_p_beta"]],
+            "pd_130hz": [float(v) for v in cdbs["segment_p_beta"]],
+        },
+    }
+
+
 def mean_trace(seed_rows: list[dict[str, Any]], key: str) -> list[float]:
     stack = np.asarray([row[key] for row in seed_rows], dtype=float)
     return stack.mean(axis=0).tolist()
@@ -558,7 +639,22 @@ def main() -> int:
         default=DEFAULT_SEEDS,
         help="Comma-separated seeds (default: 0; mean when multiple)",
     )
-    parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    parser.add_argument(
+        "--protocol",
+        choices=PROTOCOLS,
+        default=DEFAULT_PROTOCOL,
+        help=(
+            "eval = Fig 5a closed-loop eval protocol (2 s pre-roll, 2 s reset, five 2 s carried steps; "
+            "default, matches the paper's Fig 2a curves); single = one 14 s integrate (earlier path). "
+            "Ignored with --plot-only (the cache decides)."
+        ),
+    )
+    parser.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help=f"Output PNG path. Default: auto-increment {FIGURES_DIR.as_posix()}/{OUT_STEM}_vN.png",
+    )
     parser.add_argument(
         "--series",
         type=Path,
@@ -623,7 +719,31 @@ def main() -> int:
     _figure_promote.set_export_notes_images(args.export_notes)
     _figure_promote.set_update_report3(args.update_report)
 
+    if args.protocol == "eval":
+        if args.sampling == "segment":
+            print(
+                "--protocol eval has no segment mode (the Fig 5a eval protocol is trailing only); "
+                "use --protocol single with --sampling segment",
+                file=sys.stderr,
+            )
+            return 2
+        if not args.plot_only and (args.step_s != STEP_S or args.window_s != WINDOW_S):
+            print(
+                f"--protocol eval uses the Fig 5a sample step ({STEP_S:g} s) and window ({WINDOW_S:g} s); "
+                "use --protocol single to change --step-s / --window-s",
+                file=sys.stderr,
+            )
+            return 2
+
+    if args.out is None:
+        FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+        args.out, png_version = _figure_promote.next_versioned_png(FIGURES_DIR, OUT_STEM)
+    else:
+        png_version = _figure_promote.parse_png_version(args.out)
+    args.out = _linked_png(args.out)
+
     sampling: SamplingMode = args.sampling
+    protocol: Protocol = args.protocol
     verbose = not args.quiet
     if sampling == "trailing":
         times = sample_times(args.step_s)
@@ -640,39 +760,50 @@ def main() -> int:
             print("Run without --plot-only once to build the cache.", file=sys.stderr)
             return 2
         cache = load_series(args.series)
+        protocol = cache.get("protocol", "single")  # caches from before --protocol were single
         seeds = tuple(cache.get("seeds", args.seeds))
         print(f"loaded traces from {args.series}", file=sys.stderr, flush=True)
     else:
         seeds = args.seeds
         per_seed: list[dict[str, Any]] = []
-        with PythonPlant() as plant:
+        if protocol == "eval":
             for seed in seeds:
-                if sampling == "trailing":
-                    _log(
-                        f"simulating seed {seed} "
-                        f"({INTEGRATE_S:.0f}s sim = {WARMUP_S:.0f}s pre-roll + {DISPLAY_S:.0f}s display, "
-                        f"{times.size} trailing samples every {args.step_s:.1f}s, "
-                        f"{args.window_s:.1f}s window)...",
-                        verbose=verbose,
-                    )
-                else:
-                    _log(
-                        f"simulating seed {seed} "
-                        f"({DISPLAY_S:.0f} s, {n_segments} segments x {args.segment_s:.1f} s)...",
-                        verbose=verbose,
-                    )
-                per_seed.append(
-                    simulate_seed(
-                        plant,
-                        seed=seed,
-                        sampling=sampling,
-                        segment_s=args.segment_s,
-                        edges=edges,
-                        times=times,
-                        window_s=args.window_s,
-                        verbose=verbose,
-                    )
+                _log(
+                    f"simulating seed {seed} (Fig 5a eval protocol: 2 s pre-roll, 2 s reset, "
+                    f"five 2 s carried steps; {times.size} trailing samples every {args.step_s:.1f}s, "
+                    f"{args.window_s:.1f}s window)...",
+                    verbose=verbose,
                 )
+                per_seed.append(simulate_seed_eval(seed, verbose=verbose))
+        else:
+            with PythonPlant() as plant:
+                for seed in seeds:
+                    if sampling == "trailing":
+                        _log(
+                            f"simulating seed {seed} "
+                            f"({INTEGRATE_S:.0f}s sim = {WARMUP_S:.0f}s pre-roll + {DISPLAY_S:.0f}s display, "
+                            f"{times.size} trailing samples every {args.step_s:.1f}s, "
+                            f"{args.window_s:.1f}s window)...",
+                            verbose=verbose,
+                        )
+                    else:
+                        _log(
+                            f"simulating seed {seed} "
+                            f"({DISPLAY_S:.0f} s, {n_segments} segments x {args.segment_s:.1f} s)...",
+                            verbose=verbose,
+                        )
+                    per_seed.append(
+                        simulate_seed(
+                            plant,
+                            seed=seed,
+                            sampling=sampling,
+                            segment_s=args.segment_s,
+                            edges=edges,
+                            times=times,
+                            window_s=args.window_s,
+                            verbose=verbose,
+                        )
+                    )
 
         traces = {
             "pd_no_treatment": mean_trace(per_seed, "pd_no_treatment"),
@@ -680,6 +811,7 @@ def main() -> int:
         }
         cache = {
             "figure": "mehregan_fig2a",
+            "protocol": protocol,
             "sampling": sampling,
             "duration_s": DISPLAY_S,
             "dbs_onset_s": DBS_ONSET_S,
@@ -731,6 +863,8 @@ def main() -> int:
 
     manifest = {
         "figure": "mehregan_fig2a",
+        "protocol": cache.get("protocol", protocol),
+        "png_version": png_version,
         "sampling": cache.get("sampling", sampling),
         "duration_s": cache.get("duration_s", DISPLAY_S),
         "dbs_onset_s": cache.get("dbs_onset_s", DBS_ONSET_S),
