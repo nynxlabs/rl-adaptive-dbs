@@ -45,11 +45,19 @@ class SEA_DBSEnvAdapter(gym.Env):
         self.config = (config or SEADBSConfig()).with_variant_defaults()
         self._owns_plant = plant is None
         if plant is None:
+            from envs.plant.config import PlantConfig
             from envs.plant.python_backend import PythonPlant
 
-            self._plant: PlantBackend = PythonPlant()
+            self._plant: PlantBackend = PythonPlant(PlantConfig(dt_ms=self.config.plant_dt_ms))
         else:
             self._plant = plant
+            plant_dt = getattr(getattr(plant, "config", None), "dt_ms", None)
+            if plant_dt is not None and abs(float(plant_dt) - self.config.plant_dt_ms) > 1e-12:
+                msg = (
+                    f"plant dt_ms {plant_dt} != SEADBSConfig.plant_dt_ms "
+                    f"{self.config.plant_dt_ms} (the stim trace is built on the config grid)"
+                )
+                raise ValueError(msg)
         if self.config.plant_integration_mode == "continuous" and isinstance(
             self._plant, MatlabPlant
         ):
