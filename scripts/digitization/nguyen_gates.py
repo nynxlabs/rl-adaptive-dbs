@@ -718,7 +718,7 @@ FIG5_REQUIRED_KEYS: tuple[str, ...] = tuple(dict.fromkeys(c.gate for c in FIG5_C
 
 FIG6_AB_CHECKS: tuple[Check, ...] = (
     # α–β (episode-final reading): absolute residuals (same units, same θ).
-    Check("alpha_beta_early_near_paper", "ab_early", "abs", 95.0, "first traced ep–50; paper 289"),
+    Check("alpha_beta_early_near_paper", "ab_early", "abs", 95.0, "first traced ep–50; paper 287"),
     Check("alpha_beta_mid_near_paper", "ab_mid", "abs", 52.0, "ep 50–100; paper 221"),
     Check("alpha_beta_post100_near_paper", "ab_post100", "abs", 6.4, "ep 100–250; paper 110"),
     Check("alpha_beta_late_near_paper", "ab_late", "abs", 5.3, "ep 350–500; paper 109"),
@@ -727,7 +727,7 @@ FIG6_AB_CHECKS: tuple[Check, ...] = (
     Check("alpha_beta_t50_timing", "ab_t50", "abs", 35.0, "episodes; paper 87"),
     Check("alpha_beta_drop_fraction", "ab_drop_fraction", "abs", 0.34, "(early − mid) / (early − late); paper 0.37"),
     Check("alpha_beta_trend_near_paper", "ab_trend", "abs", 0.17, "late / early; paper 0.38"),
-    Check("alpha_beta_drop_magnitude_near_paper", "ab_drop", "abs", 93.0, "early − late; paper 180"),
+    Check("alpha_beta_drop_magnitude_near_paper", "ab_drop", "abs", 93.0, "early − late; paper 178"),
     Check("alpha_beta_late_cv", "ab_late_cv", "abs", 0.025, "std / mean ep 350–500; paper 0.16"),
 )
 FIG6_FREQ_CHECKS: tuple[Check, ...] = (
