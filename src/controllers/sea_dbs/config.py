@@ -45,6 +45,7 @@ INFERENCE_PSD_SAMPLES: int = ABLATION_EVAL_STEPS + 1
 PlantIntegrationMode = Literal["disconnected", "continuous"]
 StepMode = Literal["shot", "trailing"]
 StepPulseMode = Literal["carrier", "per_step"]
+UpdateCadence = Literal["step", "episode"]
 GumbelActionSampling = Literal["relaxed", "hard"]
 CriticActionInput = Literal["one_hot", "logits"]
 
@@ -73,12 +74,23 @@ class SEADBSConfig:
     # stimulating step); ``per_step`` delivers one pulse at the start of the step
     # (Eq. (6): "a_t = 1 corresponds to delivering a DBS pulse"; up to 500 Hz).
     step_pulse_mode: StepPulseMode = "carrier"
+    # ``trailing`` only, a reading that contradicts Algorithm 1 line 3 ("Reset
+    # environment"): one simulation for the whole run. Only the first reset warms up
+    # the plant; later resets keep its state, the spike history, the pulse clock and
+    # the Eq. (4) window and only restart the episode's step count, so stimulation
+    # can build up across 60 ms episodes. Candidate experiments only.
+    carry_plant_across_episodes: bool = False
     max_episode_steps: int = MAX_EPISODE_STEPS
     num_episodes: int = TRAIN_EPISODES
 
     # Reward / observation (§6, §14.1)
     beta_threshold: float = BETA_THRESHOLD
     reward_scale: float = REWARD_SCALE
+    # Candidate reading beyond Eq. (7) (§V.A says the reward penalizes overstimulation
+    # and promotes energy efficiency, but Eq. (7) has no stimulation term): the
+    # training reward subtracts ``stim_cost`` on every stimulating step. Logged
+    # episode rewards (Fig 4b) stay Eq. (7) of P̄, as the paper reports them.
+    stim_cost: float = 0.0
     observation_scale: float = OBSERVATION_SCALE
     # Window for mean P_beta (Eq. 4–5); paper-silent. Convention: 10, the paper's
     # inference horizon (Figs 5–7 plot 10 stimulation steps). With independent
@@ -101,6 +113,11 @@ class SEADBSConfig:
     polyak_tau: float = 0.005  # open — standard DDPG default
     min_buffer_size: int = BATCH_SIZE
     update_frequency: int = 1  # open — gradient steps per env step
+    # Candidate reading that contradicts Algorithm 1 (which updates inside the step
+    # loop): ``episode`` runs ``updates_per_episode`` gradient steps after each episode
+    # instead of ``update_frequency`` per env step.
+    update_cadence: UpdateCadence = "step"
+    updates_per_episode: int = 1
 
     # Gumbel-Softmax (§IV.C, Eq. 14). tau_0, tau_min, lambda_tau are not in
     # Table I. Convention: anneal over exactly the 4,500 training steps from a

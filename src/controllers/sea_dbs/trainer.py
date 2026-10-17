@@ -360,16 +360,20 @@ class SEA_DBSTrainer:
                     )
                 )
 
-                if len(self.buffer) >= cfg.min_buffer_size:
+                if cfg.update_cadence == "step" and len(self.buffer) >= cfg.min_buffer_size:
                     for _ in range(cfg.update_frequency):
                         self._update_step()
 
-                episode_reward += float(reward)
+                episode_reward += float(step_info.get("reward_eq7", reward))
                 episode_actions.append(int(action))
                 episode_p_beta.append(float(step_info.get("p_beta_norm", 0.0)))
                 state = next_state
                 if truncated:
                     break
+
+            if cfg.update_cadence == "episode" and len(self.buffer) >= cfg.min_buffer_size:
+                for _ in range(cfg.updates_per_episode):
+                    self._update_step()
 
             if cfg.episode_psd_metric == "last":
                 episode_psd_val = float(episode_p_beta[-1]) if episode_p_beta else 0.0
