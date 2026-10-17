@@ -4,19 +4,31 @@
 
 Independent replications of three reinforcement-learning papers on **adaptive deep brain stimulation (DBS)** for Parkinson's disease. All three controllers run on one shared simulated cortex–basal ganglia–thalamus circuit (Kumaravelu et al., 2016), rebuilt from the paper text and figures (for Nguyen et al., also from the authors' later code release where the paper is silent).
 
-Every replicated paper panel is scored against automated qualitative gates; per-paper counts are below. **[See the side-by-side showcase →](docs/figures/replication_showcase.md)**
+Every paper panel is scored against automated gates, and a panel counts as replicated only when all of its gates pass. Per-paper counts are below; the trackers have every gate. **[See the side-by-side showcase →](docs/figures/replication_showcase.md)**
 
 | Paper | Controller | Panels passing | Tracker |
 |-------|------------|:--------------:|---------|
-| Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning* | DDPG actor–critic, plus PTQ / QAT quantization | 9 / 9 | [mehregan](figures/mehregan/replications.md) |
-| Ravivarapu et al., *Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson's Disease* (SEA-DBS) | Sample-efficient actor–critic | 6 / 6 | [ravivarapu](figures/ravivarapu/replications.md) |
+| Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning* | DDPG actor–critic, plus PTQ / QAT quantization | 7 / 9 (Fig 6a, 6b: QAT fails) | [mehregan](figures/mehregan/replications.md) |
+| Ravivarapu et al., *Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson's Disease* (SEA-DBS) | Sample-efficient actor–critic | 0 / 7 | [ravivarapu](figures/ravivarapu/replications.md) |
 | Nguyen et al., *Closed-Loop Neuromorphic Deep Brain Stimulation using Deep Spiking Q-Networks* | Deep spiking Q-network | 4 / 5 (Fig 7: 13 of 14 gates) | [nguyen](figures/nguyen/replications.md) |
 
-| Mehregan Fig. 4a: beta power during training | Ravivarapu Fig. 4a: SEA-DBS vs baseline | Nguyen Fig. 7: 50-episode evaluation |
+| Mehregan Fig. 4a: beta power during training (pass) | Ravivarapu Fig. 4a: SEA-DBS vs baseline (open) | Nguyen Fig. 7: 50-episode evaluation (open) |
 |:---:|:---:|:---:|
-| <img src="figures/mehregan/images/4a/training_beta_v40.png" width="280" alt="Mehregan Fig. 4a replication"> | <img src="figures/ravivarapu/images/4a/training_psd_v70.png" width="280" alt="Ravivarapu Fig. 4a replication"> | <img src="figures/nguyen/images/7/eval_50ep_v29.png" width="280" alt="Nguyen Fig. 7 replication"> |
+| <img src="figures/mehregan/images/4a/training_beta_v42.png" width="280" alt="Mehregan Fig. 4a replication"> | <img src="figures/ravivarapu/images/4a/training_psd_v82.png" width="280" alt="Ravivarapu Fig. 4a replication"> | <img src="figures/nguyen/images/7/eval_50ep_v29.png" width="280" alt="Nguyen Fig. 7 replication"> |
 
 > **Status:** active research code. Docs and scripts are still being consolidated, so expect some redundancy.
+
+## The shared model
+
+All three controllers run on one biophysical model of the cortex–basal ganglia–thalamus network in the parkinsonian rat (Kumaravelu, Brocker & Grill, 2016), set up as a reinforcement-learning environment the way Mehregan et al. describe it. Nguyen et al. and Ravivarapu et al. connect through adapters that match their papers' step lengths, observations, and rewards, so no paper gets its own copy of the dynamics. Specs: [docs/plant.md](docs/plant.md), [docs/environment.md](docs/environment.md). Where a replication departs from a paper or the published model, the panel's tracker labels the deviation; for Mehregan et al., [docs/development/replication-fidelity.md](docs/development/replication-fidelity.md) lists what matches and what diverges.
+
+## How we check
+
+Every figure panel has its own gates: numeric checks against curves digitized from the paper, like where a curve starts, which way it trends, and how two conditions are ordered. A panel counts as replicated only when all of its gates pass, so a panel that passes most of its gates is still open. Each tracker lists every gate with its current pass/fail state and the command that reproduces the panel.
+
+## Progress reports
+
+Dated progress reports live in [reports/](reports/) (`reports/YYYY-MM-DD.md`, with a PDF of each). They are snapshots: the October 2026 gate audits replaced some of their results, so the trackers above are the current state.
 
 ## Quick start
 
@@ -40,7 +52,7 @@ Full install, verification, and day-to-day use: **[docs/setup.md](docs/setup.md)
 
 ## Current goals
 
-**Primary success criterion:** qualitative **figure replication** — side-by-side paper panels vs our plots, with explicit gates per panel. Active work is organized around **open figure panels**, not “advance to the next roadmap phase.”
+**Primary success criterion:** qualitative **figure replication** — side-by-side paper panels vs our plots, with explicit gates per panel. Active work is organized around **open figure panels**, not “advance to the next roadmap phase.” Next: close the open panels (Ravivarapu, Mehregan's QAT panels, Nguyen Fig. 7), then compare the three controllers on the same model.
 
 | Focus | Doc | Entry points |
 |-------|-----|--------------|
@@ -55,7 +67,7 @@ The **phase roadmap** ([docs/development/roadmap.md](docs/development/roadmap.md
 
 Architecturally, the repo has three layers (built out in [docs/development/roadmap.md](docs/development/roadmap.md) phases 1–9):
 
-1. **Environment (single source of truth)** — Replicate the **computational RL environment** from Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning*: Kumaravelu et al. (2016) **cortex–basal ganglia–thalamus** dynamics, GPi **beta-band** biomarker, 2 s steps, reward Eq. (8), and a Gymnasium-style API that `ddpg` uses directly. Other papers connect through **adapters** on the same plant. Spec: [docs/environment.md](docs/environment.md). **Current focus:** open Nguyen / Ravivarapu panels ([figures/nguyen/replications.md](figures/nguyen/replications.md), [figures/ravivarapu/replications.md](figures/ravivarapu/replications.md)); Mehregan tracker [figures/mehregan/replications.md](figures/mehregan/replications.md). Plant panels 1b–2b gate on [docs/plant.md](docs/plant.md); Mehregan training panels on [docs/environment.md](docs/environment.md) + [docs/controllers/ddpg/replication.md](docs/controllers/ddpg/replication.md).
+1. **Environment (single source of truth)** — Replicate the **computational RL environment** from Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning*: Kumaravelu et al. (2016) **cortex–basal ganglia–thalamus** dynamics, GPi **beta-band** biomarker, 2 s steps, reward Eq. (8), and a Gymnasium-style API that `ddpg` uses directly. Other papers connect through **adapters** on the same plant. Spec: [docs/environment.md](docs/environment.md). **Current focus:** the open panels: Ravivarapu Figs. 4a–7 and Table II ([figures/ravivarapu/replications.md](figures/ravivarapu/replications.md)), Mehregan Fig. 6a / 6b QAT ([figures/mehregan/replications.md](figures/mehregan/replications.md)), and Nguyen Fig. 7 ([figures/nguyen/replications.md](figures/nguyen/replications.md)). Plant panels 1b–2b gate on [docs/plant.md](docs/plant.md); Mehregan training panels on [docs/environment.md](docs/environment.md) + [docs/controllers/ddpg/replication.md](docs/controllers/ddpg/replication.md).
 
 2. **Controllers (one per paper)** — Replicate each paper’s **learning-based controller** under `controllers/`, all driving the **same plant** (no duplicated CBGT dynamics):
 
@@ -80,13 +92,14 @@ This repository is intended to work on **Windows**, **macOS**, and **Linux** (in
 Python packages live under **`src/`** (editable install via `uv sync`):
 
 - **`src/envs/`** — Shared Gymnasium-style RL environment (Mehregan et al. computational setup).
-- **`src/controllers/`** — Per-paper controllers: `ddpg` (implemented), `snn` (Phase 5), `sea_dbs` (Phase 6).
+- **`src/controllers/`** — Per-paper controllers: `ddpg` (Mehregan), `snn` (Nguyen), `sea_dbs` (Ravivarapu).
 - **`src/benchmarks/`** — Suite runner: YAML manifests → `results/` ([docs/benchmarking.md](docs/benchmarking.md)).
 - **`suites/`** — Versioned eval configs (`mehregan_eval.yaml`, smoke variant for CI).
 - **`src/rl_adaptive_dbs/`** — CLI (`rl-dbs`), TUI (`rl-dbs-tui`), and shared entry helpers.
 
 - `docs/` — [setup.md](docs/setup.md) (setup & use), [development/](docs/development/) (roadmap, conventions, `uv`, pytest), [plant.md](docs/plant.md), [environment.md](docs/environment.md), [controllers/](docs/controllers/), [benchmarking.md](docs/benchmarking.md), [cli.md](docs/cli.md), [tui.md](docs/tui.md).
 - `figures/<paper>/replications.md` — ship trackers (Mehregan / Nguyen / Ravivarapu).
+- `reports/` — dated progress reports (`YYYY-MM-DD.md` + PDF); snapshots, not the current state.
 - `results/` — benchmark outputs from `rl-dbs benchmark` (local, gitignored).
 - `reference-material/` — Third-party models and scripts. Kumaravelu et al. (2016) MATLAB network: `reference-material/KumaraveluEtAl2016/` ([`readme.txt`](reference-material/KumaraveluEtAl2016/readme.txt) for citation and provenance).
 - `scripts/` — layout in [`scripts/README.md`](scripts/README.md): panel ship scripts under **`scripts/figures/papers/`**, digitization/gates, MATLAB/plant helpers; **`scripts/probes/`** keeps only reusable extension diagnostics (see [`scripts/probes/README.md`](scripts/probes/README.md)).
