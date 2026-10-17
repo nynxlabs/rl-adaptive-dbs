@@ -407,3 +407,82 @@ def test_trailing_p_beta_uses_only_the_trailing_window() -> None:
     kept = np.concatenate(env._spikes[0])  # noqa: SLF001
     assert kept.min() >= env._t_s - 0.1 - 2 * 0.002 - 0.002  # noqa: SLF001
     env.close()
+
+
+def test_trailing_carry_across_episodes_keeps_the_simulation() -> None:
+    from controllers.sea_dbs.adapter import SEA_DBSEnvAdapter
+
+    plant, calls = _trailing_fake_plant()
+    resets: list[int | None] = []
+    orig_reset = plant.reset
+
+    def counting_reset(seed=None):
+        resets.append(seed)
+        orig_reset(seed)
+
+    plant.reset = counting_reset  # type: ignore[method-assign]
+    cfg = SEADBSConfig(
+        step_mode="trailing", trailing_window_s=0.1, n_obs=3, carry_plant_across_episodes=True
+    )
+    env = SEA_DBSEnvAdapter(plant=plant, config=cfg)
+    env.reset(seed=0)
+    for _ in range(5):
+        env.step(1)
+    t_before, window = env._t_s, list(env._obs_window)  # noqa: SLF001
+    n_calls = len(calls)
+    obs, _info = env.reset(seed=1)
+    # No plant reset, no warm-up: same clock, same Eq. (4) window, step count restarted.
+    assert resets == [0]
+    assert len(calls) == n_calls and env._t_s == t_before  # noqa: SLF001
+    assert list(env._obs_window) == window  # noqa: SLF001
+    assert obs[0] == pytest.approx(np.mean(window))
+    assert env._step_count == 0  # noqa: SLF001
+    env.close()
+
+
+class _LevelPlant:
+    """Shot plant: stimulated shots return lower beta."""
+
+    def reset(self, seed=None):
+        return self
+
+    def integrate(self, duration_s, dbs_spec=None, *, record_spikes=True):
+        from types import SimpleNamespace
+
+        stim = bool(dbs_spec is not None and (dbs_spec.frequency_hz or 0.0) > 0.0)
+        return SimpleNamespace(p_beta=150.0 if stim else 220.0)
+
+    def close(self):
+        return None
+
+
+def test_stim_cost_lowers_training_reward_only() -> None:
+    from controllers.sea_dbs.adapter import SEA_DBSEnvAdapter
+    from controllers.sea_dbs.reward import sea_dbs_reward
+
+    cfg = SEADBSConfig(stim_cost=0.7, observation_scale=472.0)
+    env = SEA_DBSEnvAdapter(plant=_LevelPlant(), config=cfg)
+    env.reset(seed=0)
+    _o, r1, _t, _tr, info1 = env.step(1)
+    assert r1 == pytest.approx(info1["reward_eq7"] - 0.7)
+    assert info1["reward_eq7"] == pytest.approx(sea_dbs_reward(info1["p_beta_norm"]))
+    _o, r0, _t, _tr, info0 = env.step(0)
+    assert r0 == pytest.approx(info0["reward_eq7"])
+    env.close()
+
+
+def test_episode_update_cadence_runs_updates_after_each_episode() -> None:
+    from controllers.sea_dbs.adapter import SEA_DBSEnvAdapter
+    from controllers.sea_dbs.trainer import SEA_DBSTrainer
+
+    cfg = SEADBSConfig(variant="paper", update_cadence="episode", updates_per_episode=3).for_smoke(
+        episodes=3, max_steps=8
+    )
+    env = SEA_DBSEnvAdapter(plant=_LevelPlant(), config=cfg)
+    try:
+        trainer = SEA_DBSTrainer(env, cfg)
+        trainer.train_episodes()
+        # Buffer reaches min_buffer_size (8 in smoke) after the first episode.
+        assert trainer._update_count == 3 * 3  # noqa: SLF001
+    finally:
+        env.close()

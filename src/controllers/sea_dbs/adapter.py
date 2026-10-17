@@ -247,8 +247,22 @@ class SEA_DBSEnvAdapter(gym.Env):
             self._episode_seed = int(self._rng.integers(0, 2**31 - 1))
         else:
             self._episode_seed = None
-        self._plant.reset(seed=seed)
+        carry = self._is_trailing() and self.config.carry_plant_across_episodes and bool(self._spikes)
         self._step_count = 0
+        if carry:
+            # Same simulation, new episode: the state is the current Eq. (4) window.
+            mean_norm = self._mean_p_beta()
+            return self._observation_from_window(), {
+                "p_beta_raw": float(self._obs_window[-1]) * self.config.observation_scale,
+                "p_beta_norm": mean_norm,
+                "mean_p_beta": mean_norm,
+                "adapter": True,
+                "step_duration_ms": self.config.step_duration_ms,
+                "integration_duration_ms": self._t_s * 1000.0,
+                "carrier_hz": self._carrier_hz,
+                "plant_integration_mode": "trailing-carried",
+            }
+        self._plant.reset(seed=seed)
         self._obs_window.clear()
 
         if self._is_trailing():
@@ -306,11 +320,12 @@ class SEA_DBSEnvAdapter(gym.Env):
         self._obs_window.append(self._normalize_p_beta(raw))
         obs = self._observation_from_window()
         mean_norm = self._mean_p_beta()
-        reward = sea_dbs_reward(
+        reward_eq7 = sea_dbs_reward(
             mean_norm,
             beta_threshold=self.config.beta_threshold,
             reward_scale=self.config.reward_scale,
         )
+        reward = reward_eq7 - float(self.config.stim_cost) * float(int(action) == 1)
 
         self._step_count += 1
         truncated = self._step_count >= self.config.max_episode_steps
@@ -326,6 +341,7 @@ class SEA_DBSEnvAdapter(gym.Env):
             "integration_duration_ms": duration_s * 1000.0,
             "carrier_hz": self._carrier_hz,
             "plant_integration_mode": self.config.plant_integration_mode,
+            "reward_eq7": reward_eq7,
             "dw": dw,
         }
         return obs, reward, terminated, truncated, info
