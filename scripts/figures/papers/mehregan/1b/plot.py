@@ -46,10 +46,13 @@ _OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
 _overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
+_PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
+_figure_promote = load_script_module("figure_promote", _PROMOTE)
+
 FIGURE_DIR = Path("artifacts/figures/papers/mehregan/1b")
 FIGURES_DIR = Path("figures/mehregan/images/1b")
 DEFAULT_CURVES = FIGURE_DIR / "curves.json"
-DEFAULT_OUT = FIGURES_DIR / "gpi_psd.png"
+OUT_STEM = "gpi_psd"  # versioned as gpi_psd_vN.png; promote ships gpi_psd.png
 DEFAULT_MANIFEST = FIGURE_DIR / "manifest.json"
 DEFAULT_DURATION_S = 10.0
 DEFAULT_SEEDS: tuple[int, ...] = tuple(range(10))
@@ -87,6 +90,23 @@ CONDITIONS: tuple[Condition, ...] = (
     Condition("pd", PlantConfig(pd=1), DbsSpec.none()),
     Condition("pd_130hz", PlantConfig(pd=1), DbsSpec.from_frequency_hz(130.0)),
 )
+
+
+def _linked_png(path: Path) -> Path:
+    path = Path(path)
+    paper = path.parent / "paper.png"
+    if not paper.is_symlink():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+    linked_dir = paper.resolve().parent
+    linked_target = linked_dir / path.name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists() or path.is_symlink():
+        return path
+    if not linked_target.exists():
+        linked_target.touch()
+    path.symlink_to(linked_target)
+    return path
 
 
 def parse_seeds(raw: str) -> tuple[int, ...]:
@@ -278,7 +298,12 @@ def main() -> int:
         default=DEFAULT_SEEDS,
         help="Comma-separated eval seeds to average (default: 0–9)",
     )
-    parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    parser.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help=f"Output PNG path. Default: auto-increment {FIGURES_DIR.as_posix()}/{OUT_STEM}_vN.png",
+    )
     parser.add_argument(
         "--curves",
         type=Path,
@@ -297,11 +322,37 @@ def main() -> int:
         help="Fixed y-axis max (default: auto from data + 10%% headroom)",
     )
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
+    parser.add_argument(
+        "--no-update-docs",
+        action="store_true",
+        help="Skip figures/mehregan/replications.md caption and image refresh",
+    )
+    parser.add_argument(
+        "--export-notes",
+        action="store_true",
+        help="After promote, copy replication PNGs into the notes folder (RL_DBS_NOTES_DIR / export.notes_dir)",
+    )
+    # Former name, kept so existing commands keep working.
+    parser.add_argument("--push-kb", dest="export_notes", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--update-report",
+        action="store_true",
+        help="After promote, refresh Report 3 gallery image links in the notes folder",
+    )
     args = parser.parse_args()
+    _figure_promote.set_export_notes_images(args.export_notes)
+    _figure_promote.set_update_report3(args.update_report)
 
     if args.duration_s <= 0:
         print("--duration-s must be positive", file=sys.stderr)
         return 2
+
+    if args.out is None:
+        FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+        args.out, png_version = _figure_promote.next_versioned_png(FIGURES_DIR, OUT_STEM)
+    else:
+        png_version = _figure_promote.parse_png_version(args.out)
+    args.out = _linked_png(args.out)
 
     if args.plot_only:
         if not args.curves.exists():
@@ -359,6 +410,7 @@ def main() -> int:
 
     manifest = {
         "figure": "mehregan_fig1b",
+        "png_version": png_version,
         "duration_s": duration_s,
         "seeds": list(seeds),
         "curves_cache": str(args.curves),
@@ -383,6 +435,14 @@ def main() -> int:
     args.manifest.parent.mkdir(parents=True, exist_ok=True)
     manifest = _panel.stamp_manifest(manifest)
     args.manifest.write_text(json.dumps(manifest, indent=2) + "\n")
+
+    if not args.no_update_docs:
+        updated = _figure_promote.promote_1b(
+            manifest=manifest,
+            curves_path=args.curves,
+            png_path=args.out,
+        )
+        print(f"updated comparison doc: {updated['doc']}", file=sys.stderr, flush=True)
 
     print(
         f"gates_pass={paper_gates['pass']} gates={paper_gates['gates']}",
