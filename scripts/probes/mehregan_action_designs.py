@@ -18,7 +18,7 @@ rate-matched menu). Three modes per ``--run`` spec:
   PTQ of the final actor and a QAT fake-quant wrap, decoded against fp32.
 
 Spec: ``label:design=NAME,k=v,...``; run knobs ``mode, sigma, update_every,
-updates, reward, reward_noise, variant, seed, gamma, tau, n_trans`` - all other
+updates, reward, reward_noise, variant, seed, gamma, tau, n_trans, adam_eps`` - all other
 keys go to the design constructor.
 
   nice -n 10 uv run python scripts/probes/mehregan_action_designs.py \\
@@ -30,6 +30,7 @@ import argparse
 import copy
 import json
 import time
+from collections import Counter
 from dataclasses import dataclass, fields, replace
 from pathlib import Path
 
@@ -67,6 +68,7 @@ class RunKnobs:
     gamma: float = 0.99
     tau: float = 0.005
     mean_hz: float = 45.0
+    adam_eps: float = 1e-8  # paper-silent (PyTorch default); the Fig 3 probe's bounding knob
 
 
 def _coerce(v: str):
@@ -116,7 +118,8 @@ class Rewards:
         self.phase_best = 2.0 * float(np.sort(cosv)[-n_pulses:].mean())
 
     def phase(self, t: np.ndarray) -> float:
-        return 2.0 * float(self._cos[np.asarray(t)].mean())
+        # pulses on one slot coincide (one pulse in the plant): score distinct slots
+        return 2.0 * float(self._cos[np.unique(t)].sum()) / self.n
 
     def target_r(self, t: np.ndarray) -> float:
         return -float(np.mean(np.abs(np.sort(t) - self.target))) / self.d_reg
@@ -147,7 +150,9 @@ def isi_cv(t: np.ndarray) -> float:
 
 def compare(t: np.ndarray, ref: np.ndarray) -> dict:
     a, b = np.sort(t), np.sort(ref)
-    moved = 1.0 - len(np.intersect1d(a, b)) / len(b)
+    # multiset overlap: per-pulse designs can place two pulses on one slot
+    ca, cb = Counter(a.tolist()), Counter(b.tolist())
+    moved = 1.0 - sum((ca & cb).values()) / len(b)
     return {"moved": float(moved), "mad_ms": float(np.mean(np.abs(a - b))) if len(a) == len(b) else float("nan")}
 
 
@@ -175,7 +180,7 @@ class Agent:
         self.actor_t, self.critic_t = clone_module(self.actor), clone_module(self.critic)
         hard_update(self.actor_t, self.actor)
         hard_update(self.critic_t, self.critic)
-        self.opt_a = torch.optim.Adam(self.actor.parameters(), lr=ACTOR_LR)
+        self.opt_a = torch.optim.Adam(self.actor.parameters(), lr=ACTOR_LR, eps=knobs.adam_eps)
         self.opt_c = torch.optim.Adam(self.critic.parameters(), lr=CRITIC_LR)
         self.gen = torch.Generator().manual_seed(knobs.seed + 17)
 
@@ -216,6 +221,7 @@ def probe_stats(agent: Agent, probe: torch.Tensor, ref_slots: list[np.ndarray], 
         "mad_ms_vs_init": float(np.nanmean([c["mad_ms"] for c in cmp])),
         "isi_cv": float(np.mean([isi_cv(t) for t in slots])),
         "distinct_across_probe": len({t.tobytes() for t in slots}),
+        "n_distinct_pulses": float(np.mean([len(np.unique(t)) for t in slots])),
     }
     if rfn is not None:
         out["reward_nf"] = float(np.mean([rfn(t) for t in slots]))
