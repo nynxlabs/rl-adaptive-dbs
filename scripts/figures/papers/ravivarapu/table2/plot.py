@@ -3,9 +3,10 @@
 
 Paper §V.B: "changing the environment seed every n ∈ {10, 20, 50, 75} step";
 Table II reports average PSD and average reward for Baseline and SEA-DBS.
-Eval-only on the Fig 4 checkpoints: one deterministic (argmax) 300-step
-rollout per variant and interval at 50 Hz on the training plant setup, the
-plant reset with the next seed every n steps (``evaluate_reseeded``;
+Eval-only on the Fig 4 checkpoints: one deterministic (argmax) rollout of 30
+blocks of n steps per variant and interval at 50 Hz on the training plant
+setup, the plant reset with the next seed at every block, so every n visits
+plant seeds 0–29 (``evaluate_reseeded``;
 convention in ``docs/controllers/sea_dbs/replication.md`` §14.13). Avg PSD is
 the mean Eq. (5) observation × 1000 (paper units). Avg Reward is reported
 both as the mean step reward and as Eq. (7) of Avg PSD (the paper's column
@@ -35,7 +36,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from controllers.sea_dbs.config import INFERENCE_CARRIER_50HZ
-from controllers.sea_dbs.eval import TABLE2_HORIZON_STEPS, TABLE2_RESEED_INTERVALS
+from controllers.sea_dbs.eval import TABLE2_N_BLOCKS, TABLE2_RESEED_INTERVALS, table2_horizon
 
 _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
 _figure_promote = load_script_module("figure_promote", _PROMOTE)
@@ -120,7 +121,7 @@ def _plot(rows: dict[int, dict[str, float]], png_path: Path, *, promote: bool) -
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--smoke", action="store_true", help="20-step horizon, n = 10 and 20 only")
+    parser.add_argument("--smoke", action="store_true", help="2 blocks, n = 10 and 20 only")
     parser.add_argument("--plot-only", action="store_true", help="Replot from cached series.json (no eval)")
     _resume_cli.add_export_notes_arg(parser)
     _resume_cli.add_update_report3_arg(parser)
@@ -132,14 +133,14 @@ def main() -> int:
         args.update_report = False
     _resume_cli.configure_promote_publish(args, _figure_promote)
     series_path = CACHE_DIR / "series.json"
-    horizon = 20 if args.smoke else TABLE2_HORIZON_STEPS
+    n_blocks = 2 if args.smoke else TABLE2_N_BLOCKS
     intervals = (10, 20) if args.smoke else TABLE2_RESEED_INTERVALS
     if args.plot_only:
         if not series_path.is_file():
             raise SystemExit(f"missing series cache: {series_path}")
         payload = json.loads(series_path.read_text(encoding="utf-8"))
         cells = payload["cells"]
-        horizon = int(payload.get("horizon", horizon))
+        n_blocks = int(payload.get("n_blocks", n_blocks))
     else:
         jobs = [
             _parallel_series.RavivarapuTable2Job(
@@ -147,7 +148,7 @@ def main() -> int:
                 seed=args.seed,
                 checkpoint=str(_common.fig4_checkpoint(variant, args.seed)),
                 reseed_every=n,
-                horizon=horizon,
+                horizon=table2_horizon(n, n_blocks),
                 carrier_hz=INFERENCE_CARRIER_50HZ,
             )
             for variant in VARIANTS
@@ -159,7 +160,7 @@ def main() -> int:
         cells = {f"{r['variant']}_{r['reseed_every']}": r for r in results}
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
         series_path.write_text(
-            json.dumps({"horizon": horizon, "seed": args.seed, "smoke": args.smoke, "cells": cells}, indent=2)
+            json.dumps({"n_blocks": n_blocks, "seed": args.seed, "smoke": args.smoke, "cells": cells}, indent=2)
             + "\n"
         )
 
@@ -183,13 +184,14 @@ def main() -> int:
     }
     caption = (
         f"Table II avg PSD (×1000 normalized) with the plant reseeded every n steps; "
-        f"seed {args.seed}, {horizon}-step argmax rollout @ 50 Hz on the Fig 4 checkpoints; "
+        f"plant seeds {args.seed}–{args.seed + n_blocks - 1} once per n ({n_blocks} blocks of n steps), "
+        f"argmax rollout @ 50 Hz on the Fig 4 checkpoints; "
         f"pass={gates.get('pass')}; bars ours, dashes paper."
     )
     manifest = {
         "panel": "table2",
         "carrier_hz": INFERENCE_CARRIER_50HZ,
-        "horizon": horizon,
+        "n_blocks": n_blocks,
         "intervals": list(intervals),
         "png": _figure_promote.repo_rel_posix(png_path),
         "png_version": png_version,

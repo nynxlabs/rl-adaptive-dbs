@@ -153,13 +153,20 @@ def evaluate_ablation_steps(
 
 # Table II (paper §V.B): "changing the environment seed every n ∈ {10, 20, 50,
 # 75} step". Convention (paper silent on the rest — replication.md §14.13):
-# one deterministic rollout of TABLE2_HORIZON_STEPS steps (the least common
-# multiple of the four intervals, so every n sees whole blocks); every n steps
-# the plant is reset with the next seed (cfg.seed, cfg.seed + 1, …), which also
-# re-prefills the Eq. (5) window with that seed's untreated level. Avg PSD is
-# the mean Eq. (5) observation over all steps.
+# one deterministic rollout of TABLE2_N_BLOCKS blocks of n steps; at the start of
+# each block the plant is reset with the next seed (cfg.seed, cfg.seed + 1, …),
+# which also re-prefills the Eq. (5) window with that seed's untreated level.
+# Every n visits the same TABLE2_N_BLOCKS plant seeds: the full-stimulation
+# floor varies 221–479 across seeds 0–29, so a fixed horizon (300 steps until
+# oct 17 2026: seeds 0–3 for n = 75, 0–29 for n = 10) made the n trend mostly a
+# seed-pool effect. Avg PSD is the mean Eq. (5) observation over all steps.
 TABLE2_RESEED_INTERVALS = (10, 20, 50, 75)
-TABLE2_HORIZON_STEPS = 300
+TABLE2_N_BLOCKS = 30
+
+
+def table2_horizon(reseed_every: int, n_blocks: int = TABLE2_N_BLOCKS) -> int:
+    """Steps in the Table II rollout for one interval (``n_blocks`` seeds of ``n`` steps)."""
+    return int(n_blocks) * int(reseed_every)
 
 
 def evaluate_reseeded(
@@ -168,14 +175,19 @@ def evaluate_reseeded(
     reseed_every: int,
     config: SEADBSConfig | None = None,
     plant: Any | None = None,
-    horizon: int = TABLE2_HORIZON_STEPS,
+    horizon: int | None = None,
     carrier_hz: float | None = None,
 ) -> dict[str, Any]:
-    """Argmax rollout with the plant reseeded every ``reseed_every`` steps (Table II)."""
+    """Argmax rollout with the plant reseeded every ``reseed_every`` steps (Table II).
+
+    ``horizon`` defaults to ``table2_horizon(reseed_every)``.
+    """
     from controllers.sea_dbs.reward import sea_dbs_reward
 
     n = int(reseed_every)
-    if n <= 0 or int(horizon) % n:
+    if horizon is None:
+        horizon = table2_horizon(n) if n > 0 else 0
+    if n <= 0 or int(horizon) <= 0 or int(horizon) % n:
         raise ValueError(f"horizon {horizon} must be a positive multiple of reseed_every {n}")
     device = (config or SEADBSConfig()).device
     payload = load_checkpoint(checkpoint, device=device)
