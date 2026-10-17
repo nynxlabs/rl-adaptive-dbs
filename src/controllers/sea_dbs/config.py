@@ -126,8 +126,10 @@ class SEADBSConfig:
 
     # Plant / DBS carrier (§14.10)
     carrier_hz: float = DEFAULT_CARRIER_HZ
-    # Integrator grid (PlantConfig.dt_ms); used to build the STN drive trace grid.
-    plant_dt_ms: float = 0.01
+    # Plant integration step (PlantConfig.dt_ms) and STN drive grid. §V.A: "integrated at
+    # a resolution of 0.02 ms". Checkpoints from before oct 17 2026 stored 0.01 (the
+    # Kumaravelu reference step) and evaluate at that step.
+    plant_dt_ms: float = 0.02
     # Stim action = carrier pulse train for this many ms of the step's plant
     # window. ``None`` = the whole window (default).
     dbs_burst_ms: float | None = None
