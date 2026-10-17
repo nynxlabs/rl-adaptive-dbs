@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from rl_adaptive_dbs import panel_cli
 
 FLAGS = {
@@ -50,3 +52,17 @@ def test_explicit_output_flag_wins_and_promote_run_publishes() -> None:
 def test_config_diff() -> None:
     assert panel_cli.config_diff({"a": 1, "b": 2}, {"a": 1, "b": 3}) == {"b": 3}
     assert panel_cli.config_diff(None, {"a": 1}) == {}
+
+
+def test_launch_argv_adds_a_log_window_for_pounce(monkeypatch) -> None:
+    monkeypatch.setattr(panel_cli.shutil, "which", lambda name: "/usr/bin/" + name if name == "tmux" else None)
+    argv = panel_cli._launch_argv("nguyen-4-main", ["python", "x.py"], Path("/repo/logs/nguyen-4-main.log"))
+    assert argv[:9] == ["tmux", "-L", "nguyen-4-main", "new-session", "-d", "-s", "nguyen-4-main", "-n", "run"]
+    assert "setsid nohup nice -n 10 python x.py < /dev/null" in argv[9]
+    window = argv[argv.index("new-window") :]
+    assert window[:5] == ["new-window", "-t", "=nguyen-4-main:", "-n", "log"]
+    assert "tail -n +1 -F --pid=" in window[5] and "/repo/logs/nguyen-4-main.log" in window[5]
+    assert ["@pounce_readonly", "on"] == argv[argv.index("@pounce_readonly") : argv.index("@pounce_readonly") + 2]
+    assert argv[-1] == "rl-dbs · nguyen-4-main"
+    # Without a log there is no log window.
+    assert "new-window" not in panel_cli._launch_argv("s", ["python", "x.py"])
