@@ -149,11 +149,16 @@ NGUYEN_GATE_GROUPS: dict[str, dict[str, list[tuple[str, str]]]] = {
 
 NGUYEN_GATE_ROWS: dict[str, list[tuple[str, str]]] = {
     "3": [
-        ("ordering_pd_on_above_pd_off", "PD On above PD Off"),
-        ("threshold_near_pd_on_q1", "threshold near PD On Q1 (informational)"),
-        ("paper_ordering_pd_on_above_pd_off", "digitization — ordering"),
-        ("paper_mean_ratio_near_paper_readout", "digitization — mean ratio (no curves_fig3 yet)"),
-        ("paper_means_separated", "digitization — means separated (logged)"),
+        ("ordering_pd_on_above_pd_off", "PD On median above PD Off median"),
+        ("paper_pd_off_q1_near_paper", "digitization — PD Off Q1 within ±10% of paper"),
+        ("paper_pd_off_median_near_paper", "digitization — PD Off median within ±10% of paper"),
+        ("paper_pd_off_q3_near_paper", "digitization — PD Off Q3 within ±10% of paper"),
+        ("paper_pd_off_mean_near_paper", "digitization — PD Off mean within ±10% of paper"),
+        ("paper_pd_on_q1_near_paper", "digitization — PD On Q1 within ±10% of paper"),
+        ("paper_pd_on_median_near_paper", "digitization — PD On median within ±10% of paper"),
+        ("paper_pd_on_q3_near_paper", "digitization — PD On Q3 within ±10% of paper"),
+        ("paper_pd_on_mean_near_paper", "digitization — PD On mean within ±10% of paper"),
+        ("paper_pd_off_q1_marginally_above_theta", "PD Off Q1 in (150, 187.5] — §IV: Q1 \"marginally higher than 150\" (paper 167.8)"),
     ],
     "5": [
         ("shared_train", "Fig 4 passed + same n_episodes"),

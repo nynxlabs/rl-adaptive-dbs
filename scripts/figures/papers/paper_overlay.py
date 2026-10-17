@@ -497,10 +497,8 @@ def overlay_smoothed_raw_axis(
 
 # --- Nguyen ---
 
-# Fig 3 is scatter/boxplot — no refined ``curves_fig3`` yet. Overlay the same
-# documented paper mean readouts used by ``nguyen_gates.fig3_gates`` (~215 / ~295).
-NGUYEN_FIG3_PD_OFF_MEAN = 215.0
-NGUYEN_FIG3_PD_ON_MEAN = 295.0
+# Fig 3 is scatter/boxplot: overlay the digitized paper box statistics and mean lines
+# (``curves_fig3_boxplot.json``) used by ``nguyen_gates.fig3_gates``.
 # Match ``nguyen/3/plot.py`` replication mean-line colors (not lightened).
 NGUYEN_FIG3_MEAN_OFF = "#d62728"
 NGUYEN_FIG3_MEAN_ON = "#000000"
@@ -515,43 +513,33 @@ def overlay_nguyen_fig3(
     box_positions: tuple[float, float] = (1.0, 2.0),
     box_width: float = 0.5,
 ) -> dict[str, float]:
-    """Draw documented paper means: full-width on scatter (a), per-box on box (b)."""
-    means = {
-        "pd_off": NGUYEN_FIG3_PD_OFF_MEAN,
-        "pd_on": NGUYEN_FIG3_PD_ON_MEAN,
+    """Paper means full-width on scatter (a); paper box (Q1–Q3, median, caps) dashed on (b)."""
+    paper = _nguyen_gates.fig3_paper_boxplot()
+    means = {group: float(paper[group]["mean"]) for group in ("pd_off", "pd_on")}
+    dashed = {
+        "linestyle": (0, (5.0, 2.5)),
+        "linewidth": PAPER_LINEWIDTH,
+        "alpha": 0.95,
+        "zorder": PAPER_ZORDER,
     }
-    scatter_specs = (
-        (means["pd_off"], mean_off_color),
-        (means["pd_on"], mean_on_color),
-    )
-    for y, color in scatter_specs:
-        ax_scatter.axhline(
-            y,
-            color=color,
-            linestyle=(0, (5.0, 2.5)),
-            linewidth=PAPER_LINEWIDTH,
-            alpha=0.95,
-            zorder=PAPER_ZORDER,
-            label="_nolegend_",
-        )
+    for group, color in (("pd_off", mean_off_color), ("pd_on", mean_on_color)):
+        ax_scatter.axhline(means[group], color=color, label="_nolegend_", **dashed)
     if ax_box is not None:
         half = box_width / 2.0
-        off_x, on_x = box_positions
-        box_specs = (
-            (means["pd_off"], mean_off_color, off_x),
-            (means["pd_on"], mean_on_color, on_x),
-        )
-        for y, color, x_center in box_specs:
+        for group, x_center in zip(("pd_off", "pd_on"), box_positions):
+            st = paper[group]
+            x0, x1 = x_center - half, x_center + half
             ax_box.plot(
-                [x_center - half, x_center + half],
-                [y, y],
-                color=color,
-                linestyle=(0, (5.0, 2.5)),
-                linewidth=PAPER_LINEWIDTH,
-                alpha=0.95,
-                zorder=PAPER_ZORDER,
-                solid_capstyle="butt",
+                [x0, x1, x1, x0, x0],
+                [st["q1"], st["q1"], st["q3"], st["q3"], st["q1"]],
+                color=PAPER_CONDENSED_LEGEND_COLOR,
+                **dashed,
             )
+            ax_box.plot([x0, x1], [st["median"], st["median"]], color=PAPER_CONDENSED_LEGEND_COLOR, **dashed)
+            for lo, hi in ((st["whisker_low"], st["q1"]), (st["q3"], st["whisker_high"])):
+                ax_box.plot([x_center, x_center], [lo, hi], color=PAPER_CONDENSED_LEGEND_COLOR, **dashed)
+            for y in (st["whisker_low"], st["whisker_high"]):
+                ax_box.plot([x_center - half / 2, x_center + half / 2], [y, y], color=PAPER_CONDENSED_LEGEND_COLOR, **dashed)
     add_condensed_paper_legend(ax_scatter)
     return means
 
