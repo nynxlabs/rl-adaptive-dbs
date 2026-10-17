@@ -1,7 +1,8 @@
 """Nguyen et al. environment adapter (100 ms steps, spike obs, α–β feedback).
 
-Ternary DBS sensitivities (``SNNConfig`` defaults, replication.md §4.2):
-amplitude **10** nA/cm², frequency **5** Hz, pulse width **0.05** ms per ``+1`` action.
+Ternary DBS step sizes come from ``SNNConfig`` (``*_sensitivity``). The Fig 4–7 recipe
+(``fig4_nguyen_config``) uses amplitude 5 nA/cm², frequency 5 Hz and pulse width 0.1 ms per
+``+1`` action; the dataclass defaults differ (docs/controllers/snn/replication.md §12.2).
 """
 
 from __future__ import annotations
