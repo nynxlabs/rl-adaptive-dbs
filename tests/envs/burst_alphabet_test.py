@@ -34,3 +34,16 @@ def test_legacy_layout_unchanged() -> None:
     assert legacy.n_actions == 41
     assert len(_onsets(legacy.idbs_for_pattern(1))) == 77
     np.testing.assert_array_equal(legacy.idbs_for_pattern(21), legacy.idbs_for_pattern(1))
+
+
+def test_curated_menus_hold_the_rate_and_drop_beta_bursts() -> None:
+    from envs.mehregan.pattern_alternatives import CuratedPatternAlphabet
+
+    full = CuratedPatternAlphabet(mean_hz=45.0)
+    nobeta = CuratedPatternAlphabet(mean_hz=45.0, exclude_beta_bursts=True, n_random=20)
+    assert full.n_actions == 21
+    assert nobeta.n_actions == 1 + 12 + 20  # sizes 2 / 3 (22.5 / 15 Hz bursts) dropped
+    for alphabet in (full, nobeta):
+        counts = {len(_onsets(alphabet.idbs_for_pattern(i))) for i in range(alphabet.n_actions)}
+        assert counts == {90}
+    np.testing.assert_array_equal(full.idbs_for_pattern(5), BurstPatternAlphabet(mean_hz=45.0).idbs_for_pattern(5))

@@ -670,3 +670,94 @@ class ContinuousFrequencyAlphabet:
             idbs=self.idbs_for_pattern(int(action)),
             mean_hz=hz,
         )
+
+
+@lru_cache(maxsize=None)
+def _build_random_exact_idbs(
+    *,
+    index: int,
+    mean_hz: float,
+    step_duration_s: float,
+    dt_ms: float,
+    pulse_width_ms: float,
+    amplitude: float,
+) -> np.ndarray:
+    """Exactly ``mean_hz * step`` pulses at distinct random 1-ms slots (seeded by index)."""
+    n_steps = _grid_steps(step_duration_s=step_duration_s, dt_ms=dt_ms)
+    pulse_len = int(round(pulse_width_ms / dt_ms))
+    n_pulses = exact_pulse_count(mean_hz=mean_hz, step_duration_s=step_duration_s)
+    n_slots = int(round(step_duration_s * 1000.0)) - 1
+    rng = np.random.default_rng([int(round(mean_hz * 100)), index, 4242])
+    slots = np.sort(rng.choice(n_slots, size=n_pulses, replace=False))
+    onsets = (slots * int(round(1.0 / dt_ms))).astype(np.int64)
+    return _trace_from_onsets(onsets, n_steps=n_steps, pulse_len=pulse_len, amplitude=amplitude)
+
+
+@dataclass(frozen=True)
+class CuratedPatternAlphabet:
+    """Candidate menus built from the exact-rate burst menu (paper-silent construction).
+
+    Patterns: the regular train (index 0), the exact-rate bursts — minus, with
+    ``exclude_beta_bursts``, every burst size whose repetition rate
+    ``mean_hz / size`` falls in ``beta_band_hz`` (doublets / triplets at 45 Hz
+    repeat at 22.5 / 15 Hz) — then ``n_random`` random rate-matched placements.
+    """
+
+    mean_hz: float
+    step_duration_s: float = 2.0
+    dt_ms: float = 0.02
+    exclude_beta_bursts: bool = False
+    n_random: int = 0
+    beta_band_hz: tuple[float, float] = (13.0, 35.0)
+    pulse_width_ms: float = DBS_PULSE_WIDTH_MS
+    amplitude: float = DBS_AMPLITUDE_NA_PER_CM2
+
+    def _specs(self) -> tuple[tuple[str, int], ...]:
+        specs: list[tuple[str, int]] = [("burst", 0)]
+        lo, hi = self.beta_band_hz
+        for v in range(len(BURST_SIZES) * len(BURST_RATES_HZ)):
+            size = BURST_SIZES[v % len(BURST_SIZES)]
+            if self.exclude_beta_bursts and lo <= self.mean_hz / size <= hi:
+                continue
+            specs.append(("burst", v + 1))
+        specs.extend(("random", k) for k in range(self.n_random))
+        return tuple(specs)
+
+    @property
+    def n_actions(self) -> int:
+        return len(self._specs())
+
+    def idbs_for_pattern(self, index: int) -> np.ndarray:
+        specs = self._specs()
+        if index < 0 or index >= len(specs):
+            msg = f"pattern index {index} outside [0, {len(specs)})"
+            raise ValueError(msg)
+        kind, k = specs[index]
+        builder = _build_exact_burst_idbs if kind == "burst" else _build_random_exact_idbs
+        return builder(
+            index=k,
+            mean_hz=self.mean_hz,
+            step_duration_s=self.step_duration_s,
+            dt_ms=self.dt_ms,
+            pulse_width_ms=self.pulse_width_ms,
+            amplitude=self.amplitude,
+        )
+
+    def idbs_for_action(self, action: int) -> np.ndarray:
+        return self.idbs_for_pattern(int(action))
+
+    def to_dbs_spec(self, action: int) -> DbsSpec:
+        return DbsSpec(
+            pick_dbs_freq=DbsSpec.from_frequency_hz(self.mean_hz).pick_dbs_freq,
+            idbs=self.idbs_for_action(int(action)),
+            mean_hz=self.mean_hz,
+        )
+
+    def action_for_dbs_spec(self, spec: DbsSpec) -> int:
+        return self.action_for_frequency_hz(spec.frequency_hz)
+
+    def action_for_frequency_hz(self, hz: float) -> int:
+        if abs(float(hz) - self.mean_hz) < 1e-6:
+            return 0
+        msg = f"frequency {hz} Hz has no pattern (mean_hz={self.mean_hz})"
+        raise ValueError(msg)

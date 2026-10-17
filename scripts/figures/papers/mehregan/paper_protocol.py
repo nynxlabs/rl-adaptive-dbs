@@ -55,7 +55,7 @@ from controllers.ddpg.trainer import DDPGTrainer
 from envs.mehregan.config import MehreganEnvConfig
 from envs.mehregan.env import MehreganEnv
 from envs.mehregan.fixed_mean_patterns import FixedMeanPatternAlphabet
-from envs.mehregan.pattern_alternatives import BurstPatternAlphabet
+from envs.mehregan.pattern_alternatives import BurstPatternAlphabet, CuratedPatternAlphabet
 from envs.plant.config import PlantConfig
 from envs.plant.dbs import DbsSpec
 from envs.plant.python_backend import PythonPlant
@@ -95,7 +95,7 @@ ONSET_DISPLAY_S = 2.0
 SAMPLE_S = 0.2
 WINDOW_S = 2.0
 
-ALPHABETS = ("burst", "burst_legacy", "jitter")
+ALPHABETS = ("burst", "burst_legacy", "burst_nobeta", "burst_nobeta_rand20", "burst_rand20", "jitter")
 
 
 def _log(msg: str) -> None:
@@ -177,6 +177,15 @@ def apply_overrides(knobs: PaperKnobs, pairs: list[str] | None) -> PaperKnobs:
 def make_alphabet(mean_hz: float, knobs: PaperKnobs) -> Any:
     if knobs.alphabet == "burst":
         return BurstPatternAlphabet(mean_hz=mean_hz, step_duration_s=STEP_S, dt_ms=PAPER_DT_MS)
+    if knobs.alphabet in ("burst_nobeta", "burst_nobeta_rand20", "burst_rand20"):
+        # Candidate menus (paper-silent construction; see author_questions Mehregan).
+        return CuratedPatternAlphabet(
+            mean_hz=mean_hz,
+            step_duration_s=STEP_S,
+            dt_ms=PAPER_DT_MS,
+            exclude_beta_bursts="nobeta" in knobs.alphabet,
+            n_random=20 if "rand20" in knobs.alphabet else 0,
+        )
     if knobs.alphabet == "burst_legacy":
         return BurstPatternAlphabet(
             mean_hz=mean_hz,
