@@ -19,6 +19,9 @@ class MehreganEnvConfig:
     max_episode_steps: int = 30
     beta_threshold: float = 0.35
     reward_scale: float = 10.0
+    # Below beta_t: "square" = Fig. 3c's plotted curve +((beta_t - s)*10)^2;
+    # "linear" = printed Eq. (8) branch with its sign flipped (envs/mehregan/reward.py).
+    reward_below_threshold: str = "square"
     # Raw $P_\\beta$ is ~400–500 without stimulation (Mehregan Fig. 4); Fig. 3c uses $\\beta_t=0.35$.
     observation_scale: float = 1000.0
     state_length: int = 1  # paper original; state_length > 1 requires obs preprocessing (TASK-67)
