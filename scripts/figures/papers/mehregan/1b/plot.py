@@ -16,6 +16,12 @@ Run:
 Plant PSD only — no RL training; checkpoint resume is not applicable.
   uv run python scripts/figures/papers/mehregan/1b/plot.py --plot-only --y-max 90
   uv run python scripts/figures/papers/mehregan/1b/plot.py --seeds 0,1,7,42,99
+
+Candidate readings (undocumented in the paper; off by default, recorded in the manifest
+as ``candidate``): ``--dt-ms`` (integration step), ``--transient-s`` (drop the start of
+each record before the PSD), ``--signal gpi_voltage`` (PSD of the mean GPi membrane
+potential instead of spike trains). Seed count and duration are already flags
+(``--seeds``, ``--duration-s``).
 """
 from __future__ import annotations
 
@@ -27,12 +33,13 @@ import argparse
 import json
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.signal.windows import dpss
 
 from envs.plant import DbsSpec, PlantConfig, PythonPlant
 from envs.plant.biomarkers import SpectrumParams, multitaper_psd_point_process, p_beta
@@ -56,6 +63,7 @@ OUT_STEM = "gpi_psd"  # versioned as gpi_psd_vN.png; promote ships gpi_psd.png
 DEFAULT_MANIFEST = FIGURE_DIR / "manifest.json"
 DEFAULT_DURATION_S = 10.0
 DEFAULT_SEEDS: tuple[int, ...] = tuple(range(10))
+SIGNALS: tuple[str, ...] = ("spikes", "gpi_voltage")
 
 # Paper-style light figure (Fig 1b is a qualitative PSD comparison panel).
 STYLE = {
@@ -141,12 +149,80 @@ def mean_gpi_psd(
     return freqs, np.mean(np.vstack(psds), axis=0)
 
 
+def _conditions_for(dt_ms: float | None) -> tuple[Condition, ...]:
+    """Panel conditions, optionally with a different integration step (candidate reading)."""
+    if dt_ms is None:
+        return CONDITIONS
+    return tuple(replace(c, config=replace(c.config, dt_ms=dt_ms)) for c in CONDITIONS)
+
+
+def _drop_transient_spikes(gpi_spikes: list[np.ndarray], transient_s: float) -> list[np.ndarray]:
+    """Drop spikes before ``transient_s`` and shift the rest to start at 0 (candidate reading)."""
+    if transient_s <= 0.0:
+        return gpi_spikes
+    shifted: list[np.ndarray] = []
+    for spikes in gpi_spikes:
+        arr = np.asarray(spikes, dtype=float).reshape(-1)
+        shifted.append(arr[arr >= transient_s] - transient_s)
+    return shifted
+
+
+def multitaper_psd_continuous(
+    signal: np.ndarray,
+    *,
+    fs: float,
+    f_low: float = 1.0,
+    f_high: float = 100.0,
+    time_bandwidth: float = 3.0,
+    n_tapers: int = 5,
+) -> tuple[np.ndarray, np.ndarray]:
+    """One-sided multitaper PSD of a continuous trace (unit-energy DPSS tapers, mean removed).
+
+    Same taper settings as the spike-train estimator (NW = 3, K = 5). Units: signal^2 / Hz.
+    """
+    x = np.asarray(signal, dtype=float).reshape(-1)
+    x = x - float(np.mean(x))
+    tapers = np.asarray(dpss(x.size, time_bandwidth, n_tapers, sym=False), dtype=float)
+    tapers = tapers / np.sqrt(np.sum(tapers**2, axis=1, keepdims=True))
+    spectra = np.fft.rfft(tapers * x[None, :], axis=1)
+    psd = np.mean(np.abs(spectra) ** 2, axis=0) / fs
+    psd[1:] *= 2.0
+    freqs = np.fft.rfftfreq(x.size, d=1.0 / fs)
+    keep = (freqs >= f_low) & (freqs <= f_high)
+    return freqs[keep], psd[keep]
+
+
+def mean_gpi_voltage_psd(
+    vgi: np.ndarray,
+    *,
+    dt_ms: float,
+    transient_s: float,
+    bin_ms: float = 1.0,
+) -> tuple[np.ndarray, np.ndarray]:
+    """PSD of the mean GPi membrane potential (LFP-like candidate reading).
+
+    ``vgi`` is (neurons, steps) in mV. The population mean is block-averaged to
+    ``bin_ms`` (1 kHz, which low-passes the spike peaks), the transient is dropped, and
+    the multitaper PSD is taken over 1–100 Hz.
+    """
+    v = np.asarray(vgi, dtype=float)
+    mean_v = v.mean(axis=0) if v.ndim == 2 else v.reshape(-1)
+    factor = max(1, int(round(bin_ms / dt_ms)))
+    n_bins = mean_v.size // factor
+    binned = mean_v[: n_bins * factor].reshape(n_bins, factor).mean(axis=1)
+    fs = 1000.0 / bin_ms
+    skip = int(round(transient_s * fs))
+    return multitaper_psd_continuous(binned[skip:], fs=fs)
+
+
 def simulate_condition(
     plant: PythonPlant,
     condition: Condition,
     *,
     seeds: tuple[int, ...],
     duration_s: float,
+    signal: str = "spikes",
+    transient_s: float = 0.0,
 ) -> dict[str, Any]:
     plant.config = condition.config
     psd_stack: list[np.ndarray] = []
@@ -164,21 +240,35 @@ def simulate_condition(
     for seed in seeds:
         t_seed0 = time.monotonic()
         print(f"    seed {seed} integrate {duration_s:.1f}s...", file=sys.stderr, flush=True)
-        result = plant.reset(seed=seed).integrate(duration_s, condition.dbs)
+        traces = ("vgi",) if signal == "gpi_voltage" else ()
+        result = plant.reset(seed=seed).integrate(
+            duration_s,
+            condition.dbs,
+            return_traces=traces,
+        )
         seed_elapsed = time.monotonic() - t_seed0
         spike_count = sum(int(np.asarray(s).size) for s in result.gpi_spikes)
-        f, psd = mean_gpi_psd(
-            result.gpi_spikes,
-            dt_ms=plant.config.dt_ms,
-            segment_duration_s=duration_s,
-        )
+        spikes = _drop_transient_spikes(result.gpi_spikes, transient_s)
+        seg_s = duration_s - transient_s
+        if signal == "gpi_voltage":
+            f, psd = mean_gpi_voltage_psd(
+                result.info["traces"]["vgi"],
+                dt_ms=plant.config.dt_ms,
+                transient_s=transient_s,
+            )
+        else:
+            f, psd = mean_gpi_psd(
+                spikes,
+                dt_ms=plant.config.dt_ms,
+                segment_duration_s=seg_s,
+            )
         freqs = f
         psd_stack.append(psd)
         pb = float(
             p_beta(
-                result.gpi_spikes,
+                spikes,
                 dt_ms=plant.config.dt_ms,
-                segment_duration_s=duration_s,
+                segment_duration_s=seg_s,
             ),
         )
         p_beta_by_seed[str(seed)] = pb
@@ -221,6 +311,7 @@ def save_curves(
     *,
     duration_s: float,
     seeds: tuple[int, ...],
+    candidate: dict[str, Any] | None = None,
 ) -> None:
     payload = {
         "figure": "mehregan_fig1b",
@@ -228,6 +319,8 @@ def save_curves(
         "seeds": list(seeds),
         "curves": curves,
     }
+    if candidate is not None:
+        payload["candidate"] = candidate
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2) + "\n")
 
@@ -339,12 +432,36 @@ def main() -> int:
         action="store_true",
         help="After promote, refresh Report 3 gallery image links in the notes folder",
     )
+    parser.add_argument(
+        "--dt-ms",
+        type=float,
+        default=None,
+        help="Candidate reading: integration step for all conditions (default: PlantConfig, 0.01 ms)",
+    )
+    parser.add_argument(
+        "--transient-s",
+        type=float,
+        default=0.0,
+        help="Candidate reading: drop the first N seconds of each seed before the PSD (default: keep all)",
+    )
+    parser.add_argument(
+        "--signal",
+        choices=SIGNALS,
+        default="spikes",
+        help="PSD input: GPi spike trains (default) or the mean GPi membrane potential (candidate reading)",
+    )
     args = parser.parse_args()
     _figure_promote.set_export_notes_images(args.export_notes)
     _figure_promote.set_update_report3(args.update_report)
 
     if args.duration_s <= 0:
         print("--duration-s must be positive", file=sys.stderr)
+        return 2
+    if not 0.0 <= args.transient_s < args.duration_s:
+        print("--transient-s must be >= 0 and shorter than --duration-s", file=sys.stderr)
+        return 2
+    if args.dt_ms is not None and args.dt_ms <= 0:
+        print("--dt-ms must be positive", file=sys.stderr)
         return 2
 
     if args.out is None:
@@ -354,6 +471,7 @@ def main() -> int:
         png_version = _figure_promote.parse_png_version(args.out)
     args.out = _linked_png(args.out)
 
+    candidate: dict[str, Any] | None = None
     if args.plot_only:
         if not args.curves.exists():
             print(f"missing curves cache: {args.curves}", file=sys.stderr)
@@ -362,17 +480,25 @@ def main() -> int:
         curves, cache_meta = load_curves(args.curves)
         duration_s = float(cache_meta.get("duration_s", args.duration_s))
         seeds = tuple(cache_meta.get("seeds", args.seeds))
+        candidate = cache_meta.get("candidate")
         print(f"loaded {len(curves)} curves from {args.curves}", file=sys.stderr)
     else:
         duration_s = args.duration_s
         seeds = args.seeds
+        conditions = _conditions_for(args.dt_ms)
+        candidate = {
+            "dt_ms": conditions[0].config.dt_ms,
+            "transient_s": args.transient_s,
+            "signal": args.signal,
+        }
         curves = []
         with PythonPlant() as plant:
             t_total0 = time.monotonic()
-            for condition in CONDITIONS:
+            for condition in conditions:
                 print(
                     f"simulating {condition.key} ({duration_s:.1f} s, "
-                    f"{len(seeds)} seeds)...",
+                    f"{len(seeds)} seeds, signal={args.signal}, "
+                    f"transient={args.transient_s:.1f} s)...",
                     file=sys.stderr,
                     flush=True,
                 )
@@ -382,15 +508,23 @@ def main() -> int:
                         condition,
                         seeds=seeds,
                         duration_s=duration_s,
+                        signal=args.signal,
+                        transient_s=args.transient_s,
                     ),
                 )
             total_elapsed = time.monotonic() - t_total0
             print(
-                f"all {len(CONDITIONS)} conditions done in {total_elapsed:.1f}s",
+                f"all {len(conditions)} conditions done in {total_elapsed:.1f}s",
                 file=sys.stderr,
                 flush=True,
             )
-        save_curves(curves, args.curves, duration_s=duration_s, seeds=seeds)
+        save_curves(
+            curves,
+            args.curves,
+            duration_s=duration_s,
+            seeds=seeds,
+            candidate=candidate,
+        )
         print(f"wrote curves cache {args.curves}", file=sys.stderr)
 
     title = "Oscillatory activity of model neurons in the GPi"
@@ -413,6 +547,7 @@ def main() -> int:
         "png_version": png_version,
         "duration_s": duration_s,
         "seeds": list(seeds),
+        "candidate": candidate,
         "curves_cache": str(args.curves),
         "plot_only": args.plot_only,
         "panel": panel,
