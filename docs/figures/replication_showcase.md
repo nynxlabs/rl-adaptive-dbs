@@ -4,7 +4,7 @@ This is a short, visual summary of my **qualitative replications** of three adap
 
 I built these from the paper text and figures. Mehregan and Ravivarapu have no released training or environment source; for Nguyen, where the ISCAS paper is silent I follow the same group's June 2026 follow-up paper (its published training loop and hyperparameters) and the code released with it (the Fig. 7 evaluation reset window). The shared dynamics use the **Kumaravelu et al. (2016)** cortex-basal ganglia-thalamus model. Full run commands, manifests, and internal gates live in the per-paper trackers: [Mehregan](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/figures/mehregan/replications.md), [Nguyen](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/figures/nguyen/replications.md), [Ravivarapu](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/figures/ravivarapu/replications.md).
 
-**Status:** Mehregan 9/9 and Ravivarapu 6/6 as of October 2, 2026; Nguyen 4/5 as of October 13, 2026 (Fig. 7 passes 13 of its 14 gates). The per-paper trackers have the current gates.
+**Status (October 14, 2026):** Mehregan 7/9 (Fig. 6a and 6b fail on QAT), Ravivarapu 0/7, Nguyen 4/5 (Fig. 7 passes 13 of its 14 gates). The October 12–14 gate audits withdrew the earlier Ravivarapu passes and the Mehregan Fig. 6 passes: they rested on mechanisms the papers don't describe or on gates that were too loose. The per-paper trackers have the current gates.
 
 ---
 
@@ -19,19 +19,20 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 | Mehregan | **Fig. 4b** | Training curves: reward and episode-mean beta vs episode | Pass |
 | Mehregan | **Fig. 5a** | Trained policy vs periodic stimulation @ 45 Hz | Pass |
 | Mehregan | **Fig. 5b** | Trained policy vs periodic stimulation @ 30 Hz | Pass |
-| Mehregan | **Fig. 6a** | Quantized policies (PTQ / QAT) @ 45 Hz | Pass |
-| Mehregan | **Fig. 6b** | Quantized policies (PTQ / QAT) @ 30 Hz | Pass |
+| Mehregan | **Fig. 6a** | Quantized policies (PTQ / QAT) @ 45 Hz | Fail (QAT) |
+| Mehregan | **Fig. 6b** | Quantized policies (PTQ / QAT) @ 30 Hz | Fail (QAT) |
 | Nguyen | **Fig. 3** | GPi α–β power distribution, PD vs healthy | Pass |
 | Nguyen | **Fig. 4** | Training rewards and episode lengths | Pass |
 | Nguyen | **Fig. 5** | Network spikes and DBS energy over training | Pass |
 | Nguyen | **Fig. 6** | α–β and DBS parameters over training | Pass |
 | Nguyen | **Fig. 7** | 50-episode evaluation of the trained policy | Open (13 of 14 gates) |
-| Ravivarapu | **Fig. 4a** | Training beta PSD vs episode, Baseline vs SEA-DBS | Pass |
-| Ravivarapu | **Fig. 4b** | Training reward vs episode, Baseline vs SEA-DBS | Pass |
-| Ravivarapu | **Fig. 5a** | Inference @ 50 Hz carrier | Pass |
-| Ravivarapu | **Fig. 5b** | Inference @ 30 Hz carrier | Pass |
-| Ravivarapu | **Fig. 6** | FP16 post-training quantization @ 50 Hz | Pass |
-| Ravivarapu | **Fig. 7** | Ablation: Baseline / +PM / +GS / SEA-DBS | Pass |
+| Ravivarapu | **Fig. 4a** | Training beta PSD vs episode, Baseline vs SEA-DBS | Fail (15 of 28 gates) |
+| Ravivarapu | **Fig. 4b** | Training reward vs episode, Baseline vs SEA-DBS | Fail (11 of 20 gates) |
+| Ravivarapu | **Fig. 5a** | Inference @ 50 Hz carrier | Fail (13 of 20 gates) |
+| Ravivarapu | **Fig. 5b** | Inference @ 30 Hz carrier | Fail (6 of 22 gates) |
+| Ravivarapu | **Fig. 6** | FP16 post-training quantization @ 50 Hz | Fail (10 of 15 gates) |
+| Ravivarapu | **Fig. 7** | Ablation: Baseline / +PM / +GS / SEA-DBS | Fail (7 of 17 gates) |
+| Ravivarapu | **Table II** | Average PSD with the plant reseeded every n steps | Fail (2 of 6 gates) |
 
 **Terms used below:** *GPi* is the globus pallidus internus, the output nucleus where the beta-band (13–35 Hz) biomarker is measured. *cDBS* is conventional continuous 130 Hz stimulation. *PTQ* / *QAT* are post-training quantization and quantization-aware training (shrinking the controller network to lower-precision numbers).
 
@@ -91,9 +92,9 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper | My replication |
 |:-----:|:---------------:|
-| ![Paper Fig. 4a](../../figures/mehregan/images/4a/paper.png) | ![Replication Fig. 4a](../../figures/mehregan/images/4a/training_beta_v40.png) |
+| ![Paper Fig. 4a](../../figures/mehregan/images/4a/paper.png) | ![Replication Fig. 4a](../../figures/mehregan/images/4a/training_beta_v42.png) |
 
-**Notes:** Seed 0, 300 steps (10 episodes x 30 steps), fixed-mean pulse-pattern action space, softmax exploration with one-hot critic input. Displayed with a centered 8-step moving average. The first-episode mean matches the paper closely (0.505 vs 0.507); my drop is somewhat larger than the paper's.
+**Notes:** Seed 0, 300 steps (10 episodes x 30 steps), fixed-mean pulse-pattern action space, trained with the paper's Algorithm 1 as written. Raw per-step trace, no display smoothing. The first-episode mean is 0.444 vs the paper's 0.507 (0.43–0.55 across seeds); the late level is 0.365 vs 0.380.
 
 ---
 
@@ -101,13 +102,13 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 **Paper claim:** Over **9 episodes** (indices 0-8), **total reward rises** toward zero while **episode-mean beta power falls**, the inverse relationship expected from the reward definition.
 
-**What I checked:** Paired with the Fig. 4a training run: reward trend up, episode-mean PSD trend down, and the timing of the rise. Same stacked layout as the paper (reward top, PSD bottom).
+**What I checked:** Paired with the Fig. 4a training run: reward trend up, episode-mean PSD trend down, and the timing of the rise. Reward and PSD are plotted as two panels.
 
 | Paper | My replication |
 |:-----:|:---------------:|
-| ![Paper Fig. 4b](../../figures/mehregan/images/4b/paper.png) | ![Replication Fig. 4b](../../figures/mehregan/images/4b/training_fig4b_v47.png) |
+| ![Paper Fig. 4b](../../figures/mehregan/images/4b/paper.png) | ![Replication Fig. 4b reward](../../figures/mehregan/images/4b/training_reward_v49.png) ![Replication Fig. 4b PSD](../../figures/mehregan/images/4b/training_psd_v49.png) |
 
-**Notes:** Same seed-0 training run as Fig. 4a. Episode-mean PSD falls from about 0.50 to 0.31 while reward climbs past zero. The paper does not report the training RNG seed; different seeds change wiggles and levels. I compare **trends**, not pointwise values.
+**Notes:** Same seed-0 training run as Fig. 4a. Episode-mean PSD falls from 0.444 to about 0.35 (paper: 0.498 to 0.368) while reward climbs from −81 to about zero (paper: −81 to −2.4). The paper does not report the training RNG seed; different seeds change wiggles and levels. I compare **trends**, not pointwise values.
 
 <div style="page-break-after: always;"></div>
 
@@ -119,9 +120,9 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper | My replication |
 |:-----:|:---------------:|
-| ![Paper Fig. 5a](../../figures/mehregan/images/5a/paper.png) | ![Replication Fig. 5a](../../figures/mehregan/images/5a/efficacy_45hz_v23.png) |
+| ![Paper Fig. 5a](../../figures/mehregan/images/5a/paper.png) | ![Replication Fig. 5a](../../figures/mehregan/images/5a/efficacy_45hz_v24.png) |
 
-**Notes:** Uses an action space of 40 irregular patterns (the regular pattern is excluded from training) and the same trailing-window biomarker sampling as Fig. 2a. Seed 0.
+**Notes:** Evaluates the Fig. 4a checkpoint, the paper's one 45 Hz model, with the same trailing-window biomarker sampling as Fig. 2a. Seed 0. The policy settles on a burst pattern; late means: trained 339, periodic 45 Hz 299, no stimulation 486, 130 Hz cDBS 169.
 
 ---
 
@@ -133,7 +134,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper | My replication |
 |:-----:|:---------------:|
-| ![Paper Fig. 5b](../../figures/mehregan/images/5b/paper.png) | ![Replication Fig. 5b](../../figures/mehregan/images/5b/efficacy_30hz_v23.png) |
+| ![Paper Fig. 5b](../../figures/mehregan/images/5b/paper.png) | ![Replication Fig. 5b](../../figures/mehregan/images/5b/efficacy_30hz_v25.png) |
 
 **Notes:** Trained with a burst-pattern alphabet (seed 0). The learned policy settles on a single constant pattern that happens to be a strong open-loop beta suppressor; that still satisfies this panel, but it is not the adaptive behavior the paper implies.
 
@@ -147,9 +148,9 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper | My replication |
 |:-----:|:---------------:|
-| ![Paper Fig. 6a](../../figures/mehregan/images/6a/paper.png) | ![Replication Fig. 6a](../../figures/mehregan/images/6a/ptq_qat_45hz_v61.png) |
+| ![Paper Fig. 6a](../../figures/mehregan/images/6a/paper.png) | ![Replication Fig. 6a](../../figures/mehregan/images/6a/ptq_qat_45hz_v69.png) |
 
-**Notes:** Honest evaluation (no display stylization). The quantized policies don't always pick the same action as fp32, but they land at similar suppressed levels.
+**Status:** Fail. fp32 and both PTQ policies reach the same suppressed level and pass every fp32 / PTQ gate. QAT fails: over 15 training seeds most QAT policies suppress beta instead of staying high, because 10 episodes of int8 QAT don't converge on this action space. Details in the [Mehregan tracker](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/figures/mehregan/replications.md).
 
 ---
 
@@ -161,7 +162,9 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper | My replication |
 |:-----:|:---------------:|
-| ![Paper Fig. 6b](../../figures/mehregan/images/6b/paper.png) | ![Replication Fig. 6b](../../figures/mehregan/images/6b/ptq_qat_30hz_v40.png) |
+| ![Paper Fig. 6b](../../figures/mehregan/images/6b/paper.png) | ![Replication Fig. 6b](../../figures/mehregan/images/6b/ptq_qat_30hz_v47.png) |
+
+**Status:** Fail on QAT, for the same reason as Fig. 6a; fp32 and PTQ pass.
 
 <div style="page-break-after: always;"></div>
 
@@ -243,6 +246,8 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 **Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson's Disease (SEA-DBS).** An actor-critic that picks binary pulse actions every 2 ms, adding a **predictive reward model (PM)** and **Gumbel-Softmax exploration (GS)** on top of a DDPG baseline.
 
+**Status: every Ravivarapu panel currently fails.** The earlier passes rested on mechanisms the paper doesn't describe (scheduled actor boosts, per-variant plants and learning rates, hand-picked eval seeds, loosened gates), which were removed in October 2026. With one training config as the paper specifies, two root causes dominate: Eq. (7) has no stimulation cost, so every variant learns to stimulate on every step and their rollouts coincide; and on the Kumaravelu model, 30 Hz stimulation raises beta. The [Ravivarapu tracker](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/figures/ravivarapu/replications.md) lists all five root causes and every gate. The images below are the current, failing replications.
+
 ## Fig. 4a: Training beta PSD vs episode
 
 **Paper claim:** SEA-DBS shows a **more pronounced and consistent** beta suppression over training episodes; the Baseline declines only modestly.
@@ -251,7 +256,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper | My replication |
 |:-----:|:---------------:|
-| ![Paper Fig. 4a](../../figures/ravivarapu/images/4a/paper.png) | ![Replication Fig. 4a](../../figures/ravivarapu/images/4a/training_psd_v70.png) |
+| ![Paper Fig. 4a](../../figures/ravivarapu/images/4a/paper.png) | ![Replication Fig. 4a](../../figures/ravivarapu/images/4a/training_psd_v82.png) |
 
 **Notes:** Displayed with a 10-episode rolling mean; gates run on the raw per-episode values.
 
@@ -263,7 +268,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper | My replication |
 |:-----:|:---------------:|
-| ![Paper Fig. 4b](../../figures/ravivarapu/images/4b/paper.png) | ![Replication Fig. 4b](../../figures/ravivarapu/images/4b/training_reward_v15.png) |
+| ![Paper Fig. 4b](../../figures/ravivarapu/images/4b/paper.png) | ![Replication Fig. 4b](../../figures/ravivarapu/images/4b/training_reward_v20.png) |
 
 <div style="page-break-after: always;"></div>
 
@@ -275,8 +280,8 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper | My replication |
 |:-----:|:---------------:|
-| ![Paper Fig. 5a](../../figures/ravivarapu/images/5a/paper.png) | ![Replication Fig. 5a](../../figures/ravivarapu/images/5a/inference_50hz_v19.png) |
-| ![Paper Fig. 5b](../../figures/ravivarapu/images/5b/paper.png) | ![Replication Fig. 5b](../../figures/ravivarapu/images/5b/inference_30hz_v19.png) |
+| ![Paper Fig. 5a](../../figures/ravivarapu/images/5a/paper.png) | ![Replication Fig. 5a](../../figures/ravivarapu/images/5a/inference_50hz_v24.png) |
+| ![Paper Fig. 5b](../../figures/ravivarapu/images/5b/paper.png) | ![Replication Fig. 5b](../../figures/ravivarapu/images/5b/inference_30hz_v24.png) |
 
 ---
 
@@ -286,9 +291,9 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper | My replication |
 |:-----:|:---------------:|
-| ![Paper Fig. 6](../../figures/ravivarapu/images/6/paper.png) | ![Replication Fig. 6](../../figures/ravivarapu/images/6/ptq_fp16_50hz_v19.png) |
+| ![Paper Fig. 6](../../figures/ravivarapu/images/6/paper.png) | ![Replication Fig. 6](../../figures/ravivarapu/images/6/ptq_fp16_50hz_v24.png) |
 
-**Notes:** My checkpoint shrinks from about 0.6 MB to 0.3 MB (the paper reports about 65 MB to 33 MB for its larger network); the halving is what matters here.
+**Notes:** The SEA-DBS networks shrink from 52 KB to 26 KB (the paper reports about 65 MB to 33 MB for its larger network); the halving is what matters here.
 
 ---
 
@@ -298,7 +303,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper | My replication |
 |:-----:|:---------------:|
-| ![Paper Fig. 7](../../figures/ravivarapu/images/7/paper.png) | ![Replication Fig. 7](../../figures/ravivarapu/images/7/ablation_psd_v22.png) |
+| ![Paper Fig. 7](../../figures/ravivarapu/images/7/paper.png) | ![Replication Fig. 7](../../figures/ravivarapu/images/7/ablation_psd_v29.png) |
 
 <div style="page-break-after: always;"></div>
 
@@ -332,5 +337,7 @@ Every panel has its own `scripts/figures/papers/<paper>/<panel>/plot.py`; `--plo
 
 | Panel set | Topic | Status |
 |-----------|-------|--------|
+| Ravivarapu Figs. 4a–7, Table II | Variants coincide as always-on policies (no stimulation cost in Eq. (7)); 30 Hz raises beta on our plant | Open — [figures/ravivarapu/replications.md](../../figures/ravivarapu/replications.md) |
+| Mehregan Fig. 6a / 6b | QAT policies suppress beta instead of staying high | Open — [figures/mehregan/replications.md](../../figures/mehregan/replications.md) |
 | Nguyen Fig. 7 | Evaluation start: step 0 reads 197 vs the paper's 153 | Open — [figures/nguyen/replications.md](../../figures/nguyen/replications.md) |
 | Cross-controller benchmarking | All three controllers on the same plant metrics | Planned — [docs/benchmarking.md](../benchmarking.md) |
