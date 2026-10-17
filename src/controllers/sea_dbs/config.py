@@ -43,6 +43,8 @@ ABLATION_EVAL_STEPS: int = 10
 INFERENCE_PSD_SAMPLES: int = ABLATION_EVAL_STEPS + 1
 
 PlantIntegrationMode = Literal["disconnected", "continuous"]
+StepMode = Literal["shot", "trailing"]
+StepPulseMode = Literal["carrier", "per_step"]
 GumbelActionSampling = Literal["relaxed", "hard"]
 CriticActionInput = Literal["one_hot", "logits"]
 
@@ -58,6 +60,19 @@ class SEADBSConfig:
     # the episode IC (Mehregan-style env). ``continuous`` stitches one Kumaravelu
     # trajectory across the episode's steps (PythonPlant only; diagnostic).
     plant_integration_mode: PlantIntegrationMode = "disconnected"
+    # ``shot`` (default): each RL step integrates ``biomarker_window_s`` of plant
+    # (repo convention, replication.md §5). ``trailing``: the paper's §V.A timing —
+    # one continuous simulation per episode, the agent acts every
+    # ``step_duration_ms`` (2 ms), and each step's P_beta comes from the GPi spikes
+    # of the last ``trailing_window_s`` (paper-silent; a convention). Reset runs an
+    # untreated warm-up so the trailing window and the Eq. (4) window start full.
+    step_mode: StepMode = "shot"
+    trailing_window_s: float = 0.15
+    # What a = 1 delivers in a ``trailing`` step: ``carrier`` gates a phase-continuous
+    # ``carrier_hz`` train (a pulse fires only when one of its onsets falls in a
+    # stimulating step); ``per_step`` delivers one pulse at the start of the step
+    # (Eq. (6): "a_t = 1 corresponds to delivering a DBS pulse"; up to 500 Hz).
+    step_pulse_mode: StepPulseMode = "carrier"
     max_episode_steps: int = MAX_EPISODE_STEPS
     num_episodes: int = TRAIN_EPISODES
 

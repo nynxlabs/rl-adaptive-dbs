@@ -336,3 +336,74 @@ def test_table2_reseed_resets_plant_every_n_steps(tmp_path) -> None:
         out = evaluate_reseeded(ckpt, reseed_every=n, plant=_FakePlant(), config=cfg)
         assert out["block_seeds"] == list(range(3, 3 + TABLE2_N_BLOCKS))
         assert len(out["p_beta_norm"]) == n * TABLE2_N_BLOCKS
+
+
+def _trailing_fake_plant():
+    """Records every segment's duration and STN drive; one GPi spike mid-segment."""
+    from types import SimpleNamespace
+
+    calls: list[tuple[float, object]] = []
+
+    class _Plant:
+        def reset(self, seed=None):
+            calls.clear()
+
+        def integrate(self, duration_s, dbs_spec=None, *, record_spikes=True, carry=False, fixed_network=False):
+            assert carry and fixed_network
+            calls.append((duration_s, None if dbs_spec is None else dbs_spec.idbs))
+            return SimpleNamespace(gpi_spikes=[np.array([duration_s / 2.0])], p_beta=None)
+
+        def close(self):
+            return None
+
+    return _Plant(), calls
+
+
+def test_trailing_step_mode_warmup_and_pulses() -> None:
+    from controllers.sea_dbs.adapter import SEA_DBSEnvAdapter
+
+    plant, calls = _trailing_fake_plant()
+    cfg = SEADBSConfig(step_mode="trailing", trailing_window_s=0.1, n_obs=3, plant_dt_ms=0.02, carrier_hz=50.0)
+    env = SEA_DBSEnvAdapter(plant=plant, config=cfg)
+    env.reset(seed=0)
+    # Warm-up: trailing window + (n_obs - 1) steps of untreated plant, one segment.
+    assert calls[0][0] == pytest.approx(0.1 + 2 * 0.002)
+    assert calls[0][1] is None
+    n = int(round(2.0 / 0.02))
+    # Carrier reading at 50 Hz: a pulse at the first stimulating step, then every 20 ms.
+    onsets = []
+    for step in range(20):
+        env.step(1)
+        idbs = calls[-1][1]
+        assert idbs.shape == (n + 1,)
+        rising = np.flatnonzero(np.diff(np.r_[0.0, idbs[1:]]) > 0)
+        onsets += [step * n + int(i) + 1 for i in rising]
+    assert onsets == [1, 1001]
+    # a = 0 delivers nothing.
+    env.step(0)
+    assert not np.any(calls[-1][1][1:])
+    env.close()
+
+    plant, calls = _trailing_fake_plant()
+    env = SEA_DBSEnvAdapter(plant=plant, config=replace(cfg, step_pulse_mode="per_step"))
+    env.reset(seed=0)
+    for _ in range(3):
+        env.step(1)
+        assert np.count_nonzero(np.diff(np.r_[0.0, calls[-1][1][1:]]) > 0) == 1
+    env.close()
+
+
+def test_trailing_p_beta_uses_only_the_trailing_window() -> None:
+    from controllers.sea_dbs.adapter import SEA_DBSEnvAdapter
+
+    plant, _calls = _trailing_fake_plant()
+    cfg = SEADBSConfig(step_mode="trailing", trailing_window_s=0.1, n_obs=2, plant_dt_ms=0.02)
+    env = SEA_DBSEnvAdapter(plant=plant, config=cfg)
+    env.reset(seed=0)
+    for _ in range(60):
+        env.step(0)
+    # 0.102 s warm-up + 60 x 2 ms; every kept spike is within reach of the window.
+    assert env._t_s == pytest.approx(0.102 + 0.12)  # noqa: SLF001
+    kept = np.concatenate(env._spikes[0])  # noqa: SLF001
+    assert kept.min() >= env._t_s - 0.1 - 2 * 0.002 - 0.002  # noqa: SLF001
+    env.close()
