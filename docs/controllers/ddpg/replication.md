@@ -229,7 +229,7 @@ The actor outputs logits over a finite STN pattern set. The text does not fix **
 
 Algorithm 1 requires $\gamma$, soft-update $\tau$, and **update_frequency** (gradient steps per env step); §IV.A.1 lists none of these numerically. **Fixed:** Adam rates, buffer **8192**, batch **32**, **10** episodes × **30** steps. **Open:** $\gamma$, $\tau$, update cadence. **Decide in** trainer config; match released code if available, else standard DDPG defaults with explicit documentation.
 
-**Implemented (`controllers/ddpg/config.py`):** $\gamma = 0.99$, $\tau = 0.005$, `update_frequency = 1` (standard DDPG defaults when the paper is silent).
+**Implemented (`controllers/ddpg/config.py`):** $\gamma = 0.99$, $\tau = 0.005$, `update_frequency = 1` (standard DDPG defaults when the paper is silent). **Mehregan figure panels (Oct 2026, agreed with the maintainer):** "update frequency" is read as one update on every 2nd environment step (`paper_protocol.PaperKnobs.update_every = 2`; the literal reading, one update every step, is `update_every=1`) — it gives Fig 4a's gradual five-episode fall (`docs/figures/mehregan/4a.md` § Candidate readings).
 
 ### 4. Target network initialization
 

@@ -192,7 +192,7 @@ Eq. (8) uses threshold $\beta_t = 0.35$ on averaged state entries $s(i)$, but th
 
 Algorithm 1 requires discount $\gamma$, target soft-update $\tau$, and inner-loop **update frequency**, but §IV.A.1 reports no numeric values. **Fixed:** actor/critic learning rates, buffer **8192**, batch **32**. **Open:** $\gamma$, $\tau$, updates per env step. **Decide in** `controllers/ddpg/` config; match released code if available (see [controllers/ddpg/replication.md](controllers/ddpg/replication.md)).
 
-**Implemented (`controllers/ddpg/config.py`):** $\gamma = 0.99$, $\tau = 0.005$, `update_frequency = 1`.
+**Implemented (`controllers/ddpg/config.py`):** $\gamma = 0.99$, $\tau = 0.005$, `update_frequency = 1`. **Mehregan figure panels (Oct 2026, agreed with the maintainer):** "update frequency" is read as one update on every 2nd environment step (`paper_protocol.PaperKnobs.update_every = 2`; the literal reading, one update every step, is `update_every=1`) — it gives Fig 4a's gradual five-episode fall (`docs/figures/mehregan/4a.md` § Candidate readings).
 
 ### 6. Post-training evaluation segment timing
 
