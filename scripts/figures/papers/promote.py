@@ -686,17 +686,14 @@ def _nguyen_all_gates_pass(gates: dict[str, Any], panel: str) -> bool | None:
     if panel == "4":
         return _nguyen_fig4_overall_pass(gates, shape=False)
     rows = NGUYEN_GATE_ROWS[panel]
-    seen = False
+    if not gates:
+        return None
+    # Every listed row is required: a key the manifest lacks (stale manifest, or a gate
+    # that was not computed) fails the panel instead of being skipped.
     for key, _ in rows:
-        if key not in gates:
-            continue
-        value = gates[key]
-        if not isinstance(value, bool):
-            continue
-        seen = True
-        if not value:
+        if gates.get(key) is not True:
             return False
-    return True if seen else None
+    return True
 
 
 def _format_nguyen_fig4_gates_table(
