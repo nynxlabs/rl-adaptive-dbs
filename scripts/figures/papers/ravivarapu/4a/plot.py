@@ -293,10 +293,13 @@ def plot_series(series: dict[str, Any], png_path: Path, *, promote: bool = True)
         ("paper", f"SEA-DBS (roll{roll_w})", REPL_SEA_COLOR),
     )
     for variant, label, color in repl_styles:
-        psd = _common.rolling_mean(series["variants"][variant]["episode_psd"], roll_w)
-        episodes = np.arange(1, len(psd) + 1)
+        raw = np.asarray(series["variants"][variant]["episode_psd"], dtype=float)
+        episodes = np.arange(1, len(raw) + 1)
+        # Raw episodes (what the gates read) drawn faintly under the rolling mean.
+        ax.plot(episodes, raw, linewidth=0.6, alpha=0.3, color=color)
+        psd = _common.rolling_mean(raw, roll_w)
         ax.plot(episodes, psd, label=label, linewidth=1.6 if variant == "baseline" else 1.8, color=color)
-        paper_y.append(np.asarray(psd, dtype=float))
+        paper_y.extend([np.asarray(psd, dtype=float), raw])
     paper_overlay_y = _paper_overlay.overlay_ravivarapu_fig4a(ax)
     paper_y.extend(paper_overlay_y[name][0] for name in ("Baseline", "SEA-DBS"))
     y_all = np.concatenate([np.ravel(y) for y in paper_y if y.size])

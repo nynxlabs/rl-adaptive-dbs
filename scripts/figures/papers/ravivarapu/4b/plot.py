@@ -93,10 +93,13 @@ def plot_series(series: dict[str, Any], png_path: Path, *, promote: bool = True)
         ("baseline", f"Baseline (DDPG, roll{roll_w})"),
         ("paper", f"SEA-DBS (roll{roll_w})"),
     ):
-        rewards = _common.rolling_mean(_per_step_rewards(series, variant), roll_w)
+        raw = _per_step_rewards(series, variant)
+        rewards = _common.rolling_mean(raw, roll_w)
         episodes = np.arange(1, len(rewards) + 1)
-        ax.plot(episodes, rewards, label=label, linewidth=1.6 if variant == "baseline" else 1.8)
-        repl_ys.append(rewards)
+        (line,) = ax.plot(episodes, rewards, label=label, linewidth=1.6 if variant == "baseline" else 1.8)
+        # Raw episodes (what the gates read) drawn faintly under the rolling mean.
+        ax.plot(episodes, raw, linewidth=0.6, alpha=0.3, color=line.get_color())
+        repl_ys.extend([rewards, raw])
     paper = _paper_overlay.overlay_ravivarapu_fig4b(ax, y_scale=1.0)
     paper_ys = [py for _px, py in paper.values()]
     all_y = np.concatenate(repl_ys + paper_ys)
