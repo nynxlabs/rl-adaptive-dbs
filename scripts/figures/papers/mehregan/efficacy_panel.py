@@ -167,10 +167,28 @@ def panel_means(payload: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def efficacy_gates(cfg: EfficacyPanel, means: dict[str, Any]) -> dict[str, Any]:
-    required = ("no_stim_mean", "trained_mean", "periodic_mean", "no_stim_pre", "periodic_pre")
+def payload_traces(payload: dict[str, Any]) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """``{series: (time_s, P_beta)}`` from an eval payload (``eval.json``)."""
+    return {
+        k: (np.asarray(v["time_s"], dtype=float), np.asarray(v["trace"], dtype=float))
+        for k, v in payload["conditions"].items()
+    }
+
+
+def efficacy_gates(
+    cfg: EfficacyPanel,
+    means: dict[str, Any],
+    traces: dict[str, tuple[np.ndarray, np.ndarray]] | None = None,
+) -> dict[str, Any]:
+    """Panel verdict from late means + the eval traces (:func:`payload_traces`).
+
+    The trace-level gates (shared baseline across every series, pre-onset level,
+    onset speed, shape r, trained − periodic gap) need ``traces``; without them
+    the verdict fails on ``traces_present``.
+    """
+    required = ("no_stim_mean", "trained_mean", "periodic_mean")
     if any(means.get(k) is None for k in required):
-        # Manifest from before the closed-loop eval (no pre-onset means) — re-run the panel.
+        # Manifest from before the closed-loop eval — re-run the panel.
         return {"means_present": False, "pass": False}
     dig = fig5_efficacy_gates(
         {
@@ -179,12 +197,16 @@ def efficacy_gates(cfg: EfficacyPanel, means: dict[str, Any]) -> dict[str, Any]:
             "periodic": means["periodic_mean"],
             "cdbs_130": means.get("cdbs_130_mean"),
         },
+        traces=traces,
         panel=cfg.panel,
+        onset=STIM_ONSET_S,
         late_lo=LATE_LO_S,
+        t_end=TIME_MAX_S,
         require_cdbs=cfg.with_cdbs,
     )
     gates = dict(dig["gates"])
-    gates["shared_baseline"] = abs(means["no_stim_pre"] - means["periodic_pre"]) < 25.0
+    if traces is None:
+        gates["traces_present"] = False
     gates["trained_closed_loop"] = bool(means.get("trained_closed_loop"))
     return {
         **gates,
@@ -302,7 +324,7 @@ def main(cfg: EfficacyPanel, doc: str | None = None) -> int:
         print(f"wrote {args.eval_json}", flush=True)
 
     panel = plot_panel(cfg, payload, out_path=args.out)
-    gates = efficacy_gates(cfg, panel)
+    gates = efficacy_gates(cfg, panel, payload_traces(payload))
     panel["gates"] = gates
     manifest = {
         "figure": f"mehregan_fig{cfg.panel}",

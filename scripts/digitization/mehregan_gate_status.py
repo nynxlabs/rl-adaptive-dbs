@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import importlib.util
 import json
 import re
@@ -19,6 +20,7 @@ if str(_DIGITIZATION) not in sys.path:
 
 from paper_gates import (  # noqa: E402
     ARTIFACT_ROOT,
+    FIG4B_EPISODES,
     fig1b_gates,
     fig2_time_gates,
     fig4a_gates,
@@ -42,6 +44,42 @@ MEHREGAN_FIG6_GATE_ROWS: tuple[tuple[str, str], ...] = (
     ("qat_majority_not_below_paper", "QAT late/pre ≥ 80% of digitized paper in a strict majority of QAT training seeds"),
     ("qat_median_near_paper", "median-seed QAT late/pre within 20% of digitized paper (figure: same range)"),
     ("qat_late_sustained", "median QAT trace [10,12] s mean ≥ 90% of its [2,8] s mean (no late fade)"),
+    ("fp32_onset_near_paper", "fp32 [2,4] s mean / pre-onset within 20% of digitized paper (onset speed)"),
+    ("fp32_shape_r", "Pearson r fp32 trace vs digitized paper on a common [0,12] s grid ≥ 0.6"),
+    ("prestim_level_near_paper", "fp32 pre-onset level within 10% of digitized paper"),
+    ("qat_fp32_gap_vs_paper", "(median-seed QAT − fp32) late / pre ≥ 0.5× the digitized paper gap"),
+    ("ptq_int8_alters_trace", "mean |PTQ int8 − fp32| over t ≥ 2 s ≥ 0.5× digitized paper (quantization alters outputs)"),
+    ("ptq_fp16_alters_trace", "mean |PTQ fp16 − fp32| over t ≥ 2 s ≥ 0.5× digitized paper (quantization alters outputs)"),
+)
+
+MEHREGAN_FIG2_GATE_ROWS: tuple[tuple[str, str], ...] = (
+    ("prestim_shared", "treated/untreated agree pre-onset (≤5% rel)"),
+    ("treated_below_untreated_late", "cDBS below no-treatment after t=2"),
+    ("late_ratio_near_paper", "late treated/untreated ratio vs digitization"),
+    ("suppression_drop_near_paper", "drop magnitude vs digitization"),
+    ("untreated_flat", "untreated late (t ≥ 6 s) / pre within ±0.15 (absolute) of digitized paper"),
+    ("treated_late_over_pre_near_paper", "treated late / pre within 30% of digitized paper"),
+    ("prestim_level_near_paper", "untreated pre-onset level within 15% of digitized paper"),
+    ("treated_mid_ratio_near_paper", "treated/untreated mean on [4,7] s within 30% of digitized paper"),
+    ("t50_near_paper", "treated trace reaches half its pre→late drop within ±1 s of digitized paper"),
+    ("treated_shape_r", "Pearson r treated trace vs digitized paper on a common [0,12] s grid ≥ 0.7"),
+    ("gap_shape_r", "Pearson r of the untreated − treated gap vs digitized paper on [0,12] s ≥ 0.7"),
+)
+
+MEHREGAN_FIG5_SHARED_ROWS_HEAD: tuple[tuple[str, str], ...] = (
+    ("traces_present", "eval traces available for the trace-level gates"),
+    ("shared_baseline", "pre-onset spread across all series (incl. trained) ≤ 3% of the level"),
+    ("trained_closed_loop", "trained series runs the actor closed loop (no replayed actions)"),
+    ("trained_below_no_stim", "trained mean (t ≥ 4 s) < no stim"),
+)
+
+MEHREGAN_FIG5_SHARED_ROWS_TAIL: tuple[tuple[str, str], ...] = (
+    ("trained_no_stim_ratio_near_paper", "trained/no-stim late ratio (t ≥ 4 s) vs digitized paper"),
+    ("periodic_no_stim_ratio_near_paper", "periodic/no-stim late ratio (t ≥ 4 s) vs digitized paper"),
+    ("prestim_level_near_paper", "mean pre-onset level within 10% of digitized paper"),
+    ("trained_onset_ratio_near_paper", "trained/no-stim on [2,4] s within 30% of digitized paper (onset speed)"),
+    ("trained_shape_r", "Pearson r trained trace vs digitized paper on a common [0,12] s grid ≥ 0.6"),
+    ("periodic_shape_r", "Pearson r periodic trace vs digitized paper on a common [0,12] s grid ≥ 0.6"),
 )
 
 
@@ -75,22 +113,19 @@ def _fig2_replication(series: dict[str, Any]) -> dict[str, tuple[np.ndarray, np.
     }
 
 
-def _load_fig5a_pass():
-    path = _MEHREGAN_PLOTS / "5a" / "plot.py"
-    spec = importlib.util.spec_from_file_location("mehregan_fig5a_plot", path)
-    mod = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(mod)
-    return mod.fig5a_pass
+@functools.cache
+def _load_script(name: str, path: Path):
+    from rl_adaptive_dbs.panel import load_script_module
+
+    return load_script_module(name, path)
 
 
-def _load_fig5b_pass():
-    path = _MEHREGAN_PLOTS / "5b" / "plot.py"
-    spec = importlib.util.spec_from_file_location("mehregan_fig5b_plot", path)
-    mod = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(mod)
-    return mod.fig5b_pass
+def _load_efficacy_panel():
+    return _load_script("mehregan_efficacy_panel", _MEHREGAN_PLOTS / "efficacy_panel.py")
+
+
+def _load_quant_panel():
+    return _load_script("mehregan_quant_panel", _MEHREGAN_PLOTS / "quant_panel.py")
 
 
 def _manifest_gates(manifest: dict[str, Any]) -> dict[str, bool]:
@@ -143,6 +178,12 @@ def evaluate_1b() -> PanelGateStatus:
         GateRow("suppression_ratio_near_paper", "pd_130/pd ratio vs digitized paper"),
         GateRow("healthy_beta_near_paper", "healthy level within 30% of paper"),
         GateRow("pd_130hz_beta_near_paper", "treated level within 30% of paper"),
+        GateRow("healthy_pd_ratio_near_paper", "healthy/PD beta ratio within 30% of digitized paper"),
+        GateRow("pd_beta_near_paper", "PD beta level within 30% of digitized paper"),
+        GateRow("pd_peak_freq_near_paper", "PD spectral peak (1.5 Hz smoothed) within ±4 Hz of digitized paper"),
+        GateRow("low_over_beta_near_paper", "every series' [1,12]/[13,35] Hz power ratio within 35% of digitized paper"),
+        GateRow("pd_shape_r", "Pearson r PD PSD vs digitized paper on a common 1–50 Hz grid ≥ 0.6"),
+        GateRow("pd130_shape_r", "Pearson r 130 Hz PSD vs digitized paper on a common 1–50 Hz grid ≥ 0.3"),
     )
     return PanelGateStatus(
         panel="1b",
@@ -158,12 +199,7 @@ def evaluate_1b() -> PanelGateStatus:
 def evaluate_2a() -> PanelGateStatus:
     series_path = ARTIFACT_ROOT / "2a" / "series.json"
     dig = fig2_time_gates(_fig2_replication(_load_json(series_path)), panel="2a")
-    rows = (
-        GateRow("prestim_shared", "treated/untreated agree pre-onset (≤5% rel)"),
-        GateRow("treated_below_untreated_late", "cDBS below no-treatment after t=2"),
-        GateRow("late_ratio_near_paper", "late treated/untreated ratio vs digitization"),
-        GateRow("suppression_drop_near_paper", "drop magnitude vs digitization"),
-    )
+    rows = tuple(GateRow(k, d) for k, d in MEHREGAN_FIG2_GATE_ROWS)
     return PanelGateStatus(
         panel="2a",
         pass_field="gates_pass",
@@ -178,12 +214,7 @@ def evaluate_2a() -> PanelGateStatus:
 def evaluate_2b() -> PanelGateStatus:
     series_path = ARTIFACT_ROOT / "2b" / "series.json"
     dig = fig2_time_gates(_fig2_replication(_load_json(series_path)), panel="2b")
-    rows = (
-        GateRow("prestim_shared", "treated/untreated agree pre-onset (≤5% rel)"),
-        GateRow("treated_below_untreated_late", "cDBS below no-treatment after t=2"),
-        GateRow("late_ratio_near_paper", "late treated/untreated ratio vs digitization"),
-        GateRow("suppression_drop_near_paper", "drop magnitude vs digitization"),
-    )
+    rows = tuple(GateRow(k, d) for k, d in MEHREGAN_FIG2_GATE_ROWS)
     return PanelGateStatus(
         panel="2b",
         pass_field="gates_pass",
@@ -204,8 +235,14 @@ def evaluate_4a() -> PanelGateStatus:
         GateRow("overall_trend_down", "end window mean < start window mean"),
         GateRow("drop_vs_paper", "drop ≥ 70% of digitized paper drop"),
         GateRow("late_early_ratio_near_paper", "late/early ratio vs digitization"),
-        GateRow("mid_fade_vs_paper", "mid [120,150] fade ≥ 50% of paper mid-drop"),
+        GateRow("mid_fade_vs_paper", "mid [120,150] fade (vs [0,100]) within 0.5–2× the digitized paper mid fade"),
         GateRow("ep0_near_paper", "steps 0–29 mean within 15% of digitized paper ep0 (seed spread)"),
+        GateRow("episode_shape_r", "Pearson r of the 10 episode (30-step) means vs digitized paper ≥ 0.7"),
+        GateRow("late_level_near_paper", "episodes 5–9 mean within 15% of digitized paper"),
+        GateRow("episode_drop_near_paper", "drop eps 0–3 → eps 6–9 within 0.6–1.6× digitized paper"),
+        GateRow("no_late_rebound", "eps 7–9 mean ≤ eps 5–6 mean + 0.02"),
+        GateRow("half_drop_episode_near_paper", "first episode at half the eps 0–3 → 6–9 drop within ±1 of digitized paper"),
+        GateRow("per_episode_near_paper", "every episode mean within 20% of digitized paper"),
     )
     return PanelGateStatus(
         panel="4a",
@@ -218,103 +255,123 @@ def evaluate_4a() -> PanelGateStatus:
     )
 
 
+def _fig4b_inputs(series: dict[str, Any], n_episodes: int) -> tuple[list[float], list[float]]:
+    """Episode rewards + episode-mean PSD from the Fig 4a series cache."""
+    training = series.get("training") or {}
+    rewards = training.get("episode_rewards") or series.get("episode_rewards") or []
+    trace = np.asarray(series.get("beta_norm_trace") or [], dtype=float)
+    spe = int(series.get("steps_per_episode") or 30)
+    n = min(n_episodes, len(rewards), trace.size // spe)
+    beta = trace[: n * spe].reshape(n, spe).mean(axis=1) if n else np.array([])
+    return [float(r) for r in rewards[:n]], beta.tolist()
+
+
 def evaluate_4b() -> PanelGateStatus:
-    manifest_path = ARTIFACT_ROOT / "4b" / "manifest.json"
-    manifest = _load_json(manifest_path)
-    dig = fig4b_gates(manifest["episode_rewards"], manifest["episode_mean_beta"])
+    # Fig 4b replots the Fig 4a run: gate the live 4a cache (all 10 episodes).
+    series_path = ARTIFACT_ROOT / "4a" / "series.json"
+    rewards, beta = _fig4b_inputs(_load_json(series_path), FIG4B_EPISODES)
+    dig = fig4b_gates(rewards, beta)
     gates = dict(dig["gates"])
-    gates["plot_style"] = len(manifest["episode_rewards"]) >= 2
     rows = (
+        GateRow("plot_style", "10 episodes plotted (paper: 10 vertices on its 0–8 axis, x = 8i/9)"),
         GateRow("early_negative", "mean reward ep 0–2 < 0"),
-        GateRow("reward_rises", "late mean reward > early mean"),
+        GateRow("reward_rises", "late (eps 6–9) mean reward > early mean"),
         GateRow("late_plateau_improved", "late mean reward > −10"),
         GateRow("rise_timing", "reward exceeds ep0 + 10 by ep ≤ 6"),
         GateRow("beta_drops", "late episode-mean PSD < early"),
         GateRow("beta_drop_ratio_near_paper", "PSD late/early ratio vs digitization"),
-        GateRow("reward_recovers_like_paper", "qualitative rise (not magnitude match)"),
+        GateRow("reward_recovers_like_paper", "qualitative rise in ours and paper"),
         GateRow("late_beta_near_paper", "late PSD within 15% of digitized paper"),
-        GateRow("late_reward_near_zero", "late mean reward in (−10, 2] (paper ~−2)"),
+        GateRow("late_reward_near_zero", "late mean reward in (−10, 2] (paper ~−3)"),
         GateRow("ep0_beta_near_paper", "episode 0 PSD within 15% of digitized paper (seed spread)"),
-        GateRow("plot_style", "≥ 2 episodes plotted"),
+        GateRow("reward_shape_r", "Pearson r per-episode reward vs digitized paper ≥ 0.7"),
+        GateRow("psd_shape_r", "Pearson r per-episode PSD vs digitized paper ≥ 0.7"),
+        GateRow("early_reward_near_paper", "eps 0–2 mean reward within 50% of digitized paper"),
+        GateRow("reward_floor_not_deeper", "min episode reward ≥ 1.5× digitized paper min"),
+        GateRow("max_reward_le_cap", "max episode reward ≤ +5 (paper never above ≈ −2)"),
+        GateRow("psd_floor_not_deeper", "min episode PSD ≥ 0.9× digitized paper min"),
+        GateRow("per_episode_psd_near_paper", "every episode PSD within 20% of digitized paper"),
     )
     return PanelGateStatus(
         panel="4b",
         pass_field="gates_pass",
         overall=all(gates.values()),
         gates=gates,
-        source=str(manifest_path),
-        header="`fig4b_gates` → manifest `summary.gates`",
+        source=str(series_path),
+        header="`fig4b_gates` → Fig 4a `series.json` (10 episodes)",
         rows=rows,
     )
 
 
-def evaluate_5a() -> PanelGateStatus:
-    manifest_path = ARTIFACT_ROOT / "5a" / "manifest.json"
-    manifest = _load_json(manifest_path)
-    panel = manifest.get("panel") or {}
-    fig5a_pass = _load_fig5a_pass()
-    result = fig5a_pass(panel)
+def _evaluate_5(panel: str) -> PanelGateStatus:
+    eff = _load_efficacy_panel()
+    cfg = eff.FIG5A if panel == "5a" else eff.FIG5B
+    manifest_path = ARTIFACT_ROOT / panel / "manifest.json"
+    eval_path = ARTIFACT_ROOT / panel / "eval.json"
+    if eval_path.exists():
+        payload = _load_json(eval_path)
+        means = eff.panel_means(payload)
+        result = eff.efficacy_gates(cfg, means, eff.payload_traces(payload))
+        source = eval_path
+    else:
+        result = eff.efficacy_gates(cfg, _load_json(manifest_path).get("panel") or {})
+        source = manifest_path
     gates = {k: bool(v) for k, v in result.items() if isinstance(v, bool) and k != "pass"}
-    rows = (
-        GateRow("shared_baseline", "no-stim vs periodic pre-onset Δ < 25"),
-        GateRow("trained_closed_loop", "trained series runs the actor closed loop (no replayed actions)"),
-        GateRow("trained_below_no_stim", "trained mean (t ≥ 4 s) < no stim"),
-        GateRow("trained_above_periodic", "trained > periodic 45 Hz"),
-        GateRow("cdbs_lowest", "130 Hz cDBS lowest of four series"),
-        GateRow("trained_no_stim_ratio_near_paper", "trained/no-stim late ratio (t ≥ 4 s) vs digitized paper"),
-        GateRow("periodic_no_stim_ratio_near_paper", "periodic/no-stim late ratio (t ≥ 4 s) vs digitized paper"),
-    )
+    if panel == "5a":
+        mid = (
+            ("trained_above_periodic", "trained > periodic 45 Hz"),
+            ("cdbs_lowest", "130 Hz cDBS lowest of four series"),
+        )
+        extra = (
+            ("trained_periodic_gap_near_paper", "(trained − periodic)/no-stim late within 0.4–2× digitized paper"),
+            ("cdbs_no_stim_ratio_near_paper", "130 Hz/no-stim late ratio within 30% of digitized paper"),
+        )
+    else:
+        mid = (
+            ("trained_below_periodic", "trained < periodic 30 Hz"),
+            ("periodic_above_no_stim", "periodic 30 Hz elevates beta vs no stim"),
+        )
+        extra = (
+            ("trained_periodic_gap_near_paper", "trained-below-periodic gap (/no-stim, late) within 0.4–2× digitized paper"),
+        )
+    keys = MEHREGAN_FIG5_SHARED_ROWS_HEAD + mid + MEHREGAN_FIG5_SHARED_ROWS_TAIL + extra
+    if gates.get("traces_present", True):
+        keys = tuple(r for r in keys if r[0] != "traces_present")
     return PanelGateStatus(
-        panel="5a",
+        panel=panel,
         pass_field="pass",
         overall=bool(result.get("pass")),
         gates=gates,
-        source=str(manifest_path),
-        header="`fig5a_pass` / `fig5_efficacy_gates` → manifest `gates`",
-        rows=rows,
-    )
-
-
-def evaluate_5b() -> PanelGateStatus:
-    manifest_path = ARTIFACT_ROOT / "5b" / "manifest.json"
-    manifest = _load_json(manifest_path)
-    panel = manifest.get("panel") or {}
-    fig5b_pass = _load_fig5b_pass()
-    result = fig5b_pass(panel)
-    gates = {k: bool(v) for k, v in result.items() if isinstance(v, bool) and k != "pass"}
-    rows = (
-        GateRow("shared_baseline", "no-stim vs periodic pre-onset Δ < 25"),
-        GateRow("trained_closed_loop", "trained series runs the actor closed loop (no replayed actions)"),
-        GateRow("trained_below_no_stim", "trained mean (t ≥ 4 s) < no stim"),
-        GateRow("trained_below_periodic", "trained < periodic 30 Hz"),
-        GateRow("periodic_above_no_stim", "periodic 30 Hz elevates beta vs no stim"),
-        GateRow("trained_no_stim_ratio_near_paper", "trained/no-stim late ratio (t ≥ 4 s) vs digitized paper"),
-        GateRow("periodic_no_stim_ratio_near_paper", "periodic/no-stim late ratio (t ≥ 4 s) vs digitized paper"),
-    )
-    return PanelGateStatus(
-        panel="5b",
-        pass_field="pass",
-        overall=bool(result.get("pass")),
-        gates=gates,
-        source=str(manifest_path),
-        header="`fig5b_pass` / `fig5_efficacy_gates` → manifest `gates`",
-        rows=rows,
+        source=str(source),
+        header="`efficacy_gates` / `fig5_efficacy_gates` → `eval.json`",
+        rows=tuple(GateRow(k, d) for k, d in keys),
     )
 
 
 def _evaluate_6(panel: str) -> PanelGateStatus:
     manifest_path = ARTIFACT_ROOT / panel / "manifest.json"
-    manifest = _load_json(manifest_path)
-    gates = _manifest_gates(manifest)
-    overall = _manifest_overall(manifest, "all_pass")
+    eval_path = ARTIFACT_ROOT / panel / "eval.json"
+    if eval_path.exists():
+        # Recompute from the cached eval so new gates show without a re-run.
+        quant = _load_quant_panel()
+        cfg = quant.FIG6A if panel == "6a" else quant.FIG6B
+        dig = quant.quant_gates(cfg, _load_json(eval_path))
+        gates = dict(dig["gates"])
+        overall: bool | None = bool(dig["pass"])
+        source = eval_path
+    else:
+        manifest = _load_json(manifest_path)
+        gates = _manifest_gates(manifest)
+        overall = _manifest_overall(manifest, "all_pass")
+        source = manifest_path
     rows = tuple(GateRow(key, desc) for key, desc in MEHREGAN_FIG6_GATE_ROWS)
     return PanelGateStatus(
         panel=panel,
         pass_field="all_pass",
         overall=overall,
         gates=gates,
-        source=str(manifest_path),
-        header="`fig6_quant_gates` → manifest `gates`",
+        source=str(source),
+        header="`fig6_quant_gates` → `eval.json`",
         rows=rows,
     )
 
@@ -325,8 +382,8 @@ EVALUATORS = {
     "2b": evaluate_2b,
     "4a": evaluate_4a,
     "4b": evaluate_4b,
-    "5a": evaluate_5a,
-    "5b": evaluate_5b,
+    "5a": lambda: _evaluate_5("5a"),
+    "5b": lambda: _evaluate_5("5b"),
     "6a": lambda: _evaluate_6("6a"),
     "6b": lambda: _evaluate_6("6b"),
 }
