@@ -325,7 +325,7 @@ def repo_rel_posix(path: Path) -> str:
 def materialize_ship_png(source: Path, ship_repo_rel: str) -> Path:
     """Copy a versioned replication PNG to a stable ship path (repo + linked notes folder).
 
-    Report 3 and other gallery embeds use unversioned ship names (e.g.
+    The 2026-08-10 report and other gallery embeds use unversioned ship names (e.g.
   ``training_beta.png``) so links from notes apps stay valid after each
     ``_vN`` promote.
     """
@@ -1093,7 +1093,7 @@ _UPDATE_REPORT3 = False
 
 
 def set_update_report3(enabled: bool) -> None:
-    """Enable/disable Report 3 gallery refresh after promote (``--update-report``)."""
+    """Enable/disable the 2026-08-10 report gallery refresh after promote (``--update-report``)."""
     global _UPDATE_REPORT3
     _UPDATE_REPORT3 = bool(enabled)
 

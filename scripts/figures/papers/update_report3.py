@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Refresh replication image paths in ``<notes_dir>/reports/3.md``.
+"""Refresh replication image paths in ``<notes_dir>/reports/2026-08-10.md``.
 
-Report 3 gallery embeds use **co-located copies** under
+The 2026-08-10 report gallery embeds use **co-located copies** under
 ``reports/images/gallery/`` (``./images/gallery/rep_*.png``) so notes apps
 resolve them from the note folder regardless of its root. Ship PNGs under
 ``figures/<paper>/images/`` are still refreshed for trackers.
@@ -31,7 +31,7 @@ _promote = load_script_module("figure_promote", _PROMOTE)
 
 REPO_ROOT = _promote.REPO_ROOT
 
-# Report 3 alt text -> (paper dir under figures/, stable ship path under paper/).
+# The 2026-08-10 report alt text -> (paper dir under figures/, stable ship path under paper/).
 REPORT3_SHIP_PATHS: dict[str, tuple[str, str]] = {
     "Rep 1b": ("mehregan", "images/1b/gpi_psd.png"),
     "Rep 2a": ("mehregan", "images/2a/beta_power.png"),
@@ -47,7 +47,7 @@ REPORT3_SHIP_PATHS: dict[str, tuple[str, str]] = {
     "Rep R4a": ("ravivarapu", "images/4a/training_psd.png"),
 }
 
-# Co-located gallery filenames (beside ``reports/3.md``).
+# Co-located gallery filenames (beside ``reports/2026-08-10.md``).
 REPORT3_GALLERY_FILES: dict[str, str] = {
     "Rep 1b": "rep_1b.png",
     "Rep 2a": "rep_2a.png",
@@ -63,7 +63,7 @@ REPORT3_GALLERY_FILES: dict[str, str] = {
     "Rep R4a": "rep_r4a.png",
 }
 
-# Report 3 alt -> tracker ``![…](images/…)`` alt substring for the versioned source.
+# The 2026-08-10 report alt -> tracker ``![…](images/…)`` alt substring for the versioned source.
 REPORT3_TRACKER_ALTS: dict[str, tuple[str, str]] = {
     "Rep 1b": ("mehregan", "Replication Fig 1b"),
     "Rep 2a": ("mehregan", "Replication Fig 2a"),
@@ -359,7 +359,7 @@ def _sync_marked_block(
 
 
 def sync_report3_panel_notes(*, dry_run: bool = False, verbose: bool = True) -> dict[str, object]:
-    """Refresh claim, status, quoted captions, and brief gate specs in Report 3."""
+    """Refresh claim, status, quoted captions, and brief gate specs in the 2026-08-10 report."""
     path = report3_path()
     text = path.read_text(encoding="utf-8")
     changes: list[str] = []
@@ -441,10 +441,10 @@ def sync_report3_paper_captions(*, dry_run: bool = False, verbose: bool = True) 
 
 
 def report3_path() -> Path:
-    """``<notes_dir>/reports/3.md`` (see ``rl_adaptive_dbs.notes_export``)."""
-    candidate = _promote.require_notes_dir() / "reports" / "3.md"
+    """``<notes_dir>/reports/2026-08-10.md`` (see ``rl_adaptive_dbs.notes_export``)."""
+    candidate = _promote.require_notes_dir() / "reports" / "2026-08-10.md"
     if not candidate.is_file():
-        msg = f"Report 3 not found at {candidate}"
+        msg = f"2026-08-10 report not found at {candidate}"
         raise FileNotFoundError(msg)
     return candidate
 
@@ -481,7 +481,7 @@ def _versioned_source(report_alt: str) -> Path | None:
 
 
 def sync_report3_gallery_ships(*, verbose: bool = True) -> list[dict[str, str]]:
-    """Copy tracker-linked versioned PNGs into Report 3 stable ship paths."""
+    """Copy tracker-linked versioned PNGs into the 2026-08-10 report stable ship paths."""
     synced: list[dict[str, str]] = []
     for report_alt, (paper, ship_rel) in REPORT3_SHIP_PATHS.items():
         source = _versioned_source(report_alt)
@@ -506,7 +506,7 @@ def sync_report3_gallery_ships(*, verbose: bool = True) -> list[dict[str, str]]:
 
 
 def sync_report3_gallery_embeds(*, verbose: bool = True) -> list[dict[str, str]]:
-    """Copy gallery PNG bytes into ``reports/images/gallery/`` beside Report 3."""
+    """Copy gallery PNG bytes into ``reports/images/gallery/`` beside the 2026-08-10 report."""
     gallery_dir = report3_gallery_dir()
     gallery_dir.mkdir(parents=True, exist_ok=True)
     copied: list[dict[str, str]] = []
@@ -532,7 +532,7 @@ def sync_report3_gallery_embeds(*, verbose: bool = True) -> list[dict[str, str]]
 
 
 def build_report3_replacements() -> dict[str, str]:
-    """Map Report 3 image alt -> co-located ``./images/gallery/...`` href."""
+    """Map the 2026-08-10 report image alt -> co-located ``./images/gallery/...`` href."""
     return {report_alt: _report_href(report_alt) for report_alt in REPORT3_GALLERY_FILES}
 
 
@@ -568,7 +568,7 @@ def update_report3(*, dry_run: bool = False, verbose: bool = True) -> dict[str, 
 
 
 def refresh_report3_gallery(*, dry_run: bool = False, verbose: bool = True) -> dict[str, object]:
-    """Sync ship + co-located gallery PNG bytes, then rewrite Report 3 embed hrefs."""
+    """Sync ship + co-located gallery PNG bytes, then rewrite the 2026-08-10 report embed hrefs."""
     if dry_run:
         ships = [
             {
@@ -601,12 +601,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--ships-only",
         action="store_true",
-        help="Only materialize ship PNGs; do not rewrite reports/3.md.",
+        help="Only materialize ship PNGs; do not rewrite reports/2026-08-10.md.",
     )
     parser.add_argument(
         "--captions-only",
         action="store_true",
-        help="Only refresh panel notes (claim, status, captions, gates) in reports/3.md.",
+        help="Only refresh panel notes (claim, status, captions, gates) in reports/2026-08-10.md.",
     )
     parser.add_argument("-q", "--quiet", action="store_true")
     args = parser.parse_args(argv)

@@ -1,8 +1,8 @@
 """Locate the optional notes folder that figure promotion mirrors into.
 
 ``--export-notes`` / ``--update-report`` copy replication PNGs and refresh the
-Report 3 gallery in a notes folder outside the repo, laid out as
-``<notes_dir>/figures/<paper>/...`` and ``<notes_dir>/reports/3.md``.
+2026-08-10 report gallery in a notes folder outside the repo, laid out as
+``<notes_dir>/figures/<paper>/...`` and ``<notes_dir>/reports/2026-08-10.md``.
 
 Resolution order:
 
@@ -22,7 +22,7 @@ from rl_adaptive_dbs.user_config import resolve_config
 
 NOTES_DIR_HINT = (
     "no notes folder configured for figure export: set RL_DBS_NOTES_DIR or "
-    "export.notes_dir in .rl-dbs.yaml (folder holding figures/<paper>/ and reports/3.md)"
+    "export.notes_dir in .rl-dbs.yaml (folder holding figures/<paper>/ and reports/2026-08-10.md)"
 )
 
 

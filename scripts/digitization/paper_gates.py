@@ -435,7 +435,7 @@ def fig4b_gates(
 ) -> dict[str, Any]:
     """Reward rise + episode PSD drop vs paper digitizations.
 
-    Digitization revisit (Report 3): paper late episode-mean PSD sits just
+    Digitization revisit (2026-08-10 report): paper late episode-mean PSD sits just
     above reward threshold ``β_t = 0.35`` (~0.37) so episode reward approaches
     0 from below. ``late_beta_near_paper`` and ``late_reward_near_zero`` (the
     digitized late reward ~−2) reject a collapse onto a deep suppressor (late

@@ -7,11 +7,11 @@ Usage::
 
     uv sync --group reports
     uv run python -m rl_adaptive_dbs.run scripts/reports/export_pdf.py \\
-        "$RL_DBS_NOTES_DIR"/reports/3.md \\
-        -o "$RL_DBS_NOTES_DIR"/reports/3.pdf
+        "$RL_DBS_NOTES_DIR"/reports/2026-08-10.md \\
+        -o "$RL_DBS_NOTES_DIR"/reports/2026-08-10.pdf
 
     # One long scroll (no forced page breaks):
-    uv run python -m rl_adaptive_dbs.run scripts/reports/export_pdf.py reports/3.md --continuous
+    uv run python -m rl_adaptive_dbs.run scripts/reports/export_pdf.py reports/2026-08-10.md --continuous
 
 Requires system libraries for WeasyPrint on Linux (Pango, Cairo). On Debian/Ubuntu::
 
@@ -239,7 +239,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "input_md",
         type=Path,
-        help="Markdown report (e.g. reports/3.md)",
+        help="Markdown report (e.g. reports/2026-08-10.md)",
     )
     parser.add_argument(
         "-o",
