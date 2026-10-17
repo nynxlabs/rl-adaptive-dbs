@@ -1,6 +1,6 @@
 # rl-adaptive-dbs
 
-[![tests](https://github.com/nynxlabs/rl-adaptive-dbs/actions/workflows/tests.yml/badge.svg)](https://github.com/nynxlabs/rl-adaptive-dbs/actions/workflows/tests.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Independent replications of three reinforcement-learning papers on **adaptive deep brain stimulation (DBS)** for Parkinson's disease. All three controllers run on one shared simulated cortex–basal ganglia–thalamus circuit (Kumaravelu et al., 2016), rebuilt from the paper text and figures (for Nguyen et al., also from the authors' later code release where the paper is silent).
 
