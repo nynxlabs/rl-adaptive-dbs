@@ -150,11 +150,37 @@ def _slice_args() -> list[str]:
     return [f"--slice={slice_name}"] if probe.returncode == 0 else []
 
 
-def _launch_argv(session: str, inner: list[str]) -> list[str]:
-    """systemd scope → private tmux server → setsid/nohup/nice; degrade when tools are missing."""
+def _log_window(session: str, log: Path) -> list[str]:
+    """tmux commands that add a "log" window following the run's log, shown on attach.
+
+    The pane tails the log until the run window's process exits, so the tmux session (and its
+    scope) still ends with the run. ``@pounce_readonly`` / ``@pounce_title`` are read by pounce,
+    master's terminal app, which lists every tmux session and attaches to this one read-only.
+    """
+    target = f"={session}:"
+    follow = (
+        f"p=$(tmux display -p -t {shlex.quote(target + 'run')} '#{{pane_pid}}' 2>/dev/null); "
+        f'if [ -n "$p" ]; then exec tail -n +1 -F --pid="$p" {shlex.quote(str(log))}; '
+        f"else cat {shlex.quote(str(log))}; fi"
+    )
+    return [
+        ";", "new-window", "-t", target, "-n", "log", follow,
+        ";", "set-option", "-t", target, "@pounce_readonly", "on",
+        ";", "set-option", "-t", target, "@pounce_title", f"rl-dbs · {session}",
+    ]
+
+
+def _launch_argv(session: str, inner: list[str], log: Path | None = None) -> list[str]:
+    """systemd scope → private tmux server → setsid/nohup/nice; degrade when tools are missing.
+
+    With ``log``, the session also gets a window following it (``_log_window``); the run itself
+    is unchanged.
+    """
     shell = f"cd {shlex.quote(str(REPO_ROOT))} && setsid nohup nice -n 10 " + shlex.join(inner) + " < /dev/null"
     if shutil.which("tmux"):
-        argv = ["tmux", "-L", session, "new-session", "-d", "-s", session, shell]
+        argv = ["tmux", "-L", session, "new-session", "-d", "-s", session, "-n", "run", shell]
+        if log is not None:
+            argv += _log_window(session, log)
         if shutil.which("systemd-run") and sys.platform.startswith("linux"):
             argv = ["systemd-run", "--user", "--scope", "--quiet", f"--unit={session}", *_slice_args(), "--", *argv]
         return argv
@@ -205,7 +231,7 @@ def cmd_run(ns: argparse.Namespace) -> int:
         print("$ " + shlex.join(inner[inner.index("--") + 1 :]), flush=True)
         return subprocess.call(inner, cwd=REPO_ROOT)
 
-    argv = _launch_argv(session, inner)
+    argv = _launch_argv(session, inner, log)
     if ns.dry_run:
         print(shlex.join(argv))
         return 0
