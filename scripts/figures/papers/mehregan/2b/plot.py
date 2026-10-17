@@ -21,6 +21,17 @@ Each run writes ``figures/mehregan/images/2b/error_index_vN.png`` (N auto-increm
 and updates the replication image link in ``figures/mehregan/replications.md``.
 
 Plant EI simulation only — no RL training; checkpoint resume is not applicable.
+
+Candidate readings (all default to today's behavior; tested as undocumented
+readings of how Fig 2b was produced, not as shipped defaults):
+  --boc-rate-hz H          BoC inverse-gamma SMC timing with mean inter-pulse
+                           interval 1000/H ms (scale = (1000/H)*(shape-1)).
+                           Unset = platform scale 1785.71 ms (mean ~13.4 Hz).
+  --response-window-ms W   EI misfire response window after each SMC pulse.
+                           Unset = 25 ms (Gao / Mehregan Eq. 2).
+Existing flags cover the other readings: --window-s (T_omega), --smc-schedule
+periodic --smc-hz H (periodic pulses), --iappth-baseline 1.2 (Kumaravelu bias,
+SMC additive), --ggith.
 """
 from __future__ import annotations
 
@@ -42,10 +53,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from envs.plant import DbsSpec, MatlabPlant, PlantConfig, PythonPlant
-from envs.plant.biomarkers import DEFAULT_EI_WINDOW_S, error_index
+from envs.plant.biomarkers import (
+    DEFAULT_EI_RESPONSE_WINDOW_S,
+    DEFAULT_EI_WINDOW_S,
+    error_index,
+)
 from envs.plant.config import (
     BOC_SMC_AMPLITUDE,
     BOC_SMC_CORTICAL_AMPLITUDE,
+    BOC_SMC_INVGAMMA_SCALE_MS,
+    BOC_SMC_INVGAMMA_SHAPE,
     KUMARAVELU_GGITH,
 )
 from envs.plant.dbs import create_dbs_current
@@ -204,6 +221,7 @@ def trailing_ei(
     times: np.ndarray,
     window_s: float = WINDOW_S,
     n_neurons: int,
+    response_window_s: float = DEFAULT_EI_RESPONSE_WINDOW_S,
     label: str = "trace",
     verbose: bool = True,
     progress_every: int = 10,
@@ -227,6 +245,7 @@ def trailing_ei(
             t_end=t_end,
             inclusive_pulse_end=inclusive_end,
             n_neurons=n_neurons,
+            response_window_s=response_window_s,
         )
         if verbose and (idx == 0 or idx == n_samples - 1 or (idx + 1) % progress_every == 0):
             _log(
@@ -270,6 +289,8 @@ def simulate_trace(
     window_s: float,
     label: str,
     verbose: bool = True,
+    invgamma_scale_ms: float = BOC_SMC_INVGAMMA_SCALE_MS,
+    response_window_s: float = DEFAULT_EI_RESPONSE_WINDOW_S,
 ) -> np.ndarray:
     plant.config = PlantConfig(
         pd=1,
@@ -280,6 +301,7 @@ def simulate_trace(
         smc_cortical_amplitude=smc_cortical_amplitude,
         smc_amplitude=smc_amplitude,
         smc_frequency_hz=smc_hz if smc_schedule == "periodic" else 0.0,
+        smc_invgamma_scale_ms=invgamma_scale_ms,
         iappth_baseline=iappth_baseline,
         ggith=ggith,
     )
@@ -336,6 +358,7 @@ def simulate_trace(
         times=times,
         window_s=window_s,
         n_neurons=plant.config.neurons_per_region,
+        response_window_s=response_window_s,
         label=label,
         verbose=verbose,
     )
@@ -356,6 +379,8 @@ def simulate_seed(
     times: np.ndarray,
     window_s: float,
     verbose: bool = True,
+    invgamma_scale_ms: float = BOC_SMC_INVGAMMA_SCALE_MS,
+    response_window_s: float = DEFAULT_EI_RESPONSE_WINDOW_S,
 ) -> dict[str, Any]:
     _log(f"  seed {seed}: condition 1/2 — PD no treatment", verbose=verbose)
     ei_none = simulate_trace(
@@ -374,6 +399,8 @@ def simulate_seed(
         window_s=window_s,
         label="pd_no_treatment",
         verbose=verbose,
+        invgamma_scale_ms=invgamma_scale_ms,
+        response_window_s=response_window_s,
     )
     _log(f"  seed {seed}: condition 2/2 — PD 130 Hz cDBS", verbose=verbose)
     ei_130 = simulate_trace(
@@ -392,6 +419,8 @@ def simulate_seed(
         window_s=window_s,
         label="pd_130hz",
         verbose=verbose,
+        invgamma_scale_ms=invgamma_scale_ms,
+        response_window_s=response_window_s,
     )
     _log(
         f"  seed {seed}: done "
@@ -558,6 +587,21 @@ def main() -> int:
         help="SMCτ for EI: scheduled drive rising edges or Cor spike alignment (Gao)",
     )
     parser.add_argument(
+        "--boc-rate-hz",
+        type=float,
+        default=None,
+        help=(
+            "Candidate reading: BoC inverse-gamma SMC at mean rate H Hz "
+            "(scale = (1000/H)*(shape-1)); default: platform scale (~13.4 Hz)"
+        ),
+    )
+    parser.add_argument(
+        "--response-window-ms",
+        type=float,
+        default=DEFAULT_EI_RESPONSE_WINDOW_S * 1000.0,
+        help="Candidate reading: EI misfire response window after each SMC pulse (default 25)",
+    )
+    parser.add_argument(
         "--backend",
         choices=("python", "matlab"),
         default=DEFAULT_BACKEND,
@@ -603,6 +647,16 @@ def main() -> int:
 
     verbose = not args.quiet
     times = sample_times(args.step_s)
+    if args.boc_rate_hz is not None and args.boc_rate_hz <= 0.0:
+        parser.error("--boc-rate-hz must be > 0")
+    if args.response_window_ms <= 0.0:
+        parser.error("--response-window-ms must be > 0")
+    invgamma_scale_ms = (
+        BOC_SMC_INVGAMMA_SCALE_MS
+        if args.boc_rate_hz is None
+        else (1000.0 / args.boc_rate_hz) * (BOC_SMC_INVGAMMA_SHAPE - 1.0)
+    )
+    response_window_s = args.response_window_ms / 1000.0
 
     if args.plot_only:
         if not args.series.exists():
@@ -637,6 +691,8 @@ def main() -> int:
                         times=times,
                         window_s=args.window_s,
                         verbose=verbose,
+                        invgamma_scale_ms=invgamma_scale_ms,
+                        response_window_s=response_window_s,
                     )
                 )
         traces = {
@@ -670,6 +726,9 @@ def main() -> int:
             "per_seed": per_seed,
             "step_s": args.step_s,
             "window_s": args.window_s,
+            "boc_rate_hz": args.boc_rate_hz,
+            "smc_invgamma_scale_ms": invgamma_scale_ms,
+            "response_window_ms": args.response_window_ms,
             "n_samples": int(times.size),
         }
         save_series(cache, args.series)
@@ -717,6 +776,9 @@ def main() -> int:
         "integrate_s": cache.get("integrate_s", INTEGRATE_S),
         "step_s": cache.get("step_s", args.step_s),
         "window_s": cache.get("window_s", args.window_s),
+        "boc_rate_hz": cache.get("boc_rate_hz"),
+        "smc_invgamma_scale_ms": cache.get("smc_invgamma_scale_ms", BOC_SMC_INVGAMMA_SCALE_MS),
+        "response_window_ms": cache.get("response_window_ms", DEFAULT_EI_RESPONSE_WINDOW_S * 1000.0),
         "n_samples": cache.get("n_samples"),
         "seeds": list(cache.get("seeds", args.seeds)),
         "series_cache": str(args.series),
