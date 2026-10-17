@@ -330,7 +330,9 @@ class SEA_DBSEnvAdapter(gym.Env):
         self._step_count += 1
         truncated = self._step_count >= self.config.max_episode_steps
         terminated = False
-        dw = 1.0 if truncated else 0.0
+        # Algorithm 1 stores no done flag; ``mask_episode_end`` (default) stops the
+        # Q-target from bootstrapping past the 30-step time limit.
+        dw = 1.0 if (truncated and self.config.mask_episode_end) else 0.0
         info = {
             "p_beta_raw": raw,
             "p_beta_norm": mean_norm,

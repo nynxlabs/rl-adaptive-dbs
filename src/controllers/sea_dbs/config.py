@@ -80,6 +80,10 @@ class SEADBSConfig:
     # the Eq. (4) window and only restart the episode's step count, so stimulation
     # can build up across 60 ms episodes. Candidate experiments only.
     carry_plant_across_episodes: bool = False
+    # Replay done flag at the 30-step time limit (Algorithm 1 stores none; replication.md
+    # §14.6). False bootstraps through episode ends — the natural pairing with a plant
+    # carried across episodes, where an episode end doesn't end the simulation.
+    mask_episode_end: bool = True
     max_episode_steps: int = MAX_EPISODE_STEPS
     num_episodes: int = TRAIN_EPISODES
 
