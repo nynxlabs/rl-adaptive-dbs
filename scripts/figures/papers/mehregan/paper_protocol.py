@@ -8,7 +8,8 @@ every panel trains and evaluates the same way.
 
 Paper-stated (§III.B, §IV.A.1, Alg. 1) — implemented as written:
 
-- 2 s environment step, plant step 0.02 ms, 30 steps per episode, 10 episodes.
+- 2 s environment step, plant step 0.02 ms, 30 steps per episode, 10 episodes;
+  Alg. 1's "update frequency" read as one update every 2nd step.
 - Replay buffer 8192, batch 32, actor lr 5e-4, critic lr 1e-3, Adam.
 - Critic scores ``Q(s, a_logit)`` (Eq. 4); critic target uses the target actor's
   logits (Eq. 3); actor maximizes ``Q(s, μ(s))`` (Eq. 5); soft target updates
@@ -115,12 +116,14 @@ class PaperKnobs:
     # plotted curve (master-approved Oct 17 2026); "linear" = printed branch,
     # sign flipped (kept to separate the reward effect in candidate runs).
     reward_below: str = "square"
-    # Candidate readings (off by default; see author_questions Mehregan):
+    # Alg. 1 line 15 "for update frequency do": our reading (agreed with the
+    # maintainer, Oct 17 2026) is one update on every 2nd environment step; the
+    # literal loop (1 update every step) is update_every=1.
+    update_every: int = 2
+    # Candidate readings (off by default):
     # carry_plant = continue the plant across episode resets instead of new ICs;
-    # update_every = run the Alg. 1 updates only on every k-th environment step;
     # logit_noise_end = linear per-episode anneal of the logit noise to this σ.
     carry_plant: bool = False
-    update_every: int = 1
     logit_noise_end: float | None = None
 
     def as_dict(self) -> dict[str, Any]:
