@@ -81,7 +81,9 @@ STATE_LENGTH = 1
 # --- Paper-silent defaults (conventions) ------------------------------------
 DEFAULT_ALPHABET = "burst"
 DEFAULT_LOGIT_NOISE = 1.0
-DEFAULT_INIT_BIAS = 0.0
+# §I: "the action space is initialized using regular pulses" — head bias toward
+# pattern 0 (strength paper-silent; 2.0 plays the regular train from episode 0).
+DEFAULT_INIT_BIAS = 1.0
 DEFAULT_GAMMA = 0.99
 DEFAULT_TAU = 0.005
 
