@@ -328,3 +328,11 @@ def test_table2_reseed_resets_plant_every_n_steps(tmp_path) -> None:
     assert out["reward_of_avg_psd"] == pytest.approx(sea_dbs_reward(0.4))
     with pytest.raises(ValueError):
         evaluate_reseeded(ckpt, reseed_every=7, horizon=20, plant=_FakePlant(), config=cfg)
+    # Default horizon: every interval visits the same TABLE2_N_BLOCKS plant seeds.
+    from controllers.sea_dbs.eval import TABLE2_N_BLOCKS
+
+    for n in (2, 3):
+        resets.clear()
+        out = evaluate_reseeded(ckpt, reseed_every=n, plant=_FakePlant(), config=cfg)
+        assert out["block_seeds"] == list(range(3, 3 + TABLE2_N_BLOCKS))
+        assert len(out["p_beta_norm"]) == n * TABLE2_N_BLOCKS
