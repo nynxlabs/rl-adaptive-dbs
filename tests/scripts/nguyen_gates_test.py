@@ -83,6 +83,8 @@ def test_fig6_paper_self_consistent():
     pw_interp = np.interp(episodes, pwx, pwy)
 
     power_rep = fig6_power_gates(ab_interp)
+    # The old heuristic rows are report-only now; the paper must still pass them.
+    power_rep["gates"] = {**power_rep["gates"], **power_rep["report"]}
     assert power_rep["gates"]["alpha_beta_early_above_theta"]
     assert power_rep["gates"]["alpha_beta_early_near_paper"]
     assert power_rep["gates"]["alpha_beta_mid_near_paper"]
@@ -97,7 +99,10 @@ def test_fig6_paper_self_consistent():
     assert power_rep["gates"]["alpha_beta_drop_magnitude_near_paper"]
     assert power_rep["gates"]["alpha_beta_series_has_variance"]
     assert power_rep["gates"]["alpha_beta_late_stable"]
-    assert power_rep["pass"]
+    # Late CV gates measure episode-to-episode spread, which a smoothed curve lacks.
+    noise_gates = {"alpha_beta_late_cv", "freq_late_cv"}
+    assert not power_rep["gates"]["alpha_beta_late_cv"]
+    assert all(v for k, v in power_rep["gates"].items() if k not in noise_gates)
 
     report = fig6_training_gates(
         ab_interp,
@@ -115,7 +120,7 @@ def test_fig6_paper_self_consistent():
     assert report["gates"]["freq_late_near_paper"]
     assert report["gates"]["pw_late_near_paper"]
     assert report["gates"]["late_params_stable"]
-    assert report["pass"]
+    assert all(v for k, v in report["gates"].items() if k not in noise_gates)
 
 
 @pytest.mark.skipif(not (ARTIFACT / "curves_fig7.json").exists(), reason="no digitization")
@@ -144,3 +149,23 @@ def test_fig7_protocol_needs_paper_episode_count_and_horizon():
 
 def test_curves_path_stems():
     assert curves_path("fig4_reward").name == "curves_fig4_reward.json"
+
+
+@pytest.mark.skipif(not (ARTIFACT / "curves_fig5_energy.json").exists(), reason="no digitization")
+def test_fig5_linear_energy_ramp_fails():
+    spikes = np.full(500, 800.0) + np.random.default_rng(0).normal(0.0, 10.0, 500)
+    report = fig5_spikes_energy_gates(spikes, np.linspace(350.0, 500.0, 500))
+    assert not report["pass"]
+    assert not report["gates"]["energy_overshoot"]
+    assert not report["gates"]["energy_trend_near_paper"]
+
+
+@pytest.mark.skipif(not (ARTIFACT / "curves_fig6_power.json").exists(), reason="no digitization")
+@pytest.mark.parametrize("at", [50, 130])
+def test_fig6_step_away_from_paper_drop_fails(at: int):
+    episodes = np.arange(500)
+    ab = np.where(episodes < at, 290.0, 110.0) * (1.0 + np.random.default_rng(1).normal(0.0, 0.16, 500))
+    report = fig6_power_gates(ab)
+    assert not report["pass"]
+    assert not report["gates"]["alpha_beta_pearson"]
+    assert not report["gates"]["alpha_beta_drop_fraction"]

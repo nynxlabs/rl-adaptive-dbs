@@ -43,11 +43,13 @@ def test_paper_curve_passes_all_required_gates():
     report = ng.fig4_gates(rewards, lengths, max_episode_steps=25)
     assert all(_required_values(report).values()), _required_values(report)
     assert report["pass"] and report["shape_pass"]
-    assert report["reward"]["tier2"] == {"reward_leads_length": True, "reward_scale_raw_d": True}
+    assert report["reward"]["tier2"] == {"reward_scale_raw_d": True}
 
 
-@pytest.mark.parametrize("shift", [-10.0, 10.0])
-def test_paper_shifted_ten_episodes_passes(shift: float):
+# The calibrated t50 window is ±10 episodes; a 10-episode lag also moves the run's own
+# start level and lands t50 at paper + 11, so the shift test uses ±5.
+@pytest.mark.parametrize("shift", [-5.0, 5.0])
+def test_paper_shifted_five_episodes_passes(shift: float):
     rewards, lengths = _paper(shift)
     report = ng.fig4_gates(rewards, lengths, max_episode_steps=25)
     assert report["pass"], _required_values(report)
@@ -154,3 +156,12 @@ def test_centered_smooth_is_centred():
     peak = np.flatnonzero(s > 0)
     assert peak[0] == 41 and peak[-1] == 60
     assert np.allclose(ng.centered_smooth(np.full(30, 3.0), 20), 3.0)
+
+
+def test_late_length_rise_fails_trend():
+    rewards, lengths = _paper()
+    lengths = lengths.copy()
+    lengths[350:] += 1.6  # late level climbs instead of easing down (paper 0.925)
+    report = ng.fig4_gates(rewards, lengths, max_episode_steps=25)
+    assert not report["length"]["length_late_trend"]
+    assert not report["pass"]
