@@ -7,9 +7,9 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 <!-- summary:start -->
 | Panel | Description | Status |
 |-------|-------------|--------|
-| Fig 1b | GPi PSD | Fail (`healthy_pd_ratio_near_paper`, rep v1) |
+| Fig 1b | GPi PSD | Fail (`healthy_pd_ratio_near_paper`, rep v2) |
 | Fig 2a | GPi $P_\beta$ time series | Pass (rep v1) |
-| Fig 2b | Error Index time series | Fail (`untreated_flat`, rep v17) |
+| Fig 2b | Error Index time series | Pass (rep v18) |
 | Fig 4a | Training $P_\beta$ vs step | Fail (`drop_vs_paper`, paper Alg. 1, rep v43) |
 | Fig 4b | Training reward vs episode | Fail (`psd_shape_r`, paired to 4a, rep v50) |
 | Fig 5a | Post-train efficacy @ 45 Hz | Pass (closed loop, Fig 4a model, rep v25) |
@@ -32,15 +32,15 @@ Mean GPi multitaper power spectral density (1–50 Hz) for three conditions: **h
 
 ### Replication
 
-![Replication Fig 1b](images/1b/gpi_psd_v1.png)
+![Replication Fig 1b](images/1b/gpi_psd_v2.png)
 
 <!-- caption-1b:start -->
-**Caption:** GPi PSD, 10 s sim, seeds 0–9 mean; β[13–35 Hz] healthy/PD/130 Hz = 13.4/22.2/7.5 (paper 15.3/17.7/7.9); PD peak 19 Hz (paper 13), v1, 2026-10-17
+**Caption:** GPi PSD, 10 s sim, seeds 0–9 mean; β[13–35 Hz] healthy/PD/130 Hz = 13.4/22.2/8.1 (paper 15.3/17.7/7.9); PD peak 19 Hz (paper 13), v2, 2026-10-17
 
 **Manifest:** `artifacts/figures/papers/mehregan/1b/manifest.json`
 <!-- caption-1b:end -->
 
-**Status:** Fail (upgraded gates, Oct 17 2026) — beta-band ordering and the 130 Hz and healthy levels match (β healthy / PD / 130 Hz 13.4 / 22.2 / 7.5 vs paper 15.3 / 17.7 / 7.9), but our PD spectrum peaks at 18.5 Hz vs the paper's 12.6 Hz and its shape correlates poorly (r 0.18; 130 Hz r 0.2), the healthy/PD ratio is 30% off, and healthy / 130 Hz carry excess 1–12 Hz power. Seven spectral estimators all put the PD peak at 18.2–19.0 Hz (`scripts/probes/mehregan_fig1b_estimator.py`), so the gap is in the simulated spikes (Kumaravelu plant), not the estimator — logged as an author question, not tunable faithfully.
+**Status:** Fail (upgraded gates, fresh run rep v2, Oct 17 2026) — beta-band ordering and the 130 Hz and healthy levels match (β healthy / PD / 130 Hz 13.4 / 22.2 / 8.1 vs paper 15.3 / 17.7 / 7.9), but our PD spectrum peaks at 18.5 Hz vs the paper's 12.6 Hz and its shape correlates poorly (r 0.19), the healthy/PD ratio sits at the 30% edge, and healthy / 130 Hz carry excess 1–12 Hz power. Seven spectral estimators (`scripts/probes/mehregan_fig1b_estimator.py`) and four candidate readings (`--dt-ms 0.02`, `--transient-s` on 30 s, seed 0 only, `--signal voltage`) all keep the PD peak at 18.4–18.8 Hz, so the gap is in our plant's PD dynamics, not the estimator or protocol — an author question.
 
 <!-- gates-1b:start -->
 **Gates set** (`fig1b_gates` → manifest `gates` / `gates_pass`). Overall **`gates_pass`**: no (from `artifacts/figures/papers/mehregan/1b/curves.json`, 2026-10-17). Every row is required for exit.
@@ -131,18 +131,18 @@ Windowed Error Index (EI, Eq. 2) over **12 s** with **So-style SMC pulses into T
 
 ### Replication
 
-![Replication Fig 2b](images/2b/error_index_v17.png)
+![Replication Fig 2b](images/2b/error_index_v18.png)
 
 <!-- caption-2b:start -->
-**Caption:** 14 s sim (2 s pre-roll), plot = sim − 2 s, 0.2 s trailing / 2 s EI window (end sim 14 s), SMC BoC inv-gamma Iappth, backend python, seed 0, v17 (2026-10-17)
+**Caption:** 14 s sim (2 s pre-roll), plot = sim − 2 s, 0.2 s trailing / 2 s EI window (end sim 14 s), SMC BoC inv-gamma Iappth, backend python, seed 0, v18 (2026-10-17)
 
 **Manifest:** `artifacts/figures/papers/mehregan/2b/manifest.json`
 <!-- caption-2b:end -->
 
-**Status:** Fail (upgraded gates, Oct 17 2026) — ordering, late ratio, drop and shape pass, but the pre-onset EI is 0.331 vs paper 0.249 (+33%), the untreated trace falls (late/pre 0.87 vs paper 1.11) and cDBS suppresses more slowly ([4,7] s treated/untreated 0.54 vs 0.36; half-drop 2.78 s vs 2.28 s). The SMC-into-thalamus drive is our convention (Kumaravelu has no cortex→thalamus path; see Convention below) — logged as an author question.
+**Status:** Pass — every upgraded gate on a fresh run of the current plant (rep v18, Oct 17 2026). The earlier failure (pre-onset EI 0.33 vs paper 0.25) came from a cached July series replotted under the new gates; plant changes since then moved the EI trace. Eight candidate readings (thalamic baseline kept, T_ω 1 s / 4 s, periodic or 10 / 20 Hz SMC timing, 15 / 40 ms misfire windows) did not beat the shipped convention. Single seed (0).
 
 <!-- gates-2b:start -->
-**Gates set** (`fig2_time_gates`, panel `2b`). Overall **`gates_pass`**: no (from `artifacts/figures/papers/mehregan/2b/series.json`, 2026-10-17). Every row is required for exit.
+**Gates set** (`fig2_time_gates`, panel `2b`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/2b/series.json`, 2026-10-17). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -150,10 +150,10 @@ Windowed Error Index (EI, Eq. 2) over **12 s** with **So-style SMC pulses into T
 | `treated_below_untreated_late` | cDBS below no-treatment after t=2 | yes |
 | `late_ratio_near_paper` | late treated/untreated ratio vs digitization | yes |
 | `suppression_drop_near_paper` | drop magnitude vs digitization | yes |
-| `untreated_flat` | untreated late (t ≥ 6 s) / pre within ±0.15 (absolute) of digitized paper | no |
+| `untreated_flat` | untreated late (t ≥ 6 s) / pre within ±0.15 (absolute) of digitized paper | yes |
 | `treated_late_over_pre_near_paper` | treated late / pre within 30% of digitized paper | yes |
-| `prestim_level_near_paper` | untreated pre-onset level within 15% of digitized paper | no |
-| `treated_mid_ratio_near_paper` | treated/untreated mean on [4,7] s within 30% of digitized paper | no |
+| `prestim_level_near_paper` | untreated pre-onset level within 15% of digitized paper | yes |
+| `treated_mid_ratio_near_paper` | treated/untreated mean on [4,7] s within 30% of digitized paper | yes |
 | `t50_near_paper` | treated trace reaches half its pre→late drop within ±1 s of digitized paper | yes |
 | `treated_shape_r` | Pearson r treated trace vs digitized paper on a common [0,12] s grid ≥ 0.7 | yes |
 | `gap_shape_r` | Pearson r of the untreated − treated gap vs digitized paper on [0,12] s ≥ 0.7 | yes |
