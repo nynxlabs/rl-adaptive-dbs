@@ -180,22 +180,17 @@ def collect_samples(
 
 
 def evaluate_gates(samples: dict[str, Any]) -> dict[str, Any]:
+    """Ordering plus every digitized-paper gate (``nguyen_gates.fig3_gates``); all required."""
     pd_off = np.asarray(samples["pd_off"], dtype=float)
     pd_on = np.asarray(samples["pd_on"], dtype=float)
     ordering_ok = bool(np.median(pd_on) > np.median(pd_off))
-    pd_q1 = float(np.percentile(pd_on, 25))
-    threshold_plausible = bool(abs(pd_q1 - THRESHOLD) / max(THRESHOLD, 1.0) < 0.75)
     heuristic = {
         "ordering_pd_on_above_pd_off": ordering_ok,
-        "threshold_near_pd_on_q1": threshold_plausible,
-        "pd_on_q1": pd_q1,
+        "pd_on_q1": float(np.percentile(pd_on, 25)),
+        "pd_off_q1": float(np.percentile(pd_off, 25)),
         "pass": ordering_ok,
     }
-    dig = fig3_gates(samples)
-    merged = attach_digitization(heuristic, dig)
-    # Fig 3 ship pass remains ordering-only (threshold is soft).
-    merged["pass"] = ordering_ok and bool(dig["gates"].get("ordering_pd_on_above_pd_off", True))
-    return merged
+    return attach_digitization(heuristic, fig3_gates(samples))
 
 
 def plot_samples(samples: dict[str, Any], out_path: Path) -> None:
@@ -276,7 +271,7 @@ def plot_samples(samples: dict[str, Any], out_path: Path) -> None:
     ax1.set_ylabel("GPi α–β Oscillation Power")
     ax1.set_title("(b)")
 
-    # Documented paper means (gates) until refined curves_fig3 exists.
+    # Digitized paper box statistics and means (curves_fig3_boxplot.json).
     _paper_overlay.overlay_nguyen_fig3(
         ax0,
         ax1,
@@ -392,7 +387,7 @@ def main(argv: list[str] | None = None) -> int:
         f"GPi α–β (7–35 Hz), {samples['n_iterations']} iters × {samples['duration_s']} s; "
         f"PD On mean={samples['pd_on_mean']:.1f}, "
         f"PD Off mean={samples['pd_off_mean']:.1f}, "
-        f"PD On Q1={gates['pd_on_q1']:.1f}; ordering_pass={gates['pass']}"
+        f"PD Off Q1={gates['pd_off_q1']:.1f} (paper 167.8); pass={gates['pass']}"
     )
     manifest = {
         "panel": "2/3",

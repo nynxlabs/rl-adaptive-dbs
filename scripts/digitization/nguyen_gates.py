@@ -4,8 +4,8 @@ Loads normalized ``curves_fig*.json`` under
 ``artifacts/figures/papers/nguyen/paper_digitization/`` and compares
 replication traces with **x-axis windows** (episode index, RL step).
 
-Fig 3 is a scatter/boxplot — no refined time-series digitization yet; gates use
-documented paper readouts (~215 / ~295 means) until ``curves_fig3`` exists.
+Fig 3 is a scatter/boxplot: its gates read the box statistics in
+``curves_fig3_boxplot.json`` (``scripts/digitization/nguyen_fig3_boxplot.py``).
 """
 from __future__ import annotations
 
@@ -29,9 +29,9 @@ from paper_gates import (
 
 ARTIFACT_ROOT = Path("artifacts/figures/papers/nguyen/paper_digitization")
 
-# Paper Fig 3 qualitative readouts (tracker / panel note; not digitized curves).
-PAPER_FIG3_PD_OFF_MEAN = 215.0
-PAPER_FIG3_PD_ON_MEAN = 295.0
+# Paper Fig 3 means as read off panel (a) (curves_fig3_boxplot.json: 216.0 / 296.7).
+PAPER_FIG3_PD_OFF_MEAN = 216.0
+PAPER_FIG3_PD_ON_MEAN = 296.7
 THETA = 150.0
 
 INIT_AMP = 300.0
@@ -85,51 +85,58 @@ def attach_digitization(
     return out
 
 
+FIG3_STATS = ("q1", "median", "q3", "mean")
+FIG3_REL_TOL = 0.10
+
+
+@functools.lru_cache(maxsize=1)
+def fig3_paper_boxplot() -> dict[str, dict[str, float]]:
+    """Paper Fig 3 box statistics + means (``scripts/digitization/nguyen_fig3_boxplot.py``)."""
+    data = json.loads(curves_path("fig3_boxplot").read_text(encoding="utf-8"))
+    return data["groups"]
+
+
 def fig3_gates(
     samples: dict[str, Any],
     *,
-    rel_tol: float = DEFAULT_REL_TOL,
+    rel_tol: float = FIG3_REL_TOL,
 ) -> dict[str, Any]:
-    """Fig 3 distribution: ordering + mean ratio vs documented paper readouts."""
-    pd_off = np.asarray(samples["pd_off"], dtype=float)
-    pd_on = np.asarray(samples["pd_on"], dtype=float)
-    mean_off = float(np.mean(pd_off))
-    mean_on = float(np.mean(pd_on))
-    median_off = float(np.median(pd_off))
-    median_on = float(np.median(pd_on))
-    pd_q1 = float(np.percentile(pd_on, 25))
+    """Fig 3 distributions vs the digitized paper boxplot (panel b) and mean lines (panel a).
 
-    gates = {
-        "ordering_pd_on_above_pd_off": median_on > median_off,
-        "mean_ratio_near_paper_readout": ratio_close(
-            mean_on,
-            mean_off,
-            PAPER_FIG3_PD_ON_MEAN,
-            PAPER_FIG3_PD_OFF_MEAN,
-            tol=rel_tol,
-        ),
-        "means_separated": mean_on > mean_off + 0.15 * max(mean_off, 1.0),
+    Required: PD On above PD Off; Q1 / median / Q3 / mean of each group within ±10 % of the
+    paper (pixel read ~1.4 units; 500-sample quartiles move ~2 %); and PD Off Q1 just above
+    θ = 150, the paper's stated reason for θ ("the first quartile … is marginally higher
+    than 150" — the PD On Q1 is ~264, so the sentence can only mean PD Off).
+    """
+    paper = fig3_paper_boxplot()
+    ours: dict[str, dict[str, float]] = {}
+    for group in ("pd_off", "pd_on"):
+        arr = np.asarray(samples[group], dtype=float)
+        ours[group] = {
+            "q1": float(np.percentile(arr, 25)),
+            "median": float(np.median(arr)),
+            "q3": float(np.percentile(arr, 75)),
+            "mean": float(np.mean(arr)),
+        }
+    gates: dict[str, bool] = {
+        "ordering_pd_on_above_pd_off": ours["pd_on"]["median"] > ours["pd_off"]["median"],
     }
+    metrics: dict[str, Any] = {}
+    for group in ("pd_off", "pd_on"):
+        for stat in FIG3_STATS:
+            key = f"{group}_{stat}"
+            gates[f"{key}_near_paper"] = rel_close(ours[group][stat], paper[group][stat], tol=rel_tol)
+            metrics[key] = ours[group][stat]
+            metrics[f"paper_{key}"] = paper[group][stat]
+    gates["pd_off_q1_marginally_above_theta"] = THETA < ours["pd_off"]["q1"] <= 1.25 * THETA
     return _gate_pack(
         gates,
-        {
-            "pd_off_mean": mean_off,
-            "pd_on_mean": mean_on,
-            "pd_off_median": median_off,
-            "pd_on_median": median_on,
-            "pd_on_q1": pd_q1,
-            "threshold_near_pd_on_q1": bool(abs(pd_q1 - THETA) / max(THETA, 1.0) < 0.75),
-            "paper_pd_off_mean": PAPER_FIG3_PD_OFF_MEAN,
-            "paper_pd_on_mean": PAPER_FIG3_PD_ON_MEAN,
-        },
+        metrics,
         paper_ref={
-            "path": None,
-            "note": "Fig 3 scatter/boxplot — no curves_fig3.json; using tracker readouts",
+            "path": str(curves_path("fig3_boxplot")),
+            "note": "pixel read of the paper boxplot and mean lines (nguyen_fig3_boxplot.py)",
         },
-        notes=[
-            "threshold_near_pd_on_q1 is soft/informational.",
-            "Digitize Fig 3 panel (a) to replace mean_ratio_near_paper_readout anchor.",
-        ],
+        notes=[f"level gates ±{rel_tol:.0%} of the paper; θ gate: 150 < PD Off Q1 ≤ 187.5"],
     )
 
 
