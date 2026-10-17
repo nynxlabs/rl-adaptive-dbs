@@ -360,6 +360,18 @@ Before this pass every Ravivarapu panel was marked Pass, but the passes rested o
 
 Kept as labeled conventions (paper-silent): 150 ms shot, 50 Hz training carrier, scale 472, $n_{\mathrm{obs}} = 10$ with prefill (5 until the oct 12 convention screen), independent shots, Gumbel schedule defaults, Baseline ε-greedy, Polyak 0.005, one update per env step, 64-unit MLPs, seed 0, and the display-only 10-episode rolling mean on Figs 4a/4b (gates use raw episodes). Panel results: [figures/ravivarapu/replications.md](../../../figures/ravivarapu/replications.md).
 
+### Candidate readings (config flags, all off by default)
+
+Readings the paper doesn't state or contradicts, kept for `--candidate` experiments only ([docs/figures/ravivarapu/4a.md](../../figures/ravivarapu/4a.md) § Candidate readings, § The paper's 2 ms step):
+
+| Flag | Reading |
+|------|---------|
+| `step_mode="trailing"`, `trailing_window_s`, `step_pulse_mode` | The paper's 2 ms step: one continuous 60 ms simulation per episode, P_β from a trailing spike window (§5) |
+| `carry_plant_across_episodes` | One simulation for the whole run (against Algorithm 1's "Reset environment") |
+| `mask_episode_end=False` | Bootstrap the Q-target through the 30-step time limit (Algorithm 1 stores no done flag) |
+| `stim_cost` | Subtract a cost per stimulating step from the training reward (not in Eq. (7)); logged rewards stay Eq. (7) |
+| `update_cadence="episode"`, `updates_per_episode` | Gradient steps after each episode instead of every step (against Algorithm 1) |
+
 ## 16. References
 
 - Ravivarapu et al., *Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson’s Disease*.
