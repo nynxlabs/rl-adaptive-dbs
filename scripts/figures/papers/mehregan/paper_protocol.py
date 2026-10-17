@@ -108,6 +108,9 @@ class PaperKnobs:
     init_bias_scale: float = DEFAULT_INIT_BIAS
     gamma: float = DEFAULT_GAMMA
     tau: float = DEFAULT_TAU
+    # Not paper-silent: which reading of Eq. (8) below beta_t ("linear" = printed
+    # branch with its sign flipped, "square" = Fig. 3c's curve). Open decision.
+    reward_below: str = "linear"
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -117,6 +120,7 @@ class PaperKnobs:
             "init_bias_scale": self.init_bias_scale,
             "gamma": self.gamma,
             "tau": self.tau,
+            "reward_below": self.reward_below,
         }
 
 
@@ -132,6 +136,7 @@ def apply_overrides(knobs: PaperKnobs, pairs: list[str] | None) -> PaperKnobs:
         "init_bias_scale": float,
         "gamma": float,
         "tau": float,
+        "reward_below": str,
     }
     for raw in pairs:
         key, sep, value = raw.partition("=")
@@ -140,6 +145,9 @@ def apply_overrides(knobs: PaperKnobs, pairs: list[str] | None) -> PaperKnobs:
             msg = f"--set expects one of {sorted(types)} as FIELD=VALUE, got {raw!r}"
             raise ValueError(msg)
         out = replace(out, **{key: types[key](value)})
+    if out.reward_below not in ("linear", "square"):
+        msg = f"reward_below must be 'linear' or 'square', got {out.reward_below!r}"
+        raise ValueError(msg)
     if out.alphabet not in ALPHABETS:
         msg = f"alphabet must be one of {ALPHABETS}, got {out.alphabet!r}"
         raise ValueError(msg)
@@ -177,6 +185,7 @@ def make_env(mean_hz: float, knobs: PaperKnobs) -> MehreganEnv:
         pattern_mean_hz=mean_hz,
         max_episode_steps=STEPS_PER_EPISODE,
         plant_integration_mode="continuous",
+        reward_below_threshold=knobs.reward_below,
     )
     plant = PythonPlant(config=plant_config())
     return MehreganEnv(plant=plant, config=env_cfg, alphabet=make_alphabet(mean_hz, knobs))
