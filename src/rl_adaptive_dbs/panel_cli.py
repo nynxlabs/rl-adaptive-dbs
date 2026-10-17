@@ -100,6 +100,9 @@ def build_panel_args(
         for flag, name in _CANDIDATE_OUTPUTS.items():
             if flag in flags and not _has_flag(args, flag):
                 args += [flag, str(out_dir / name)]
+        # Panels that keep every output under one cache directory (Ravivarapu Fig 4a).
+        if "--cache-dir" in flags and not _has_flag(args, "--cache-dir"):
+            args += ["--cache-dir", str(out_dir)]
         for flag in _NO_PROMOTE_FLAGS:
             if flag in flags and not _has_flag(args, flag):
                 args.append(flag)

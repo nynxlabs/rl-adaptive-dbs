@@ -66,3 +66,10 @@ def test_launch_argv_adds_a_log_window_for_pounce(monkeypatch) -> None:
     assert argv[-1] == "rl-dbs · nguyen-4-main"
     # Without a log there is no log window.
     assert "new-window" not in panel_cli._launch_argv("s", ["python", "x.py"])
+
+
+def test_candidate_redirects_a_cache_dir_panel() -> None:
+    flags = {"--cache-dir", "--no-promote", "--parallel-series", "--set"}
+    args = panel_cli.build_panel_args("ravivarapu/4a", ["--set", "n_obs=5"], candidate="c1", flags=flags)
+    assert args[args.index("--cache-dir") + 1] == str(panel_cli.candidate_dir("ravivarapu/4a", "c1"))
+    assert "--no-promote" in args
