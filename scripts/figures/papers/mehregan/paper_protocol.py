@@ -115,6 +115,13 @@ class PaperKnobs:
     # plotted curve (master-approved Oct 17 2026); "linear" = printed branch,
     # sign flipped (kept to separate the reward effect in candidate runs).
     reward_below: str = "square"
+    # Candidate readings (off by default; see author_questions Mehregan):
+    # carry_plant = continue the plant across episode resets instead of new ICs;
+    # update_every = run the Alg. 1 updates only on every k-th environment step;
+    # logit_noise_end = linear per-episode anneal of the logit noise to this σ.
+    carry_plant: bool = False
+    update_every: int = 1
+    logit_noise_end: float | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -125,6 +132,9 @@ class PaperKnobs:
             "gamma": self.gamma,
             "tau": self.tau,
             "reward_below": self.reward_below,
+            "carry_plant": self.carry_plant,
+            "update_every": self.update_every,
+            "logit_noise_end": self.logit_noise_end,
         }
 
 
@@ -141,6 +151,9 @@ def apply_overrides(knobs: PaperKnobs, pairs: list[str] | None) -> PaperKnobs:
         "gamma": float,
         "tau": float,
         "reward_below": str,
+        "carry_plant": lambda v: str(v).lower() in ("1", "true", "yes"),
+        "update_every": int,
+        "logit_noise_end": float,
     }
     for raw in pairs:
         key, sep, value = raw.partition("=")
@@ -277,7 +290,14 @@ def train_paper(
                 for module in (trainer.actor, trainer.actor_target):
                     module.apply(torch.ao.quantization.disable_observer)
                 log(f"froze QAT observers at episode {episode}")
-            state, info0 = env.reset(seed=seed + episode)
+            if knobs.logit_noise_end is not None and num_episodes > 1:
+                frac = episode / (num_episodes - 1)
+                sigma = knobs.logit_noise_std + frac * (knobs.logit_noise_end - knobs.logit_noise_std)
+                trainer.config = replace(trainer.config, logit_noise_std=sigma)
+            if knobs.carry_plant and episode > 0:
+                state, info0 = env.reset(seed=seed + episode, options={"keep_plant": True})
+            else:
+                state, info0 = env.reset(seed=seed + episode)
             reset_beta.append(float(info0["p_beta_norm"]))
             # Alg. 1 line 7: the reset segment's reward is collected too.
             ep_reward = float(info0.get("reward", 0.0))
@@ -300,7 +320,7 @@ def train_paper(
                     dw=float(info.get("dw", 0.0)),
                 )
                 state = next_state
-                if len(trainer.buffer) >= config.min_buffer_size:
+                if len(trainer.buffer) >= config.min_buffer_size and env_step % knobs.update_every == 0:
                     for _ in range(config.update_frequency):
                         c_loss, a_loss = trainer._update_step()
                         trainer.metrics.critic_losses.append(c_loss)

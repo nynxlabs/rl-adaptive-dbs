@@ -146,7 +146,11 @@ class MehreganEnv(gym.Env):
         else:
             self._episode_seed = None
 
-        self._plant.reset(self._episode_seed)
+        # options["keep_plant"]: continue the plant (state and network) from the
+        # previous episode instead of new initial conditions — a candidate
+        # reading only; Alg. 1 line 7 says "new initial conditions".
+        if not (options and options.get("keep_plant")):
+            self._plant.reset(self._episode_seed)
         self._step_count = 0
         self._episode_actions.clear()
         self._obs_window.clear()
