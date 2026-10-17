@@ -15,7 +15,8 @@ Paper-stated (§III.B, §IV.A.1, Alg. 1) — implemented as written:
   (Eqs. 6–7); MSE critic loss.
 - Actor = CNN → logits → softmax/argmax (Fig 3a); action space initialized to
   the regular train at the mean rate.
-- Reward Eq. (8), β_t = 0.35 on $P_\\beta / 1000$.
+- Reward Eq. (8), β_t = 0.35 on $P_\\beta / 1000$; below β_t the Fig. 3c curve
+  $+((β_t - s)·10)^2$ (the printed linear branch has the wrong sign).
 - Eval: fixed seed, 2 s reset, then five 2 s steps of the trained policy; fixed
   periodic baselines on the same seed.
 - PTQ: ``torch.ao.quantization.quantize_dynamic`` (int8) and fp16 casting of the
@@ -108,9 +109,10 @@ class PaperKnobs:
     init_bias_scale: float = DEFAULT_INIT_BIAS
     gamma: float = DEFAULT_GAMMA
     tau: float = DEFAULT_TAU
-    # Not paper-silent: which reading of Eq. (8) below beta_t ("linear" = printed
-    # branch with its sign flipped, "square" = Fig. 3c's curve). Open decision.
-    reward_below: str = "linear"
+    # Not paper-silent: reading of Eq. (8) below beta_t. "square" = Fig. 3c's
+    # plotted curve (master-approved Oct 17 2026); "linear" = printed branch,
+    # sign flipped (kept to separate the reward effect in candidate runs).
+    reward_below: str = "square"
 
     def as_dict(self) -> dict[str, Any]:
         return {

@@ -12,17 +12,18 @@ def mehregan_reward(
     *,
     beta_threshold: float = 0.35,
     reward_scale: float = 10.0,
-    below_threshold: str = "linear",
+    below_threshold: str = "square",
 ) -> float:
     """Instantaneous reward from normalized observation window (environment.md §6).
 
     Above $\\beta_t$ both readings are Eq. (8)'s quadratic penalty. Below it the
     printed Eq. (8) is ``(s_sum - beta_t) * 10``, which is negative there and so
     contradicts the prose ("a positive reward if it falls below the threshold").
-    ``"linear"`` (default) is the printed branch with its sign flipped,
-    $(\\beta_t - s_{sum}) \\cdot 10$. ``"square"`` is the curve the paper plots in
-    Fig. 3c, $+((\\beta_t - s_{sum}) \\cdot 10)^2$ (digitized: $R(0) \\approx 11$,
-    fitted exponent 2.1). Making ``"square"`` the default waits on the maintainer.
+    ``"square"`` (default, master-approved Oct 17 2026) is the curve the paper
+    plots in Fig. 3c, $+((\\beta_t - s_{sum}) \\cdot 10)^2$ (digitized:
+    $R(0) \\approx 11$, fitted exponent 2.1): the text points to Fig. 3c as the
+    reward and the printed branch has the wrong sign. ``"linear"`` is the
+    printed branch with its sign flipped, $(\\beta_t - s_{sum}) \\cdot 10$.
     """
     obs = np.asarray(observation, dtype=float).reshape(-1)
     if obs.size == 0:
