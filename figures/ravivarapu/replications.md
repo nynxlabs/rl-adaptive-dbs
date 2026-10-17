@@ -22,6 +22,8 @@ Separately, our Fig 4b (mean Eq. (7) reward per step) is not Eq. (7) of our Fig 
 
 **The paper's 2 ms step (oct 17 2026).** A trailing-window mode (`step_mode="trailing"`) runs the paper's literal timing: 30 steps of 2 ms in one continuous 60 ms episode. On Kumaravelu no stimulation lowers beta within 60 ms, both learners stop stimulating, and Fig 4a candidates pass 11–14 of 28 gates (vs 15 for the 150 ms shot), so the 150 ms shot stays the labeled convention ([4a.md](../../docs/figures/ravivarapu/4a.md) § The paper's 2 ms step).
 
+**Candidate readings (oct 17 2026).** Readings beyond the text, behind config flags that default off: the plant carried across episodes (2 ms steps), a stimulation cost in the training reward, and one update per episode. The cost is the only one that splits Baseline and SEA-DBS at inference, and one update per episode gives the best Fig 4a (17 of 28), but none clears a panel, so the shipped default stays as written ([4a.md](../../docs/figures/ravivarapu/4a.md) § Candidate readings, § The paper's 2 ms step).
+
 <!-- summary:start -->
 | Panel | Description | Status |
 |-------|-------------|--------|
