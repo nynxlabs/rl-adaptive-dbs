@@ -214,29 +214,30 @@ FIG4_PEARSON_EARLY_HI = 200  # transition-focused Pearson window (ep 0–200)
 # deviation from its config's mean curve (inflated by √(N/(N−1))). Each tolerance is
 # the smallest clean number (2 significant figures; milestones in steps of 5 episodes)
 # at which ≥ 90 % of those synthetic runs pass the gate key (a key with two checks
-# widens both together). Pools (oct 17 2026): wu1500 ×13, s5d1 ×13, audit1-base /
-# audit1-net1 / audit1-net1seq ×2 each — 32 runs (19 with α–β finals for Fig 6).
+# widens both together, by the smallest common factor). Pools (oct 17 2026): wu1500 ×13,
+# s5d1 ×13, audit1-base / -net1 / -net1seq / -net1seq100 ×8 each — 58 runs (45 with
+# α–β finals for Fig 6).
 # Pearson checks compare with the paper (r = 1 against itself), so tol = 1 − r_min.
 FIG4_CHECKS: tuple[Check, ...] = (
     # Length (panel b): absolute residuals (steps).
-    Check("length_late_level", "length.mean_150_end", "abs", 1.2, "steps; paper 8.57"),
-    Check("length_late_level", "length.mean_350_end", "abs", 1.6, "steps; paper 8.19"),
+    Check("length_late_level", "length.mean_150_end", "abs", 1.7, "steps; paper 8.57"),
+    Check("length_late_level", "length.mean_350_end", "abs", 1.9, "steps; paper 8.19"),
     Check("length_t50_timing", "length.t50", "abs", 10.0, "episodes; paper 76"),
-    Check("length_t50_timing", "length.t90", "abs", 50.0, "episodes; paper 89"),
-    Check("length_pearson_0_200", "length.pearson_0_200", "ge", 0.037, "r ≥ 0.963"),
+    Check("length_t50_timing", "length.t90", "abs", 60.0, "episodes; paper 89"),
+    Check("length_pearson_0_200", "length.pearson_0_200", "ge", 0.059, "r ≥ 0.941"),
     Check("length_start_at_horizon", "length.start_median_0_50", "ge", 0.5, "steps; paper 24.9 (integer lengths: half a step)"),
-    Check("length_pearson_0_500", "length.pearson_0_500", "ge", 0.045, "r ≥ 0.955"),
-    Check("length_ratio", "length.late_ratio", "abs", 0.071, "paper 0.344"),
-    Check("length_late_plateau_hold", "length.plateau_min_progress", "ge", 0.21, "paper 0.92"),
-    Check("late_timeouts", "length.timeout_rate_150_end", "le", 0.0, "paper 0"),
-    Check("length_late_trend", "length.late_trend", "abs", 0.11, "L̄350–500 / L̄150–350; paper 0.925"),
+    Check("length_pearson_0_500", "length.pearson_0_500", "ge", 0.075, "r ≥ 0.925"),
+    Check("length_ratio", "length.late_ratio", "abs", 0.087, "paper 0.344"),
+    Check("length_late_plateau_hold", "length.plateau_min_progress", "ge", 0.3, "paper 0.92"),
+    Check("late_timeouts", "length.timeout_rate_150_end", "le", 0.0086, "paper 0 (≤ 3 of 350 episodes)"),
+    Check("length_late_trend", "length.late_trend", "abs", 0.15, "L̄350–500 / L̄150–350; paper 0.925"),
     # Reward (panel a): absolute residuals (our reward scale matches the paper's).
-    Check("reward_t50_timing", "reward.t50", "abs", 40.0, "episodes; paper 71"),
-    Check("reward_t50_timing", "reward.t90", "abs", 25.0, "episodes; paper 86"),
-    Check("reward_pearson_0_200", "reward.pearson_0_200", "ge", 0.054, "r ≥ 0.946"),
-    Check("reward_pearson_0_500", "reward.pearson_0_500", "ge", 0.039, "r ≥ 0.961"),
-    Check("reward_relative_gain", "reward.relative_gain", "abs", 0.018, "paper 0.974"),
-    Check("reward_late_plateau_hold", "reward.plateau_min_progress", "ge", 0.049, "paper 0.96"),
+    Check("reward_t50_timing", "reward.t50", "abs", 45.0, "episodes; paper 71"),
+    Check("reward_t50_timing", "reward.t90", "abs", 35.0, "episodes; paper 86"),
+    Check("reward_pearson_0_200", "reward.pearson_0_200", "ge", 0.062, "r ≥ 0.938"),
+    Check("reward_pearson_0_500", "reward.pearson_0_500", "ge", 0.058, "r ≥ 0.942"),
+    Check("reward_relative_gain", "reward.relative_gain", "abs", 0.026, "paper 0.974"),
+    Check("reward_late_plateau_hold", "reward.plateau_min_progress", "ge", 0.058, "paper 0.96"),
     Check("reward_leads_length", "reward.t10_lead", "ge", 35.0, "length t10 − reward t10; paper 36"),
 )
 # Tier 2: first-50 reward vs paper −487.5k, meaningful only if d = (αβ − θ)² unnormalized.
@@ -685,14 +686,14 @@ def fig4_abort_check(
 
 FIG5_CHECKS: tuple[Check, ...] = (
     # Spike count: relative residuals (the paper never defines its count).
-    Check("spike_trend_near_paper", "spike_trend", "abs", 0.076, "S̄350–500 / S̄0–50; paper 1.00"),
+    Check("spike_trend_near_paper", "spike_trend", "abs", 0.099, "S̄350–500 / S̄0–50; paper 1.00"),
     # DBS energy: relative residuals (our energy scale differs from the paper's).
     Check("energy_pearson_0_500", "energy_pearson_0_500", "ge", 0.21, "r ≥ 0.79"),
-    Check("energy_rise_timing", "energy_t50", "abs", 10.0, "episodes; paper 73"),
-    Check("energy_rise_timing", "energy_t90", "abs", 35.0, "episodes; paper 88"),
+    Check("energy_rise_timing", "energy_t50", "abs", 25.0, "episodes; paper 73"),
+    Check("energy_rise_timing", "energy_t90", "abs", 40.0, "episodes; paper 88"),
     Check("energy_mid_ramp_near_paper", "energy_mid_ramp", "abs", 0.23, "Ē55–75 / Ē0–50; paper 1.15"),
-    Check("energy_trend_near_paper", "energy_trend", "abs", 0.44, "Ē350–500 / Ē0–50; paper 1.80"),
-    Check("energy_overshoot", "energy_overshoot", "abs", 0.078, "Ē150–350 / Ē350–500; paper 1.16"),
+    Check("energy_trend_near_paper", "energy_trend", "abs", 0.6, "Ē350–500 / Ē0–50; paper 1.80"),
+    Check("energy_overshoot", "energy_overshoot", "abs", 0.087, "Ē150–350 / Ē350–500; paper 1.16"),
 )
 FIG5_LEVEL_REPORT_KEYS: tuple[str, ...] = (
     "spike_early_near_paper",
@@ -717,26 +718,26 @@ FIG5_REQUIRED_KEYS: tuple[str, ...] = tuple(dict.fromkeys(c.gate for c in FIG5_C
 
 FIG6_AB_CHECKS: tuple[Check, ...] = (
     # α–β (episode-final reading): absolute residuals (same units, same θ).
-    Check("alpha_beta_early_near_paper", "ab_early", "abs", 110.0, "first traced ep–50; paper 289"),
-    Check("alpha_beta_mid_near_paper", "ab_mid", "abs", 58.0, "ep 50–100; paper 221"),
+    Check("alpha_beta_early_near_paper", "ab_early", "abs", 95.0, "first traced ep–50; paper 289"),
+    Check("alpha_beta_mid_near_paper", "ab_mid", "abs", 52.0, "ep 50–100; paper 221"),
     Check("alpha_beta_post100_near_paper", "ab_post100", "abs", 6.4, "ep 100–250; paper 110"),
     Check("alpha_beta_late_near_paper", "ab_late", "abs", 5.3, "ep 350–500; paper 109"),
-    Check("alpha_beta_mean_near_paper", "ab_mean", "abs", 9.0, "first traced ep–500; paper 130"),
-    Check("alpha_beta_pearson", "ab_pearson", "ge", 0.063, "r ≥ 0.937"),
-    Check("alpha_beta_t50_timing", "ab_t50", "abs", 20.0, "episodes; paper 87"),
-    Check("alpha_beta_drop_fraction", "ab_drop_fraction", "abs", 0.24, "(early − mid) / (early − late); paper 0.37"),
+    Check("alpha_beta_mean_near_paper", "ab_mean", "abs", 11.0, "first traced ep–500; paper 130"),
+    Check("alpha_beta_pearson", "ab_pearson", "ge", 0.091, "r ≥ 0.909"),
+    Check("alpha_beta_t50_timing", "ab_t50", "abs", 35.0, "episodes; paper 87"),
+    Check("alpha_beta_drop_fraction", "ab_drop_fraction", "abs", 0.34, "(early − mid) / (early − late); paper 0.37"),
     Check("alpha_beta_trend_near_paper", "ab_trend", "abs", 0.17, "late / early; paper 0.38"),
-    Check("alpha_beta_drop_magnitude_near_paper", "ab_drop", "abs", 110.0, "early − late; paper 180"),
-    Check("alpha_beta_late_cv", "ab_late_cv", "abs", 0.026, "std / mean ep 350–500; paper 0.16"),
+    Check("alpha_beta_drop_magnitude_near_paper", "ab_drop", "abs", 93.0, "early − late; paper 180"),
+    Check("alpha_beta_late_cv", "ab_late_cv", "abs", 0.025, "std / mean ep 350–500; paper 0.16"),
 )
 FIG6_FREQ_CHECKS: tuple[Check, ...] = (
     # Frequency: relative residuals (our levels sit below the paper's).
-    Check("freq_early_near_paper", "freq_early", "abs", 35.0, "Hz, ep 0–50; paper 59.1"),
-    Check("freq_mid_near_paper", "freq_mid", "abs", 33.0, "Hz, ep 50–100; paper 93.7"),
+    Check("freq_early_near_paper", "freq_early", "abs", 42.0, "Hz, ep 0–50; paper 59.1"),
+    Check("freq_mid_near_paper", "freq_mid", "abs", 37.0, "Hz, ep 50–100; paper 93.7"),
     Check("freq_late_near_paper", "freq_late", "abs", 6.2, "Hz, ep 350–500; paper 81.3"),
-    Check("freq_t50_timing", "freq_t50", "abs", 40.0, "episodes; paper 26"),
-    Check("freq_pearson", "freq_pearson", "ge", 0.66, "r ≥ 0.34"),
-    Check("freq_late_cv", "freq_late_cv", "abs", 0.012, "std / mean ep 350–500; paper 0.076"),
+    Check("freq_t50_timing", "freq_t50", "abs", 45.0, "episodes; paper 26"),
+    Check("freq_pearson", "freq_pearson", "ge", 0.68, "r ≥ 0.32"),
+    Check("freq_late_cv", "freq_late_cv", "abs", 0.025, "std / mean ep 350–500; paper 0.076"),
 )
 FIG6_CHECKS: tuple[Check, ...] = (*FIG6_AB_CHECKS, *FIG6_FREQ_CHECKS)
 FIG6_THETA_KEYS: tuple[str, ...] = (

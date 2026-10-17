@@ -239,8 +239,14 @@ def clean_tol(needed: float, metric: str) -> float:
 def key_level_tolerances(
     checks: tuple[Any, ...], devs: dict[int, list[float]], min_pass: float
 ) -> dict[str, float]:
-    """For gate keys made of several checks, raise the per-check quantile together until
-    the key as a whole passes on ≥ ``min_pass`` of synthetic runs (clean-rounded)."""
+    """Tolerances for gate keys made of several checks.
+
+    Each check starts at its own clean 90 % tolerance; candidates are the clean-rounded
+    synthetic deviations above it. Pick the combination with the smallest widening
+    ``max_j(tol_j / own_j)`` at which the key as a whole passes on ≥ ``min_pass`` of runs.
+    """
+    import itertools
+
     out: dict[str, float] = {}
     by_key: dict[str, list[int]] = defaultdict(list)
     for i, c in enumerate(checks):
@@ -249,15 +255,24 @@ def key_level_tolerances(
         if len(idx) < 2:
             continue
         mat = np.asarray([devs[i] for i in idx])  # checks × runs
-        n = mat.shape[1]
-        for k in range(math.ceil(min_pass * n), n + 1):
-            q = k / n
-            tols = [clean_tol(needed_tol(list(mat[j]), q), checks[i].metric) for j, i in enumerate(idx)]
-            rate = float(np.mean(np.all(mat <= np.asarray(tols)[:, None], axis=0)))
-            if rate >= min_pass:
-                break
+        own = [clean_tol(needed_tol(list(mat[j]), min_pass), checks[i].metric) for j, i in enumerate(idx)]
+        cands = []
         for j, i in enumerate(idx):
-            out[checks[i].metric] = tols[j]
+            vals = {own[j]} | {
+                clean_tol(float(d), checks[i].metric) for d in mat[j] if math.isfinite(d) and d > own[j]
+            }
+            cands.append(sorted(vals))
+        best: tuple[float, tuple[float, ...]] | None = None
+        for combo in itertools.product(*cands):
+            tols = np.asarray(combo)[:, None]
+            if float(np.mean(np.all(mat <= tols, axis=0))) < min_pass:
+                continue
+            widen = max(t / o if o > 0 else (1.0 if t == 0 else math.inf) for t, o in zip(combo, own))
+            if best is None or widen < best[0]:
+                best = (widen, combo)
+        chosen = best[1] if best else tuple(math.inf for _ in idx)
+        for j, i in enumerate(idx):
+            out[checks[i].metric] = chosen[j]
     return out
 
 
