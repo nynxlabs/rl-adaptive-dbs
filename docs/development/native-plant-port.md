@@ -2,7 +2,7 @@
 
 **Status:** In progress (Phase B–D; see [roadmap.md](roadmap.md)).  
 **Parent task:** Parallel MATLAB engines + native plant planning (TASK-15).  
-**Authoritative plant spec:** [plant.md](../plant.md). Reference dynamics: `reference-material/KumaraveluEtAl2016/simulate_network_model.m`.
+**Authoritative plant spec:** [plant.md](../plant.md). Reference dynamics: `reference-material/KumaraveluEtAl2016/simulate_network_model.m` (fetched, not bundled: `python scripts/matlab/fetch_kumaravelu.py`).
 
 ---
 
@@ -208,7 +208,7 @@ Immediate throughput win — separate child issue for programmer:
 
 ## 10. References
 
-- Kumaravelu et al. (2016) — bundled MATLAB under `reference-material/KumaraveluEtAl2016/`
+- Kumaravelu et al. (2016) — MATLAB fetched into `reference-material/KumaraveluEtAl2016/` (`python scripts/matlab/fetch_kumaravelu.py`)
 - [plant.md](../plant.md) — plant spec §7–9
 - [environment.md](../environment.md) — Mehregan Gym API
 - [development/testing.md](testing.md) — `@pytest.mark.matlab` policy

@@ -4,20 +4,11 @@
 from __future__ import annotations
 
 import argparse
-import os
 from pathlib import Path
 
 import numpy as np
 
-
-def _repo_model_dir() -> Path:
-    env = os.environ.get("RL_ADAPTIVE_DBS_MATLAB_MODEL")
-    if env:
-        return Path(env).resolve()
-    root = os.environ.get("RL_ADAPTIVE_DBS_ROOT")
-    if root:
-        return Path(root).resolve() / "reference-material" / "KumaraveluEtAl2016"
-    return Path(__file__).resolve().parents[2] / "reference-material" / "KumaraveluEtAl2016"
+from envs.plant.matlab_backend import model_dir
 
 
 def _matlab_vec(raw: object) -> np.ndarray:
@@ -30,11 +21,12 @@ def _matlab_perm(raw: object) -> np.ndarray:
 
 def export_matlab_init_draws(*, seed: int, n: int = 10, pd: int = 1) -> dict[str, np.ndarray]:
     """Read init draws from a short MATLAB run (``plant_init_export`` struct)."""
+    path = model_dir()
     import matlab.engine
 
     eng = matlab.engine.start_matlab()
     try:
-        eng.cd(str(_repo_model_dir()), nargout=0)
+        eng.cd(str(path), nargout=0)
         raw = eng.simulate_network_model(
             1.0,
             float(pd),

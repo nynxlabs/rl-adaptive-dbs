@@ -20,3 +20,10 @@ notes.md
 wilzen3476/
 logs/
 .venv
+
+# Kumaravelu et al. (2016) model — fetched, not redistributed (LICENSING.md):
+# python scripts/matlab/fetch_kumaravelu.py
+/reference-material/KumaraveluEtAl2016/simulate_network_model.m
+/reference-material/KumaraveluEtAl2016/run_simulate_network_model.q
+/reference-material/KumaraveluEtAl2016/readme.txt
+/reference-material/KumaraveluEtAl2016/plant_band_power.m

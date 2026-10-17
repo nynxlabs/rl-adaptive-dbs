@@ -1,6 +1,6 @@
 # MATLAB setup (Kumaravelu plant bridge)
 
-MATLAB is required for **Phase 2** plant work: running the bundled Kumaravelu et al. (2016) network (`reference-material/KumaraveluEtAl2016/`) and validating the Python bridge. CI and day-to-day Python-only work do **not** need MATLAB ([development/testing.md](development/testing.md)).
+MATLAB is required for **Phase 2** plant work: running the Kumaravelu et al. (2016) network (fetched into `reference-material/KumaraveluEtAl2016/` with `python scripts/matlab/fetch_kumaravelu.py` — it is not bundled, see [LICENSING.md](../LICENSING.md)) and validating the Python bridge. CI and day-to-day Python-only work do **not** need MATLAB ([development/testing.md](development/testing.md)).
 
 **Platforms:** **Windows, macOS, and Linux** (including WSL) — same repo contract everywhere ([platform support](../README.md#platform-support)). Shell helpers (`scripts/matlab/env.sh`, `scripts/matlab/verify.sh`) are **bash**; on Windows use **Git Bash**, **WSL**, or the manual steps in §2.3 / §5.
 
@@ -30,7 +30,7 @@ Walks through install (optional), `MATLAB_ROOT`, license, `uv sync`, shell persi
 | **MATLAB** (R2024b+; repo tested on **R2025b**) | Run `simulate_network_model.m` and the plant bridge |
 | **Valid license** | Batch mode and `matlab.engine` both require it |
 | **`matlabengine` (Python)** | `import matlab.engine` from the project venv — version must match your MATLAB release |
-| **Toolboxes** | **Base MATLAB** for Phase 2 bridge (`CTX_BG_TH_network`; vendored patches in [kumaravelu_vendor_patches.md](reference-material/kumaravelu_vendor_patches.md)). Full upstream `simulate_network_model` also needs **Signal Processing Toolbox** (`dpss` in `make_Spectrum`) — biomarkers for Mehregan are computed in Python per [plant.md](plant.md) |
+| **Toolboxes** | **Base MATLAB** for Phase 2 bridge (`CTX_BG_TH_network`; our integration patches in [kumaravelu_vendor_patches.md](reference-material/kumaravelu_vendor_patches.md)). Full upstream `simulate_network_model` also needs **Signal Processing Toolbox** (`dpss` in `make_Spectrum`) — biomarkers for Mehregan are computed in Python per [plant.md](plant.md) |
 | **OS extras** | Headless **Linux/WSL** only: `xvfb` + GTK libs (§3.1) |
 
 Default `MATLAB_ROOT` assumed by scripts: **`~/MATLAB`** (Linux/macOS) or your MathWorks install path (§2). Override when your install lives elsewhere.
@@ -43,8 +43,9 @@ Skip §3 if MATLAB is already on this machine. On every OS the flow is the same:
 
 1. Set **`MATLAB_ROOT`** and **`MATLAB_RELEASE`** to your install.
 2. `uv sync --all-groups` (or `--group matlab`).
-3. Source **`scripts/matlab/env.sh`** (bash) or set the equivalent env vars (§5).
-4. Run **`bash scripts/matlab/verify.sh`** — all checks should pass.
+3. Fetch the model: `python scripts/matlab/fetch_kumaravelu.py` (§7).
+4. Source **`scripts/matlab/env.sh`** (bash) or set the equivalent env vars (§5).
+5. Run **`bash scripts/matlab/verify.sh`** — all checks should pass.
 
 ### Universal checklist (bash)
 
@@ -55,6 +56,7 @@ export MATLAB_ROOT=/path/to/MATLAB    # see §2.1–§2.3
 export MATLAB_RELEASE=R2025b          # must match your install
 
 uv sync --all-groups
+uv run python scripts/matlab/fetch_kumaravelu.py   # Kumaravelu model (not bundled)
 source scripts/matlab/env.sh          # Git Bash / macOS / Linux / WSL
 
 bash scripts/matlab/verify.sh
@@ -294,7 +296,7 @@ source /path/to/rl-adaptive-dbs/scripts/matlab/env.sh
 | `MATLAB_ROOT` | Install root (contains `bin/matlab` or `bin/matlab.exe`) |
 | `MATLAB_RELEASE` | e.g. `R2025b` — drives prefdir and license search |
 | `MATLAB_PREFDIR` | Default `~/.matlab/<RELEASE>` |
-| `RL_ADAPTIVE_DBS_MATLAB_MODEL` | `reference-material/KumaraveluEtAl2016` |
+| `RL_ADAPTIVE_DBS_MATLAB_MODEL` | `reference-material/KumaraveluEtAl2016` (the fetched model; §7) |
 | `PATH` | Prepends `$MATLAB_ROOT/bin` |
 | `LD_LIBRARY_PATH` / `DYLD_LIBRARY_PATH` | Platform arch `bin` folder (for `matlab.engine`) |
 
@@ -338,13 +340,23 @@ bash scripts/matlab/verify.sh     # install + license + Python engine (all OS vi
 
 **Phase 2 needs:** `CTX_BG_TH_network` dynamics (GPi spike trains). `scripts/matlab/verify.sh` runs a short segment automatically.
 
+**Fetch the model first.** The Kumaravelu MATLAB files have no license we could find, so this repository does not redistribute them ([LICENSING.md](../LICENSING.md)). The fetch script downloads the pinned upstream revision (ModelDB mirror commit `0addcc04d7e6`), checks SHA-256 hashes, and applies our patches from `reference-material/KumaraveluEtAl2016/patches/`:
+
+```bash
+uv run python scripts/matlab/fetch_kumaravelu.py            # download + patch (stdlib only; plain python works too)
+uv run python scripts/matlab/fetch_kumaravelu.py --check    # verify the fetched copy
+uv run python scripts/matlab/fetch_kumaravelu.py --source DIR   # offline, from a downloaded copy of the upstream files
+```
+
+The output (`simulate_network_model.m`, `run_simulate_network_model.q`, `readme.txt`, `plant_band_power.m`) is gitignored. After editing those files, record the change with `--update-patches` (rewrites `patches/*.patch` and `patches/manifest.json`) and describe it in [kumaravelu_vendor_patches.md](reference-material/kumaravelu_vendor_patches.md). `MatlabPlant` and `scripts/plant/export_plant_init_draws.py` raise an error naming the fetch command when the model is missing, and `@pytest.mark.matlab` tests skip.
+
 ```bash
 source scripts/matlab/env.sh
 cd reference-material/KumaraveluEtAl2016
 matlab -batch "simulate_network_model(1,1,0,1,true); exit"
 ```
 
-Fifth argument `dynamics_only=true` returns after `CTX_BG_TH_network` (vendored patch; see [kumaravelu_vendor_patches.md](reference-material/kumaravelu_vendor_patches.md)).
+Fifth argument `dynamics_only=true` returns after `CTX_BG_TH_network` (our patch; see [kumaravelu_vendor_patches.md](reference-material/kumaravelu_vendor_patches.md)).
 
 **Full upstream script** (optional, for `.mat` reference dumps):
 

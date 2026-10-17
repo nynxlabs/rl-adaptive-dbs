@@ -51,7 +51,7 @@ Draft specs that define scope, interfaces, and paper-aligned intent—not final 
 
 Replicate the shared plant and Mehregan et al. Gym API before any controller work.
 
-- Wrap Kumaravelu et al. (2016) MATLAB model (`reference-material/KumaraveluEtAl2016/`) per [plant.md](../plant.md); expose Mehregan Gym API per [environment.md](../environment.md).
+- Wrap Kumaravelu et al. (2016) MATLAB model (`reference-material/KumaraveluEtAl2016/`, fetched with `scripts/matlab/fetch_kumaravelu.py`) per [plant.md](../plant.md); expose Mehregan Gym API per [environment.md](../environment.md).
 - Gymnasium `reset` / `step`: parkinsonian ICs, STN DBS, GPi $P_\beta$, 2 s RL steps, reward Eq. (8)—the interface `ddpg` will use directly.
 - Equivalence checks vs reference (integration step, biomarker band, baseline traces).
 - **Exit criteria:** reproducible rollouts; baselines (`none`, `cdbs-130hz`, `periodic-45hz`) runnable from `envs/`; ready for Phase 3 training.

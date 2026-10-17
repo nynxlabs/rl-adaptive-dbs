@@ -92,6 +92,11 @@ if ask_yn "Install Python deps (uv sync --all-groups)?" y; then
 fi
 say ""
 
+if ask_yn "Fetch the Kumaravelu et al. (2016) model from ModelDB (not bundled; see LICENSING.md)?" y; then
+  uv run python "$_matlab_dir/fetch_kumaravelu.py"
+fi
+say ""
+
 default_root="$(guess_matlab_root "$os")"
 if [[ -n "$default_root" ]] && { [[ -x "$default_root/bin/matlab" ]] || [[ -x "$default_root/bin/matlab.exe" ]]; }; then
   say "Found MATLAB at: $default_root"

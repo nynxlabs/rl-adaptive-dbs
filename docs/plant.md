@@ -25,7 +25,7 @@ The plant layer exposes **dynamics + actuation + spike/biomarker outputs**. The 
 ## 2. Reference and provenance
 
 - **Publication:** Kumaravelu, K., Brocker, D. T., Grill, W. M. (2016). *A biophysical model of the cortex–basal ganglia–thalamus network in the 6-OHDA lesioned rat model of Parkinson’s disease.* *Journal of Computational Neuroscience*, 40, 207–229.
-- **Bundled MATLAB:** [`reference-material/KumaraveluEtAl2016/`](../reference-material/KumaraveluEtAl2016/) — entry script `simulate_network_model.m`, network routine `CTX_BG_TH_network` in the same file. Citation and provenance: [`readme.txt`](../reference-material/KumaraveluEtAl2016/readme.txt).
+- **Reference MATLAB (fetched, not bundled):** `python scripts/matlab/fetch_kumaravelu.py` downloads the pinned upstream revision into `reference-material/KumaraveluEtAl2016/` and applies our integration patches ([changes.md](../reference-material/KumaraveluEtAl2016/changes.md); licensing: [LICENSING.md](../LICENSING.md)) — entry script `simulate_network_model.m`, network routine `CTX_BG_TH_network` in the same file. Citation and provenance: the fetched `readme.txt`.
 - **Upstream:** [ModelDBRepository/206232](https://github.com/ModelDBRepository/206232).
 
 **Replication default:** **Parkinsonian** runs use `pd = 1` in the reference script (`pd = 0` is healthy). RL work in this repo targets the **parkinsonian** regime unless a benchmark explicitly includes healthy controls.
@@ -80,7 +80,7 @@ The reference drives DBS as a **current injected in STN** (`Idbs` passed to `CTX
 
 Biomarker **definitions differ by paper**; the plant and wrapper should compute spectra from **GPi spike trains** and expose band integrals consistently.
 
-### 6.1 Reference script (Kumaravelu bundle)
+### 6.1 Reference script (Kumaravelu MATLAB)
 
 After simulation, `make_Spectrum(GPi_APs, params)` computes a multitaper PSD (`mtspectrumpt`, Chronux-style parameters in-script: `Fs` from `dt`, `fpass = [1 100]`, `tapers = [3 5]`). The reference integrates power over **7–35 Hz**:
 
@@ -232,7 +232,7 @@ Mark heavy checks `@pytest.mark.matlab` ([development/testing.md](development/te
 | ≥10× speedup vs MATLAB (2 s integrate) | **Pass** (Numba JIT, WSL ≈6.5 s vs MATLAB ≈66 s, seed=42) |
 | Default backend flip to `python` | **Done** (TASK-63, 2026-07-06) |
 
-Default is `python`; opt into MATLAB via `plant.backend: matlab` or `RL_DBS_PLANT_BACKEND=matlab`. Treat **`reference-material/KumaraveluEtAl2016/`** as the dynamics reference for audits; Python is validated against it via exported init fixtures and parametrized `@pytest.mark.matlab` tests.
+Default is `python`; opt into MATLAB via `plant.backend: matlab` or `RL_DBS_PLANT_BACKEND=matlab`. Treat the fetched MATLAB in **`reference-material/KumaraveluEtAl2016/`** (`python scripts/matlab/fetch_kumaravelu.py`) as the dynamics reference for audits; Python is validated against it via exported init fixtures and parametrized `@pytest.mark.matlab` tests.
 
 ---
 
@@ -272,6 +272,6 @@ Reference uses specific `Fs`, `fpass`, and tapers. **Open:** whether adapters ma
 
 ## 12. References
 
-- Kumaravelu et al. (2016) — plant dynamics; bundled MATLAB under [`reference-material/KumaraveluEtAl2016/`](../reference-material/KumaraveluEtAl2016/).
+- Kumaravelu et al. (2016) — plant dynamics; MATLAB from [ModelDBRepository/206232](https://github.com/ModelDBRepository/206232), fetched into `reference-material/KumaraveluEtAl2016/` with `python scripts/matlab/fetch_kumaravelu.py`.
 - Mehregan et al. — RL environment using this plant; [environment.md](environment.md).
 - Nguyen et al., Ravivarapu et al. — adapters on the same plant; [controllers/snn/replication.md](controllers/snn/replication.md), [controllers/sea_dbs/replication.md](controllers/sea_dbs/replication.md).

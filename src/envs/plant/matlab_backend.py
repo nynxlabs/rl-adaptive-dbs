@@ -22,11 +22,26 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
-def _model_dir() -> Path:
+FETCH_COMMAND = "python scripts/matlab/fetch_kumaravelu.py"
+
+
+def model_dir(*, require: bool = True) -> Path:
+    """Directory holding the fetched Kumaravelu MATLAB model (not bundled; LICENSING.md).
+
+    ``RL_ADAPTIVE_DBS_MATLAB_MODEL`` overrides the default
+    ``reference-material/KumaraveluEtAl2016/``. With ``require=True`` a missing
+    ``simulate_network_model.m`` raises ``FileNotFoundError`` naming the fetch command.
+    """
     env = os.environ.get("RL_ADAPTIVE_DBS_MATLAB_MODEL")
-    if env:
-        return Path(env).resolve()
-    return _repo_root() / "reference-material" / "KumaraveluEtAl2016"
+    path = Path(env).resolve() if env else _repo_root() / "reference-material" / "KumaraveluEtAl2016"
+    if require and not (path / "simulate_network_model.m").is_file():
+        msg = (
+            f"Kumaravelu MATLAB model not found in {path} (simulate_network_model.m is missing). "
+            f"It is not redistributed with this repository; fetch it with `{FETCH_COMMAND}` "
+            "or set RL_ADAPTIVE_DBS_MATLAB_MODEL (docs/matlab.md)."
+        )
+        raise FileNotFoundError(msg)
+    return path
 
 
 @dataclass(frozen=True)
@@ -68,10 +83,11 @@ class MatlabPlant:
 
     def _get_engine(self) -> Any:
         if self._engine is None:
+            path = model_dir()
             import matlab.engine
 
             self._engine = matlab.engine.start_matlab()
-            self._engine.cd(str(_model_dir()), nargout=0)
+            self._engine.cd(str(path), nargout=0)
         return self._engine
 
     def close(self) -> None:

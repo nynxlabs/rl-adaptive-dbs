@@ -9,7 +9,12 @@ export MATLAB_ROOT="${MATLAB_ROOT:-$HOME/MATLAB}"
 export MATLAB_RELEASE="${MATLAB_RELEASE:-R2025b}"
 export MATLAB_PREFDIR="${MATLAB_PREFDIR:-$HOME/.matlab/$MATLAB_RELEASE}"
 export RL_ADAPTIVE_DBS_ROOT="${RL_ADAPTIVE_DBS_ROOT:-$_repo_root}"
+# Kumaravelu et al. (2016) model: fetched, not bundled (LICENSING.md).
 export RL_ADAPTIVE_DBS_MATLAB_MODEL="${RL_ADAPTIVE_DBS_MATLAB_MODEL:-$_repo_root/reference-material/KumaraveluEtAl2016}"
+if [ ! -f "$RL_ADAPTIVE_DBS_MATLAB_MODEL/simulate_network_model.m" ]; then
+  echo "matlab/env.sh: Kumaravelu model not found in $RL_ADAPTIVE_DBS_MATLAB_MODEL" >&2
+  echo "  Fetch it: python scripts/matlab/fetch_kumaravelu.py (docs/matlab.md)" >&2
+fi
 
 _matlab_bin=""
 if [ -x "$MATLAB_ROOT/bin/matlab" ]; then

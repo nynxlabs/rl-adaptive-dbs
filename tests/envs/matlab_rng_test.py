@@ -26,10 +26,9 @@ def test_load_cached_init_draws_seed42() -> None:
 def test_cached_init_draws_gsngen_matches_matlab_export() -> None:
     """Fixture gsngen must match live CTX_BG_TH_network (plant_init_export)."""
     pytest.importorskip("matlab.engine")
-    from tests.conftest import matlab_engine_available
+    from tests.envs.plant_backends import require_matlab
 
-    if not matlab_engine_available():
-        pytest.skip("MATLAB Python engine not installed (uv sync --group matlab)")
+    require_matlab()
 
     from scripts.plant.export_plant_init_draws import export_matlab_init_draws
 

@@ -43,8 +43,11 @@ def matlab_engine_available() -> bool:
 
 
 def require_matlab() -> None:
-    if not matlab_engine_available():
-        pytest.skip("MATLAB Python engine not installed (uv sync --group matlab)")
+    from tests.conftest import matlab_skip_reason
+
+    reason = matlab_skip_reason()
+    if reason is not None:
+        pytest.skip(reason)
 
 
 @contextmanager

@@ -135,6 +135,9 @@ if [[ "$WITH_MATLAB" -eq 1 ]]; then
   say "=== MATLAB Python engine (uv sync --group matlab) ==="
   uv sync --group matlab
   say ""
+  say "=== Kumaravelu MATLAB model (fetched, not bundled — LICENSING.md) ==="
+  uv run python "$_script_dir/matlab/fetch_kumaravelu.py"
+  say ""
   say "=== MATLAB setup ==="
   if [[ "$INTERACTIVE" -eq 1 ]] && [[ -t 0 ]]; then
     bash "$_script_dir/matlab/setup.sh"

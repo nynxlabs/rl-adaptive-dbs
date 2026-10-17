@@ -14,7 +14,7 @@ Single source of truth for **what we have replicated**, **what diverges**, and *
 
 | Area | Paper / spec | Our implementation | Evidence |
 |------|--------------|-------------------|----------|
-| **Plant model** | Kumaravelu et al. (2016) CBGT, parkinsonian (`pd=1`), STN DBS | Bundled MATLAB reference + native `PythonPlant` port | TASK-106; `tests/envs/plant_backend_equivalence_test.py`; [plant.md](../plant.md) §8 |
+| **Plant model** | Kumaravelu et al. (2016) CBGT, parkinsonian (`pd=1`), STN DBS | Fetched MATLAB reference + native `PythonPlant` port | TASK-106; `tests/envs/plant_backend_equivalence_test.py`; [plant.md](../plant.md) §8 |
 | **Python vs MATLAB plant** | Same dynamics on shared grid | GPi spikes and $P_\beta$ match within ~1e-15 spike-time atol / &lt;1% $P_\beta$ rel error (init fixtures) | TASK-106; `tests/envs/python_integrator_fixed_ic_test.py` |
 | **Beta biomarker** | Eq. (1): GPi PSD integral **13–35 Hz**, mean over $n=10$ neurons | `envs/plant/biomarkers.py` — 13–35 Hz (not Kumaravelu default 7–35) | [environment.md](../environment.md) §3.1; TASK-109 |
 | **Fig. 1b (GPi PSD)** | Healthy, PD, PD + 130 Hz cDBS GPi PSD panel | `scripts/figures/papers/mehregan/1b/plot.py`; seeds 0–9 mean, 10 s segment; qualitative $P_\beta$ ordering matches paper | 2026-07-09; [plant.md](../plant.md) §8.1; [figures/mehregan/replications.md](../../figures/mehregan/replications.md) |

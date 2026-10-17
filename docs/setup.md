@@ -8,7 +8,7 @@ Install, verify, and use **rl-adaptive-dbs** day to day. For **priorities and st
 
 **rl-adaptive-dbs** provides:
 
-- A shared **plant** (Kumaravelu et al., 2016; MATLAB in `reference-material/`) wrapped for RL
+- A shared **plant** (Kumaravelu et al., 2016; native Python port, with the original MATLAB fetched on demand into `reference-material/`) wrapped for RL
 - A shared **Gymnasium-style environment** (`src/envs/`) — Mehregan et al. API (2 s steps, $P_\beta$, Eq. (8) reward)
 - **Controllers** (`src/controllers/ddpg` implemented; `src/controllers/snn` scaffolded for Phase 5; `sea_dbs` until Phase 6) — one implementation per paper; `ddpg` uses `envs/` directly, `snn` and `sea_dbs` use **adapters** for their paper’s RL interface
 - **Benchmarking & CLI** (Phase 4) — `src/benchmarks/` runner, **`rl-dbs`** (`benchmark`, `summary`, `info`, `train`/`eval`), **`rl-dbs-tui`** (six tabs — Run, Training, Eval, Benchmarks, Logs, Settings); Mehregan **PTQ/QAT** in `controllers/ddpg/quantization.py` — [benchmarking.md](benchmarking.md), [cli.md](cli.md), [tui.md](tui.md)
@@ -194,7 +194,7 @@ rl-adaptive-dbs/
 ├── rl_adaptive_dbs/         # CLI + TUI entry points
 ├── tests/                   # pytest (mirrors envs/, controllers/, benchmarks/)
 ├── docs/                    # Guides and specs (this file: setup.md)
-├── reference-material/      # Kumaravelu et al. (2016) MATLAB model
+├── reference-material/      # Kumaravelu et al. (2016) MATLAB model — fetched, not bundled
 ├── scripts/
 │   ├── setup.sh             # Project setup (Python + optional MATLAB)
 │   ├── validate-fresh.sh    # Fresh-host validation (Multipass / Sandbox)

@@ -123,7 +123,7 @@ Registered in `pyproject.toml`:
 | Marker | Use |
 |--------|-----|
 | `slow` | Long rollouts, training smoke, large fixtures |
-| `matlab` | Needs licensed MATLAB **and** `matlabengine` (`uv sync --group matlab`) plus the Kumaravelu bridge |
+| `matlab` | Needs licensed MATLAB **and** `matlabengine` (`uv sync --group matlab`) plus the fetched Kumaravelu model (`python scripts/matlab/fetch_kumaravelu.py`); skipped with a reason when any is missing |
 
 Example:
 

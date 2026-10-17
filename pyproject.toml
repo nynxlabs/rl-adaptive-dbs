@@ -50,8 +50,9 @@ markers = [
 [tool.hatch.build]
 dev-mode-dirs = ["src"]
 
-# The vendored MATLAB model, paper figure crops, reports, and model-generated
-# test fixtures stay out of built distributions (see LICENSING.md).
+# Our Kumaravelu model patches, paper figure crops, reports, and model-generated
+# test fixtures stay out of built distributions (see LICENSING.md). The MATLAB
+# model itself is not in the repository (scripts/matlab/fetch_kumaravelu.py).
 [tool.hatch.build.targets.sdist]
 only-include = ["src"]
 

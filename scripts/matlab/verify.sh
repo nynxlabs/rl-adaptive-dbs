@@ -34,7 +34,7 @@ model_dir="$RL_ADAPTIVE_DBS_MATLAB_MODEL"
 if [ -f "$model_dir/simulate_network_model.m" ]; then
   pass "reference model at $model_dir"
 else
-  die "missing simulate_network_model.m under $model_dir"
+  die "missing simulate_network_model.m under $model_dir — fetch it: python scripts/matlab/fetch_kumaravelu.py"
 fi
 
 if matlab -batch "cd('$model_dir'); assert(exist('simulate_network_model','file')==2); disp('model visible'); exit" >/dev/null 2>&1; then

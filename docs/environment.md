@@ -17,7 +17,7 @@ The **plant** is the shared **Kumaravelu et al. (2016)** parkinsonian CBGT model
 
 ## 2. Plant (dynamics model)
 
-Use the shared biophysical plant per **[plant.md](plant.md)** (Kumaravelu et al., 2016 CBGT, STN DBS, $n = 10$ per region, parkinsonian default). Mehregan §IV.A.1 reports integration step **0.02 ms**; the bundled reference defaults to **0.01 ms**—see [plant.md](plant.md) §5. The `envs/` Mehregan API does not duplicate dynamics; it wraps the plant with **2 s** RL steps, biomarker windows, and reward Eq. (8) below.
+Use the shared biophysical plant per **[plant.md](plant.md)** (Kumaravelu et al., 2016 CBGT, STN DBS, $n = 10$ per region, parkinsonian default). Mehregan §IV.A.1 reports integration step **0.02 ms**; the Kumaravelu reference script defaults to **0.01 ms**—see [plant.md](plant.md) §5. The `envs/` Mehregan API does not duplicate dynamics; it wraps the plant with **2 s** RL steps, biomarker windows, and reward Eq. (8) below.
 
 ---
 
@@ -219,4 +219,4 @@ See [plant.md](plant.md) §9.
 ## 13. References
 
 - Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning*.
-- Kumaravelu et al. (2016) — plant: [plant.md](plant.md); bundled MATLAB: [`reference-material/KumaraveluEtAl2016/`](../reference-material/KumaraveluEtAl2016/) ([`readme.txt`](../reference-material/KumaraveluEtAl2016/readme.txt)).
+- Kumaravelu et al. (2016) — plant: [plant.md](plant.md); MATLAB reference: fetched into `reference-material/KumaraveluEtAl2016/` with `python scripts/matlab/fetch_kumaravelu.py` (citation in its `readme.txt`).

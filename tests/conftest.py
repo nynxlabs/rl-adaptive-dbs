@@ -36,6 +36,22 @@ def matlab_engine_available() -> bool:
     return True
 
 
+def kumaravelu_model_fetched() -> bool:
+    """The MATLAB model is fetched, not bundled (``scripts/matlab/fetch_kumaravelu.py``)."""
+    from envs.plant.matlab_backend import model_dir
+
+    return (model_dir(require=False) / "simulate_network_model.m").is_file()
+
+
+def matlab_skip_reason() -> str | None:
+    """Why MATLAB-backed tests cannot run here, or ``None`` when they can."""
+    if not kumaravelu_model_fetched():
+        return "Kumaravelu MATLAB model not fetched (python scripts/matlab/fetch_kumaravelu.py)"
+    if not matlab_engine_available():
+        return "MATLAB engine not available (install/license or uv sync --group matlab)"
+    return None
+
+
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers",
@@ -46,9 +62,12 @@ def pytest_configure(config: pytest.Config) -> None:
 def pytest_collection_modifyitems(
     config: pytest.Config, items: list[pytest.Item]
 ) -> None:
-    if matlab_engine_available():
+    if not any("matlab" in item.keywords for item in items):
         return
-    skip = pytest.mark.skip(reason="MATLAB engine not available (install/license or uv sync --group matlab)")
+    reason = matlab_skip_reason()
+    if reason is None:
+        return
+    skip = pytest.mark.skip(reason=reason)
     for item in items:
         if "matlab" in item.keywords:
             item.add_marker(skip)
