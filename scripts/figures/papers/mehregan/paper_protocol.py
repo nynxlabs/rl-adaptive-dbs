@@ -92,7 +92,9 @@ STATE_LENGTH = STEP_MS
 
 # --- Paper-silent defaults (conventions) ------------------------------------
 DEFAULT_LOGIT_NOISE = 1.0
-DEFAULT_INIT_BIAS = 0.0
+# §I: "the action space is initialized using regular pulses" — head bias toward
+# each pulse's regular slot (strength paper-silent).
+DEFAULT_INIT_BIAS = 1.0
 DEFAULT_GAMMA = 0.99
 DEFAULT_TAU = 0.005
 DEFAULT_STATE_SAMPLE_MS = 100
@@ -121,6 +123,12 @@ class PaperKnobs:
     updates_per_step: int = DEFAULT_UPDATES_PER_STEP  # Alg. 1 line 15 "update frequency"
     # Linear anneal of the logit noise to this σ by the last episode (None = constant).
     logit_noise_end: float | None = None
+    # Optimizer / regularization conventions (paper: "Adam", lr stated; the rest silent).
+    adam_eps: float = 1e-8
+    adam_beta2: float = 0.999
+    logit_l2: float = 0.0  # actor loss += logit_l2 * mean(logits^2) (bounds Eq. 5's climb)
+    actor_grad_clip: float | None = None  # max grad norm on the actor (None = off)
+    head_init_scale: float = 1.0  # scales the logit head's initial weights
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -131,6 +139,11 @@ class PaperKnobs:
             "state_sample_ms": self.state_sample_ms,
             "updates_per_step": self.updates_per_step,
             "logit_noise_end": self.logit_noise_end,
+            "adam_eps": self.adam_eps,
+            "adam_beta2": self.adam_beta2,
+            "logit_l2": self.logit_l2,
+            "actor_grad_clip": self.actor_grad_clip,
+            "head_init_scale": self.head_init_scale,
         }
 
     def noise_std(self, episode: int, num_episodes: int) -> float:
@@ -148,6 +161,11 @@ _KNOB_TYPES = {
     "state_sample_ms": int,
     "updates_per_step": int,
     "logit_noise_end": float,
+    "adam_eps": float,
+    "adam_beta2": float,
+    "logit_l2": float,
+    "actor_grad_clip": float,
+    "head_init_scale": float,
 }
 
 
@@ -243,6 +261,9 @@ def reward_of(state: np.ndarray) -> float:
 
 def make_actor(space: PulseSpace, knobs: PaperKnobs, variant: str) -> nn.Module:
     actor = PulseActor(state_len=STATE_LENGTH, n_pulses=space.n_pulses, n_slots=space.n_slots)
+    if knobs.head_init_scale != 1.0:
+        with torch.no_grad():
+            actor.head.weight.mul_(knobs.head_init_scale)
     actor.init_regular(mean_hz=space.mean_hz, bias_scale=knobs.init_bias_scale)
     return QATActor(actor) if variant == "qat" else actor
 
@@ -306,7 +327,13 @@ def train_paper(
     hard_update(critic_t, critic)
     # Fused Adam: the same update as the default implementation, ~6x faster on
     # the 46M-weight logit head and action branch.
-    opt_a = torch.optim.Adam(actor.parameters(), lr=actor_lr, fused=True)
+    opt_a = torch.optim.Adam(
+        actor.parameters(),
+        lr=actor_lr,
+        eps=knobs.adam_eps,
+        betas=(0.9, knobs.adam_beta2),
+        fused=True,
+    )
     opt_c = torch.optim.Adam(critic.parameters(), lr=CRITIC_LR, fused=True)
     buf = Replay(BUFFER_CAPACITY, seed)
     plant = PythonPlant(config=plant_config())
@@ -336,7 +363,7 @@ def train_paper(
             log(f"froze QAT observers at episode {episode}")
         plant.reset(seed=seed + episode)
         tracker.reset()
-        res = plant.integrate(STEP_S, DbsSpec.none(), carry=True)
+        res = plant.integrate(STEP_S, DbsSpec.none(), carry=True, fixed_network=True)
         state = tracker.push(res.gpi_spikes, float(res.p_beta))
         reset_beta.append(float(state.mean()))
         noise_std = knobs.noise_std(episode, num_episodes)
@@ -348,7 +375,7 @@ def train_paper(
                     logits.shape, generator=noise_rng
                 )
             slots = PulseActor.slots_from_logits(logits, space.n_pulses, space.n_slots)[0].numpy()
-            res = plant.integrate(STEP_S, space.to_dbs_spec(slots), carry=True)
+            res = plant.integrate(STEP_S, space.to_dbs_spec(slots), carry=True, fixed_network=True)
             next_state = tracker.push(res.gpi_spikes, float(res.p_beta))
             reward = reward_of(next_state)
             dw = 1.0 if step == STEPS_PER_EPISODE - 1 else 0.0
@@ -369,9 +396,14 @@ def train_paper(
                 opt_c.step()
                 for p in critic.parameters():
                     p.requires_grad_(False)
-                actor_loss = -critic(s, crit_in(actor(s))).mean()
+                a_now = actor(s)
+                actor_loss = -critic(s, crit_in(a_now)).mean()
+                if knobs.logit_l2 > 0:
+                    actor_loss = actor_loss + knobs.logit_l2 * a_now.pow(2).mean()
                 opt_a.zero_grad()
                 actor_loss.backward()
+                if knobs.actor_grad_clip is not None:
+                    torch.nn.utils.clip_grad_norm_(actor.parameters(), knobs.actor_grad_clip)
                 opt_a.step()
                 for p in critic.parameters():
                     p.requires_grad_(True)
@@ -552,7 +584,7 @@ def run_condition(
     states: list[np.ndarray] = []
 
     def _seg(spec: DbsSpec) -> tuple[list[np.ndarray], float]:
-        res = plant.integrate(STEP_S, spec, carry=True)
+        res = plant.integrate(STEP_S, spec, carry=True, fixed_network=True)
         if res.p_beta is None:
             raise RuntimeError("plant integrate returned no p_beta")
         offset = len(spikes) * STEP_S
