@@ -79,7 +79,7 @@ def iter_tracker_image_links() -> list[tuple[str, str]]:
 
 
 def iter_report3_image_links() -> list[tuple[str, str]]:
-    """Gallery embeds from ``<notes_dir>/reports/3.md``."""
+    """Gallery embeds from ``<notes_dir>/reports/2026-08-10.md``."""
     out: list[tuple[str, str]] = []
     seen: set[tuple[str, str]] = set()
     try:
@@ -120,7 +120,7 @@ def iter_materialized_repo_pngs() -> list[tuple[str, str]]:
 
 
 def iter_all_push_targets(*, include_repo_materialized: bool = True) -> list[tuple[str, str]]:
-    """Union of tracker links, Report 3 gallery, and materialized repo PNGs."""
+    """Union of tracker links, the 2026-08-10 report gallery, and materialized repo PNGs."""
     out: list[tuple[str, str]] = []
     seen: set[tuple[str, str]] = set()
     for links in (iter_tracker_image_links(), iter_report3_image_links()):
@@ -254,7 +254,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--tracker-only",
         action="store_true",
-        help="only ``replications.md`` links (skip Report 3 + materialized repo PNG scan)",
+        help="only ``replications.md`` links (skip the 2026-08-10 report + materialized repo PNG scan)",
     )
     parser.add_argument("-q", "--quiet", action="store_true")
     args = parser.parse_args(argv)

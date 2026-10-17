@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run on the main checkout after landing a figure ship from a worktree.
-# Copies tracker-linked PNGs into the notes folder and refreshes Report 3
+# Copies tracker-linked PNGs into the notes folder and refreshes the 2026-08-10 report
 # (see rl_adaptive_dbs.notes_export for where that folder comes from).
 #
 # If the checkout uses vault-md githooks, their restore hook does the same
@@ -34,4 +34,4 @@ else
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/update_report3.py
 fi
 
-echo "sync_notes_after_ship: notes-folder replication images + Report 3 refreshed"
+echo "sync_notes_after_ship: notes-folder replication images + the 2026-08-10 report refreshed"

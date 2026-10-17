@@ -129,7 +129,7 @@ def main() -> int:
     parser.add_argument(
         "--update-report",
         action="store_true",
-        help="After promote, refresh Report 3 gallery image links in the notes folder",
+        help="After promote, refresh the 2026-08-10 report gallery image links in the notes folder",
     )
     _common.add_no_promote_arg(parser)
     args = parser.parse_args()
