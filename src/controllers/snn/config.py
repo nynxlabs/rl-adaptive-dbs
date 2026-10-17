@@ -333,28 +333,33 @@ def fig4_nguyen_config(
     """Nguyen Fig. 4–6 training config (docs/figures/nguyen/4.md, 6.md).
 
     Paper-stated: Eq. (7) reward with unnormalized d, θ = 150, init 300 nA/cm² / 40 Hz /
-    0.3 ms, 25-step episodes, replay update every 128 transitions, LIF DSQN, binary spikes.
-    From the authors' follow-up (arXiv 2606.28600): soft target τ 0.005, AdamW, SmoothL1,
-    value clipping 100, γ 0.99, lr 1e-3, buffer 100k, batch 128, ε 0.9 → 0.05 over 2,000
-    steps, surrogate-gradient training, per-episode continuous simulation, all eight CBGT
-    populations observed. Step sizes 5 Hz / 0.1 ms read off Fig 6 (40 + 8 × 5 = 80 Hz,
-    0.3 + 8 × 0.1 = 1.1 ms in ~8-step episodes). Paper-silent conventions: t_u = 3,
-    amplitude step 10 nA/cm², δ = 1, τ = 330, 64 minibatches per update, 1,650-transition
-    replay warm-up, rewards scaled by 1e-4 for learning only. Plant deviation (master's OK,
-    Oct 11 2026): distance-based STN recruitment ρ = 3 (``stn_dbs_spread``); Kumaravelu
-    drives all STN neurons equally (ρ = 1), which keeps pulse width and energy flat.
-    26 seeds: 15 pass every Fig 4 gate and 11 every Fig 4–6 gate; the shipped figure is seed 1.
+    0.3 ms, 25-step episodes, replay update every 128 transitions, binary spikes, and the
+    DSQN of §III.B: one hidden layer of 128 LIF neurons, β = 0.95, Eq. (2) reset by
+    subtraction, the n × N spike matrix fed one row per SNN step, actions by spike-count
+    argmax and Q from the output membrane.
+    From the authors' published code (CL-DBS-RL, arXiv 2606.28600), where the paper is
+    silent: t_u = 5, δ = 0.01, amplitude step 5 nA/cm², soft target τ 0.005, AdamW,
+    SmoothL1, value clipping 100, γ 0.99, lr 1e-3, buffer 100k, batch 128,
+    surrogate-gradient training, per-episode continuous simulation, all eight CBGT
+    populations observed. Step sizes 5 Hz / 0.1 ms read off Fig 6.
+    Paper-silent conventions, chosen against the digitized figures (4.md § Network
+    faithfulness audit): τ = 1,000 (the paper's late Fig 4a reward level), 10 bins of
+    10 ms per step (100 one-ms bins train less stably), linear ε 0.9 → 0.05 over 2,000
+    steps (the exponential schedule lands the length drop ~40 episodes late), 64
+    minibatches per update, 1,650-transition replay warm-up, rewards scaled by 1e-4 for
+    learning only. Plant deviation (master's OK, Oct 11 2026): distance-based STN
+    recruitment ρ = 3 (``stn_dbs_spread``).
     """
     return SNNConfig(
         seed=seed,
         num_episodes=num_episodes,
         max_episode_steps=EVAL_MAX_STEPS,
         alpha_beta_threshold=BIOMARKER_THRESHOLD,
-        subthreshold_steps_required=3,
-        energy_penalty=1.0,
-        threshold_reward=330.0,
+        subthreshold_steps_required=5,
+        energy_penalty=0.01,
+        threshold_reward=1000.0,
         reward_learning_scale=1e-4,
-        amplitude_sensitivity=10.0,
+        amplitude_sensitivity=5.0,
         frequency_sensitivity=5.0,
         pulse_width_sensitivity=0.1,
         plant_carry=True,
@@ -362,7 +367,9 @@ def fig4_nguyen_config(
         neurons_per_region=10,
         sequence_steps=10,
         surrogate_gradient="atan",
-        snn_input_mode="static",
+        snn_input_mode="sequence",
+        hidden_layers=1,
+        lif_reset="eq2",
         replay_update_cadence=128,
         replay_update_steps=64,
         replay_warmup_transitions=1_650,
