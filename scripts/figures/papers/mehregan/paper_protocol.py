@@ -436,7 +436,7 @@ def run_condition(
     logits_rows: list[list[float]] = []
 
     def _seg(spec: DbsSpec) -> float:
-        res = plant.integrate(STEP_S, spec, carry=True)
+        res = plant.integrate(STEP_S, spec, carry=True, fixed_network=True)
         if res.p_beta is None:
             raise RuntimeError("plant integrate returned no p_beta")
         offset = len(spikes) * STEP_S

@@ -84,3 +84,26 @@ def test_unknown_plant_integration_mode_rejected() -> None:
             plant=MockPlant(),
             config=MehreganEnvConfig(plant_integration_mode="not-a-mode"),
         )
+
+
+def test_continuous_mode_keeps_one_network_per_episode() -> None:
+    """Continuous episodes carry state on one network (no wiring redraw per 2 s step)."""
+    from envs.plant.python_backend import PythonPlant
+
+    env = MehreganEnv(
+        plant=PythonPlant(),
+        config=MehreganEnvConfig(
+            step_duration_s=0.01,
+            max_episode_steps=3,
+            plant_integration_mode="continuous",
+        ),
+    )
+    try:
+        env.reset(seed=123_456)  # no cached MATLAB draws for this seed
+        first = env._plant._init_draws
+        assert first is not None
+        env.step(baseline_action("periodic-45hz"))
+        env.step(baseline_action("periodic-45hz"))
+        assert env._plant._init_draws is first
+    finally:
+        env.close()
