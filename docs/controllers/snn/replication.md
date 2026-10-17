@@ -169,7 +169,7 @@ $$
 
 **Chosen (Fig. 4–6):** $N = 1$ (single STN stimulation contact) so per-episode energy matches paper Fig. 5 panel (b) scale (~500–3000 a.u.).
 
-**Per-episode totals (Fig. 5–6):** Sum Eq. (6) and CBGT spike counts over **`env.step()` transitions only** — the same steps counted in Fig. 4 episode length. The `reset()` initial 100 ms integrate is **not** included (observation window only).
+**Per-episode values (Fig. 5–6):** energy is the mean Eq. (6) value over the episode's `env.step()` transitions × the 25-step horizon; the spike count is spike events per 100 ms step, without the stimulated STN and GPi, which fire with each DBS pulse ([docs/figures/nguyen/5.md](../../figures/nguyen/5.md)). The `reset()` window is not counted.
 
 Energy enters the **reward** (§8) and reported **~22%** reduction vs. open-loop **130 Hz** DBS after training (§IV).
 
@@ -195,7 +195,7 @@ $$
 
 **$\theta_u$ wording in the paper** is ambiguous (“greater than or less than the threshold”), but §III.D defines **$\tau$ as the reward for being under the threshold**, so $\theta_u = 1$ on the **sub-threshold** branch is the reading consistent with Eq. (7).
 
-**Coefficients $\delta$, $\tau$, and the exact $d$ normalization** are **not** given numerically in the excerpted methods — **intentionally open**; align with released code if available, else tune for stable learning and document values.
+**Coefficients.** The paper gives no values for $\delta$ and $\tau$. $d = (\alpha\beta - \theta)^2$ is unnormalized and enters with a negative sign: the paper's first-50-episode reward (−487.5k ≈ 25 × (291 − 150)²) matches raw $d$, and the authors' published env (`MousePDEnv`) computes $-d$. Chosen (Oct 17 2026): δ = 0.01 (the published code) and τ = 1,000, the stop bonus that reproduces the paper's late Fig 4a reward level ([docs/figures/nguyen/4.md](../../figures/nguyen/4.md) § Network faithfulness audit).
 
 **Distinction from shared env reward:** [environment.md](../../environment.md) §6 uses Mehregan Eq. (8) on **normalized** beta state with $\beta_t = 0.35$. The **snn** trainer must use **Eq. (7)** above, not the shared-env reward, when replicating Nguyen et al.
 
@@ -246,39 +246,39 @@ Hyperparameters with **fixed** values in §IV (episode count, threshold **150**,
 
 ### 1. Spike observation layout ($n \times N$)
 
-Eq. (4) defines a binary spike matrix; §III.B mentions **128** inputs per forward pass (distinct from replay cadence **128**). **Fixed:** binary encoding; **100 ms** RL step. **Chosen:** all eight CBGT populations — cortex exc/inh, striatum D1/D2, STN, GPe, GPi, thalamus — 10 neurons each ($N=80$), sequence length $n=10$ (`n_regions=8`, `sequence_steps=10`); the authors' follow-up (arXiv 2606.28600) observes the same 8 × 10 matrix. `n_regions=1` keeps the earlier GPi-only input.
+Eq. (4) defines a binary spike matrix "across sequence steps". **Fixed:** binary encoding; **100 ms** RL step; the matrix is fed one row per SNN step (`snn_input_mode="sequence"`), as in the authors' published code. **Chosen:** all eight CBGT populations (cortex exc/inh, striatum D1/D2, STN, GPe, GPi, thalamus), 10 neurons each ($N = 80$), $n = 10$ bins of 10 ms (`n_regions=8`, `sequence_steps=10`). The published code uses 100 one-ms bins, which trained less stably with our learner (docs/figures/nguyen/4.md § Network faithfulness audit).
 
-### 2. Per-parameter DBS delta sensitivities
+### 2. Per-parameter DBS step sizes
 
-Ternary actions $\{-1,0,1\}$ scale amplitude, frequency, and pulse width by unspecified scalar step sizes. **Fixed:** three parameters, three ternary choices each (nine outputs). **Chosen (v1):** amplitude **10** nA/cm², frequency **5** Hz, pulse width **0.05** ms per $+1$ (`SNNConfig.*_sensitivity`), with adapter clamps.
+**Fixed:** three parameters, three ternary choices each (nine outputs). **Chosen:** frequency **5** Hz and pulse width **0.1** ms per step, read off Fig 6 (40 + 8 × 5 ≈ 80 Hz, 0.3 + 8 × 0.1 ≈ 1.1 ms); amplitude **5** nA/cm², the published code's value.
 
 ### 3. Nine-way vs factored action selection
 
-Nine output LIF units are consistent with three parameters × three choices, but the paper does not say whether control uses one **joint** argmax over nine actions or **three independent** argmaxes. **Fixed:** spike-count selection for behavior, membrane potentials for Q-learning. **Chosen (v1):** `action_scheme="factored"` — three group argmaxes; Q is the sum of the three selected group membrane values (replay index 0–26).
+**Fixed:** spike-count selection for behavior, membrane potentials for Q-learning. **Chosen:** `action_scheme="factored"`, three group argmaxes over spike counts, ties broken by the higher output membrane; Q is the sum of the three selected group membranes (replay index 0–26).
 
-### 4. DQN stabilizers and target-network policy
+### 4. DQN stabilizers and target network
 
-The paper uses DQN bootstrapping but does not name Double DQN or dueling heads. Its Q-target $y_i = r + \gamma \max_{a'} Q(s', a'; \theta)$ uses the **online weights** $\theta$ — no separate target network $\theta^-$ (as in the first Atari DQN). **Fixed:** replay flush every **128** stored transitions; Q-targets from output membrane potentials at $s'$, bootstrapped from the online network (`SNNConfig.target_update_period = 0`). **Chosen (v2, Oct 2026):** $\gamma=0.99$, Adam lr $10^{-3}$; **4** minibatches of 32 per flush (`SNNConfig.replay_update_steps` — the paper does not say how many gradient steps a flush runs; 4 × 32 matches the 128 new transitions). A hard-copy target network is still available as an extension (`target_update_period > 0`, synced every N gradient updates). v1 used a target copy every 100 updates and one gradient step per flush.
+**Fixed:** replay update every **128** stored transitions. **Chosen:** from the authors' published DSQN (arXiv 2606.28600): soft target network τ 0.005, AdamW, SmoothL1, value clipping 100, γ 0.99, lr 10⁻³, batch 128; 64 minibatches per update and a 1,650-transition warm-up (paper-silent, tuned to the Fig 4 timing).
 
 ### 5. $\epsilon$-greedy exploration schedule
 
-§III.B specifies decreasing $\epsilon$ each time step; Fig. 4 qualitatively shifts toward exploitation around episode **~100**, but no numeric schedule is tabulated. **Fixed:** $\epsilon$-greedy overlay on spike-count argmax. **Chosen (v1):** $\epsilon: 1.0 \rightarrow 0.05$ over **2500** env steps (~100 episodes × 25 steps).
+**Fixed:** decreasing ε every time step. **Chosen:** linear 0.9 → 0.05 over 2,000 steps. The published exponential schedule puts the Fig 4 length drop ~40 episodes late.
 
 ### 6. Early-termination persistence $t_u$
 
-Episodes terminate early when GPi $\alpha$–$\beta < \theta = 150$ for $t_u$ **consecutive** steps, with terminal bonus using remaining horizon $t_r$ (Eq. (7)). **Fixed:** threshold **150**; bonus uses $t_r$. **Chosen (v1):** $t_u = 3$ (`SNNConfig.subthreshold_steps_required`).
+**Fixed:** threshold **150**; terminal bonus uses $t_r$. **Chosen (Oct 17 2026):** $t_u = 5$, the published env's default; it is also the only value that reproduces Fig 6's late ~81 Hz.
 
 ### 7. Reward coefficients and distance metric $d$
 
-Eq. (7) combines energy penalty $\delta E$, threshold indicator $\theta_u$, squared gap $d$, and terminal scale $\tau$, but numeric $\delta$, $\tau$, and the exact normalization of $d$ are not given. **Fixed:** reward structure and energy index Eq. (6); **$\theta_u = 1$ when $\alpha$–$\beta < \theta$** (consistent with $\tau$ as “reward for being under the threshold”). **Chosen (v1):** $\delta=0.01$, $\tau=1.0$ (`SNNConfig.energy_penalty`, `threshold_reward`).
+See §8: δ = 0.01, τ = 1,000, raw $d$ with a negative sign; $\theta_u = 1$ when $\alpha$–$\beta < \theta$.
 
-### 8. LIF firing threshold $\theta_{\mathrm{th}}$
+### 8. DSQN topology and LIF dynamics
 
-§III.B fixes leak $\beta = 0.95$ and distinguishes biomarker threshold $\theta = 150$ from the LIF spike threshold symbol $\theta_{\mathrm{th}}$. **Fixed:** three-layer LIF DSQN with **128** hidden and **9** output units. **Chosen (v1):** $\theta_{\mathrm{th}} = 1.0$ (`SNNConfig.lif_threshold`).
+**Fixed:** one hidden layer of **128** LIF neurons and **9** outputs (input → 128 → 9, `hidden_layers=1`), leak $\beta = 0.95$, reset by subtraction exactly as Eq. (2) (`lif_reset="eq2"`; Q is the output membrane before the reset). **Chosen:** LIF threshold $\theta_{\mathrm{th}} = 1.0$; arctan surrogate gradient. Runs before Oct 17 2026 used two hidden layers and a β-scaled reset.
 
 ### 9. Shared `envs/` adapter vs Nguyen timing
 
-The unified Gym API follows Mehregan **2 s** steps and Eq. (8) reward; Nguyen requires **100 ms** steps, spike observations, $\alpha$–$\beta$ feedback, and Eq. (7) reward. **Fixed:** **100 ms** step via `NguyenEnvAdapter` calling `PythonPlant.integrate(duration_s=0.1)` each transition; Eq. (7) reward; ternary parameter deltas; early termination on $\alpha$–$\beta$. **Chosen (v1):** GPi spike trains from each 100 ms segment are binned into a $(10 \times 10)$ matrix (`sequence_steps=10`, `neurons_per_region=10`); unstable DBS triples that crash the Kumaravelu integrator roll back to the previous triple (`plant_guard` in step info).
+**Fixed:** **100 ms** step via `NguyenEnvAdapter` (`PythonPlant.integrate(duration_s=0.1)`), one continuous simulation per episode; Eq. (7) reward; early termination on α–β. A failed integration rolls back to the previous DBS triple (`plant_guard`); a 45-triple grid across the full parameter bounds never triggers it.
 
 ### 10. Evaluation horizon extensions
 
