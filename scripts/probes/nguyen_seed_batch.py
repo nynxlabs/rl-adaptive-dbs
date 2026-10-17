@@ -60,10 +60,20 @@ def parse_variant(text: str) -> tuple[str, list[str]]:
     return name, sets
 
 
-def run_job(batch: str, name: str, sets: list[str], seed: int, episodes: int) -> dict:
+def run_job(
+    batch: str,
+    name: str,
+    sets: list[str],
+    seed: int,
+    episodes: int,
+    *,
+    fig7: bool = False,
+    fig7_sets: list[str] | None = None,
+) -> dict:
     out = CAND_ROOT / f"{batch}-{name}-s{seed}"
     out.mkdir(parents=True, exist_ok=True)
-    py = [sys.executable, "-m", "rl_adaptive_dbs.run", "--max-threads", "1"]
+    # Hard per-run cap: a train takes ~10–15 min at 8 in parallel, an eval ~3 min.
+    py = ["timeout", "3600", sys.executable, "-m", "rl_adaptive_dbs.run", "--max-threads", "1"]
     log = out / "train.log"
     if not (out / "series.json").is_file():
         cmd = py + [
@@ -95,6 +105,20 @@ def run_job(batch: str, name: str, sets: list[str], seed: int, episodes: int) ->
         ]
         with (out / f"fig{panel}.log").open("w") as fh:
             subprocess.run(cmd, cwd=REPO, stdout=fh, stderr=subprocess.STDOUT, check=False)
+    if fig7 and (out / "checkpoint.pt").is_file() and not (out / "fig7_manifest.json").is_file():
+        cmd = py + [
+            str(SCRIPTS / "7" / "plot.py"),
+            "--checkpoint", str(out / "checkpoint.pt"),
+            "--fig4-manifest", str(out / "manifest.json"),
+            "--eval-cache", str(out / "eval7.json"),
+            "--manifest", str(out / "fig7_manifest.json"),
+            "--out", str(out / "fig7.png"),
+            "--no-update-docs",
+        ]
+        for s in fig7_sets or []:
+            cmd += ["--set", s]
+        with (out / "fig7.log").open("w") as fh:
+            subprocess.run(cmd, cwd=REPO, stdout=fh, stderr=subprocess.STDOUT, check=False)
     return summarize_job(out)
 
 
@@ -121,13 +145,19 @@ def summarize_job(out: Path) -> dict:
     rec["fig4"] = bool(m4.get("gates_pass"))
     fails = list(m4["gates"]["reward"].get("failed", [])) + list(m4["gates"]["length"].get("failed", []))
     rec["fig4_failed"] = fails
-    for panel in ("5", "6"):
+    for panel in ("5", "6", "7"):
         p = out / f"fig{panel}_manifest.json"
         if p.is_file():
             mp = json.loads(p.read_text())
             g = mp.get("gates", {})
             rec[f"fig{panel}"] = bool(mp.get("gates_pass"))
             rec[f"fig{panel}_failed"] = list(g.get("failed", []))
+    p7 = out / "fig7_manifest.json"
+    if p7.is_file():
+        mt = json.loads(p7.read_text()).get("gates", {}).get("paper_gate_metrics", {})
+        rec["fig7_mid"] = mt.get("mid_mean")
+        rec["fig7_late"] = mt.get("late_mean")
+        rec["fig7_start"] = mt.get("start_val")
     L = np.asarray(s["episode_lengths"], float)
     R = np.asarray(s["episode_rewards"], float)
     late = slice(350, 500)
@@ -157,6 +187,7 @@ def table(results: dict[str, list[dict]]) -> str:
         ("fig4", "F4"), ("fig46", "F4–6"), ("t10", "t10"), ("t50", "t50"), ("t90", "t90"),
         ("late_len", "len350"), ("late_pw", "pw"), ("late_freq", "Hz"), ("late_amp", "amp"),
         ("late_energy", "E"), ("late_ab", "αβ"), ("late_reward", "R150"), ("max_reward", "Rmax"),
+        ("fig7", "F7"), ("fig7_mid", "F7 mid"), ("fig7_late", "F7 late"),
     ]
     lines = ["| variant | n | " + " | ".join(c[1] for c in cols) + " |",
              "|---|---|" + "---|" * len(cols)]
@@ -169,6 +200,8 @@ def table(results: dict[str, list[dict]]) -> str:
         for key, _ in cols:
             if key == "fig4":
                 row.append(str(sum(r["fig4"] for r in recs)))
+            elif key == "fig7":
+                row.append(str(sum(bool(r.get("fig7")) for r in recs)))
             elif key == "fig46":
                 row.append(str(sum(r["fig4"] and r.get("fig5") and r.get("fig6") for r in recs)))
             else:
@@ -195,6 +228,9 @@ def main() -> int:
     ap.add_argument("--episodes", type=int, default=500)
     ap.add_argument("--parallel", type=int, default=int(os.environ.get("BATCH_PARALLEL", "4")))
     ap.add_argument("--summary-only", action="store_true")
+    ap.add_argument("--fig7", action="store_true", help="also run the 50-episode Fig 7 eval per job")
+    ap.add_argument("--fig7-set", action="append", default=[], metavar="FIELD=VALUE",
+                    help="eval-only SNNConfig override for the Fig 7 eval (repeatable)")
     args = ap.parse_args()
     seeds = parse_seeds(args.seeds)
     variants = [parse_variant(v) for v in args.variant]
@@ -206,7 +242,7 @@ def main() -> int:
     else:
         jobs = [(name, sets, seed) for seed in seeds for name, sets in variants]
         with ThreadPoolExecutor(max_workers=args.parallel) as pool:
-            futs = {pool.submit(run_job, args.batch, n, st, sd, args.episodes): n for n, st, sd in jobs}
+            futs = {pool.submit(run_job, args.batch, n, st, sd, args.episodes, fig7=args.fig7, fig7_sets=args.fig7_set): n for n, st, sd in jobs}
             for fut, name in futs.items():
                 rec = fut.result()
                 results[name].append(rec)
