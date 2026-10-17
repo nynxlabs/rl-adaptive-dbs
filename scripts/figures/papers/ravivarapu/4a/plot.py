@@ -380,7 +380,11 @@ def main() -> int:
         )
 
     gates = evaluate_gates(series)
-    png_path, png_version = _figure_promote.next_versioned_png(FIGURES_DIR, OUT_STEM)
+    if args.cache_dir is not None:
+        # Candidates keep their plot beside their cache, out of the ship image folder.
+        png_path, png_version = Path(CACHE_DIR) / f"{OUT_STEM}.png", None
+    else:
+        png_path, png_version = _figure_promote.next_versioned_png(FIGURES_DIR, OUT_STEM)
     plot_series(series, png_path, promote=not args.no_promote)
 
     caption = (
