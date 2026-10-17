@@ -157,7 +157,7 @@ def test_fig5_linear_energy_ramp_fails():
     report = fig5_spikes_energy_gates(spikes, np.linspace(350.0, 500.0, 500))
     assert not report["pass"]
     assert not report["gates"]["energy_overshoot"]
-    assert not report["gates"]["energy_trend_near_paper"]
+    assert not report["gates"]["energy_pearson_0_500"]
 
 
 @pytest.mark.skipif(not (ARTIFACT / "curves_fig6_power.json").exists(), reason="no digitization")
@@ -168,4 +168,4 @@ def test_fig6_step_away_from_paper_drop_fails(at: int):
     report = fig6_power_gates(ab)
     assert not report["pass"]
     assert not report["gates"]["alpha_beta_pearson"]
-    assert not report["gates"]["alpha_beta_drop_fraction"]
+    assert not report["gates"]["alpha_beta_t50_timing"]
