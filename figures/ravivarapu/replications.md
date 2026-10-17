@@ -20,6 +20,8 @@ Separately, our Fig 4b (mean Eq. (7) reward per step) is not Eq. (7) of our Fig 
 
 **Audit pass (oct 17 2026).** The plant now integrates at the paper's 0.02 ms (it ran at the 0.01 ms reference step; same levels, so gate counts move only by realization noise), Table II gives every interval the same 30 plant seeds (the old fixed horizon confounded $n$ with the seed pool), and the Fig 4a/4b plots draw the raw episodes under the rolling mean. Plant probes answered or narrowed several open questions: amplitude and pulse width can't make 30 Hz suppress, and always-on stays optimal under Eq. (7) on a continuous plant too, so root causes 1 and 4 stand under every reading tried ([4a.md](../../docs/figures/ravivarapu/4a.md) § Open-question probes).
 
+**The paper's 2 ms step (oct 17 2026).** A trailing-window mode (`step_mode="trailing"`) runs the paper's literal timing: 30 steps of 2 ms in one continuous 60 ms episode. On Kumaravelu no stimulation lowers beta within 60 ms, both learners stop stimulating, and Fig 4a candidates pass 11–14 of 28 gates (vs 15 for the 150 ms shot), so the 150 ms shot stays the labeled convention ([4a.md](../../docs/figures/ravivarapu/4a.md) § The paper's 2 ms step).
+
 <!-- summary:start -->
 | Panel | Description | Status |
 |-------|-------------|--------|
