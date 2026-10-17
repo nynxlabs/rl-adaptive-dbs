@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
 """Mehregan et al. (paper 1) Figure 4b — training curves vs episode.
 
-Paper §IV.A.1 companion to Fig 4a: two panels over **9 episodes** indexed
-**0–8** (paper x-axis ticks 0, 2, 4, 6, 8; line reaches episode 8):
+Paper §IV.A.1 companion to Fig 4a: two panels over the run's **10 episodes**
+(Fig 4a's 300 steps = 10 × 30). The paper draws its 10 vertices evenly across a
+0–8 x axis (vertex i at x = 8i/9); we plot episodes 0–9 and map the digitized
+paper x to episode index (× 9/8) for the overlay and every gate:
 
   1. **Episode total reward** vs episode
   2. **Episode-mean PSD(x10³)** ($P_\\beta / 1000$) vs episode
 
 Loads traces from the Fig 4a series cache (default: latest ``series.json``,
-first 9 episodes). Resume training via Fig 4a ``--resume`` (this panel replots cache only). (``training_fig4b_vN.png``)
+all 10 episodes). Resume training via Fig 4a ``--resume`` (this panel replots cache only). (``training_fig4b_vN.png``)
 for showcase side-by-side use, plus separate reward/PSD PNGs for debugging.
 
 Run:
   uv run python scripts/figures/papers/mehregan/4b/plot.py
   uv run python scripts/figures/papers/mehregan/4b/plot.py --plot-only
-  uv run python scripts/figures/papers/mehregan/4b/plot.py --episodes 9 --fig4a-series artifacts/figures/papers/mehregan/4a/series.json
+  uv run python scripts/figures/papers/mehregan/4b/plot.py --episodes 10 --fig4a-series artifacts/figures/papers/mehregan/4a/series.json
 """
 from __future__ import annotations
 
@@ -37,7 +39,12 @@ _figure_promote = load_script_module("figure_promote", _PROMOTE)
 _DIG = Path(__file__).resolve().parents[4] / "digitization"
 if str(_DIG) not in sys.path:
     sys.path.insert(0, str(_DIG))
-from paper_gates import fig4b_gates  # noqa: E402
+from paper_gates import (  # noqa: E402
+    FIG4B_EPISODES,
+    FIG4B_PAPER_X_MAX,
+    fig4b_gates,
+    refined_path,
+)
 
 _OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
 _overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
@@ -52,7 +59,9 @@ REWARD_STEM = "training_reward"
 PSD_STEM = "training_psd"
 COMBINED_STEM = "training_fig4b"
 
-DEFAULT_EPISODES = 9
+DEFAULT_EPISODES = FIG4B_EPISODES
+# Paper x (0–8 axis, 10 vertices) → episode index.
+PAPER_X_TO_EPISODE = (FIG4B_EPISODES - 1) / FIG4B_PAPER_X_MAX
 STEPS_PER_EPISODE = 30
 
 STYLE = {
@@ -155,12 +164,11 @@ def _gate_summary(
     *,
     episode_mean_beta: list[float],
 ) -> dict[str, Any]:
-    dig = fig4b_gates(episode_rewards, episode_mean_beta)
+    dig = fig4b_gates(episode_rewards, episode_mean_beta, n_expected=FIG4B_EPISODES)
     legacy = _fig4b_pass(episode_rewards)
     n = len(episode_rewards)
     metrics = dig["metrics"]
     gates = dict(dig["gates"])
-    gates["plot_style"] = n >= 2
     return {
         "n_episodes": n,
         "early_mean_ep1_3": metrics.get("early_reward"),
@@ -239,6 +247,27 @@ def _ylim_for_psd(y: np.ndarray) -> tuple[float, float, list[float]]:
     return _snap_ylim(y, step=0.05, default_lo=0.3, default_hi=0.5)
 
 
+def _overlay_fig4b(ax: plt.Axes, which: str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """Digitized paper curve on the episode axis (paper x × 9/8)."""
+    if which == "reward":
+        stem, mapping, color = (
+            "curves_wpd_refined_reward", (("Reward", "Reward"),), _paper_overlay.MEH_REWARD_GREEN
+        )
+    else:
+        stem, mapping, color = (
+            "curves_wpd_refined_psd", (("PSD (x10^3)", "PSD"),), _paper_overlay.MEH_TRAIN_TEAL
+        )
+    return _paper_overlay.overlay_named_series(
+        ax,
+        refined_path("4b", stem=stem),
+        mapping,
+        x_scale=PAPER_X_TO_EPISODE,
+        label_prefix="Paper ",
+        outline_colors=(color,),
+        condensed_legend=True,
+    )
+
+
 def _episode_x_coords(n_episodes: int) -> np.ndarray:
     """0-based episode indices (paper labels first training episode as 0)."""
     return np.arange(n_episodes, dtype=float)
@@ -255,7 +284,7 @@ def _plot_reward_on_ax(ax: plt.Axes, episode_rewards: list[float]) -> dict[str, 
     y = np.asarray(episode_rewards, dtype=float)
     x = _episode_x_coords(len(y))
     ax.plot(x, y, color="#16a34a", linewidth=1.2, label="Replication")
-    paper = _paper_overlay.overlay_mehregan_fig4b_reward(ax)
+    paper = _overlay_fig4b(ax, "reward")
     _paper_xy = next(iter(paper.values()), (np.array([]), np.array([])))
     paper_y = _paper_xy[1] if len(_paper_xy) > 1 else np.array([])
     y_all = np.concatenate([y, paper_y]) if paper_y.size else y
@@ -279,7 +308,7 @@ def _plot_psd_on_ax(ax: plt.Axes, episode_mean_beta: list[float]) -> dict[str, A
     y = np.asarray(episode_mean_beta, dtype=float)
     x = _episode_x_coords(len(y))
     ax.plot(x, y, color="#1f6f6f", linewidth=1.2, label="Replication")
-    paper = _paper_overlay.overlay_mehregan_fig4b_psd(ax)
+    paper = _overlay_fig4b(ax, "psd")
     _paper_xy = next(iter(paper.values()), (np.array([]), np.array([])))
     paper_y = _paper_xy[1] if len(_paper_xy) > 1 else np.array([])
     y_all = np.concatenate([y, paper_y]) if paper_y.size else y
@@ -395,14 +424,14 @@ def _checklist_rows(gates: dict[str, Any], summary: dict[str, Any]) -> list[tupl
     return [
         (
             "**Plot style**",
-            "One panel; reward + PSD vs episode 0–8",
+            "One panel; reward + PSD, 10 vertices on a 0–8 axis",
             f"Two PNGs; episodes 0–{n0} (0-based), line reaches ep {n0}",
             "✓" if g.get("plot_style") else "✗",
         ),
         (
             "**Axes (episodes)**",
-            "0–8, ticks every 2",
-            "0–8, ticks every 2",
+            "0–8 (vertex i at x = 8i/9)",
+            "episodes 0–9 (paper x × 9/8), ticks every 2",
             "✓",
         ),
         (
@@ -419,8 +448,8 @@ def _checklist_rows(gates: dict[str, Any], summary: dict[str, Any]) -> list[tupl
         ),
         (
             "**Early episodes (0–2)**",
-            "Reward negative (~−80 to ~−55)",
-            f"mean {_fmt(summary.get('early_mean_ep1_3'))} (negative, different magnitude)",
+            "Reward negative (digitized ep 0–2 ≈ −81, −77, −43)",
+            f"mean {_fmt(summary.get('early_mean_ep1_3'))} (same scale: ep 0 ≈ −81 in both)",
             "~" if g.get("early_negative") else "✗",
         ),
         (
@@ -430,7 +459,7 @@ def _checklist_rows(gates: dict[str, Any], summary: dict[str, Any]) -> list[tupl
             "~" if g.get("rise_timing") else "✗",
         ),
         (
-            "**Late episodes (6–8)**",
+            "**Late episodes (6–9)**",
             "Plateau near **0** from below",
             f"mean {_fmt(summary.get('late_mean_ep6_end'))}",
             "✓" if g.get("late_reward_near_zero") else "✗",
@@ -538,7 +567,7 @@ def main() -> int:
         "--episodes",
         type=int,
         default=DEFAULT_EPISODES,
-        help="Number of episodes to plot (default: 8)",
+        help=f"Number of episodes to plot (default: {DEFAULT_EPISODES})",
     )
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument(
@@ -683,7 +712,7 @@ def main() -> int:
             update_status_in_doc(
                 passed=True,
                 note=(
-                    "two panels × 9 episodes (indices 0–8), paired with the latest "
+                    "two panels × 10 episodes (indices 0–9), paired with the latest "
                     "Fig 4a series.json (seed 0; paper seed unspecified). "
                     "Digitization revisit: ep0 PSD near paper, late episode-mean "
                     "PSD above β_t=0.35 and near the digitized paper floor; "
