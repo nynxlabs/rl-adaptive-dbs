@@ -91,7 +91,7 @@ ONSET_DISPLAY_S = 2.0
 SAMPLE_S = 0.2
 WINDOW_S = 2.0
 
-ALPHABETS = ("burst", "jitter")
+ALPHABETS = ("burst", "burst_legacy", "jitter")
 
 
 def _log(msg: str) -> None:
@@ -149,6 +149,14 @@ def apply_overrides(knobs: PaperKnobs, pairs: list[str] | None) -> PaperKnobs:
 def make_alphabet(mean_hz: float, knobs: PaperKnobs) -> Any:
     if knobs.alphabet == "burst":
         return BurstPatternAlphabet(mean_hz=mean_hz, step_duration_s=STEP_S, dt_ms=PAPER_DT_MS)
+    if knobs.alphabet == "burst_legacy":
+        return BurstPatternAlphabet(
+            mean_hz=mean_hz,
+            step_duration_s=STEP_S,
+            dt_ms=PAPER_DT_MS,
+            n_patterns=41,
+            layout="legacy",
+        )
     return FixedMeanPatternAlphabet(
         mean_hz=mean_hz,
         step_duration_s=STEP_S,

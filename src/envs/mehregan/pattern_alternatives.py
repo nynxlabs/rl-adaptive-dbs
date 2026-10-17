@@ -152,6 +152,60 @@ def _build_burst_idbs(
     )
 
 
+BURST_SIZES = (2, 3, 4, 5, 6)
+BURST_RATES_HZ = (60.0, 80.0, 100.0, 120.0)
+
+
+def exact_pulse_count(*, mean_hz: float, step_duration_s: float) -> int:
+    """Pulses per step at the stated average rate (Alg. 1 input ``f``)."""
+    return int(round(mean_hz * step_duration_s))
+
+
+@lru_cache(maxsize=None)
+def _build_exact_burst_idbs(
+    *,
+    index: int,
+    mean_hz: float,
+    step_duration_s: float,
+    dt_ms: float,
+    pulse_width_ms: float,
+    amplitude: float,
+) -> np.ndarray:
+    """Pattern ``index`` with exactly ``mean_hz * step`` pulses.
+
+    0 = regular train (first ``n`` onsets of the ``1/mean_hz`` grid, so the next
+    step's first pulse follows one period later — no double pulse at the step
+    boundary). 1..20 = bursts of 2–6 pulses at 60–120 Hz intra-burst rate, burst
+    starts spread evenly over the step; the last burst takes the remainder.
+    """
+    n_steps = _grid_steps(step_duration_s=step_duration_s, dt_ms=dt_ms)
+    if mean_hz <= 0:
+        trace = np.zeros(n_steps, dtype=np.float64)
+        trace.setflags(write=False)
+        return trace
+    pulse_len = int(round(pulse_width_ms / dt_ms))
+    isi_steps = int(round((1000.0 / mean_hz) / dt_ms))
+    n_pulses = exact_pulse_count(mean_hz=mean_hz, step_duration_s=step_duration_s)
+    if index == 0:
+        onsets = np.arange(n_pulses, dtype=np.int64) * isi_steps
+    else:
+        variant = index - 1
+        size = BURST_SIZES[variant % len(BURST_SIZES)]
+        burst_hz = BURST_RATES_HZ[variant // len(BURST_SIZES)]
+        intra = max(pulse_len + 1, int(round((1000.0 / burst_hz) / dt_ms)))
+        n_bursts = -(-n_pulses // size)
+        out: list[int] = []
+        for b in range(n_bursts):
+            start = int(round(b * n_steps / n_bursts))
+            k = min(size, n_pulses - len(out))
+            out.extend(start + j * intra for j in range(k))
+        onsets = np.asarray(out, dtype=np.int64)
+    if onsets.size != n_pulses or onsets[-1] + pulse_len > n_steps or np.any(np.diff(onsets) <= pulse_len):
+        msg = f"burst pattern {index} at {mean_hz} Hz does not fit the step"
+        raise ValueError(msg)
+    return _trace_from_onsets(onsets, n_steps=n_steps, pulse_len=pulse_len, amplitude=amplitude)
+
+
 @lru_cache(maxsize=None)
 def _build_random_idbs(
     *,
@@ -263,12 +317,19 @@ def _build_alternating_idbs(
 
 @dataclass(frozen=True)
 class BurstPatternAlphabet:
-    """Burst clusters at fixed mean rate (Fig 5b; Fig 6a with ``skip_regular``)."""
+    """Burst clusters at fixed mean rate (the Mehregan panels' pattern menu).
+
+    ``layout="exact"`` (default): 21 distinct patterns (regular + 20 bursts), each
+    with exactly ``mean_hz * step`` pulses. ``layout="legacy"``: the pre-Oct 2026
+    41-pattern menu (patterns 21–40 repeat 1–20; at 45 Hz 77–91 pulses per 2 s),
+    kept so older checkpoints still evaluate.
+    """
 
     mean_hz: float
     step_duration_s: float = 2.0
     dt_ms: float = 0.02
-    n_patterns: int = 41
+    n_patterns: int = 21
+    layout: str = "exact"
     skip_regular: bool = False  # True → hide pattern 0 (regular); agent sees 40 irregular
     pulse_width_ms: float = DBS_PULSE_WIDTH_MS
     amplitude: float = DBS_AMPLITUDE_NA_PER_CM2
@@ -287,7 +348,14 @@ class BurstPatternAlphabet:
         if index < 0 or index >= self.n_patterns:
             msg = f"pattern index {index} outside [0, {self.n_patterns})"
             raise ValueError(msg)
-        return _build_burst_idbs(
+        if self.layout not in ("exact", "legacy"):
+            msg = f"layout must be 'exact' or 'legacy', got {self.layout!r}"
+            raise ValueError(msg)
+        if self.layout == "exact" and index > len(BURST_SIZES) * len(BURST_RATES_HZ):
+            msg = f"exact layout has {1 + len(BURST_SIZES) * len(BURST_RATES_HZ)} patterns, got index {index}"
+            raise ValueError(msg)
+        builder = _build_exact_burst_idbs if self.layout == "exact" else _build_burst_idbs
+        return builder(
             index=index,
             mean_hz=self.mean_hz,
             step_duration_s=self.step_duration_s,
