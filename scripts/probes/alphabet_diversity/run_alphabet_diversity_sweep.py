@@ -41,7 +41,7 @@ from envs.mehregan.pattern_alternatives import (
     PatternAlphabetLike,
     RandomPulseAlphabet,
 )
-from envs.plant.python_backend import PythonPlant
+from envs.plant import PythonPlant
 from rl_adaptive_dbs.user_config import resolve_config
 
 ARTIFACTS = Path("artifacts/ddpg")

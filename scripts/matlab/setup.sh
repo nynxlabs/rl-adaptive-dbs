@@ -89,6 +89,7 @@ fi
 
 if ask_yn "Install Python deps (uv sync --all-groups)?" y; then
   uv sync --all-groups
+  bash "$_matlab_dir/../plant/install_kumaravelu_plant.sh"
 fi
 say ""
 

@@ -32,7 +32,7 @@ from controllers.ddpg.quantization import prepare_actor_for_eval
 from envs.mehregan.extensions.alphabet_diversity.config import WithinStepEnvConfig
 from envs.mehregan.extensions.alphabet_diversity.env import WithinStepMehreganEnv
 from envs.mehregan.extensions.alphabet_diversity.near_hub import NearHubBurstAlphabet
-from envs.plant.python_backend import PythonPlant
+from envs.plant import PythonPlant
 from rl_adaptive_dbs.user_config import resolve_config
 
 ARTIFACTS = Path("artifacts/ddpg")

@@ -7,7 +7,7 @@ name = "rl-adaptive-dbs"
 version = "0.1.0"
 description = "Exploration of reinforcement learning for adaptive deep brain stimulation."
 readme = "README.md"
-license = "MIT AND LicenseRef-Kumaravelu-2016-Pending"
+license = "MIT"
 license-files = ["LICENSE", "LICENSING.md"]
 requires-python = ">=3.11"
 dependencies = [
@@ -45,14 +45,17 @@ testpaths = ["tests"]
 markers = [
     "slow: long-running checks (large rollouts, training smoke)",
     "matlab: requires MATLAB and the Kumaravelu reference bridge",
+    "plant: requires the private kumaravelu_plant package (LICENSING.md)",
 ]
 
 [tool.hatch.build]
 dev-mode-dirs = ["src"]
 
-# Our Kumaravelu model patches, paper figure crops, reports, and model-generated
-# test fixtures stay out of built distributions (see LICENSING.md). The MATLAB
-# model itself is not in the repository (scripts/matlab/fetch_kumaravelu.py).
+# Paper figure crops and reports stay out of built distributions (see
+# LICENSING.md). The Kumaravelu model, our patches to it, the Python port, and
+# the data it generated are not in this repository: the model is fetched
+# (scripts/matlab/fetch_kumaravelu.py) and the rest is in the private
+# kumaravelu_plant package.
 [tool.hatch.build.targets.sdist]
 only-include = ["src"]
 

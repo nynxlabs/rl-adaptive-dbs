@@ -28,13 +28,27 @@ def test_patch_rejects_changed_base() -> None:
         fk.apply_patch(b"a\r\nB\r\nc\r\nd\r\n", patch)
 
 
-def test_committed_patches_cover_every_output() -> None:
-    manifest = fk._manifest()
+@pytest.mark.plant
+def test_packaged_patches_cover_every_output() -> None:
+    patch_dir = fk.default_patch_dir()
+    assert patch_dir is not None
+    manifest = fk._manifest(patch_dir)
     assert set(manifest) == set(fk.OUTPUTS)
     for name in fk.OUTPUTS:
-        patch = fk._patch_path(name)
+        patch = fk._patch_path(patch_dir, name)
         if patch.exists():
             assert patch.read_text(encoding="utf-8").startswith(f"--- a/{name}\n")
+
+
+def test_without_patches_outputs_are_the_upstream_files() -> None:
+    upstream = {name: f"{name}\r\n".encode() for name in fk.UPSTREAM_SHA256}
+    assert fk.build(upstream, None) == upstream
+    assert fk.expected_sha256(None) == fk.UPSTREAM_SHA256
+
+
+def test_check_without_patches_compares_against_upstream(tmp_path: Path) -> None:
+    problems = fk.check(tmp_path, None)
+    assert sorted(problems) == sorted(f"missing {tmp_path / name}" for name in fk.UPSTREAM_SHA256)
 
 
 def test_model_dir_names_fetch_command_when_missing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -90,13 +90,17 @@ def main() -> None:
         "--output",
         type=Path,
         default=None,
-        help="default: tests/fixtures/<init_draws_filename(seed, pd)>",
+        help=(
+            "default: <init_draws_filename(seed, pd)> in the private kumaravelu_plant package's data "
+            "directory (model-generated data stays private; LICENSING.md), else the user cache"
+        ),
     )
     args = parser.parse_args()
     if args.output is None:
-        from envs.plant.network.matlab_rng import init_draws_filename
+        from envs.plant._kumaravelu import data_dir
+        from envs.plant.network.matlab_rng import init_draws_cache_dir, init_draws_filename
 
-        args.output = Path("tests/fixtures") / init_draws_filename(args.seed, args.pd)
+        args.output = (data_dir() or init_draws_cache_dir()) / init_draws_filename(args.seed, args.pd)
 
     payload = export_matlab_init_draws(seed=args.seed, pd=args.pd)
     payload["pd"] = np.array([args.pd], dtype=np.int64)

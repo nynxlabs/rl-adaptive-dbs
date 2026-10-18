@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 import numpy as np
 
 from envs.plant.dbs import ContinuousPulseTrain, create_dbs_current
@@ -17,6 +18,7 @@ def _stitch(train: ContinuousPulseTrain, segments: list[tuple[float, float, floa
     return np.concatenate(out)
 
 
+@pytest.mark.plant
 def test_constant_triple_matches_one_long_train() -> None:
     # 45 Hz ISI (2222 samples) does not divide 100 ms, so a per-segment restart would differ.
     stitched = _stitch(ContinuousPulseTrain(), [(45.0, 0.3, 300.0)] * 5, tmax_ms=100.0)

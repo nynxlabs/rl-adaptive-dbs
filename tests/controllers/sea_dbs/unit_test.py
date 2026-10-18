@@ -14,6 +14,7 @@ from controllers.sea_dbs.reward import sea_dbs_reward
 from controllers.sea_dbs.trainer import SEA_DBSTrainer
 
 
+@pytest.mark.plant
 def test_adapter_reset_nonzero_p_beta() -> None:
     env = SEA_DBSEnvAdapter(config=SEADBSConfig(seed=0))
     try:
@@ -27,6 +28,7 @@ def test_adapter_reset_nonzero_p_beta() -> None:
         env.close()
 
 
+@pytest.mark.plant
 def test_set_carrier_hz_survives_reset() -> None:
     """Fig 5 eval sets 50/30 Hz then reset(); must not restore train carrier."""
     from types import SimpleNamespace
@@ -160,6 +162,7 @@ def test_for_smoke_reduces_episodes() -> None:
     assert cfg.max_episode_steps == 4
 
 
+@pytest.mark.plant
 def test_gs_temperature_follows_eq14() -> None:
     cfg = SEADBSConfig(variant="paper", gs_tau0=1.0, gs_tau_min=0.5, gs_lambda=1e-3)
     env = SEA_DBSEnvAdapter(config=cfg)
@@ -227,6 +230,7 @@ def test_fp16_ptq_is_a_plain_cast() -> None:
         assert torch.equal(p32.detach().half(), p16.detach())
 
 
+@pytest.mark.plant
 def test_continuous_plant_integration_differs_from_disconnected() -> None:
     """Stitched timeline should move Pβ across repeated stim actions."""
     cfg = replace(
@@ -359,6 +363,7 @@ def _trailing_fake_plant():
     return _Plant(), calls
 
 
+@pytest.mark.plant
 def test_trailing_step_mode_warmup_and_pulses() -> None:
     from controllers.sea_dbs.adapter import SEA_DBSEnvAdapter
 
@@ -393,6 +398,7 @@ def test_trailing_step_mode_warmup_and_pulses() -> None:
     env.close()
 
 
+@pytest.mark.plant
 def test_trailing_p_beta_uses_only_the_trailing_window() -> None:
     from controllers.sea_dbs.adapter import SEA_DBSEnvAdapter
 
@@ -409,6 +415,7 @@ def test_trailing_p_beta_uses_only_the_trailing_window() -> None:
     env.close()
 
 
+@pytest.mark.plant
 def test_trailing_carry_across_episodes_keeps_the_simulation() -> None:
     from controllers.sea_dbs.adapter import SEA_DBSEnvAdapter
 

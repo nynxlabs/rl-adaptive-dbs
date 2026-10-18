@@ -11,6 +11,8 @@ from controllers.ddpg.checkpoint import load_checkpoint, validate_resume_config
 from controllers.ddpg.config import DDPGConfig
 from controllers.ddpg.trainer import train_ddpg
 
+pytestmark = pytest.mark.plant
+
 
 def _pattern_train_env(cfg: DDPGConfig):
     from controllers.ddpg import default_train_env

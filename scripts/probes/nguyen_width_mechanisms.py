@@ -58,7 +58,7 @@ from controllers.snn.config import fig4_nguyen_config
 from controllers.snn.reward import alpha_beta_power
 from envs.plant.config import PlantConfig
 from envs.plant.dbs import ContinuousPulseTrain
-from envs.plant.python_backend import PythonPlant
+from envs.plant import PythonPlant
 
 REFERENCE_DT_MS = 0.01
 PAPER_INIT = (40.0, 300.0, 0.3)

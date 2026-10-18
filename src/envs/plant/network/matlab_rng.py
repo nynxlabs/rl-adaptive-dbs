@@ -14,7 +14,8 @@ from pathlib import Path
 
 import numpy as np
 
-from envs.plant.network.integrator import NetworkInitDraws
+from envs.plant._kumaravelu import data_dir
+from envs.plant.network import NetworkInitDraws
 
 __all__ = [
     "MATLAB_DEFAULT_SEED",
@@ -89,12 +90,17 @@ def load_cached_init_draws(
     pd: int = 1,
     search_dirs: tuple[Path, ...] | None = None,
 ) -> NetworkInitDraws | None:
-    """Load the ``pd``-matched init draws for ``seed`` from repo fixtures or user cache."""
+    """Load the ``pd``-matched init draws for ``seed`` from the plant package or user cache.
+
+    The MATLAB-exported draws ship with the private ``kumaravelu_plant`` package
+    (``kumaravelu_plant/data``); see LICENSING.md.
+    """
     candidates: list[Path] = []
     if search_dirs is not None:
         candidates.extend(search_dirs)
-    repo_fixtures = Path(__file__).resolve().parents[4] / "tests" / "fixtures"
-    candidates.append(repo_fixtures)
+    package_data = data_dir()
+    if package_data is not None:
+        candidates.append(package_data)
     candidates.append(init_draws_cache_dir())
 
     name = init_draws_filename(seed, pd)

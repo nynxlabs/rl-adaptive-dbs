@@ -39,7 +39,7 @@ from controllers.sea_dbs.reward import sea_dbs_reward
 from envs.plant.biomarkers import SpectrumParams, band_power, multitaper_psd_point_process
 from envs.plant.config import PlantConfig
 from envs.plant.dbs import DbsSpec, create_dbs_current
-from envs.plant.python_backend import PythonPlant
+from envs.plant import PythonPlant
 
 
 class _CustomStimAdapter(SEA_DBSEnvAdapter):

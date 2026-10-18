@@ -71,7 +71,7 @@ def default_train_env(config: DDPGConfig | None = None) -> MehreganEnv:
         pattern_mean_hz=cfg.effective_pattern_mean_hz,
     )
     if cfg.action_space_mode == "fixed_mean_pattern":
-        from envs.plant.python_backend import PythonPlant
+        from envs.plant import PythonPlant
         from rl_adaptive_dbs.user_config import resolve_config
 
         plant = PythonPlant(config=resolve_config().plant)

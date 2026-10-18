@@ -86,9 +86,10 @@ def test_unknown_plant_integration_mode_rejected() -> None:
         )
 
 
+@pytest.mark.plant
 def test_continuous_mode_keeps_one_network_per_episode() -> None:
     """Continuous episodes carry state on one network (no wiring redraw per 2 s step)."""
-    from envs.plant.python_backend import PythonPlant
+    from envs.plant import PythonPlant
 
     env = MehreganEnv(
         plant=PythonPlant(),

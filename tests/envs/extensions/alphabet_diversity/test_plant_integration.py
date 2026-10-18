@@ -12,9 +12,10 @@ from envs.mehregan.extensions.alphabet_diversity.env import WithinStepMehreganEn
 from envs.mehregan.fixed_mean_patterns import FixedMeanPatternAlphabet
 from envs.mehregan.extensions.alphabet_diversity.plant_integration import stitch_idbs
 from envs.plant.config import PlantConfig
-from envs.plant.python_backend import PythonPlant
+from envs.plant import PythonPlant
 
 
+@pytest.mark.plant
 def test_stitch_idbs_places_segments_after_onset() -> None:
     alphabet = FixedMeanPatternAlphabet(
         mean_hz=45.0, step_duration_s=2.0, dt_ms=0.02, skip_regular=True
@@ -34,6 +35,7 @@ def test_stitch_idbs_places_segments_after_onset() -> None:
     assert np.array_equal(trace[onset_idx : onset_idx + seg0.size], seg0)
 
 
+@pytest.mark.plant
 @pytest.mark.slow
 def test_continuous_mode_differs_from_disconnected_on_repeat_action() -> None:
     """Same action twice: disconnected repeats Pβ; continuous does not."""

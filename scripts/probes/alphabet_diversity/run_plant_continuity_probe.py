@@ -25,7 +25,7 @@ import numpy as np
 from envs.mehregan.pattern_alternatives import BurstPatternAlphabet
 from envs.plant.biomarkers import p_beta
 from envs.plant.dbs import DbsSpec
-from envs.plant.python_backend import PythonPlant
+from envs.plant import PythonPlant
 from envs.mehregan.extensions.alphabet_diversity.observations import clip_spikes_to_subwindow
 from rl_adaptive_dbs.user_config import resolve_config
 

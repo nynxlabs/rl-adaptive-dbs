@@ -56,6 +56,7 @@ export MATLAB_ROOT=/path/to/MATLAB    # see §2.1–§2.3
 export MATLAB_RELEASE=R2025b          # must match your install
 
 uv sync --all-groups
+bash scripts/plant/install_kumaravelu_plant.sh      # private kumaravelu_plant package (re-run after any uv sync)
 uv run python scripts/matlab/fetch_kumaravelu.py   # Kumaravelu model (not bundled)
 source scripts/matlab/env.sh          # Git Bash / macOS / Linux / WSL
 
@@ -340,7 +341,7 @@ bash scripts/matlab/verify.sh     # install + license + Python engine (all OS vi
 
 **Phase 2 needs:** `CTX_BG_TH_network` dynamics (GPi spike trains). `scripts/matlab/verify.sh` runs a short segment automatically.
 
-**Fetch the model first.** The Kumaravelu MATLAB files have no license we could find, so this repository does not redistribute them ([LICENSING.md](../LICENSING.md)). The fetch script downloads the pinned upstream revision (ModelDB mirror commit `0addcc04d7e6`), checks SHA-256 hashes, and applies our patches from `reference-material/KumaraveluEtAl2016/patches/`:
+**Fetch the model first.** The Kumaravelu MATLAB files have no license we could find, so this repository does not redistribute them ([LICENSING.md](../LICENSING.md)). The fetch script downloads the pinned upstream revision (ModelDB mirror commit `0addcc04d7e6`), checks SHA-256 hashes, and applies our patches from the private `kumaravelu_plant` package (`kumaravelu_plant/matlab_patches/`; run `bash scripts/plant/install_kumaravelu_plant.sh` first, and again after any `uv sync`). Without the package it writes the unmodified upstream files, and the MATLAB plant bridge needs the patched copy:
 
 ```bash
 uv run python scripts/matlab/fetch_kumaravelu.py            # download + patch (stdlib only; plain python works too)
@@ -348,7 +349,7 @@ uv run python scripts/matlab/fetch_kumaravelu.py --check    # verify the fetched
 uv run python scripts/matlab/fetch_kumaravelu.py --source DIR   # offline, from a downloaded copy of the upstream files
 ```
 
-The output (`simulate_network_model.m`, `run_simulate_network_model.q`, `readme.txt`, `plant_band_power.m`) is gitignored. After editing those files, record the change with `--update-patches` (rewrites `patches/*.patch` and `patches/manifest.json`) and describe it in [kumaravelu_vendor_patches.md](reference-material/kumaravelu_vendor_patches.md). `MatlabPlant` and `scripts/plant/export_plant_init_draws.py` raise an error naming the fetch command when the model is missing, and `@pytest.mark.matlab` tests skip.
+The output (`simulate_network_model.m`, `run_simulate_network_model.q`, `readme.txt`, `plant_band_power.m`) is gitignored. After editing those files, record the change with `--update-patches` (rewrites the `.patch` files and `manifest.json` in the private package's `matlab_patches/`) and describe it in [kumaravelu_vendor_patches.md](reference-material/kumaravelu_vendor_patches.md). `MatlabPlant` and `scripts/plant/export_plant_init_draws.py` raise an error naming the fetch command when the model is missing, and `@pytest.mark.matlab` tests skip.
 
 ```bash
 source scripts/matlab/env.sh

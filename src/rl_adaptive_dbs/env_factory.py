@@ -6,7 +6,7 @@ from pathlib import Path
 
 from envs.mehregan.env import MehreganEnv
 from envs.plant.matlab_backend import MatlabPlant
-from envs.plant.python_backend import PythonPlant
+from envs.plant import PythonPlant
 from rl_adaptive_dbs.user_config import (
     PlantBackendName,
     ResolvedConfig,

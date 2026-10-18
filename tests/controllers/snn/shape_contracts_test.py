@@ -64,6 +64,7 @@ def test_encoder_output_shape() -> None:
     assert flat.shape == (80,)
 
 
+@pytest.mark.plant
 def test_dbs_parameter_state_apply_delta_clamps() -> None:
     cfg = SNNConfig(
         amplitude_sensitivity=50.0,
@@ -192,6 +193,7 @@ def test_replay_buffer_shape_contracts() -> None:
     assert batch.action.ndim == 1
 
 
+@pytest.mark.plant
 def test_energy_index_positive() -> None:
     energy = dbs_energy_index(
         frequency_hz=40.0,
@@ -238,6 +240,7 @@ def test_nguyen_reward_progress_cap() -> None:
     assert capped < uncapped
 
 
+@pytest.mark.plant
 def test_adapter_spaces_and_step_shapes() -> None:
     cfg = SNNConfig(sequence_steps=4, neurons_per_region=10, max_episode_steps=3)
     env = NguyenEnvAdapter(plant=_SpikeMockPlant(), config=cfg)
@@ -258,6 +261,7 @@ def test_adapter_spaces_and_step_shapes() -> None:
         env.close()
 
 
+@pytest.mark.plant
 def test_trainer_train_step_and_mock_episodes() -> None:
     cfg = SNNConfig(
         sequence_steps=2,
@@ -319,6 +323,7 @@ class _RecordingPlant(_SpikeMockPlant):
         return super().integrate(duration_s, dbs_spec, **kwargs)
 
 
+@pytest.mark.plant
 def test_plant_carry_integrates_one_continuous_episode() -> None:
     cfg = SNNConfig(sequence_steps=4, neurons_per_region=10, max_episode_steps=3, plant_carry=True)
     plant = _RecordingPlant()
@@ -337,6 +342,7 @@ def test_plant_carry_integrates_one_continuous_episode() -> None:
     np.testing.assert_array_equal(after_reset, first)
 
 
+@pytest.mark.plant
 def test_restart_mode_keeps_per_step_traces() -> None:
     cfg = SNNConfig(sequence_steps=4, neurons_per_region=10, max_episode_steps=3)
     plant = _RecordingPlant()
@@ -371,6 +377,7 @@ class _CbgtMockPlant(_RecordingPlant):
         return result
 
 
+@pytest.mark.plant
 def test_cbgt_observation_stacks_eight_populations() -> None:
     cfg = SNNConfig(sequence_steps=10, neurons_per_region=10, n_regions=8, max_episode_steps=3)
     env = NguyenEnvAdapter(plant=_CbgtMockPlant(), config=cfg)
@@ -425,6 +432,7 @@ def test_sequence_mode_reads_one_matrix_row_per_step() -> None:
     assert not torch.allclose(net(early.reshape(1, -1)).membrane, net(late.reshape(1, -1)).membrane)
 
 
+@pytest.mark.plant
 def test_terminate_on_subthreshold_false_keeps_episode_running() -> None:
     base = SNNConfig(
         sequence_steps=4,

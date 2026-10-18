@@ -47,7 +47,7 @@ class SEA_DBSEnvAdapter(gym.Env):
         self._owns_plant = plant is None
         if plant is None:
             from envs.plant.config import PlantConfig
-            from envs.plant.python_backend import PythonPlant
+            from envs.plant import PythonPlant
 
             self._plant: PlantBackend = PythonPlant(PlantConfig(dt_ms=self.config.plant_dt_ms))
         else:

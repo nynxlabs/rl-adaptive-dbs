@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from typing import Any
 
 import numpy as np
@@ -13,8 +14,8 @@ from controllers.snn.networks import DSQN
 from controllers.snn.trainer import DSQNTrainer
 from envs.plant.dbs import DbsSpec
 from envs.plant.matlab_backend import IntegrateResult
-from envs.plant.network.integrator import SYNAPTIC_DYN_KEYS
-from envs.plant.python_backend import PythonPlant
+from envs.plant._kumaravelu import require
+from envs.plant import PythonPlant
 from tests.controllers.snn.shape_contracts_test import _SpikeMockPlant
 
 
@@ -42,6 +43,7 @@ def _carry_cfg(**kw: Any) -> SNNConfig:
     return SNNConfig(sequence_steps=4, neurons_per_region=10, max_episode_steps=3, plant_carry=True, **kw)
 
 
+@pytest.mark.plant
 def test_reset_window_runs_at_its_own_frequency_then_initial_setting() -> None:
     plant = _KwargsPlant()
     env = NguyenEnvAdapter(plant=plant, config=_carry_cfg(reset_window_frequency_hz=100.0))
@@ -56,6 +58,7 @@ def test_reset_window_runs_at_its_own_frequency_then_initial_setting() -> None:
     assert np.all(np.diff(_onsets(step1)) == 2500)  # back to 40 Hz for the first action
 
 
+@pytest.mark.plant
 def test_reset_window_off_keeps_initial_frequency() -> None:
     plant = _KwargsPlant()
     env = NguyenEnvAdapter(plant=plant, config=_carry_cfg())
@@ -66,6 +69,7 @@ def test_reset_window_off_keeps_initial_frequency() -> None:
     assert np.all(np.diff(_onsets(plant.calls[0][1])) == 2500)
 
 
+@pytest.mark.plant
 def test_pulse_restart_opens_every_segment_with_a_pulse() -> None:
     plant = _KwargsPlant()
     env = NguyenEnvAdapter(plant=plant, config=_carry_cfg(plant_pulse_restart=True))
@@ -79,6 +83,7 @@ def test_pulse_restart_opens_every_segment_with_a_pulse() -> None:
     assert _onsets(second)[0] == 0
 
 
+@pytest.mark.plant
 def test_restart_synapses_flag_reaches_the_plant_only_when_on() -> None:
     for on in (False, True):
         plant = _KwargsPlant()
@@ -90,6 +95,7 @@ def test_restart_synapses_flag_reaches_the_plant_only_when_on() -> None:
         assert ("restart_synapses" in plant.calls[0][0]) is on
 
 
+@pytest.mark.plant
 def test_carried_state_zeroes_only_synapses() -> None:
     plant = PythonPlant()
     plant._dyn = {"vsn": np.full(3, -60.0), "S2a": np.full(3, 0.4), "spike_n": np.ones(3, dtype=np.int32)}
@@ -98,6 +104,7 @@ def test_carried_state_zeroes_only_synapses() -> None:
     np.testing.assert_array_equal(restarted["vsn"], -60.0)
     assert not restarted["S2a"].any() and not restarted["spike_n"].any()
     assert plant._carried_state(False) is plant._dyn
+    SYNAPTIC_DYN_KEYS = require("network.integrator").SYNAPTIC_DYN_KEYS
     assert {"S2a", "Z1a", "spike_idx", "spike_n"} <= SYNAPTIC_DYN_KEYS
     assert not {"vsn", "CAsn2", "ca3_state", "H1"} & SYNAPTIC_DYN_KEYS
 
@@ -127,6 +134,7 @@ def _tiny(**kw: Any) -> SNNConfig:
     )
 
 
+@pytest.mark.plant
 def test_fixed_episode_seed_reuses_the_run_seed() -> None:
     plant, _ = _train(_tiny())
     assert plant.reset_seeds == [7, 8, 9]
@@ -134,6 +142,7 @@ def test_fixed_episode_seed_reuses_the_run_seed() -> None:
     assert plant.reset_seeds == [7, 7, 7]
 
 
+@pytest.mark.plant
 def test_truncation_bootstraps_when_not_terminal() -> None:
     _, trainer = _train(_tiny())
     assert trainer.buffer._done[: len(trainer.buffer)].tolist() == [False, True] * 3

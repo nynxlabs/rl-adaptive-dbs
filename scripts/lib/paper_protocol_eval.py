@@ -20,7 +20,7 @@ from envs.mehregan.baselines import run_baseline_mehregan_eval
 from envs.mehregan.config import MehreganEnvConfig
 from envs.mehregan.env import MehreganEnv
 from envs.mehregan.fixed_mean_patterns import FixedMeanPatternAlphabet
-from envs.plant.python_backend import PythonPlant
+from envs.plant import PythonPlant
 from rl_adaptive_dbs.user_config import resolve_config
 from scripts.lib.pattern_reward_landscape import describe_pattern
 

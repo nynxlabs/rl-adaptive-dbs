@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from pathlib import Path
 
 from controllers.snn.config import SNNConfig
@@ -9,6 +10,8 @@ from controllers.snn.eval import evaluate
 from controllers.snn.networks import DSQN
 from controllers.snn.trainer import save_checkpoint
 from tests.controllers.snn.shape_contracts_test import _SpikeMockPlant
+
+pytestmark = pytest.mark.plant
 
 
 class _AlphaRecordingPlant(_SpikeMockPlant):

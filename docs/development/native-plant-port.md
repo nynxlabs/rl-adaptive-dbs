@@ -26,7 +26,7 @@ Parallel MATLAB is a bridge; native Python is the long-term fix. Both are in sco
 1. **`PythonPlant`** backend implementing the existing `PlantBackend` protocol ([`envs/mehregan/env.py`](../../src/envs/mehregan/env.py)) with the same `integrate()` / `reset()` / `close()` contract as `MatlabPlant`.
 2. **Bit-for-bit or documented-tolerance equivalence** to the Kumaravelu MATLAB reference for:
    - GPi spike trains (fixed seed, `pd = 1`, no DBS)
-   - $P_\beta$ (13–35 Hz, already computed in Python — [`envs/plant/biomarkers.py`](../../src/envs/plant/biomarkers.py))
+   - $P_\beta$ (13–35 Hz, already computed in Python — `kumaravelu_plant.biomarkers` (private; see LICENSING.md))
    - DBS frequency response (e.g. 130 Hz, 45 Hz pattern indices)
 3. **Drop-in replacement** — `MehreganEnv`, benchmark runner, and DDPG trainer accept `plant=` without other code changes.
 4. **Reproducible validation** — extend existing `@pytest.mark.matlab` equivalence suite to parametrize backend (`matlab` vs `python`).
@@ -48,9 +48,9 @@ Parallel MATLAB is a bridge; native Python is the long-term fix. Both are in sco
 | Component | Lines (approx.) | Port? | Notes |
 |-----------|-----------------|-------|-------|
 | `simulate_network_model` entry | 1–89 | Partial | Orchestration only; Python `PythonPlant.integrate` replaces |
-| `creatdbs` | 91–108 | **Yes** | STN pulse train from frequency; mirror [`envs/plant/dbs.py`](../../src/envs/plant/dbs.py) |
+| `creatdbs` | 91–108 | **Yes** | STN pulse train from frequency; mirror `kumaravelu_plant.dbs` (private) |
 | `CTX_BG_TH_network` | 112–839 | **Yes** | Core integrator — **largest piece** |
-| `find_spike_times` / `spikes_to_cell` | 840–858 | **Yes** | Partially exists in [`envs/plant/spikes.py`](../../src/envs/plant/spikes.py) |
+| `find_spike_times` / `spikes_to_cell` | 840–858 | **Yes** | Partially exists in `kumaravelu_plant.spikes` (private) |
 | GPe / TH / STN gating functions | 860–1036 | **Yes** | Direct translation to NumPy vectorized ops |
 | `make_Spectrum` + Chronux helpers | 1040–1235 | **No** | Python biomarkers already validated vs MATLAB |
 | `plant_band_power.m` | separate file | **No** | Validation helper only |
@@ -67,20 +67,27 @@ Parallel MATLAB is a bridge; native Python is the long-term fix. Both are in sco
 ## 4. Proposed architecture
 
 ```
-envs/plant/
+envs/plant/                 # public
   config.py          # unchanged
-  dbs.py             # extend: creatdbs waveform generator if not already equivalent
-  spikes.py          # spike detection from voltage traces
-  biomarkers.py      # unchanged (shared across backends)
+  dbs.py             # DbsSpec, stn_dbs_gains, pulse trains (create_dbs_current: private package)
+  spikes.py          # MATLAB cell/struct converters, spike_counts (find_spike_times: private package)
+  biomarkers.py      # band constants and Error Index (spectrum code: private package)
   matlab_backend.py  # unchanged
-  python_backend.py  # NEW — PythonPlant
-  network/           # NEW package
-    __init__.py
+  _kumaravelu.py     # seam to the private package
+  network/
+    matlab_rng.py
+
+kumaravelu_plant/           # private package (see LICENSING.md)
+  python_backend.py  # PythonPlant
+  dbs.py, spikes.py, biomarkers.py
+  network/
     integrator.py    # CTX_BG_TH_network main loop
-    cells.py         # per-population RHS / channel kinetics
-    synapses.py      # connectivity + conductance updates
     gating.py        # *_inf, *_tau helpers (from MATLAB local functions)
+    synapses.py      # connectivity + conductance updates
+    numba_loop.py    # Numba-compiled integrator loop
 ```
+
+The Python port is in the private `kumaravelu_plant` package, not in this repository. The public modules keep the interfaces above and resolve the private code on first use.
 
 ### `PlantBackend` contract (unchanged)
 

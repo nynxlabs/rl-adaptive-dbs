@@ -25,7 +25,7 @@ The plant layer exposes **dynamics + actuation + spike/biomarker outputs**. The 
 ## 2. Reference and provenance
 
 - **Publication:** Kumaravelu, K., Brocker, D. T., Grill, W. M. (2016). *A biophysical model of the cortex–basal ganglia–thalamus network in the 6-OHDA lesioned rat model of Parkinson’s disease.* *Journal of Computational Neuroscience*, 40, 207–229.
-- **Reference MATLAB (fetched, not bundled):** `python scripts/matlab/fetch_kumaravelu.py` downloads the pinned upstream revision into `reference-material/KumaraveluEtAl2016/` and applies our integration patches ([changes.md](../reference-material/KumaraveluEtAl2016/changes.md); licensing: [LICENSING.md](../LICENSING.md)) — entry script `simulate_network_model.m`, network routine `CTX_BG_TH_network` in the same file. Citation and provenance: the fetched `readme.txt`.
+- **Reference MATLAB (fetched, not bundled):** `python scripts/matlab/fetch_kumaravelu.py` downloads the pinned upstream revision into `reference-material/KumaraveluEtAl2016/` and applies our integration patches from the private `kumaravelu_plant` package when it is installed ([changes.md](../reference-material/KumaraveluEtAl2016/changes.md); licensing: [LICENSING.md](../LICENSING.md)) — entry script `simulate_network_model.m`, network routine `CTX_BG_TH_network` in the same file. Citation and provenance: the fetched `readme.txt`.
 - **Upstream:** [ModelDBRepository/206232](https://github.com/ModelDBRepository/206232).
 
 **Replication default:** **Parkinsonian** runs use `pd = 1` in the reference script (`pd = 0` is healthy). RL work in this repo targets the **parkinsonian** regime unless a benchmark explicitly includes healthy controls.
@@ -72,7 +72,7 @@ The reference drives DBS as a **current injected in STN** (`Idbs` passed to `CTX
 
 **Episode / IC reset:** A new RL episode draws **new initial conditions** (reference: randomized membrane voltages per population, drawn as −62 mV plus Gaussian noise with a 5 mV standard deviation). The plant `reset` (or equivalent) must support reproducible seeds for benchmarking.
 
-**Carried segments:** `PythonPlant.integrate(..., carry=True)` continues voltages, gates, Ca and synapses from the previous segment. Each call still draws the network's wiring permutations and heterogeneous conductances (`gcorsna`, `gsngen`, …) afresh, as a fresh call of the reference script would. Two exceptions: seeds with cached MATLAB init draws (`tests/fixtures/plant_init_seed*.npz`) reuse those draws every call, and `fixed_network=True` keeps the first segment's draws until `reset`. Nguyen uses the redrawing default; `SNNConfig.plant_fixed_network` opts in to one network per episode (why: [figures/nguyen/4.md](figures/nguyen/4.md) § One network per episode). Non-carried calls are unaffected by either option.
+**Carried segments:** `PythonPlant.integrate(..., carry=True)` continues voltages, gates, Ca and synapses from the previous segment. Each call still draws the network's wiring permutations and heterogeneous conductances (`gcorsna`, `gsngen`, …) afresh, as a fresh call of the reference script would. Two exceptions: seeds with cached MATLAB init draws (`plant_init_seed*.npz` in the private `kumaravelu_plant` package) reuse those draws every call, and `fixed_network=True` keeps the first segment's draws until `reset`. Nguyen uses the redrawing default; `SNNConfig.plant_fixed_network` opts in to one network per episode (why: [figures/nguyen/4.md](figures/nguyen/4.md) § One network per episode). Non-carried calls are unaffected by either option.
 
 ---
 
@@ -110,23 +110,23 @@ For optional **plant-level** suites ([benchmarking.md](benchmarking.md) §3.3), 
 
 ## 7. Target plant wrapper API
 
-The plant lives under `envs/plant/` as a **non-Gym** service the Mehregan `Env` and adapters call.
+The plant lives under `envs/plant/` as a **non-Gym** service the Mehregan `Env` and adapters call. The Kumaravelu dynamics port (network, Python backend, spectrum code, and init-draw data) is in the private `kumaravelu_plant` package; the public modules keep the config, DBS, and biomarker interfaces and resolve the private code on first use (without the package, plant use raises `PlantUnavailableError`; see [LICENSING.md](../LICENSING.md)).
 
 ### Implemented (Phase 2, partial)
 
 | Symbol | Module | Notes |
 |--------|--------|--------|
 | `MatlabPlant` | `envs.plant` | `matlab.engine` bridge to `simulate_network_model(..., dynamics_only=true)` |
-| `PythonPlant` | `envs.plant` | Native NumPy port of Kumaravelu CBGT network ([native-plant-port.md](development/native-plant-port.md)); **GPi / $P_\beta$ parity with MATLAB** when init draws come from `plant_init_export` fixtures (see below) |
+| `PythonPlant` | `envs.plant` | Native NumPy port of Kumaravelu CBGT network (private `kumaravelu_plant` package; [native-plant-port.md](development/native-plant-port.md)); **GPi / $P_\beta$ parity with MATLAB** when init draws come from `plant_init_export` fixtures (see below) |
 | `PlantConfig` | `envs.plant` | `pd`, `dt_ms` (reference **0.01 ms**), `corstim` |
 | `DbsSpec` | `envs.plant` | `pick_dbs_freq` index; `DbsSpec.none()`, `from_frequency_hz(hz)` |
 | `IntegrateResult` | `envs.plant` | `gpi_spikes` (10 neurons, times in **seconds**), `info` |
 
 **Backend selection:** `.rl-dbs.yaml` → `plant.backend: python` (default since TASK-63, 2026-07-06) or `matlab`; env override `RL_DBS_PLANT_BACKEND`. `rl-dbs info plant` shows the resolved backend. `mehregan_eval` baseline gate passed on Python ([native-plant-port.md](development/native-plant-port.md) §5); parity and **≥10×** speed gates met (2026-07-03).
 
-**Python init draws:** MATLAB’s `randperm(n, k)` for heterogeneous STN→GPe/GPi conductances is not reproducible from NumPy’s `Generator` alone. `PythonPlant.reset(seed=N)` loads the draws that match the plant's `pd` — `tests/fixtures/plant_init_seed{N}.npz` for PD (`pd=1`), `plant_init_seed{N}_pd0.npz` for healthy (`pd=0`) — from the fixtures or `~/.cache/rl-adaptive-dbs/plant_init/`, exported via `scripts/plant/export_plant_init_draws.py --seed N --pd P`. The two differ only in the cortex→D1 striatum conductances (`gcordrstr = (0.07 - 0.044 pd) + 0.001 rand`); the loader refuses a file whose `gcordrstr` belongs to the other `pd`. Until Oct 18 2026 only PD exports existed, so healthy runs on seeds 0–4, 7, 11 and 42 used the PD value ($\approx 0.026$ instead of $\approx 0.07$). With matching init draws, 2 s GPi spike trains and $P_\beta$ match MATLAB within documented tolerances (`tests/envs/python_integrator_fixed_ic_test.py`, `tests/envs/plant_backend_equivalence_test.py`).
+**Python init draws:** MATLAB’s `randperm(n, k)` for heterogeneous STN→GPe/GPi conductances is not reproducible from NumPy’s `Generator` alone. `PythonPlant.reset(seed=N)` loads the draws that match the plant's `pd` — `plant_init_seed{N}.npz` for PD (`pd=1`), `plant_init_seed{N}_pd0.npz` for healthy (`pd=0`) — loaded from the private `kumaravelu_plant` package's `data/` folder, then `~/.cache/rl-adaptive-dbs/plant_init/`. `scripts/plant/export_plant_init_draws.py --seed N --pd P` writes to the package's `data/` folder by default. The two differ only in the cortex→D1 striatum conductances (`gcordrstr = (0.07 - 0.044 pd) + 0.001 rand`); the loader refuses a file whose `gcordrstr` belongs to the other `pd`. Until Oct 18 2026 only PD exports existed, so healthy runs on seeds 0–4, 7, 11 and 42 used the PD value ($\approx 0.026$ instead of $\approx 0.07$). With matching init draws, 2 s GPi spike trains and $P_\beta$ match MATLAB within documented tolerances (`python_integrator_fixed_ic_test.py` in the private package, and `tests/envs/plant_backend_equivalence_test.py`).
 
-**Performance (2026-07-03, WSL, seed=42, 2 s, no DBS):** MATLAB **≈58–66 s**; PythonPlant **≈6–7 s** with Numba JIT (`envs/plant/network/numba_loop.py`) — **≈10× faster** than MATLAB. NumPy fallback loop remains when Numba is unavailable or trace/debug hooks are requested. The Numba path records GPi spikes in a per-neuron buffer: **512** for a 2 s segment; longer single-shot integrates auto-size via `default_gpi_spike_buffer_size` (`ceil(duration_s × 80 Hz) + 64`, at least 512). Callers may still pass `gpi_spike_buffer_size` (Fig 2a uses a 60 Hz helper). Without a duration-scaled buffer, trains truncate after ~12 s.
+**Performance (2026-07-03, WSL, seed=42, 2 s, no DBS):** MATLAB **≈58–66 s**; PythonPlant **≈6–7 s** with Numba JIT (`kumaravelu_plant.network.numba_loop`, private) — **≈10× faster** than MATLAB. NumPy fallback loop remains when Numba is unavailable or trace/debug hooks are requested. The Numba path records GPi spikes in a per-neuron buffer: **512** for a 2 s segment; longer single-shot integrates auto-size via `default_gpi_spike_buffer_size` (`ceil(duration_s × 80 Hz) + 64`, at least 512). Callers may still pass `gpi_spike_buffer_size` (Fig 2a uses a 60 Hz helper). Without a duration-scaled buffer, trains truncate after ~12 s.
 
 **Hodgkin–Huxley `vtrap`:** striatal Na/K/M rates are of the form $x/(1-e^{-x/k})$. MATLAB has no guard; 2 s segments almost never land exactly on $V=-54,-52,-30,-27$. Sequential 2 s carry (and long single-shot integrates) can, and Numba then raises `ZeroDivisionError`. Python/Numba replace those divisions with the usual HH limit ($k$ or $-k$ as $x\to 0$) and floor time constants off 0/inf. Same class of numerical stability as the Ca floor, not a paper parameter.
 
@@ -222,7 +222,7 @@ Mark heavy checks `@pytest.mark.matlab` ([development/testing.md](development/te
 
 ## 9. Native Python plant (`PythonPlant`)
 
-**Status (TASK-17, 2026-07-03):** Implemented in `envs/plant/python_backend.py` with the same `integrate` / `reset` contract as `MatlabPlant`. Dynamics port: `envs/plant/network/` ([native-plant-port.md](development/native-plant-port.md)).
+**Status (TASK-17, 2026-07-03):** Implemented in `kumaravelu_plant/python_backend.py` (private package) with the same `integrate` / `reset` contract as `MatlabPlant`. Dynamics port: `kumaravelu_plant/network/` (private package; [native-plant-port.md](development/native-plant-port.md)).
 
 | Gate | Status |
 |------|--------|

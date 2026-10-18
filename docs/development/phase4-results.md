@@ -184,8 +184,8 @@ Evidence: offline analysis on `paper_train0.pt`, `init-30hz_train0.pt`, `qat_tra
 
 ### Implementation review (`envs/plant/`)
 
-- **`PythonPlant`** (`python_backend.py`) — clean `PlantBackend` wrapper; delegates to `integrate_network` with exported init fixtures (`load_cached_init_draws`) for MATLAB `randperm` parity.
-- **Integrator** (`network/integrator.py` + `numba_loop.py`) — Numba JIT path is default when available; NumPy fallback for debug/trace. Spike detection fix (upward crossing only) documented in [native-plant-port.md](native-plant-port.md).
+- **`PythonPlant`** (`kumaravelu_plant/python_backend.py`, private package) — clean `PlantBackend` wrapper; delegates to `integrate_network` with exported init fixtures (`load_cached_init_draws`) for MATLAB `randperm` parity.
+- **Integrator** (`kumaravelu_plant/network/integrator.py` + `numba_loop.py`, private package) — Numba JIT path is default when available; NumPy fallback for debug/trace. Spike detection fix (upward crossing only) documented in [native-plant-port.md](native-plant-port.md).
 - **Config surface** — default `plant.backend: python` (TASK-63); override with `matlab` or `RL_DBS_PLANT_BACKEND=matlab` when MATLAB bridge is needed.
 
 ### Backend flip recommendation

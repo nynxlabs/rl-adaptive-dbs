@@ -9,6 +9,8 @@ import pytest
 from controllers.snn.config import SNNConfig
 from controllers.snn.trainer import train_dsqn, write_train_metrics
 
+pytestmark = pytest.mark.plant
+
 
 @pytest.mark.slow
 def test_train_dsqn_python_plant_smoke(tmp_path: Path) -> None:

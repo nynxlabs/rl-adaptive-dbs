@@ -16,6 +16,7 @@ def test_matlab_uniform_rand_matches_random_state() -> None:
     np.testing.assert_array_equal(py, ref)
 
 
+@pytest.mark.plant
 def test_load_cached_init_draws_seed42() -> None:
     draws = load_cached_init_draws(42)
     assert draws is not None

@@ -7,7 +7,7 @@ from collections.abc import Iterator
 import pytest
 
 from envs.plant import MatlabPlant, PlantConfig, PythonPlant
-from tests.envs.plant_backends import BACKEND_NAMES, PlantBackendName, require_matlab
+from tests.envs.plant_backends import BACKEND_NAMES, PlantBackendName, require_matlab, require_plant
 
 
 @pytest.fixture(scope="module", params=BACKEND_NAMES, ids=list(BACKEND_NAMES))
@@ -15,6 +15,8 @@ def plant_backend(request: pytest.FixtureRequest) -> PlantBackendName:
     backend: PlantBackendName = request.param
     if backend == "matlab":
         require_matlab()
+    else:
+        require_plant()
     return backend
 
 

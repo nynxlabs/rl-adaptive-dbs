@@ -39,6 +39,7 @@ class TestFixedMeanPatternAlphabet:
         alpha = FixedMeanPatternAlphabet(mean_hz=45.0)
         assert alpha.n_actions == 41
 
+    @pytest.mark.plant
     def test_all_patterns_same_pulse_count(self) -> None:
         """Mean-rate preservation: every pattern has the same number of pulses."""
         alpha = FixedMeanPatternAlphabet(mean_hz=45.0)
@@ -48,6 +49,7 @@ class TestFixedMeanPatternAlphabet:
         # 45 Hz over 2 s on 0.01 ms grid (inclusive endpoints) → 91 pulses
         assert counts[0] == 91
 
+    @pytest.mark.plant
     def test_pattern0_matches_regular_train(self) -> None:
         """Pattern 0 should be byte-identical to create_dbs_current(mean_hz)."""
         alpha = FixedMeanPatternAlphabet(mean_hz=45.0)
@@ -59,6 +61,7 @@ class TestFixedMeanPatternAlphabet:
         )
         np.testing.assert_array_equal(pattern_trace, regular)
 
+    @pytest.mark.plant
     def test_irregular_patterns_differ_from_regular(self) -> None:
         """At least some irregular patterns should differ from the regular train."""
         alpha = FixedMeanPatternAlphabet(mean_hz=45.0)
@@ -72,6 +75,7 @@ class TestFixedMeanPatternAlphabet:
         # match if jitter is zero, but with default 1/3 jitter that's unlikely).
         assert n_different >= 30, f"only {n_different}/40 irregular patterns differ"
 
+    @pytest.mark.plant
     def test_pattern_reproducibility(self) -> None:
         """Same (mean_hz, index) always produces the same trace."""
         alpha = FixedMeanPatternAlphabet(mean_hz=45.0)
@@ -80,6 +84,7 @@ class TestFixedMeanPatternAlphabet:
             b = alpha.idbs_for_pattern(i)
             np.testing.assert_array_equal(a, b)
 
+    @pytest.mark.plant
     def test_different_mean_hz(self) -> None:
         """30 Hz alphabet should have the same pulse count on every pattern."""
         alpha = FixedMeanPatternAlphabet(mean_hz=30.0)
@@ -87,6 +92,7 @@ class TestFixedMeanPatternAlphabet:
         expected = alpha.pulse_count(0)
         assert all(c == expected for c in counts)
 
+    @pytest.mark.plant
     def test_to_dbs_spec_has_idbs(self) -> None:
         """to_dbs_spec should attach the precomputed trace."""
         alpha = FixedMeanPatternAlphabet(mean_hz=45.0)
@@ -95,6 +101,7 @@ class TestFixedMeanPatternAlphabet:
         assert spec.mean_hz == 45.0
         np.testing.assert_array_equal(spec.idbs, alpha.idbs_for_pattern(5))
 
+    @pytest.mark.plant
     def test_to_dbs_spec_pattern0(self) -> None:
         """Pattern 0 → DbsSpec should have mean_hz and idbs."""
         alpha = FixedMeanPatternAlphabet(mean_hz=45.0)
@@ -293,6 +300,7 @@ class TestMehreganEnvPatternMode:
         assert obs.dtype == np.float32
         assert "p_beta_raw" in info
 
+    @pytest.mark.plant
     def test_step_with_pattern0(self, pattern_env: MehreganEnv) -> None:
         pattern_env.reset(seed=0)
         obs, reward, terminated, truncated, info = pattern_env.step(0)
@@ -301,12 +309,14 @@ class TestMehreganEnvPatternMode:
         assert not terminated
         assert info["action"] == 0
 
+    @pytest.mark.plant
     def test_step_with_irregular_pattern(self, pattern_env: MehreganEnv) -> None:
         pattern_env.reset(seed=0)
         obs, reward, terminated, truncated, info = pattern_env.step(5)
         assert obs.shape == (1,)
         assert info["action"] == 5
 
+    @pytest.mark.plant
     def test_full_episode(self, pattern_env: MehreganEnv) -> None:
         """Run a full 3-step episode without errors."""
         pattern_env.reset(seed=0)
@@ -316,6 +326,7 @@ class TestMehreganEnvPatternMode:
                 break
         # Should complete without error
 
+    @pytest.mark.plant
     def test_baseline_rollout_in_pattern_mode(self) -> None:
         """run_baseline_rollout with pattern-mode env and periodic-45hz baseline."""
         from envs.mehregan.baselines import run_baseline_rollout
@@ -343,6 +354,7 @@ class TestMehreganEnvPatternMode:
 class TestMehreganEnvPatternModePythonPlant:
     """Pattern-mode env steps through PythonPlant with precomputed idbs traces."""
 
+    @pytest.mark.plant
     @pytest.mark.slow
     def test_step_pattern0_and_irregular_on_python_plant(self) -> None:
         config = MehreganEnvConfig(
@@ -381,10 +393,11 @@ class TestMehreganEnvPatternModePythonPlant:
 class TestTrainDefaultEnv:
     """``default_train_env`` must use PythonPlant in pattern mode."""
 
+    @pytest.mark.plant
     def test_pattern_mode_uses_python_plant(self) -> None:
         from controllers.ddpg import default_train_env
         from controllers.ddpg.config import DDPGConfig
-        from envs.plant.python_backend import PythonPlant
+        from envs.plant import PythonPlant
 
         env = default_train_env(
             DDPGConfig(action_space_mode="fixed_mean_pattern", pattern_mean_hz=45.0),
@@ -406,6 +419,7 @@ class TestTrainDefaultEnv:
         finally:
             env.close()
 
+    @pytest.mark.plant
     def test_init_30hz_pattern_mode_env_and_baseline(self) -> None:
         """TASK-85 B2: default_train_env + init_baseline stay at 30 Hz for init-30hz."""
         from controllers.ddpg import default_train_env

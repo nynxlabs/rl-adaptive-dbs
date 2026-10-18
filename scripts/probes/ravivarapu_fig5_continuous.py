@@ -18,7 +18,7 @@ import numpy as np
 
 from envs.plant.biomarkers import p_beta
 from envs.plant.dbs import DbsSpec, create_dbs_current
-from envs.plant.python_backend import PythonPlant
+from envs.plant import PythonPlant
 
 OUT = Path("artifacts/figures/papers/ravivarapu/5a/continuous_probe.json")
 SCALE = 425.0

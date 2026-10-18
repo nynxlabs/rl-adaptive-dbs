@@ -14,6 +14,8 @@ from controllers.snn.trainer import (
     train_dsqn,
 )
 
+pytestmark = pytest.mark.plant
+
 
 @pytest.mark.slow
 def test_snn_train_resume_episode_count(tmp_path: Path) -> None:

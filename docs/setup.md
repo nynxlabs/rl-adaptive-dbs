@@ -70,6 +70,14 @@ bash scripts/setup.sh
 uv sync --all-groups
 ```
 
+Then install the private `kumaravelu_plant` package, which the plant needs:
+
+```bash
+bash scripts/plant/install_kumaravelu_plant.sh
+```
+
+`uv sync` removes this package (it is not in `uv.lock`), so run the script again after any `uv sync`. `uv run` leaves it in place. `scripts/setup.sh` runs the script for you. Without access to the private package, the rest of the repository works, but plant use raises `PlantUnavailableError` (see [LICENSING.md](../LICENSING.md)).
+
 **MATLAB only** (if Python deps are already installed):
 
 ```bash

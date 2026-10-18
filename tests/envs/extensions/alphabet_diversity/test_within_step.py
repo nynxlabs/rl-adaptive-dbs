@@ -25,6 +25,7 @@ def test_clip_spikes_rebases_to_subwindow() -> None:
     np.testing.assert_allclose(clipped[0], [0.0, 0.6])
 
 
+@pytest.mark.plant
 def test_within_step_series_length_and_order() -> None:
     # Dense early spikes → higher early sub-window power than late (heuristic).
     gpi = [np.linspace(0.0, 1.9, 40, dtype=np.float64)]
@@ -74,6 +75,7 @@ class _SpikeStubPlant(MockPlant):
         )
 
 
+@pytest.mark.plant
 def test_mehregan_env_within_step_shape_and_modes() -> None:
     env = WithinStepMehreganEnv(
         plant=_SpikeStubPlant(),

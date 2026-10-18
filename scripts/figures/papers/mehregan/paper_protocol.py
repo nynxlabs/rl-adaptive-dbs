@@ -58,7 +58,7 @@ from envs.mehregan.fixed_mean_patterns import FixedMeanPatternAlphabet
 from envs.mehregan.pattern_alternatives import BurstPatternAlphabet, CuratedPatternAlphabet
 from envs.plant.config import PlantConfig
 from envs.plant.dbs import DbsSpec
-from envs.plant.python_backend import PythonPlant
+from envs.plant import PythonPlant
 from rl_adaptive_dbs.panel import load_script_module
 from rl_adaptive_dbs.user_config import resolve_config
 

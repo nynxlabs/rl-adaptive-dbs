@@ -26,7 +26,8 @@ P_BETA_REL_TOL: float = 0.01
 P_BETA_ABS_TOL: float = 0.01
 
 # Phase B parity (2026-07-03): ``PythonPlant.reset(seed)`` loads ``plant_init_seed{seed}.npz``
-# from ``tests/fixtures/`` (MATLAB ``plant_init_export`` — ``randperm(n,k)`` for gsngen/gsngea/gsngi).
+# from the private ``kumaravelu_plant`` package data (MATLAB ``plant_init_export`` —
+# ``randperm(n,k)`` for gsngen/gsngea/gsngi).
 # Export missing seeds: ``uv run python scripts/plant/export_plant_init_draws.py --seed N``.
 
 
@@ -40,6 +41,14 @@ def matlab_engine_available() -> bool:
     from tests.conftest import matlab_engine_available as _check
 
     return _check()
+
+
+def require_plant() -> None:
+    """Skip unless the private ``kumaravelu_plant`` package is installed (LICENSING.md)."""
+    from tests.conftest import PLANT_SKIP_REASON, kumaravelu_plant_available
+
+    if not kumaravelu_plant_available():
+        pytest.skip(PLANT_SKIP_REASON)
 
 
 def require_matlab() -> None:
@@ -57,6 +66,7 @@ def plant_session(backend: PlantBackendName) -> Iterator[MatlabPlant | PythonPla
         with MatlabPlant(PlantConfig()) as plant:
             yield plant
     elif backend == "python":
+        require_plant()
         with PythonPlant(PlantConfig()) as plant:
             yield plant
     else:

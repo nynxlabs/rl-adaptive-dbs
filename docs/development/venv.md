@@ -42,6 +42,8 @@ uv sync --all-groups     # runtime + dev + figures + matlab
 
 `scripts/setup.sh` (Python-only) runs **`uv sync --group dev --group figures`**. MATLAB setup adds **`--group matlab`**. Use **`uv sync --all-groups`** for a full dev machine in one step.
 
+**Private plant package.** After any `uv sync`, run `bash scripts/plant/install_kumaravelu_plant.sh` to re-install the private `kumaravelu_plant` package into the venv. `uv sync` removes it because it is not in `uv.lock`; `uv run` keeps it. See [setup.md](../setup.md).
+
 Prefer **`uv run`** so you do not need to activate the venv:
 
 ```bash

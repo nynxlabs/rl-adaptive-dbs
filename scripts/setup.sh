@@ -111,6 +111,10 @@ else
 fi
 say ""
 
+say "=== Private Kumaravelu plant package (LICENSING.md) ==="
+bash "$_script_dir/plant/install_kumaravelu_plant.sh"
+say ""
+
 say "=== Import check ==="
 uv run python -c "import envs; import controllers; print('ok')"
 say ""
@@ -134,6 +138,7 @@ fi
 if [[ "$WITH_MATLAB" -eq 1 ]]; then
   say "=== MATLAB Python engine (uv sync --group matlab) ==="
   uv sync --group matlab
+  bash "$_script_dir/plant/install_kumaravelu_plant.sh"
   say ""
   say "=== Kumaravelu MATLAB model (fetched, not bundled — LICENSING.md) ==="
   uv run python "$_script_dir/matlab/fetch_kumaravelu.py"

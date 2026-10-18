@@ -30,7 +30,7 @@ x0.25/x2, striatal Im factor 1.2/2.0, lesion factor 0.5, iappgpe 1/2, GPe->STN
 x0.5/x2, STN->GPe x0.5/x2, GPe->STN delay +4/+8 ms, loop kernels stretched
 x1.5. Changes that remove it switch regime instead (healthy-like spectrum, or
 a 7.5-8.6 Hz STN mode at GPe->STN stretch x2); none lands near 12.6 Hz.
-Seeds with MATLAB-exported draws (tests/fixtures) carry pd=1 gcordrstr into
+Seeds with MATLAB-exported draws (kumaravelu_plant data) carry pd=1 gcordrstr into
 pd=0 runs; correcting it for healthy seed 0 changes nothing (D1 is silent).
 """
 from __future__ import annotations
@@ -46,8 +46,10 @@ import numpy as np
 
 from envs.plant import DbsSpec, PlantConfig, PythonPlant
 from envs.plant.biomarkers import SpectrumParams, multitaper_psd_point_process
-from envs.plant import python_backend as pb
-from envs.plant.network import integrator as integ
+from envs.plant._kumaravelu import require
+
+pb = require("python_backend")
+integ = require("network.integrator")
 
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_OUT = Path("/tmp/meh1b-plant/plant_beta_probe.jsonl")
@@ -110,7 +112,7 @@ def install_patches(knobs: dict[str, float], dt_ms: float) -> None:
         return _apply(orig_draw(cls, rng, n=n, pd=pd), pd)
 
     integ.NetworkInitDraws.draw = classmethod(draw)  # type: ignore[method-assign]
-    # Seeds with MATLAB-exported draws (tests/fixtures/plant_init_seed*.npz) skip draw().
+    # Seeds with MATLAB-exported draws (kumaravelu_plant/data/plant_init_seed*.npz) skip draw().
     orig_cached = pb.load_cached_init_draws
     pb.load_cached_init_draws = lambda seed, **kw: _apply(orig_cached(seed, **kw), 1)  # exported at pd=1  # type: ignore[assignment]
 

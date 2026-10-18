@@ -36,8 +36,10 @@ import numpy as np  # noqa: E402
 
 from controllers.snn import adapter as A  # noqa: E402
 from controllers.snn.eval import evaluate  # noqa: E402
-from envs.plant import python_backend as PB  # noqa: E402
+from envs.plant._kumaravelu import require  # noqa: E402
 from nguyen_gates import fig7_eval_gates  # noqa: E402
+
+PB = require("python_backend")
 
 FIG3_PD_ON_MEDIAN = 295.2
 

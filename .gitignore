@@ -27,3 +27,11 @@ logs/
 /reference-material/KumaraveluEtAl2016/run_simulate_network_model.q
 /reference-material/KumaraveluEtAl2016/readme.txt
 /reference-material/KumaraveluEtAl2016/plant_band_power.m
+# Derived from that model — private kumaravelu_plant package only (LICENSING.md):
+/reference-material/KumaraveluEtAl2016/patches/
+/tests/fixtures/*.npz
+/src/envs/plant/network/integrator.py
+/src/envs/plant/network/gating.py
+/src/envs/plant/network/synapses.py
+/src/envs/plant/network/numba_loop.py
+/src/envs/plant/python_backend.py
