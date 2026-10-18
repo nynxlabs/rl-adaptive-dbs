@@ -10,12 +10,12 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Fig 1b | GPi PSD | Fail (`healthy_pd_ratio_near_paper`, rep v2) |
 | Fig 2a | GPi $P_\beta$ time series | Pass (rep v1) |
 | Fig 2b | Error Index time series | Pass (rep v18) |
-| Fig 4a | Training $P_\beta$ vs step | Fail (`drop_vs_paper`, paper Alg. 1, rep v43) |
-| Fig 4b | Training reward vs episode | Fail (`psd_shape_r`, paired to 4a, rep v50) |
-| Fig 5a | Post-train efficacy @ 45 Hz | Pass (closed loop, Fig 4a model, rep v25) |
-| Fig 5b | Post-train efficacy @ 30 Hz | Pass (closed loop, burst alphabet, rep v26) |
-| Fig 6a | PTQ / QAT @ 45 Hz | Fail (`qat_elevated_vs_fp32`, closed loop, int8 QAT, rep v70) |
-| Fig 6b | PTQ / QAT @ 30 Hz | Fail (`qat_elevated_vs_fp32`, closed loop, int8 QAT, rep v48) |
+| Fig 4a | Training $P_\beta$ vs step | Pass (paper Alg. 1, rep v44) |
+| Fig 4b | Training reward vs episode | Fail (`early_reward_near_paper`, paired to 4a, rep v51) |
+| Fig 5a | Post-train efficacy @ 45 Hz | Pass (closed loop, Fig 4a model, rep v26) |
+| Fig 5b | Post-train efficacy @ 30 Hz | Pass (closed loop, burst alphabet, rep v27) |
+| Fig 6a | PTQ / QAT @ 45 Hz | Fail (`qat_elevated_vs_fp32`, closed loop, int8 QAT, rep v71) |
+| Fig 6b | PTQ / QAT @ 30 Hz | Fail (`qat_elevated_vs_fp32`, closed loop, int8 QAT, rep v49) |
 <!-- summary:end -->
 
 Replication PNGs: `figures/mehregan/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/mehregan/images/<panel>/paper.png` (from paper-note embeds; composite Figs 1/2/4/5/6 split into panels). Full composites under `figures/mehregan/images/_full/`.
@@ -186,33 +186,33 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** model (§IV.A
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_beta_v43.png)
+![Replication Fig 4a](images/4a/training_beta_v44.png)
 
 <!-- caption-4a:start -->
-**Caption:** 45 Hz, paper Alg. 1 (critic on logits, lr 5e-4/1e-3), burst alphabet, logit noise σ=1, seed 0, v43, ep0=0.446, early=0.425 late=0.355 (2026-10-17)
+**Caption:** 45 Hz, paper Alg. 1 (critic on logits, lr 5e-4/1e-3), burst alphabet, logit noise σ=1, seed 0, v44, ep0=0.446, early=0.470 late=0.377 (2026-10-17)
 
 **Manifest:** `artifacts/figures/papers/mehregan/4a/manifest.json`
 <!-- caption-4a:end -->
 
-**Status:** Fail (upgraded gates) — the Oct 17 2026 audit recipe (Fig 3c reward, one network per episode, exact-rate 21-pattern menu, regular-pulse init bias 1.0; Algorithm 1 otherwise as written). Episode means 0.446 0.480 0.474 0.315 0.377 0.337 0.383 0.326 0.344 0.386 vs paper 0.507 0.506 0.464 0.477 0.445 0.397 0.382 0.375 0.372 0.374: the agent converges on burst pattern 10 by episode 3 (a cliff where the paper falls over five episodes), so `half_drop_episode_near_paper`, `per_episode_near_paper`, `episode_shape_r` and `drop_vs_paper` fail. No paper-silent knob or seed (σ 0.5/1, init bias 0/0.5/1, seeds 0–4) passes them; the cause is the menu action space (open decision). Details: [4a.md](../../docs/figures/mehregan/4a.md) § Audit (Oct 17 2026).
+**Status:** Pass — every upgraded gate (rep v44). Recipe: Fig 3c reward, one plant network per episode, exact-rate 21-pattern menu, regular-pulse init bias 1.0, and Alg. 1's "update frequency" read as one update every 2nd step (`update_every=2`, agreed with the maintainer; one update every step converges by episode 3). Episode means 0.446 0.473 0.512 0.464 0.391 0.388 0.394 0.363 0.337 0.402 vs paper 0.507 0.506 0.464 0.477 0.445 0.397 0.382 0.375 0.372 0.374 — the paper's gradual five-episode fall. Seed spread: seeds 0 and 1 pass, seed 2 fails. Details: [4a.md](../../docs/figures/mehregan/4a.md) § Candidate readings.
 
 <!-- gates-4a:start -->
-**Gates set** (`fig4a_gates` → live `series.json`). Overall **`gates_pass`**: no (from `artifacts/figures/papers/mehregan/4a/series.json`, 2026-10-17). Every row is required for exit.
+**Gates set** (`fig4a_gates` → live `series.json`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4a/series.json`, 2026-10-17). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
 | `plot_style` | 300 training steps | yes |
 | `overall_trend_down` | end window mean < start window mean | yes |
-| `drop_vs_paper` | drop ≥ 70% of digitized paper drop | no |
+| `drop_vs_paper` | drop ≥ 70% of digitized paper drop | yes |
 | `late_early_ratio_near_paper` | late/early ratio vs digitization | yes |
 | `mid_fade_vs_paper` | mid [120,150] fade (vs [0,100]) within 0.5–2× the digitized paper mid fade | yes |
 | `ep0_near_paper` | steps 0–29 mean within 15% of digitized paper ep0 (seed spread) | yes |
-| `episode_shape_r` | Pearson r of the 10 episode (30-step) means vs digitized paper ≥ 0.7 | no |
+| `episode_shape_r` | Pearson r of the 10 episode (30-step) means vs digitized paper ≥ 0.7 | yes |
 | `late_level_near_paper` | episodes 5–9 mean within 15% of digitized paper | yes |
 | `episode_drop_near_paper` | drop eps 0–3 → eps 6–9 within 0.6–1.6× digitized paper | yes |
 | `no_late_rebound` | eps 7–9 mean ≤ eps 5–6 mean + 0.02 | yes |
-| `half_drop_episode_near_paper` | first episode at half the eps 0–3 → 6–9 drop within ±1 of digitized paper | no |
-| `per_episode_near_paper` | every episode mean within 20% of digitized paper | no |
+| `half_drop_episode_near_paper` | first episode at half the eps 0–3 → 6–9 drop within ±1 of digitized paper | yes |
+| `per_episode_near_paper` | every episode mean within 20% of digitized paper | yes |
 <!-- gates-4a:end -->
 
 **Run:**
@@ -222,7 +222,7 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/4a/plot.py 
 uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/4a/plot.py --plot-only --export-notes --update-report
 ```
 
-**Defaults:** seed `0`, 45 Hz `BurstPatternAlphabet`, 21 exact-rate patterns, logit-noise exploration σ = 1.0, regular-pulse init bias 1.0, Fig 3c reward (`reward_below=square`; `linear` = printed branch), one plant network per episode with state carried across its 2 s steps, `plant.dt_ms=0.02`. Paper-silent knobs: `--set FIELD=VALUE` (`alphabet` incl. `burst_legacy`, `jitter_fraction`, `logit_noise_std`, `init_bias_scale`, `gamma`, `tau`, `reward_below`). Writes `series.json` + `checkpoint.pt` (fp32 actor for Fig 5a / 6a).
+**Defaults:** seed `0`, 45 Hz `BurstPatternAlphabet`, 21 exact-rate patterns, logit-noise exploration σ = 1.0, regular-pulse init bias 1.0, one Alg. 1 update every 2nd step (`update_every=2`; `1` = the literal loop), Fig 3c reward (`reward_below=square`; `linear` = printed branch), one plant network per episode with state carried across its 2 s steps, `plant.dt_ms=0.02`. Paper-silent knobs: `--set FIELD=VALUE` (`alphabet` incl. `burst_legacy`, `jitter_fraction`, `logit_noise_std`, `init_bias_scale`, `gamma`, `tau`, `reward_below`, `update_every`, candidates `carry_plant`, `logit_noise_end`, `alphabet=burst_nobeta|burst_rand20|burst_nobeta_rand20`). Writes `series.json` + `checkpoint.pt` (fp32 actor for Fig 5a / 6a).
 
 ---
 
@@ -238,19 +238,19 @@ Episode **total reward** and **episode-mean PSD(x10³)** of the same **45 Hz** t
 
 **Reward vs episode**
 
-![Replication Fig 4b reward](images/4b/training_reward_v50.png)
+![Replication Fig 4b reward](images/4b/training_reward_v51.png)
 
 **Episode-mean PSD vs episode**
 
-![Replication Fig 4b PSD](images/4b/training_psd_v50.png)
+![Replication Fig 4b PSD](images/4b/training_psd_v51.png)
 
 <!-- caption-4b:start -->
-**Caption:** 10 episodes, 45 Hz fixed_mean_pattern (Fig 4a paired run), seed 0, source series.json, v50, reward ep0=-94.4 ep9=-6.7, rise_ep=3, psd 0.446→0.386, gate pass (2026-10-17)
+**Caption:** 10 episodes, 45 Hz fixed_mean_pattern (Fig 4a paired run), seed 0, source series.json, v51, reward ep0=-94.4 ep9=-12.5, rise_ep=4, psd 0.446→0.402, gate pass (2026-10-17)
 
 **Manifest:** `artifacts/figures/papers/mehregan/4b/manifest.json`
 <!-- caption-4b:end -->
 
-**Status:** Fail (upgraded gates) — all 10 episodes (the paper's vertices sit at x = 8i/9). Rewards −94 −103 −100 3 −5 −2 −6 1 −1 −7 vs paper ≈ −81 −79 −43 −55 −16 … −2.4: early level, reward floor, late reward and rise pass; `psd_shape_r`, `psd_floor_not_deeper` (late policy dips to 0.315 vs paper floor 0.365) and `per_episode_psd_near_paper` fail — same cliff as Fig 4a. Details: [4b.md](../../docs/figures/mehregan/4b.md).
+**Status:** Fail (rep v51) — `early_reward_near_paper`, `reward_floor_not_deeper`; every other gate passes (reward rise, late plateau, late PSD, PSD shape, per-episode PSD). Rewards −94 −99 −159 −131 −22 −10 −10 −3 −0 −12 vs paper ≈ −81 −79 −43 −55 −16 … −2.4: episodes 2–3 explore beta-raising menu patterns (bursts of 2–3 pulses repeat at 22.5 / 15 Hz, inside the beta band; `artifacts/probes/mehregan_landscape_45_burst21.json`), so the quadratic penalty runs deeper than the paper's.
 
 <!-- gates-4b:start -->
 **Gates set** (`fig4b_gates` → Fig 4a `series.json` (10 episodes)). Overall **`gates_pass`**: no (from `artifacts/figures/papers/mehregan/4a/series.json`, 2026-10-17). Every row is required for exit.
@@ -269,12 +269,12 @@ Episode **total reward** and **episode-mean PSD(x10³)** of the same **45 Hz** t
 | `late_reward_near_zero` | late mean reward in (−10, 2] (paper ~−3) | yes |
 | `ep0_beta_near_paper` | episode 0 PSD within 15% of digitized paper (seed spread) | yes |
 | `reward_shape_r` | Pearson r per-episode reward vs digitized paper ≥ 0.7 | yes |
-| `psd_shape_r` | Pearson r per-episode PSD vs digitized paper ≥ 0.7 | no |
-| `early_reward_near_paper` | eps 0–2 mean reward within 50% of digitized paper | yes |
-| `reward_floor_not_deeper` | min episode reward ≥ 1.5× digitized paper min | yes |
+| `psd_shape_r` | Pearson r per-episode PSD vs digitized paper ≥ 0.7 | yes |
+| `early_reward_near_paper` | eps 0–2 mean reward within 50% of digitized paper | no |
+| `reward_floor_not_deeper` | min episode reward ≥ 1.5× digitized paper min | no |
 | `max_reward_le_cap` | max episode reward ≤ +5 (paper never above ≈ −2) | yes |
-| `psd_floor_not_deeper` | min episode PSD ≥ 0.9× digitized paper min | no |
-| `per_episode_psd_near_paper` | every episode PSD within 20% of digitized paper | no |
+| `psd_floor_not_deeper` | min episode PSD ≥ 0.9× digitized paper min | yes |
+| `per_episode_psd_near_paper` | every episode PSD within 20% of digitized paper | yes |
 <!-- gates-4b:end -->
 
 **Run:**
@@ -297,15 +297,15 @@ Post-training evaluation of the **45 Hz** model (§IV.A.2) on a fixed seed: 2 s 
 
 ### Replication
 
-![Replication Fig 5a](images/5a/efficacy_45hz_v25.png)
+![Replication Fig 5a](images/5a/efficacy_45hz_v26.png)
 
 <!-- caption-5a:start -->
-**Caption:** 45 Hz paper-protocol eval, seed 0, checkpoint=checkpoint.pt, 0.2s trailing, v25, trained_mean=361, no_stim_mean=486, periodic_mean=307, trained>periodic, gates pass (2026-10-17)
+**Caption:** 45 Hz paper-protocol eval, seed 0, checkpoint=checkpoint.pt, 0.2s trailing, v26, trained_mean=379, no_stim_mean=486, periodic_mean=307, trained>periodic, gates pass (2026-10-17)
 
 **Manifest:** `artifacts/figures/papers/mehregan/5a/manifest.json`
 <!-- caption-5a:end -->
 
-**Status:** Pass — every upgraded gate. Evaluates the Fig 4a checkpoint (the paper's one 45 Hz model); the policy plays burst pattern 10: trained 361, periodic 45 Hz 307, no stim 486, 130 Hz 169 (late means, t ≥ 4 s), trained–periodic gap 0.11 of no stim (paper 0.22; band 0.4–2×, which the pre-audit model failed).
+**Status:** Pass — every upgraded gate (rep v26). Evaluates the Fig 4a checkpoint (the paper's one 45 Hz model); the policy plays burst pattern 19: trained 379, periodic 45 Hz 307, no stim 486, 130 Hz 169 (late means, t ≥ 4 s); trained/no-stim 0.78 vs paper 0.81.
 
 <!-- gates-5a:start -->
 **Gates set** (`efficacy_gates` / `fig5_efficacy_gates` → `eval.json`). Overall **`pass`**: yes (from `artifacts/figures/papers/mehregan/5a/eval.json`, 2026-10-17). Every row is required for exit.
@@ -348,15 +348,15 @@ Same closed-loop eval for the **30 Hz** model (§IV.A.2), trained with the Fig 4
 
 ### Replication
 
-![Replication Fig 5b](images/5b/efficacy_30hz_v26.png)
+![Replication Fig 5b](images/5b/efficacy_30hz_v27.png)
 
 <!-- caption-5b:start -->
-**Caption:** 30 Hz paper-protocol eval, seed 0, checkpoint=checkpoint.pt, 0.2s trailing, v26, trained_mean=378, no_stim_mean=486, periodic_mean=638, trained<both, gates pass (2026-10-17)
+**Caption:** 30 Hz paper-protocol eval, seed 0, checkpoint=checkpoint.pt, 0.2s trailing, v27, trained_mean=378, no_stim_mean=486, periodic_mean=638, trained<both, gates pass (2026-10-17)
 
 **Manifest:** `artifacts/figures/papers/mehregan/5b/manifest.json`
 <!-- caption-5b:end -->
 
-**Status:** Pass — every upgraded gate. Trained 378 < no stim 486 < periodic 30 Hz 638; the Oct 17 2026 30 Hz model plays burst pattern 14 (clusters with silence — instantaneous rate outside the beta band, as the paper argues).
+**Status:** Pass — every upgraded gate (rep v27). Trained 378 < no stim 486 < periodic 30 Hz 638; the 30 Hz model plays burst pattern 14 (clusters with silence — instantaneous rate outside the beta band, as the paper argues).
 
 <!-- gates-5b:start -->
 **Gates set** (`efficacy_gates` / `fig5_efficacy_gates` → `eval.json`). Overall **`pass`**: yes (from `artifacts/figures/papers/mehregan/5b/eval.json`, 2026-10-17). Every row is required for exit.
@@ -398,15 +398,15 @@ Quantization on the **45 Hz** model (§IV.A.3), same closed-loop eval and seed. 
 
 ### Replication
 
-![Replication Fig 6a](images/6a/ptq_qat_45hz_v70.png)
+![Replication Fig 6a](images/6a/ptq_qat_45hz_v71.png)
 
 <!-- caption-6a:start -->
-**Caption:** 45 Hz paper-protocol eval, eval seed 0, fp32_post=361, QAT median post=307, QAT paper-like 1/15 train seeds, QAT median late/pre 0.60, PTQ tracks fp32, v70, 2026-10-17
+**Caption:** 45 Hz paper-protocol eval, eval seed 0, fp32_post=379, QAT median post=307, QAT paper-like 1/15 train seeds, QAT median late/pre 0.60, PTQ tracks fp32, v71, 2026-10-17
 
 **Manifest:** `artifacts/figures/papers/mehregan/6a/manifest.json`
 <!-- caption-6a:end -->
 
-**Status:** Fail (Oct 17 2026 audit recipe, 15 QAT training seeds) — fp32 / PTQ fp16 / PTQ int8 all 361 (late/pre 0.71, paper ≈ 0.78; fp32 shape r 0.88; every fp32 level/onset gate passes). PTQ is byte-identical to fp32 (the menu argmax never flips), so `ptq_*_alters_trace` fail: the paper's PTQ traces differ from fp32 by 22 / 28 PSD units with the same mean. QAT: 1/15 seeds paper-like; 14/15 deploy pattern 0, the regular 45 Hz train (late/pre 0.60 vs paper 0.995) — 10-episode int8 QAT saturates its fake-quant logit head and never learns, so the tie keeps the regular-pulse init, which suppresses at 45 Hz. Failing: `qat_elevated_vs_fp32`, `qat_majority_not_below_paper`, `qat_median_near_paper`, `qat_late_sustained`, `qat_fp32_gap_vs_paper`, `ptq_int8_alters_trace`, `ptq_fp16_alters_trace`. Root cause: the 21-pattern menu action space (Figure 3a specifies a per-pulse head; open decision) — [4a.md](../../docs/figures/mehregan/4a.md) § Audit and § QAT tie-break.
+**Status:** Fail (rep v71, 15 QAT training seeds) — fp32 / PTQ fp16 / PTQ int8 all 379 (every fp32 level/onset/shape gate passes). PTQ is byte-identical to fp32 (the menu argmax never flips), so `ptq_*_alters_trace` fail: the paper's PTQ traces differ from fp32 by 22 / 28 PSD units with the same mean. QAT: 1/15 seeds paper-like; 14/15 deploy the regular 45 Hz train (late/pre 0.60 vs paper 0.995) — 10-episode int8 QAT saturates its fake-quant head and never learns, so the tie keeps the regular-pulse init, which suppresses at 45 Hz. Root cause: the menu action space; the per-pulse head of Figure 3a cannot learn Fig 4a under Alg. 1 (open question). [4a.md](../../docs/figures/mehregan/4a.md) § Fig 3a per-pulse head — bounded probe.
 
 <!-- gates-6a:start -->
 **Gates set** (`fig6_quant_gates` → `eval.json`). Overall **`all_pass`**: no (from `artifacts/figures/papers/mehregan/6a/eval.json`, 2026-10-17). Every row is required for exit.
@@ -455,15 +455,15 @@ Same quantization panel for the **30 Hz** model (§IV.A.3): Fig 5b fp32 checkpoi
 
 ### Replication
 
-![Replication Fig 6b](images/6b/ptq_qat_30hz_v48.png)
+![Replication Fig 6b](images/6b/ptq_qat_30hz_v49.png)
 
 <!-- caption-6b:start -->
-**Caption:** 30 Hz paper-protocol eval, eval seed 0, fp32_post=378, QAT median post=347, QAT paper-like 2/15 train seeds, QAT median late/pre 0.68, PTQ tracks fp32, v48, 2026-10-17
+**Caption:** 30 Hz paper-protocol eval, eval seed 0, fp32_post=378, QAT median post=347, QAT paper-like 2/15 train seeds, QAT median late/pre 0.68, PTQ tracks fp32, v49, 2026-10-17
 
 **Manifest:** `artifacts/figures/papers/mehregan/6b/manifest.json`
 <!-- caption-6b:end -->
 
-**Status:** Fail (Oct 17 2026 audit recipe, 15 QAT training seeds) — fp32 / PTQ fp16 / PTQ int8 all 378 (late/pre 0.74, paper ≈ 0.82; fp32 shape r 0.90). PTQ byte-identical to fp32 (`ptq_*_alters_trace` fail; paper gaps 16 / 12). QAT: 2/15 seeds paper-like — those two keep the regular 30 Hz train (1.25, which raises beta, as the paper's QAT does); 13/15 settle on a suppressor (0.67–0.77). Failing: `qat_elevated_vs_fp32`, `qat_majority_not_below_paper`, `qat_median_near_paper`, `qat_fp32_gap_vs_paper`, `ptq_int8_alters_trace`, `ptq_fp16_alters_trace`. Same action-space root cause as Fig 6a.
+**Status:** Fail (rep v49, 15 QAT training seeds) — fp32 / PTQ fp16 / PTQ int8 all 378; PTQ byte-identical to fp32 (`ptq_*_alters_trace` fail). QAT: 2/15 seeds paper-like (the ones that keep the regular 30 Hz train, which raises beta as the paper's QAT does); median late/pre 0.68 vs paper 0.974. Same action-space root cause as Fig 6a.
 
 <!-- gates-6b:start -->
 **Gates set** (`fig6_quant_gates` → `eval.json`). Overall **`all_pass`**: no (from `artifacts/figures/papers/mehregan/6b/eval.json`, 2026-10-17). Every row is required for exit.
