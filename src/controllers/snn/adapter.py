@@ -279,6 +279,7 @@ class NguyenEnvAdapter(gym.Env):
             record_cor_spikes=True,
             carry=True,
             fixed_network=self.config.plant_fixed_network,
+            network_hold_segments=self.config.plant_network_hold_steps,
             **self._bg_kwargs(),
             **self._carry_kwargs(),
         )

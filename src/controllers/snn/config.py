@@ -36,6 +36,9 @@ class SNNConfig:
     # instead of redrawing it every 100 ms segment. Off by default: the redrawing plant
     # reproduces Figs 4-6 and the fixed network does not (docs/figures/nguyen/4.md).
     plant_fixed_network: bool = False
+    # Candidate between the two (in neither paper nor the authors' code): keep one wiring
+    # for this many 100 ms segments, then redraw. 0 = off; ignored with plant_fixed_network.
+    plant_network_hold_steps: int = 0
     # STN DBS recruitment by distance (``PlantConfig.stn_dbs_spread``); 1.0 = Kumaravelu.
     # A plant deviation, not in the paper (docs/figures/nguyen/5.md).
     stn_dbs_spread: float = 1.0
