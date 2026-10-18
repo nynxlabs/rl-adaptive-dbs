@@ -7,7 +7,7 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 <!-- summary:start -->
 | Panel | Description | Status |
 |-------|-------------|--------|
-| Fig 1b | GPi PSD | Fail (`healthy_pd_ratio_near_paper`, rep v2) |
+| Fig 1b | GPi PSD | Fail (`healthy_pd_ratio_near_paper`, rep v3) |
 | Fig 2a | GPi $P_\beta$ time series | Pass (rep v1) |
 | Fig 2b | Error Index time series | Pass (rep v18) |
 | Fig 4a | Training $P_\beta$ vs step | Pass (paper Alg. 1, rep v44) |
@@ -32,18 +32,18 @@ Mean GPi multitaper power spectral density (1–50 Hz) for three conditions: **h
 
 ### Replication
 
-![Replication Fig 1b](images/1b/gpi_psd_v2.png)
+![Replication Fig 1b](images/1b/gpi_psd_v3.png)
 
 <!-- caption-1b:start -->
-**Caption:** GPi PSD, 10 s sim, seeds 0–9 mean; β[13–35 Hz] healthy/PD/130 Hz = 13.4/22.2/8.1 (paper 15.3/17.7/7.9); PD peak 19 Hz (paper 13), v2, 2026-10-17
+**Caption:** GPi PSD, 10 s sim, seeds 0–9 mean; β[13–35 Hz] healthy/PD/130 Hz = 13.3/22.2/8.1 (paper 15.3/17.7/7.9); PD peak 19 Hz (paper 13), v3, 2026-10-18
 
 **Manifest:** `artifacts/figures/papers/mehregan/1b/manifest.json`
 <!-- caption-1b:end -->
 
-**Status:** Fail (upgraded gates, fresh run rep v2, Oct 17 2026) — beta-band ordering and the 130 Hz and healthy levels match (β healthy / PD / 130 Hz 13.4 / 22.2 / 8.1 vs paper 15.3 / 17.7 / 7.9), but our PD spectrum peaks at 18.5 Hz vs the paper's 12.6 Hz and its shape correlates poorly (r 0.19), the healthy/PD ratio sits at the 30% edge, and healthy / 130 Hz carry excess 1–12 Hz power. Seven spectral estimators (`scripts/probes/mehregan_fig1b_estimator.py`) and four candidate readings (`--dt-ms 0.02`, `--transient-s` on 30 s, seed 0 only, `--signal voltage`) all keep the PD peak at 18.4–18.8 Hz, so the gap is in our plant's PD dynamics, not the estimator or protocol — an author question.
+**Status:** Fail (upgraded gates, fresh run rep v3, Oct 18 2026, healthy runs now on pd=0 init draws) — beta-band ordering and the 130 Hz and healthy levels match (β healthy / PD / 130 Hz 13.3 / 22.2 / 8.1 vs paper 15.3 / 17.7 / 7.9), but our PD spectrum peaks at 18.5 Hz vs the paper's 12.6 Hz and its shape correlates poorly (r 0.19), the healthy/PD ratio sits at the 30% edge, and healthy / 130 Hz carry excess 1–12 Hz power. Seven spectral estimators (`scripts/probes/mehregan_fig1b_estimator.py`) and four candidate readings (`--dt-ms 0.02`, `--transient-s` on 30 s, seed 0 only, `--signal voltage`) all keep the PD peak at 18.4–18.8 Hz, so the gap is in our plant's PD dynamics, not the estimator or protocol — an author question.
 
 <!-- gates-1b:start -->
-**Gates set** (`fig1b_gates` → manifest `gates` / `gates_pass`). Overall **`gates_pass`**: no (from `artifacts/figures/papers/mehregan/1b/curves.json`, 2026-10-17). Every row is required for exit.
+**Gates set** (`fig1b_gates` → manifest `gates` / `gates_pass`). Overall **`gates_pass`**: no (from `artifacts/figures/papers/mehregan/1b/curves.json`, 2026-10-18). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -92,7 +92,7 @@ GPi beta-band power ($P_\beta$, Eq. 1, 13–35 Hz) over **12 s**: **PD no treatm
 **Status:** Pass — every upgraded gate (pre-onset level 510 vs paper 478, late ratio 0.35 vs 0.42, half-drop 2.76 s vs 2.90 s, treated and gap shape r ≥ 0.7). Since Oct 17 2026 the traces come from the Fig 5a eval protocol (`--protocol eval`, default): the paper's Fig 2a curves are its Fig 5a "PD no stim" / "Periodic 130Hz" curves (r 0.987 / 0.999), so ours are now identical to our Fig 5a no-stim / 130 Hz traces. `--protocol single` keeps the earlier 14 s integrate. Single seed (0).
 
 <!-- gates-2a:start -->
-**Gates set** (`fig2_time_gates`, panel `2a`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/2a/series.json`, 2026-10-17). Every row is required for exit.
+**Gates set** (`fig2_time_gates`, panel `2a`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/2a/series.json`, 2026-10-18). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -142,7 +142,7 @@ Windowed Error Index (EI, Eq. 2) over **12 s** with **So-style SMC pulses into T
 **Status:** Pass — every upgraded gate on a fresh run of the current plant (rep v18, Oct 17 2026). The earlier failure (pre-onset EI 0.33 vs paper 0.25) came from a cached July series replotted under the new gates; plant changes since then moved the EI trace. Eight candidate readings (thalamic baseline kept, T_ω 1 s / 4 s, periodic or 10 / 20 Hz SMC timing, 15 / 40 ms misfire windows) did not beat the shipped convention. Single seed (0).
 
 <!-- gates-2b:start -->
-**Gates set** (`fig2_time_gates`, panel `2b`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/2b/series.json`, 2026-10-17). Every row is required for exit.
+**Gates set** (`fig2_time_gates`, panel `2b`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/2b/series.json`, 2026-10-18). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -197,7 +197,7 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** model (§IV.A
 **Status:** Pass — every upgraded gate (rep v44). Recipe: Fig 3c reward, one plant network per episode, exact-rate 21-pattern menu, regular-pulse init bias 1.0, and Alg. 1's "update frequency" read as one update every 2nd step (`update_every=2`, agreed with the maintainer; one update every step converges by episode 3). Episode means 0.446 0.473 0.512 0.464 0.391 0.388 0.394 0.363 0.337 0.402 vs paper 0.507 0.506 0.464 0.477 0.445 0.397 0.382 0.375 0.372 0.374 — the paper's gradual five-episode fall. Seed spread: seeds 0 and 1 pass, seed 2 fails. Details: [4a.md](../../docs/figures/mehregan/4a.md) § Candidate readings.
 
 <!-- gates-4a:start -->
-**Gates set** (`fig4a_gates` → live `series.json`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4a/series.json`, 2026-10-17). Every row is required for exit.
+**Gates set** (`fig4a_gates` → live `series.json`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4a/series.json`, 2026-10-18). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -253,7 +253,7 @@ Episode **total reward** and **episode-mean PSD(x10³)** of the same **45 Hz** t
 **Status:** Fail (rep v51) — `early_reward_near_paper`, `reward_floor_not_deeper`; every other gate passes (reward rise, late plateau, late PSD, PSD shape, per-episode PSD). Rewards −94 −99 −159 −131 −22 −10 −10 −3 −0 −12 vs paper ≈ −81 −79 −43 −55 −16 … −2.4: episodes 2–3 explore beta-raising menu patterns (bursts of 2–3 pulses repeat at 22.5 / 15 Hz, inside the beta band; `artifacts/probes/mehregan_landscape_45_burst21.json`), so the quadratic penalty runs deeper than the paper's.
 
 <!-- gates-4b:start -->
-**Gates set** (`fig4b_gates` → Fig 4a `series.json` (10 episodes)). Overall **`gates_pass`**: no (from `artifacts/figures/papers/mehregan/4a/series.json`, 2026-10-17). Every row is required for exit.
+**Gates set** (`fig4b_gates` → Fig 4a `series.json` (10 episodes)). Overall **`gates_pass`**: no (from `artifacts/figures/papers/mehregan/4a/series.json`, 2026-10-18). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -308,7 +308,7 @@ Post-training evaluation of the **45 Hz** model (§IV.A.2) on a fixed seed: 2 s 
 **Status:** Pass — every upgraded gate (rep v26). Evaluates the Fig 4a checkpoint (the paper's one 45 Hz model); the policy plays burst pattern 19: trained 379, periodic 45 Hz 307, no stim 486, 130 Hz 169 (late means, t ≥ 4 s); trained/no-stim 0.78 vs paper 0.81.
 
 <!-- gates-5a:start -->
-**Gates set** (`efficacy_gates` / `fig5_efficacy_gates` → `eval.json`). Overall **`pass`**: yes (from `artifacts/figures/papers/mehregan/5a/eval.json`, 2026-10-17). Every row is required for exit.
+**Gates set** (`efficacy_gates` / `fig5_efficacy_gates` → `eval.json`). Overall **`pass`**: yes (from `artifacts/figures/papers/mehregan/5a/eval.json`, 2026-10-18). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -359,7 +359,7 @@ Same closed-loop eval for the **30 Hz** model (§IV.A.2), trained with the Fig 4
 **Status:** Pass — every upgraded gate (rep v27). Trained 378 < no stim 486 < periodic 30 Hz 638; the 30 Hz model plays burst pattern 14 (clusters with silence — instantaneous rate outside the beta band, as the paper argues).
 
 <!-- gates-5b:start -->
-**Gates set** (`efficacy_gates` / `fig5_efficacy_gates` → `eval.json`). Overall **`pass`**: yes (from `artifacts/figures/papers/mehregan/5b/eval.json`, 2026-10-17). Every row is required for exit.
+**Gates set** (`efficacy_gates` / `fig5_efficacy_gates` → `eval.json`). Overall **`pass`**: yes (from `artifacts/figures/papers/mehregan/5b/eval.json`, 2026-10-18). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -409,7 +409,7 @@ Quantization on the **45 Hz** model (§IV.A.3), same closed-loop eval and seed. 
 **Status:** Fail (rep v71, 15 QAT training seeds) — fp32 / PTQ fp16 / PTQ int8 all 379 (every fp32 level/onset/shape gate passes). PTQ is byte-identical to fp32 (the menu argmax never flips), so `ptq_*_alters_trace` fail: the paper's PTQ traces differ from fp32 by 22 / 28 PSD units with the same mean. QAT: 1/15 seeds paper-like; 14/15 deploy the regular 45 Hz train (late/pre 0.60 vs paper 0.995) — 10-episode int8 QAT saturates its fake-quant head and never learns, so the tie keeps the regular-pulse init, which suppresses at 45 Hz. Root cause: the menu action space; the per-pulse head of Figure 3a cannot learn Fig 4a under Alg. 1 (open question). [4a.md](../../docs/figures/mehregan/4a.md) § Fig 3a per-pulse head — bounded probe.
 
 <!-- gates-6a:start -->
-**Gates set** (`fig6_quant_gates` → `eval.json`). Overall **`all_pass`**: no (from `artifacts/figures/papers/mehregan/6a/eval.json`, 2026-10-17). Every row is required for exit.
+**Gates set** (`fig6_quant_gates` → `eval.json`). Overall **`all_pass`**: no (from `artifacts/figures/papers/mehregan/6a/eval.json`, 2026-10-18). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -466,7 +466,7 @@ Same quantization panel for the **30 Hz** model (§IV.A.3): Fig 5b fp32 checkpoi
 **Status:** Fail (rep v49, 15 QAT training seeds) — fp32 / PTQ fp16 / PTQ int8 all 378; PTQ byte-identical to fp32 (`ptq_*_alters_trace` fail). QAT: 2/15 seeds paper-like (the ones that keep the regular 30 Hz train, which raises beta as the paper's QAT does); median late/pre 0.68 vs paper 0.974. Same action-space root cause as Fig 6a.
 
 <!-- gates-6b:start -->
-**Gates set** (`fig6_quant_gates` → `eval.json`). Overall **`all_pass`**: no (from `artifacts/figures/papers/mehregan/6b/eval.json`, 2026-10-17). Every row is required for exit.
+**Gates set** (`fig6_quant_gates` → `eval.json`). Overall **`all_pass`**: no (from `artifacts/figures/papers/mehregan/6b/eval.json`, 2026-10-18). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
