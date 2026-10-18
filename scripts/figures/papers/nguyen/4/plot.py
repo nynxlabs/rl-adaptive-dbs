@@ -323,6 +323,7 @@ def train_series(
             "episode_alpha_beta_means": result.episode_alpha_beta_means,
             "episode_alpha_beta_finals": result.episode_alpha_beta_finals,
             "episode_alpha_beta_steps": result.episode_alpha_beta_steps,
+            "episode_dbs_steps": result.episode_dbs_steps,
             "episode_early_stops": result.episode_early_stops,
             "episode_amplitudes": result.episode_amplitudes,
             "episode_frequencies": result.episode_frequencies,

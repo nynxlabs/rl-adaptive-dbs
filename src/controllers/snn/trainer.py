@@ -63,6 +63,8 @@ class TrainResult:
     episode_alpha_beta_finals: list[float] = field(default_factory=list)
     # Every step's α–β reading, per episode (diagnostic; not restored on resume).
     episode_alpha_beta_steps: list[list[float]] = field(default_factory=list)
+    # Every step's DBS setting (amplitude, frequency, pulse width), per episode (diagnostic).
+    episode_dbs_steps: list[list[list[float]]] = field(default_factory=list)
     episode_early_stops: list[bool] = field(default_factory=list)
     episode_amplitudes: list[float] = field(default_factory=list)
     episode_frequencies: list[float] = field(default_factory=list)
@@ -358,6 +360,7 @@ class DSQNTrainer:
             pop_spikes: np.ndarray | None = None
             episode_energy = 0.0
             alpha_betas: list[float] = []
+            dbs_steps: list[list[float]] = []
             end_dbs = reset_info.get("dbs")
             step_info: dict[str, Any] | None = reset_info
             steps = 0
@@ -375,6 +378,13 @@ class DSQNTrainer:
                     pop_spikes = np.asarray(by_pop, dtype=float) + (0.0 if pop_spikes is None else pop_spikes)
                 episode_energy += float(step_info.get("step_energy", 0.0))
                 alpha_betas.append(float(step_info.get("alpha_beta", float("nan"))))
+                step_dbs = step_info.get("dbs")
+                if step_dbs is not None:
+                    dbs_steps.append([
+                        round(float(step_dbs.amplitude), 3),
+                        round(float(step_dbs.frequency_hz), 3),
+                        round(float(step_dbs.pulse_width_ms), 4),
+                    ])
                 self.buffer.add(
                     Transition(
                         state=flat,
@@ -422,6 +432,7 @@ class DSQNTrainer:
                 result.episode_alpha_beta_means.append(float(np.nanmean(alpha_betas)))
                 result.episode_alpha_beta_finals.append(float(alpha_betas[-1]))
                 result.episode_alpha_beta_steps.append([round(v, 3) for v in alpha_betas])
+                result.episode_dbs_steps.append(dbs_steps)
             else:
                 reset_ab = float(reset_info.get("alpha_beta", float("nan")))
                 result.episode_alpha_beta_means.append(reset_ab)
