@@ -286,6 +286,17 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="After promote, refresh the 2026-08-10 report gallery image links in the notes folder",
     )
+    parser.add_argument(
+        "--alpha-beta-quantile",
+        type=float,
+        default=None,
+        metavar="Q",
+        help=(
+            "Candidate reading (not the shipped one): plot each episode's Q-quantile of its "
+            "per-step α–β readings instead of the final reading. Needs a series with "
+            "episode_alpha_beta_steps; never promote a candidate without master's OK"
+        ),
+    )
     args = parser.parse_args(argv)
     _figure_promote.set_export_notes_images(args.export_notes)
     _figure_promote.set_update_report3(args.update_report)
@@ -306,6 +317,15 @@ def main(argv: list[str] | None = None) -> int:
 
     t0 = time.perf_counter()
     series = load_series(args.series)
+    if args.alpha_beta_quantile is not None:
+        steps = json.loads(args.series.read_text(encoding="utf-8")).get("episode_alpha_beta_steps")
+        if not steps or len(steps) != len(series["episode_alpha_beta_finals"]):
+            print("--alpha-beta-quantile needs episode_alpha_beta_steps in the series", file=sys.stderr)
+            return 2
+        series = dict(series)
+        series["episode_alpha_beta_finals"] = [
+            float(np.quantile(np.asarray(x, dtype=float), args.alpha_beta_quantile)) for x in steps
+        ]
     fig4_manifest = None
     if args.fig4_manifest.is_file():
         fig4_manifest = json.loads(args.fig4_manifest.read_text(encoding="utf-8"))
@@ -328,6 +348,9 @@ def main(argv: list[str] | None = None) -> int:
         "elapsed_s": time.perf_counter() - t0,
         "png_version": png_version,
         "caption": caption,
+        "alpha_beta_reading": (
+            "final" if args.alpha_beta_quantile is None else f"quantile {args.alpha_beta_quantile}"
+        ),
     }
     manifest = _panel.stamp_manifest(
         manifest,
