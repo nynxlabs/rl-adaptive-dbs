@@ -317,7 +317,7 @@ Post-training evaluation of the **45 Hz** model (§IV.A.2) on a fixed seed: 2 s 
 | `trained_below_no_stim` | trained mean (t ≥ 4 s) < no stim | yes |
 | `trained_above_periodic` | trained > periodic 45 Hz | yes |
 | `cdbs_lowest` | 130 Hz cDBS lowest of four series | yes |
-| `trained_no_stim_ratio_near_paper` | trained/no-stim late ratio (t ≥ 4 s) vs digitized paper | yes |
+| `trained_no_stim_ratio_near_paper` | trained/no-stim late ratio (t ≥ 4 s) within 15% of digitized paper | yes |
 | `periodic_no_stim_ratio_near_paper` | periodic/no-stim late ratio (t ≥ 4 s) vs digitized paper | yes |
 | `prestim_level_near_paper` | mean pre-onset level within 10% of digitized paper | yes |
 | `trained_onset_ratio_near_paper` | trained/no-stim on [2,4] s within 30% of digitized paper (onset speed) | yes |
@@ -368,7 +368,7 @@ Same closed-loop eval for the **30 Hz** model (§IV.A.2), trained with the Fig 4
 | `trained_below_no_stim` | trained mean (t ≥ 4 s) < no stim | yes |
 | `trained_below_periodic` | trained < periodic 30 Hz | yes |
 | `periodic_above_no_stim` | periodic 30 Hz elevates beta vs no stim | yes |
-| `trained_no_stim_ratio_near_paper` | trained/no-stim late ratio (t ≥ 4 s) vs digitized paper | yes |
+| `trained_no_stim_ratio_near_paper` | trained/no-stim late ratio (t ≥ 4 s) within 15% of digitized paper | yes |
 | `periodic_no_stim_ratio_near_paper` | periodic/no-stim late ratio (t ≥ 4 s) vs digitized paper | yes |
 | `prestim_level_near_paper` | mean pre-onset level within 10% of digitized paper | yes |
 | `trained_onset_ratio_near_paper` | trained/no-stim on [2,4] s within 30% of digitized paper (onset speed) | yes |
