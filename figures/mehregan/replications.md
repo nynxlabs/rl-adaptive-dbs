@@ -10,7 +10,7 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Fig 1b | GPi PSD | Fail (`healthy_pd_ratio_near_paper`, rep v3) |
 | Fig 2a | GPi $P_\beta$ time series | Pass (rep v1) |
 | Fig 2b | Error Index time series | Pass (rep v18) |
-| Fig 4a | Training $P_\beta$ vs step | Pass (paper Alg. 1, rep v44) |
+| Fig 4a | Training $P_\beta$ vs step | Fail (`early_swing_near_paper`, paper Alg. 1, rep v46) |
 | Fig 4b | Training reward vs episode | Fail (`early_reward_near_paper`, paired to 4a, rep v51) |
 | Fig 5a | Post-train efficacy @ 45 Hz | Pass (closed loop, Fig 4a model, rep v26) |
 | Fig 5b | Post-train efficacy @ 30 Hz | Pass (closed loop, burst alphabet, rep v27) |
@@ -186,18 +186,18 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** model (§IV.A
 
 ### Replication
 
-![Replication Fig 4a](images/4a/training_beta_v44.png)
+![Replication Fig 4a](images/4a/training_beta_v46.png)
 
 <!-- caption-4a:start -->
-**Caption:** 45 Hz, paper Alg. 1 (critic on logits, lr 5e-4/1e-3), burst alphabet, logit noise σ=1, seed 0, v44, ep0=0.446, early=0.470 late=0.377 (2026-10-17)
+**Caption:** 45 Hz, paper Alg. 1 (critic on logits, lr 5e-4/1e-3), burst alphabet, logit noise σ=1, seed 0, v46, ep0=0.446, early=0.470 late=0.377 (2026-10-18)
 
 **Manifest:** `artifacts/figures/papers/mehregan/4a/manifest.json`
 <!-- caption-4a:end -->
 
-**Status:** Pass — every upgraded gate (rep v44). Recipe: Fig 3c reward, one plant network per episode, exact-rate 21-pattern menu, regular-pulse init bias 1.0, and Alg. 1's "update frequency" read as one update every 2nd step (`update_every=2`, agreed with the maintainer; one update every step converges by episode 3). Episode means 0.446 0.473 0.512 0.464 0.391 0.388 0.394 0.363 0.337 0.402 vs paper 0.507 0.506 0.464 0.477 0.445 0.397 0.382 0.375 0.372 0.374 — the paper's gradual five-episode fall. Seed spread: seeds 0 and 1 pass, seed 2 fails. Details: [4a.md](../../docs/figures/mehregan/4a.md) § Candidate readings.
+**Status:** Fail — `early_swing_near_paper` (rep v46, same v44 training run replotted; v45 was a failed replot). Every mean-based gate still passes, but the per-step trace swings far wider than the paper's within each early episode: residual spread over episodes 0–3 is 4.99× the digitized paper's (gate band 0.5–2×), because the 21-pattern menu's patterns span 0.6×–1.58× no stim and σ = 1 exploration jumps between them; every menu run on file sits at 3.2–5.2×. Recipe: Fig 3c reward, one plant network per episode, exact-rate 21-pattern menu, regular-pulse init bias 1.0, `update_every=2` (agreed with the maintainer). Episode means 0.446 0.473 0.512 0.464 0.391 0.388 0.394 0.363 0.337 0.402 vs paper 0.507 0.506 0.464 0.477 0.445 0.397 0.382 0.375 0.372 0.374. Figure 3a's per-pulse head passes the swing gate (0.76–0.91×) but does not learn (Oct 18 candidates). Details: [4a.md](../../docs/figures/mehregan/4a.md) § Early-swing gate, § Per-pulse candidates (Oct 18 2026).
 
 <!-- gates-4a:start -->
-**Gates set** (`fig4a_gates` → live `series.json`). Overall **`gates_pass`**: yes (from `artifacts/figures/papers/mehregan/4a/series.json`, 2026-10-18). Every row is required for exit.
+**Gates set** (`fig4a_gates` → live `series.json`). Overall **`gates_pass`**: no (from `artifacts/figures/papers/mehregan/4a/series.json`, 2026-10-18). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
@@ -213,6 +213,7 @@ Per-step GPi beta-band power during DDPG training of the **45 Hz** model (§IV.A
 | `no_late_rebound` | eps 7–9 mean ≤ eps 5–6 mean + 0.02 | yes |
 | `half_drop_episode_near_paper` | first episode at half the eps 0–3 → 6–9 drop within ±1 of digitized paper | yes |
 | `per_episode_near_paper` | every episode mean within 20% of digitized paper | yes |
+| `early_swing_near_paper` | Within-episode step-to-step spread over eps 0–3 (residual std, at the paper's digitized x) within 0.5–2× the digitized paper's | no |
 <!-- gates-4a:end -->
 
 **Run:**
