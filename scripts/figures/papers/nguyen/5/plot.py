@@ -62,17 +62,6 @@ PAPER_SPIKE_MAX = 950.0
 PAPER_ENERGY_MIN = 300.0
 PAPER_ENERGY_MAX = 3200.0
 
-STYLE = {
-    "figure.facecolor": "white",
-    "axes.facecolor": "white",
-    "axes.edgecolor": "#333333",
-    "axes.labelcolor": "#111111",
-    "text.color": "#111111",
-    "xtick.color": "#333333",
-    "ytick.color": "#333333",
-    "grid.color": "#cccccc",
-    "font.size": 10,
-}
 
 
 _LINKED = load_script_module("figure_linked", Path(__file__).resolve().parents[2] / "_linked.py")
@@ -210,7 +199,7 @@ def evaluate_gates(series: dict[str, Any], *, fig4_manifest: dict[str, Any] | No
 
 
 def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -> dict[str, Any]:
-    plt.rcParams.update(STYLE)
+    _paper_overlay.apply_figure_style()
     spikes = network_spikes(series)
     energies = np.asarray(series["episode_energies"], dtype=float)
     episodes = np.arange(spikes.size, dtype=float)

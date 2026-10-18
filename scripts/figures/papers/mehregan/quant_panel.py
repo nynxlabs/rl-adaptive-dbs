@@ -51,7 +51,6 @@ SERIES = ("fp32", "ptq_int8", "ptq_fp16")
 DEFAULT_QAT_SEEDS = "0-14"
 STIM_ONSET_S = _PP.ONSET_DISPLAY_S
 TIME_MAX_S = _PP.DISPLAY_S
-STYLE = {"figure.facecolor": "white", "axes.facecolor": "white", "font.size": 10}
 
 
 @dataclass(frozen=True)
@@ -295,7 +294,7 @@ def quant_gates(cfg: QuantPanel, payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def plot_panel(cfg: QuantPanel, payload: dict[str, Any], *, out_path: Path) -> dict[str, Any]:
-    plt.rcParams.update(STYLE)
+    _paper_overlay.apply_figure_style()
     fig, ax = plt.subplots(figsize=(8.0, 4.5), dpi=150)
     style = _style(cfg)
     flat: list[float] = []

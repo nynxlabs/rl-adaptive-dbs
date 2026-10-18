@@ -60,12 +60,6 @@ DEFAULT_MANIFEST = CACHE_DIR / "manifest.json"
 OUT_STEM = "alpha_beta_params"
 SMOOTH_WINDOW = 20
 
-STYLE = {
-    "figure.facecolor": "white",
-    "axes.facecolor": "white",
-    "axes.edgecolor": "#333333",
-    "font.size": 10,
-}
 
 
 _LINKED = load_script_module("figure_linked", Path(__file__).resolve().parents[2] / "_linked.py")
@@ -135,7 +129,7 @@ def evaluate_gates(series: dict[str, Any], *, fig4_manifest: dict[str, Any] | No
 
 
 def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -> dict[str, Any]:
-    plt.rcParams.update(STYLE)
+    _paper_overlay.apply_figure_style()
     ab = np.asarray(series["episode_alpha_beta_finals"], dtype=float)
     amp = np.asarray(series["episode_amplitudes"], dtype=float)
     freq = np.asarray(series["episode_frequencies"], dtype=float)

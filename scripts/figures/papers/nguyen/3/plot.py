@@ -59,19 +59,6 @@ DEFAULT_DURATION_S = 0.1  # Nguyen RL step (§IV)
 SCATTER_SIZE = 22
 THRESHOLD = 150.0  # reward threshold (§IV); not drawn on Fig 3 panel
 
-STYLE = {
-    "figure.facecolor": "white",
-    "axes.facecolor": "white",
-    "axes.edgecolor": "#333333",
-    "axes.labelcolor": "#111111",
-    "text.color": "#111111",
-    "xtick.color": "#333333",
-    "ytick.color": "#333333",
-    "grid.color": "#cccccc",
-    "legend.facecolor": "white",
-    "legend.edgecolor": "#cccccc",
-    "font.size": 10,
-}
 
 COLOR_PD_OFF = "#1f77b4"
 COLOR_PD_ON = "#ff7f0e"
@@ -186,7 +173,7 @@ def evaluate_gates(samples: dict[str, Any]) -> dict[str, Any]:
 
 
 def plot_samples(samples: dict[str, Any], out_path: Path) -> None:
-    plt.rcParams.update(STYLE)
+    _paper_overlay.apply_figure_style()
     fig, axes = plt.subplots(
         1, 2, figsize=(9.0, 3.8), constrained_layout=True, sharey=True
     )

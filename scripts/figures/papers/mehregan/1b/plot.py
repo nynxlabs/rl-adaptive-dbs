@@ -67,19 +67,6 @@ DEFAULT_SEEDS: tuple[int, ...] = tuple(range(10))
 SIGNALS: tuple[str, ...] = ("spikes", "gpi_voltage")
 
 # Paper-style light figure (Fig 1b is a qualitative PSD comparison panel).
-STYLE = {
-    "figure.facecolor": "white",
-    "axes.facecolor": "white",
-    "axes.edgecolor": "#333333",
-    "axes.labelcolor": "#111111",
-    "text.color": "#111111",
-    "xtick.color": "#333333",
-    "ytick.color": "#333333",
-    "grid.color": "#cccccc",
-    "legend.facecolor": "white",
-    "legend.edgecolor": "#cccccc",
-    "font.size": 10,
-}
 SERIES = {
     "healthy": {"label": "Healthy Control", "color": "#2ca02c"},
     "pd": {"label": "PD no Treatment", "color": "#d62728"},
@@ -334,7 +321,7 @@ def plot_fig1b(
     y_max: float | None = None,
     y_headroom: float = 1.1,
 ) -> dict[str, Any]:
-    plt.rcParams.update(STYLE)
+    _paper_overlay.apply_figure_style()
     fig, ax = plt.subplots(figsize=(7.0, 4.5), dpi=150)
 
     peak_by_series: dict[str, float] = {}

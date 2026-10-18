@@ -65,11 +65,6 @@ DEFAULT_EPISODES = FIG4B_EPISODES
 PAPER_X_TO_EPISODE = (FIG4B_EPISODES - 1) / FIG4B_PAPER_X_MAX
 STEPS_PER_EPISODE = 30
 
-STYLE = {
-    "figure.facecolor": "white",
-    "axes.facecolor": "white",
-    "font.size": 10,
-}
 
 
 _LINKED = load_script_module("figure_linked", Path(__file__).resolve().parents[2] / "_linked.py")
@@ -326,7 +321,7 @@ def plot_reward_vs_episode(
     *,
     out_path: Path,
 ) -> dict[str, Any]:
-    plt.rcParams.update(STYLE)
+    _paper_overlay.apply_figure_style()
     fig, ax = plt.subplots(figsize=(8.0, 4.5), dpi=150)
     panel = _plot_reward_on_ax(ax, episode_rewards)
     ax.set_xlabel("Episode")
@@ -342,7 +337,7 @@ def plot_psd_vs_episode(
     *,
     out_path: Path,
 ) -> dict[str, Any]:
-    plt.rcParams.update(STYLE)
+    _paper_overlay.apply_figure_style()
     fig, ax = plt.subplots(figsize=(8.0, 4.5), dpi=150)
     panel = _plot_psd_on_ax(ax, episode_mean_beta)
     fig.tight_layout()
@@ -359,7 +354,7 @@ def plot_combined_fig4b(
     out_path: Path,
 ) -> dict[str, Any]:
     """Paper-style stacked panel: reward (top) + episode-mean PSD (bottom)."""
-    plt.rcParams.update(STYLE)
+    _paper_overlay.apply_figure_style()
     fig, (ax_reward, ax_psd) = plt.subplots(
         2,
         1,

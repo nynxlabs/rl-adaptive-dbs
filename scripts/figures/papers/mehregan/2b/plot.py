@@ -108,18 +108,6 @@ PAPER_Y_MAX = 0.4
 
 SamplingMode = Literal["trailing", "segment"]
 
-STYLE = {
-    "figure.facecolor": "white",
-    "axes.facecolor": "white",
-    "axes.edgecolor": "#333333",
-    "axes.labelcolor": "#111111",
-    "text.color": "#111111",
-    "xtick.color": "#333333",
-    "ytick.color": "#333333",
-    "legend.facecolor": "white",
-    "legend.edgecolor": "#cccccc",
-    "font.size": 10,
-}
 SERIES = {
     "pd_no_treatment": {
         "label": "PD no Treatment",
@@ -472,7 +460,7 @@ def plot_fig2b(
     y_min: float | None = None,
     y_max: float | None = None,
 ) -> dict[str, Any]:
-    plt.rcParams.update(STYLE)
+    _paper_overlay.apply_figure_style()
     fig, ax = plt.subplots(figsize=(7.0, 4.5), dpi=150)
 
     repl_ys: list[np.ndarray] = []

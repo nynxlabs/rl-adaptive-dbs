@@ -99,17 +99,6 @@ DEFAULT_SEED = 0
 DEFAULT_EPISODES = 500  # paper Fig 4 horizon; shape_pass uses first 100
 SMOOTH_WINDOW = FIG4_SMOOTH  # centred moving average, same as the gates
 
-STYLE = {
-    "figure.facecolor": "white",
-    "axes.facecolor": "white",
-    "axes.edgecolor": "#333333",
-    "axes.labelcolor": "#111111",
-    "text.color": "#111111",
-    "xtick.color": "#333333",
-    "ytick.color": "#333333",
-    "grid.color": "#cccccc",
-    "font.size": 10,
-}
 
 COLOR_REWARD_RAW = "#9ecae1"
 COLOR_REWARD_SMOOTH = "#08519c"
@@ -363,7 +352,7 @@ def evaluate_gates(
 
 
 def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -> dict[str, Any]:
-    plt.rcParams.update(STYLE)
+    _paper_overlay.apply_figure_style()
     rewards = np.asarray(series["episode_rewards"], dtype=float)
     lengths = np.asarray(series["episode_lengths"], dtype=float)
     episodes = np.arange(rewards.size, dtype=float)

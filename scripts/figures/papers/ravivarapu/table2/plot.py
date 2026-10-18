@@ -51,6 +51,10 @@ _parallel_series = load_script_module("figure_parallel_series", _PARALLEL_SERIES
 _COMMON = Path(__file__).resolve().parents[1] / "common.py"
 _common = load_script_module("ravivarapu_common", _COMMON)
 
+_OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
+_overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
+_paper_overlay = _overlay_import.load_paper_overlay()
+
 _DIG = Path(__file__).resolve().parents[4] / "digitization"
 if str(_DIG) not in sys.path:
     sys.path.insert(0, str(_DIG))
@@ -92,16 +96,20 @@ def _plot(rows: dict[int, dict[str, float]], png_path: Path, *, promote: bool) -
     ns = [n for n in TABLE2_RESEED_INTERVALS if n in rows]
     xs = np.arange(len(ns), dtype=float)
     w = 0.36
+    _paper_overlay.apply_figure_style()
     fig, ax = plt.subplots(figsize=(6, 4))
     ax.bar(xs - w / 2, [rows[n]["baseline_psd"] for n in ns], w, label="Baseline (ours)", color="#1f77b4")
     ax.bar(xs + w / 2, [rows[n]["sea_psd"] for n in ns], w, label="SEA-DBS (ours)", color="#2ca02c")
+    # Paper marks: orange (Fig 4a's paper-baseline overlay color) and neutral grey, so the
+    # two stay apart on light and dark pages and on top of the blue/green bars.
     ax.plot(
-        xs - w / 2, [TABLE2_PAPER_PSD[n][0] for n in ns], "k_", markersize=22, markeredgewidth=2.5,
+        xs - w / 2, [TABLE2_PAPER_PSD[n][0] for n in ns], "_",
+        color=_paper_overlay.RAVI_PAPER_BASELINE_COLOR, markersize=22, markeredgewidth=2.5,
         label="Baseline (paper)",
     )
     ax.plot(
-        xs + w / 2, [TABLE2_PAPER_PSD[n][1] for n in ns], "_", color="0.45", markersize=22,
-        markeredgewidth=2.5, label="SEA-DBS (paper)",
+        xs + w / 2, [TABLE2_PAPER_PSD[n][1] for n in ns], "_", color=_paper_overlay.NEUTRAL,
+        markersize=22, markeredgewidth=2.5, label="SEA-DBS (paper)",
     )
     all_y = [rows[n][k] for n in ns for k in ("baseline_psd", "sea_psd")]
     all_y += [v for n in ns for v in TABLE2_PAPER_PSD[n]]

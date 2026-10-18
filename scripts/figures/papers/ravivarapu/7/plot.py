@@ -237,6 +237,7 @@ def main() -> int:
             actions[result.variant] = result.actions
             eval_meta[result.variant] = result.eval_meta
 
+    _paper_overlay.apply_figure_style()
     fig, ax = plt.subplots(figsize=(7, 4))
     scale = float(_paper_overlay.RAVI_INFERENCE_PAPER_Y_TO_NORM)
     ys: list[np.ndarray] = []

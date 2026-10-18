@@ -75,11 +75,6 @@ EARLY_END = 130
 LATE_START = 150
 WINDOW = 30
 
-STYLE = {
-    "figure.facecolor": "white",
-    "axes.facecolor": "white",
-    "font.size": 10,
-}
 
 
 _LINKED = load_script_module("figure_linked", Path(__file__).resolve().parents[2] / "_linked.py")
@@ -149,7 +144,7 @@ def _ylim_for_trace(y: np.ndarray) -> tuple[float, float, list[float]]:
 
 
 def plot_fig4a(cache: dict[str, Any], *, out_path: Path) -> dict[str, Any]:
-    plt.rcParams.update(STYLE)
+    _paper_overlay.apply_figure_style()
     y = np.asarray(cache["beta_norm_trace"], dtype=float)
     y_plot = y
     x = np.arange(y.size)

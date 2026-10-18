@@ -46,11 +46,6 @@ LATE_LO_S = 4.0  # paper-gate window (digitized late means use t >= 4 s)
 STIM_ONSET_S = _PP.ONSET_DISPLAY_S
 TIME_MAX_S = _PP.DISPLAY_S
 
-STYLE = {
-    "figure.facecolor": "white",
-    "axes.facecolor": "white",
-    "font.size": 10,
-}
 
 
 @dataclass(frozen=True)
@@ -218,7 +213,7 @@ def efficacy_gates(
 
 
 def plot_panel(cfg: EfficacyPanel, payload: dict[str, Any], *, out_path: Path) -> dict[str, Any]:
-    plt.rcParams.update(STYLE)
+    _paper_overlay.apply_figure_style()
     fig, ax = plt.subplots(figsize=(8.0, 4.5), dpi=150)
     style = _series_style(cfg)
     flat: list[float] = []

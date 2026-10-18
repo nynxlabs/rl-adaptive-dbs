@@ -183,6 +183,7 @@ def main() -> int:
                 ckpt, np.asarray(traces[label][:-1], dtype=float)
             )
 
+    _paper_overlay.apply_figure_style()
     fig, ax = plt.subplots(figsize=(6, 4))
     scale = float(_paper_overlay.RAVI_INFERENCE_PAPER_Y_TO_NORM)
     ys: list[np.ndarray] = []

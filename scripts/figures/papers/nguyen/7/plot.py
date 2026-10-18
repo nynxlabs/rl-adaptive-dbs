@@ -75,12 +75,6 @@ EVAL_RESET_OVERRIDES: dict[str, Any] = {"reset_window_frequency_hz": 100.0}
 # Eval plant: one wiring per eval episode (see the module docstring); --set overrides it.
 EVAL_PLANT_OVERRIDES: dict[str, Any] = {"plant_fixed_network": True}
 
-STYLE = {
-    "figure.facecolor": "white",
-    "axes.facecolor": "white",
-    "axes.edgecolor": "#333333",
-    "font.size": 10,
-}
 
 
 _LINKED = load_script_module("figure_linked", Path(__file__).resolve().parents[2] / "_linked.py")
@@ -132,7 +126,7 @@ def evaluate_gates(
 
 
 def plot_eval(eval_payload: dict[str, Any], out_path: Path) -> dict[str, Any]:
-    plt.rcParams.update(STYLE)
+    _paper_overlay.apply_figure_style()
     trajectories: list[list[float]] = eval_payload["alpha_beta_trajectories"]
     max_len = max(len(tr) for tr in trajectories)
     pad_trajectories = [

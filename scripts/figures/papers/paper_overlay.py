@@ -32,6 +32,28 @@ if str(_DIG) not in sys.path:
 from paper_gates import load_refined  # noqa: E402
 import nguyen_gates as _nguyen_gates  # noqa: E402
 
+
+def _load_figure_style():
+    import importlib.util
+
+    if "figure_style" in sys.modules:
+        return sys.modules["figure_style"]
+    path = Path(__file__).resolve().parent / "figure_style.py"
+    spec = importlib.util.spec_from_file_location("figure_style", path)
+    if spec is None or spec.loader is None:
+        msg = f"cannot load figure style from {path}"
+        raise ImportError(msg)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+# Shared panel style (transparent background, neutral grey chrome); see figure_style.py.
+figure_style = _load_figure_style()
+apply_figure_style = figure_style.apply
+NEUTRAL = figure_style.NEUTRAL
+
 MEHREGAN_DIG = Path("artifacts/figures/papers/mehregan")
 NGUYEN_DIG = Path("artifacts/figures/papers/nguyen/paper_digitization")
 RAVIVARAPU_DIG = Path("artifacts/figures/papers/ravivarapu/paper_digitization")
@@ -58,7 +80,7 @@ MEH_PD = "#d62728"
 MEH_PD_130 = "#1f77b4"
 MEH_TRAIN_TEAL = "#1f6f6f"
 MEH_REWARD_GREEN = "#16a34a"
-MEH_NO_STIM = "#111111"
+MEH_NO_STIM = NEUTRAL
 MEH_TRAINED = "#2ca02c"
 MEH_PERIODIC = "#ff7f0e"
 MEH_CDBS = "#bcbd22"
@@ -77,12 +99,12 @@ PAPER_RAW_ZORDER = 49
 # Single legend row for Mehregan (and optional callers): traces stay per-hue,
 # but the table only explains that dashed lightened lines are paper digitization.
 PAPER_CONDENSED_LEGEND_LABEL = "paper digitalization"
-PAPER_CONDENSED_LEGEND_COLOR = "#000000"
+PAPER_CONDENSED_LEGEND_COLOR = NEUTRAL
 # Legend sits above paper overlays (PAPER_ZORDER) and all replication artists.
 LEGEND_ZORDER = 1000
 LEGEND_FRAMEALPHA = 1.0
-LEGEND_FACECOLOR = "white"
-LEGEND_EDGECOLOR = "#cccccc"
+LEGEND_FACECOLOR = figure_style.WASH_RGBA
+LEGEND_EDGECOLOR = figure_style.LEGEND_EDGE_RGBA
 LEGEND_COMPACT_KW = {
     "shadow": False,
     "fancybox": False,
@@ -99,14 +121,14 @@ LEGEND_RCPARAMS = {
 }
 
 PAPER_SMOOTH_STYLE: dict[str, Any] = {
-    "color": "#000000",
+    "color": NEUTRAL,
     "linestyle": PAPER_LINESTYLE,
     "linewidth": PAPER_LINEWIDTH,
     "alpha": 0.95,
     "zorder": PAPER_ZORDER,
 }
 PAPER_RAW_STYLE: dict[str, Any] = {
-    "color": "#4a4a4a",
+    "color": NEUTRAL,
     "linestyle": ":",
     "linewidth": PAPER_RAW_LINEWIDTH,
     "alpha": 0.75,
@@ -136,7 +158,30 @@ def lighten_color(color: str, amount: float = PAPER_LIGHTEN) -> str:
 
 
 def paper_color_from_outline(outline: str, *, raw: bool = False) -> str:
-    return lighten_color(outline, PAPER_RAW_LIGHTEN if raw else PAPER_LIGHTEN)
+    """Ghost of ``outline`` for paper overlays: the same hue at partial opacity.
+
+    On a white page this is the same tint as ``lighten_color(outline, amount)``; on a
+    dark page it dims toward the background instead of turning near-white, so the
+    overlay stays a ghost of the replication trace on both (transparent PNGs).
+    """
+    amount = PAPER_RAW_LIGHTEN if raw else PAPER_LIGHTEN
+    return with_alpha(outline, 1.0 - amount)
+
+
+def with_alpha(color: Any, alpha: float) -> str:
+    """``color`` as ``#rrggbbaa``, multiplying any alpha it already has by ``alpha``."""
+    from matplotlib.colors import to_hex, to_rgba
+
+    r, g, b, a = to_rgba(color)
+    return to_hex((r, g, b, float(np.clip(a * alpha, 0.0, 1.0))), keep_alpha=True)
+
+
+def _fold_alpha(style: dict[str, Any]) -> None:
+    """Fold ``style['alpha']`` into the color so a translucent color keeps its own alpha
+    (matplotlib's ``alpha=`` replaces a color's alpha instead of multiplying it)."""
+    alpha = style.pop("alpha", None)
+    if alpha is not None:
+        style["color"] = with_alpha(style["color"], float(alpha))
 
 
 def _compact_legend_frame(leg) -> None:
@@ -155,12 +200,10 @@ def _reassert_legend_frame(leg, *, opaque: bool, alpha: float, edgecolor: str) -
     fr = leg.get_frame()
     if fr is None:
         return
-    if opaque:
-        fr.set_facecolor(LEGEND_FACECOLOR)
-        fr.set_alpha(1.0)
-    else:
-        fr.set_facecolor((1.0, 1.0, 1.0, alpha))
-        fr.set_alpha(alpha)
+    # Legend frames are a translucent grey wash in the shared style (readable on
+    # light and dark pages); ``opaque`` / ``alpha`` only keep the call shape.
+    fr.set_alpha(None)
+    fr.set_facecolor(LEGEND_FACECOLOR)
     fr.set_edgecolor(edgecolor)
     fr.set_linewidth(0.6)
     fr.set_zorder(LEGEND_ZORDER)
@@ -182,13 +225,7 @@ def finalize_figure_legends(fig) -> None:
 
 
 def save_figure(fig, fname, *args, **kwargs):
-    """``fig.savefig`` wrapper that finalizes opaque legend tables first."""
-    finalize_figure_legends(fig)
-    try:
-        fig.canvas.draw()
-    except Exception:
-        pass
-    finalize_figure_legends(fig)
+    """``fig.savefig`` wrapper that finalizes legend tables and the shared style first."""
     return fig.savefig(fname, *args, **kwargs)
 
 
@@ -206,6 +243,9 @@ def _install_savefig_finalize() -> None:
         except Exception:
             pass
         finalize_figure_legends(self)
+        figure_style.finalize(self)
+        kwargs["transparent"] = True
+        kwargs.pop("facecolor", None)
         return _orig_savefig(self, fname, *args, **kwargs)
 
     savefig._opaque_legend_patched = True  # type: ignore[attr-defined]
@@ -268,10 +308,9 @@ def add_condensed_paper_legend(
     ax.plot(
         [],
         [],
-        color=line_color,
+        color=with_alpha(line_color, line_alpha),
         linestyle=(0, (5.0, 2.5)),
         linewidth=PAPER_LINEWIDTH,
-        alpha=line_alpha,
         zorder=PAPER_ZORDER,
         label=label,
     )
@@ -338,6 +377,7 @@ def overlay_on_axis(
         style["alpha"] = alpha
     if zorder is not None:
         style["zorder"] = zorder
+    _fold_alpha(style)
     color = style["color"]
     zorder = int(style.get("zorder", PAPER_ZORDER))
     # Dash pattern that starts with ink (offset 0); default '--' can look inset.

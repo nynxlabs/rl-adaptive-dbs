@@ -286,6 +286,7 @@ def evaluate_gates(series: dict[str, Any]) -> dict[str, Any]:
 
 
 def plot_series(series: dict[str, Any], png_path: Path, *, promote: bool = True) -> None:
+    _paper_overlay.apply_figure_style()
     fig, ax = plt.subplots(figsize=(6, 4))
     paper_y: list[np.ndarray] = []
     roll_w = DISPLAY_ROLL_WINDOW
