@@ -19,7 +19,8 @@ def _repo_root() -> Path:
     env = os.environ.get("RL_ADAPTIVE_DBS_ROOT")
     if env:
         return Path(env).resolve()
-    return Path(__file__).resolve().parents[2]
+    # src/envs/plant/matlab_backend.py -> repo root
+    return Path(__file__).resolve().parents[3]
 
 
 FETCH_COMMAND = "python scripts/matlab/fetch_kumaravelu.py"

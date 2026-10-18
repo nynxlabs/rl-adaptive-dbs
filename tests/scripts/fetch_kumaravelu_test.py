@@ -56,3 +56,9 @@ def test_model_dir_names_fetch_command_when_missing(tmp_path: Path, monkeypatch:
     assert model_dir(require=False) == tmp_path.resolve()
     with pytest.raises(FileNotFoundError, match="fetch_kumaravelu.py"):
         model_dir()
+
+
+def test_model_dir_defaults_to_repo_reference_material(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("RL_ADAPTIVE_DBS_MATLAB_MODEL", raising=False)
+    monkeypatch.delenv("RL_ADAPTIVE_DBS_ROOT", raising=False)
+    assert model_dir(require=False) == _ROOT.resolve() / "reference-material" / "KumaraveluEtAl2016"
