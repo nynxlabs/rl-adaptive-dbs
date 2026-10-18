@@ -173,8 +173,21 @@ def _style_axes(ax) -> None:
         line.set_color(NEUTRAL)
         line.set_alpha(GRID_ALPHA)
     for spine in ax.spines.values():
-        spine.set_edgecolor(NEUTRAL)
-    ax.tick_params(colors=NEUTRAL, which="both")
+        if _is_dark_neutral(_rgba(spine.get_edgecolor())):
+            spine.set_edgecolor(NEUTRAL)
+    # Recolor only black ticks; a twin axis's colored ticks (e.g. red amplitude) stay.
+    for name, axis in (("x", ax.xaxis), ("y", ax.yaxis)):
+        for which in ("major", "minor"):
+            ticks = axis.get_major_ticks() if which == "major" else axis.get_minor_ticks()
+            if not ticks:
+                continue
+            tick = ticks[0]
+            if _is_dark_neutral(_rgba(tick.label1.get_color())) or _is_dark_neutral(
+                _rgba(tick.label2.get_color())
+            ):
+                ax.tick_params(axis=name, which=which, labelcolor=NEUTRAL)
+            if _is_dark_neutral(_rgba(tick.tick1line.get_color())):
+                ax.tick_params(axis=name, which=which, color=NEUTRAL)
     for label in (ax.xaxis.label, ax.yaxis.label, ax.title, ax._left_title, ax._right_title):
         rgba = _rgba(label.get_color())
         if _is_dark_neutral(rgba):

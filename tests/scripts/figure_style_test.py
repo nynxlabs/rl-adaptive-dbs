@@ -77,3 +77,19 @@ def test_paper_ghost_matches_old_white_blend_on_white() -> None:
 
 def test_with_alpha_multiplies_existing_alpha() -> None:
     assert abs(to_rgba(_overlay.with_alpha("#80808080", 0.5))[3] - 0x80 / 255 * 0.5) <= 1 / 255
+
+
+def test_finalize_keeps_colored_twin_axis_ticks() -> None:
+    _overlay.apply_figure_style()
+    fig, ax = plt.subplots()
+    twin = ax.twinx()
+    ax.plot([0, 1], [0, 1])
+    twin.plot([0, 1], [1, 0], color="#d62728")
+    twin.tick_params(axis="y", labelcolor="#d62728")
+    ax.tick_params(axis="x", labelcolor="black")
+    fig.canvas.draw()
+    _style.finalize(fig)
+    fig.canvas.draw()
+    assert to_hex(twin.yaxis.get_major_ticks()[0].label2.get_color()) == "#d62728"
+    assert to_hex(ax.xaxis.get_major_ticks()[0].label1.get_color()) == _style.NEUTRAL
+    plt.close(fig)
