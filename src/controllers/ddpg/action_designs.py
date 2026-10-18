@@ -1,6 +1,6 @@
-"""Probe-only structured per-pulse action designs for the Mehregan DDPG actor.
+"""Structured per-pulse action designs for the Mehregan DDPG actor.
 
-Not used by any panel. Each design keeps the Fig 3a/3b state CNN (two conv +
+Only :class:`PerPulseLogits` is used by a panel (as a labelled candidate). Each design keeps the Fig 3a/3b state CNN (two conv +
 avg-pool blocks, flatten, 2x Linear 256) and the Fig 3b critic layout (state
 branch + ``Linear(ReLU(W a))`` action branch, added, ``Linear -> 1``) and swaps
 only the actor head + action decoder. The step is ``l = 2000`` one-ms slots and
@@ -23,6 +23,9 @@ Designs (Fig 3a deviations noted per class):
 3. :class:`PerPulseRelaxed` - the Fig 3a ``n_pulses x l`` logits with a
    straight-through or Gumbel-softmax view for the critic.
 4. :class:`LargeMenu` - a few hundred rate-matched patterns, argmax over logits.
+5. :class:`PerPulseLogits` - the Fig 3a head with the Fig 3b critic on the raw
+   logits (as drawn); trained by the panel recipe (``--set action_head=perpulse``)
+   through :class:`AlgOneAgent`.
 """
 
 from __future__ import annotations
@@ -35,25 +38,20 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from controllers.ddpg.networks import StateEncoder, clone_module, hard_update, soft_update
+
 STEP_MS = 2000
 
 
-class StateCNN(nn.Module):
-    """Fig 3a/3b state branch: two conv + avg-pool blocks, flatten, 2x Linear 256."""
+class StateCNN(StateEncoder):
+    """Fig 3a/3b state branch: two conv + avg-pool blocks, flatten, 2x Linear 256.
+
+    ``state_len = 2000`` is Figure 3a's ``1 x l`` input (``fc1`` fan-in 32,000);
+    ``state_len = 1`` is the shipped menu's length-1 state (no pooling, fan-in 64).
+    """
 
     def __init__(self, *, state_len: int, fc_hidden: int = 256) -> None:
-        super().__init__()
-        self.conv1 = nn.Conv1d(1, 32, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv1d(32, 64, kernel_size=3, padding=1)
-        self.fc1 = nn.Linear(64 * (state_len // 4), fc_hidden)
-        self.fc2 = nn.Linear(fc_hidden, fc_hidden)
-
-    def forward(self, state: torch.Tensor) -> torch.Tensor:
-        x = state.unsqueeze(1)
-        x = F.avg_pool1d(F.relu(self.conv1(x)), 2)
-        x = F.avg_pool1d(F.relu(self.conv2(x)), 2)
-        x = F.relu(self.fc1(x.flatten(1)))
-        return F.relu(self.fc2(x))
+        super().__init__(state_length=state_len, fc_hidden=fc_hidden)
 
 
 class HeadActor(nn.Module):
@@ -267,6 +265,152 @@ class PerPulseRelaxed:
         return np.sort(self._grid(raw.float())[0].argmax(-1).numpy().astype(np.int64))
 
 
+@dataclass
+class PerPulseLogits:
+    """Design 5: Figure 3a / 3b as drawn — the critic scores the raw logits.
+
+    The head emits ``n_pulses x l`` logits ("Linear (Action Logits)
+    ``1 x f l l/1000`` -> Reshape -> Softmax(dim=1) -> Argmax(dim=-1)"); each
+    pulse plays the argmax slot of its row. Exploration (paper-silent) adds
+    noise to the logits, as the shipped menu does: ``"gauss"`` = Gaussian
+    ``sigma``, ``"gumbel"`` = Gumbel-max (a softmax sample at ``sigma = 1``). The
+    stored ``a_logit`` is the noisy vector, so the critic (Eq. 4) scores what was
+    played, and Eq. 5 differentiates the critic through the raw logits.
+    """
+
+    n_pulses: int
+    n_slots: int = STEP_MS
+    init_bias: float = 1.0
+    noise: str = "gauss"
+    # Deviation (candidate): the critic scores the logits minus the actor's
+    # regular-pulse init spike, so the spike (the same in every stored action)
+    # is not a free bias input for the critic.
+    center: bool = False
+    name: str = "perpulse_logits"
+
+    def __post_init__(self) -> None:
+        spike = torch.zeros(self.n_pulses, self.n_slots)
+        spike[torch.arange(self.n_pulses), torch.as_tensor(regular_onsets(self.n_pulses, self.n_slots))] = self.init_bias
+        self._spike = spike.reshape(-1)
+
+    @property
+    def raw_dim(self) -> int:
+        return self.n_pulses * self.n_slots
+
+    @property
+    def view_dim(self) -> int:
+        return self.raw_dim
+
+    def init_actor(self, actor: HeadActor) -> None:
+        with torch.no_grad():
+            actor.head.bias.zero_()
+            grid = actor.head.bias.view(self.n_pulses, self.n_slots)
+            reg = regular_onsets(self.n_pulses, self.n_slots)
+            grid[torch.arange(self.n_pulses), torch.as_tensor(reg)] = self.init_bias
+
+    def explore(self, raw: torch.Tensor, sigma: float, gen: torch.Generator | None) -> torch.Tensor:
+        if self.noise == "gumbel":
+            return raw + sigma * _gumbel(raw.shape, gen)
+        return raw + sigma * torch.randn(raw.shape, generator=gen)
+
+    def view_stored(self, stored: torch.Tensor) -> torch.Tensor:
+        return stored - self._spike if self.center else stored
+
+    def view_actor(self, raw: torch.Tensor, gen: torch.Generator | None = None) -> torch.Tensor:
+        return raw - self._spike if self.center else raw
+
+    def decode_stored(self, stored: torch.Tensor) -> np.ndarray:
+        return self.decode_raw(stored)
+
+    def decode_raw(self, raw: torch.Tensor) -> np.ndarray:
+        return np.sort(raw.float().reshape(self.n_pulses, self.n_slots).argmax(-1).numpy().astype(np.int64))
+
+    def regular_margin(self, raw: torch.Tensor) -> float:
+        """Mean over pulses of (regular-slot logit - best other logit)."""
+        g = raw.detach().float().reshape(self.n_pulses, self.n_slots).clone()
+        rows = torch.arange(self.n_pulses)
+        reg = torch.as_tensor(regular_onsets(self.n_pulses, self.n_slots))
+        on = g[rows, reg].clone()
+        g[rows, reg] = -float("inf")
+        return float((on - g.max(-1).values).mean())
+
+
+def fanin_param_groups(module: nn.Module, lr: float, ref: int) -> list[dict]:
+    """Adam param groups with ``lr * min(1, ref / fan_in)`` per Linear / Conv1d.
+
+    ``ref <= 0`` keeps one group at ``lr``. A fan-in-scaled step (as in muP-style
+    parametrizations) keeps a layer's per-update change in pre-activation about
+    ``lr * ref`` whatever its width; plain Adam moves a layer with fan-in ``n``
+    and same-sign inputs by about ``lr * n`` per update.
+    """
+    if ref <= 0:
+        return [{"params": list(module.parameters()), "lr": lr}]
+    groups = []
+    for sub in module.modules():
+        if isinstance(sub, (nn.Linear, nn.Conv1d)):
+            fan_in = sub.weight[0].numel()
+            groups.append({"params": list(sub.parameters(recurse=False)), "lr": lr * min(1.0, ref / fan_in)})
+    return groups
+
+
+class AlgOneAgent:
+    """Alg. 1 update (Eqs. 3-7) for a design: target nets, MSE critic, Eq. 5 actor.
+
+    ``fanin_ref`` > 0 applies :func:`fanin_param_groups` to the networks named in
+    ``fanin_scope`` (``"both"``, ``"actor"``, ``"critic"``) — a deviation from the
+    single stated learning rate per network (candidate only).
+    """
+
+    def __init__(
+        self,
+        design,
+        *,
+        state_len: int,
+        actor_lr: float,
+        critic_lr: float,
+        gamma: float,
+        tau: float,
+        seed: int,
+        fanin_ref: int = 0,
+        fanin_scope: str = "both",
+        actor_eps: float = 1e-8,
+        critic_eps: float = 1e-8,
+    ) -> None:
+        torch.manual_seed(seed)
+        self.d = design
+        self.gamma, self.tau = gamma, tau
+        self.actor = HeadActor(state_len=state_len, raw_dim=design.raw_dim)
+        design.init_actor(self.actor)
+        self.critic = ViewCritic(state_len=state_len, view_dim=design.view_dim)
+        self.actor_t, self.critic_t = clone_module(self.actor), clone_module(self.critic)
+        hard_update(self.actor_t, self.actor)
+        hard_update(self.critic_t, self.critic)
+        a_ref = fanin_ref if fanin_scope in ("both", "actor") else 0
+        c_ref = fanin_ref if fanin_scope in ("both", "critic") else 0
+        self.opt_a = torch.optim.Adam(fanin_param_groups(self.actor, actor_lr, a_ref), lr=actor_lr, eps=actor_eps, foreach=True)
+        self.opt_c = torch.optim.Adam(fanin_param_groups(self.critic, critic_lr, c_ref), lr=critic_lr, eps=critic_eps, foreach=True)
+        self.gen = torch.Generator().manual_seed(seed + 17)
+
+    def update(self, s, a, r, s2, d) -> dict:
+        with torch.no_grad():
+            q_t = r + self.gamma * (1 - d) * self.critic_t(s2, self.d.view_actor(self.actor_t(s2), self.gen))
+        loss_c = F.mse_loss(self.critic(s, self.d.view_stored(a)), q_t)
+        self.opt_c.zero_grad()
+        loss_c.backward()
+        self.opt_c.step()
+        for p in self.critic.parameters():
+            p.requires_grad_(False)
+        loss_a = -self.critic(s, self.d.view_actor(self.actor(s), self.gen)).mean()
+        self.opt_a.zero_grad()
+        loss_a.backward()
+        self.opt_a.step()
+        for p in self.critic.parameters():
+            p.requires_grad_(True)
+        soft_update(self.critic_t, self.critic, self.tau)
+        soft_update(self.actor_t, self.actor, self.tau)
+        return {"loss_c": loss_c.item(), "q": -loss_a.item()}
+
+
 def build_menu(n_pulses: int, *, size: int = 300, n_slots: int = STEP_MS, seed: int = 0) -> list[np.ndarray]:
     """Rate-matched menu: regular, jittered, bursts, random placements.
 
@@ -348,7 +492,13 @@ class LargeMenu:
         return self.menu[int(raw.reshape(-1).float().argmax())]
 
 
-DESIGNS = {"topk": TopK, "isi": IsiDesign, "perpulse": PerPulseRelaxed, "menu": LargeMenu}
+DESIGNS = {
+    "topk": TopK,
+    "isi": IsiDesign,
+    "perpulse": PerPulseRelaxed,
+    "perpulse_logits": PerPulseLogits,
+    "menu": LargeMenu,
+}
 
 
 def make_design(name: str, n_pulses: int, **kwargs: object):

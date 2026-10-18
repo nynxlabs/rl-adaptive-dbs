@@ -125,9 +125,47 @@ class PaperKnobs:
     # logit_noise_end = linear per-episode anneal of the logit noise to this σ.
     carry_plant: bool = False
     logit_noise_end: float | None = None
+    # Action head (candidate; the shipped panels use the menu). "perpulse" =
+    # Figure 3a's n_pulses x l logits head with the Fig 3b critic on the raw
+    # logits (controllers.ddpg.action_designs.PerPulseLogits); the knobs below
+    # only apply to it.
+    action_head: str = "menu"
+    # Network input length: Figure 3a draws 1 x l (l = 2000, fc1 fan-in 32,000);
+    # 1 = the shipped menu's length-1 state (fc1 fan-in 64). The state holds the
+    # current step's P_beta/1000, broadcast to the length.
+    state_len: int = 2000
+    # Network-input normalization (paper-silent): net input = (s - offset) * scale.
+    state_offset: float = 0.0
+    state_scale: float = 1.0
+    # Exploration noise family on the logits: "gauss" (as the menu) or "gumbel".
+    pp_noise: str = "gauss"
+    # Deviation (candidate): Adam lr x min(1, fanin_ref / fan_in) per layer of the
+    # networks in fanin_scope ("both" / "actor" / "critic"); 0 = the stated lrs.
+    fanin_ref: int = 0
+    fanin_scope: str = "both"
+    # Adam epsilon (paper-silent; PyTorch default 1e-8). A large epsilon makes the
+    # step scale with the gradient instead of its sign.
+    actor_adam_eps: float = 1e-8
+    critic_adam_eps: float = 1e-8
+    # Deviation (candidate): critic scores logits minus the regular-pulse init spike.
+    critic_center: bool = False
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        head = {}
+        if self.action_head != "menu":
+            head = {
+                "action_head": self.action_head,
+                "state_len": self.state_len,
+                "state_offset": self.state_offset,
+                "state_scale": self.state_scale,
+                "pp_noise": self.pp_noise,
+                "fanin_ref": self.fanin_ref,
+                "fanin_scope": self.fanin_scope,
+                "actor_adam_eps": self.actor_adam_eps,
+                "critic_adam_eps": self.critic_adam_eps,
+                "critic_center": self.critic_center,
+            }
+        return {**head, 
             "alphabet": self.alphabet,
             "jitter_fraction": self.jitter_fraction,
             "logit_noise_std": self.logit_noise_std,
@@ -157,6 +195,16 @@ def apply_overrides(knobs: PaperKnobs, pairs: list[str] | None) -> PaperKnobs:
         "carry_plant": lambda v: str(v).lower() in ("1", "true", "yes"),
         "update_every": int,
         "logit_noise_end": float,
+        "action_head": str,
+        "state_len": int,
+        "state_offset": float,
+        "state_scale": float,
+        "pp_noise": str,
+        "fanin_ref": int,
+        "fanin_scope": str,
+        "actor_adam_eps": float,
+        "critic_adam_eps": float,
+        "critic_center": lambda v: str(v).lower() in ("1", "true", "yes"),
     }
     for raw in pairs:
         key, sep, value = raw.partition("=")
@@ -167,6 +215,12 @@ def apply_overrides(knobs: PaperKnobs, pairs: list[str] | None) -> PaperKnobs:
         out = replace(out, **{key: types[key](value)})
     if out.reward_below not in ("linear", "square"):
         msg = f"reward_below must be 'linear' or 'square', got {out.reward_below!r}"
+        raise ValueError(msg)
+    if out.action_head not in ("menu", "perpulse"):
+        msg = f"action_head must be 'menu' or 'perpulse', got {out.action_head!r}"
+        raise ValueError(msg)
+    if out.fanin_scope not in ("both", "actor", "critic"):
+        msg = f"fanin_scope must be 'both', 'actor' or 'critic', got {out.fanin_scope!r}"
         raise ValueError(msg)
     if out.alphabet not in ALPHABETS:
         msg = f"alphabet must be one of {ALPHABETS}, got {out.alphabet!r}"
@@ -279,6 +333,19 @@ def train_paper(
     Returns a JSON-able dict with ``beta_trace`` (``P_beta/1000`` per step),
     ``actions``, ``episode_rewards``, ``step_rewards``, and run metadata.
     """
+    if knobs.action_head == "perpulse":
+        if variant != "paper" or qat_freeze_observer_after is not None or episode_hook or trainer_hook:
+            msg = "action_head=perpulse supports the fp32 train only"
+            raise NotImplementedError(msg)
+        return _train_perpulse(
+            mean_hz=mean_hz,
+            seed=seed,
+            knobs=knobs,
+            checkpoint_path=checkpoint_path,
+            num_episodes=num_episodes,
+            log=log,
+            extra=extra,
+        )
     torch.manual_seed(seed)
     np.random.seed(seed)
     env = make_env(mean_hz, knobs)
@@ -394,6 +461,192 @@ def train_paper(
         "reset_beta": reset_beta,
         "unique_actions": len(counts),
         "action_counts": {str(k): int(v) for k, v in sorted(counts.items())},
+        "checkpoint": str(checkpoint_path) if checkpoint_path else None,
+    }
+
+
+def _train_perpulse(
+    *,
+    mean_hz: float,
+    seed: int,
+    knobs: PaperKnobs,
+    checkpoint_path: Path | None,
+    num_episodes: int,
+    log: Callable[[str], None],
+    extra: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Alg. 1 on Figure 3a's per-pulse head (candidate; see ``PaperKnobs.action_head``).
+
+    Same protocol as the menu: continuous plant within an episode, new initial
+    conditions per episode, reset reward collected, one update every
+    ``update_every`` steps once the buffer holds a batch. Each pulse row of the
+    noisy logits plays its argmax slot; the critic scores the stored noisy logits.
+    """
+    from controllers.ddpg.action_designs import AlgOneAgent, PerPulseLogits, SlotAlphabet, regular_onsets
+
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    n_pulses = int(round(mean_hz * STEP_S))
+    design = PerPulseLogits(
+        n_pulses=n_pulses, init_bias=knobs.init_bias_scale, noise=knobs.pp_noise, center=knobs.critic_center
+    )
+    agent = AlgOneAgent(
+        design,
+        state_len=knobs.state_len,
+        actor_lr=ACTOR_LR,
+        critic_lr=CRITIC_LR,
+        gamma=knobs.gamma,
+        tau=knobs.tau,
+        seed=seed,
+        fanin_ref=knobs.fanin_ref,
+        fanin_scope=knobs.fanin_scope,
+        actor_eps=knobs.actor_adam_eps,
+        critic_eps=knobs.critic_adam_eps,
+    )
+    env = make_env(mean_hz, knobs)
+    slots_alpha = SlotAlphabet(mean_hz, step_s=STEP_S, dt_ms=PAPER_DT_MS)
+    env.alphabet = slots_alpha  # env.step(0) plays slots_alpha.pending
+    reg = regular_onsets(n_pulses)
+    rng = np.random.default_rng(seed)
+
+    def net_state(obs: np.ndarray) -> np.ndarray:
+        v = (float(np.asarray(obs).reshape(-1)[-1]) - knobs.state_offset) * knobs.state_scale
+        return np.full(knobs.state_len, v, dtype=np.float32)
+
+    def on_regular(slots: np.ndarray) -> float:
+        return float(np.isin(reg, slots).mean())
+
+    def isi_cv(slots: np.ndarray) -> float:
+        d = np.diff(np.unique(slots))
+        return float(d.std() / d.mean()) if d.size > 1 else float("nan")
+
+    buf: list[tuple[np.ndarray, torch.Tensor, float, np.ndarray, float]] = []
+    beta_trace: list[float] = []
+    actions: list[list[int]] = []
+    step_rewards: list[float] = []
+    episode_rewards: list[float] = []
+    reset_beta: list[float] = []
+    diagnostics: list[dict[str, Any]] = []
+    losses: list[dict[str, float]] = []
+    env_step = 0
+    try:
+        for episode in range(num_episodes):
+            sigma = knobs.logit_noise_std
+            if knobs.logit_noise_end is not None and num_episodes > 1:
+                frac = episode / (num_episodes - 1)
+                sigma = knobs.logit_noise_std + frac * (knobs.logit_noise_end - knobs.logit_noise_std)
+            if knobs.carry_plant and episode > 0:
+                obs, info0 = env.reset(seed=seed + episode, options={"keep_plant": True})
+            else:
+                obs, info0 = env.reset(seed=seed + episode)
+            reset_beta.append(float(info0["p_beta_norm"]))
+            ep_reward = float(info0.get("reward", 0.0))
+            s = net_state(obs)
+            ep_losses: list[dict[str, float]] = []
+            done = False
+            while not done:
+                with torch.no_grad():
+                    raw = agent.actor(torch.as_tensor(s).unsqueeze(0))
+                stored = design.explore(raw, sigma, agent.gen)[0]
+                slots = design.decode_stored(stored)
+                slots_alpha.pending = slots
+                obs2, reward, terminated, truncated, info = env.step(0)
+                done = bool(terminated or truncated)
+                env_step += 1
+                s2 = net_state(obs2)
+                buf.append((s, stored, float(reward), s2, float(info.get("dw", 0.0))))
+                if len(buf) > BUFFER_CAPACITY:
+                    buf.pop(0)
+                beta_trace.append(float(info["p_beta_norm"]))
+                actions.append([int(v) for v in slots])
+                step_rewards.append(float(reward))
+                ep_reward += float(reward)
+                s = s2
+                if len(buf) >= BATCH_SIZE and env_step % knobs.update_every == 0:
+                    idx = rng.choice(len(buf), size=BATCH_SIZE, replace=False)
+                    ep_losses.append(
+                        agent.update(
+                            torch.as_tensor(np.stack([buf[i][0] for i in idx])),
+                            torch.stack([buf[i][1] for i in idx]),
+                            torch.as_tensor([buf[i][2] for i in idx], dtype=torch.float32),
+                            torch.as_tensor(np.stack([buf[i][3] for i in idx])),
+                            torch.as_tensor([buf[i][4] for i in idx], dtype=torch.float32),
+                        )
+                    )
+            episode_rewards.append(ep_reward)
+            losses.extend(ep_losses)
+            ep_slots = [np.asarray(a) for a in actions[-STEPS_PER_EPISODE:]]
+            with torch.no_grad():
+                nf_raw = agent.actor(torch.as_tensor(net_state(np.array([np.mean(beta_trace[-STEPS_PER_EPISODE:])]))).unsqueeze(0))
+            nf = design.decode_raw(nf_raw)
+            diag = {
+                "episode": episode,
+                "sigma": sigma,
+                "mean_beta": float(np.mean(beta_trace[-STEPS_PER_EPISODE:])),
+                "played_on_regular": float(np.mean([on_regular(a) for a in ep_slots])),
+                "played_isi_cv": float(np.nanmean([isi_cv(a) for a in ep_slots])),
+                "nf_on_regular": on_regular(nf),
+                "nf_isi_cv": isi_cv(nf),
+                "nf_distinct_slots": int(np.unique(nf).size),
+                "nf_logit_std": float(nf_raw.std()),
+                "nf_logit_absmax": float(nf_raw.abs().max()),
+                "nf_regular_margin": design.regular_margin(nf_raw),
+                "critic_loss": float(np.mean([x["loss_c"] for x in ep_losses])) if ep_losses else float("nan"),
+                "q": float(np.mean([x["q"] for x in ep_losses])) if ep_losses else float("nan"),
+                "updates": len(losses),
+            }
+            diagnostics.append(diag)
+            log(
+                f"episode {episode + 1}/{num_episodes} reward={ep_reward:.2f} mean_beta={diag['mean_beta']:.3f} "
+                f"played_on_reg={diag['played_on_regular']:.2f} nf_on_reg={diag['nf_on_regular']:.2f} "
+                f"nf_isi_cv={diag['nf_isi_cv']:.2f} nf_slots={diag['nf_distinct_slots']} "
+                f"logit_std={diag['nf_logit_std']:.3g} margin={diag['nf_regular_margin']:.3g} "
+                f"critic_loss={diag['critic_loss']:.3g} q={diag['q']:.3g} updates={diag['updates']}"
+            )
+        if checkpoint_path is not None:
+            checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+            torch.save(
+                {
+                    "action_head": "perpulse",
+                    "actor_state_dict": agent.actor.state_dict(),
+                    "state_len": knobs.state_len,
+                    "n_pulses": n_pulses,
+                    "mean_hz": mean_hz,
+                    "knobs": knobs.as_dict(),
+                    "completed_episodes": num_episodes,
+                    **(extra or {}),
+                },
+                checkpoint_path,
+            )
+            log(f"wrote checkpoint {checkpoint_path}")
+    finally:
+        env.close()
+
+    return {
+        "mean_hz": mean_hz,
+        "seed": seed,
+        "variant": "paper",
+        "num_episodes": num_episodes,
+        "steps_per_episode": STEPS_PER_EPISODE,
+        "knobs": knobs.as_dict(),
+        "paper_stated": {
+            "actor_lr": ACTOR_LR,
+            "critic_lr": CRITIC_LR,
+            "buffer_capacity": BUFFER_CAPACITY,
+            "batch_size": BATCH_SIZE,
+            "step_s": STEP_S,
+            "dt_ms": PAPER_DT_MS,
+            "critic_action_input": "logits",
+            "action_head": "Figure 3a per-pulse logits",
+        },
+        "beta_trace": beta_trace,
+        "actions": actions,
+        "step_rewards": step_rewards,
+        "episode_rewards": episode_rewards,
+        "reset_beta": reset_beta,
+        "unique_actions": len({tuple(a) for a in actions}),
+        "action_counts": {},
+        "perpulse_diagnostics": diagnostics,
         "checkpoint": str(checkpoint_path) if checkpoint_path else None,
     }
 

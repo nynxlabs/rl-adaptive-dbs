@@ -287,6 +287,7 @@ def main() -> int:
                 "episode_rewards": record["episode_rewards"],
                 "unique_actions": record["unique_actions"],
                 "action_counts": record["action_counts"],
+                **({"perpulse": record["perpulse_diagnostics"]} if "perpulse_diagnostics" in record else {}),
             },
             "checkpoint": str(args.checkpoint),
             "checkpoint_versioned": str(versioned_ckpt),
