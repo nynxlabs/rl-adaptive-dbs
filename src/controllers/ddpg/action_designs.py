@@ -353,3 +353,43 @@ DESIGNS = {"topk": TopK, "isi": IsiDesign, "perpulse": PerPulseRelaxed, "menu": 
 
 def make_design(name: str, n_pulses: int, **kwargs: object):
     return DESIGNS[name](n_pulses=n_pulses, **kwargs)
+
+
+def pulse_dbs_spec(slots_ms: np.ndarray, *, mean_hz: float, step_s: float = 2.0, dt_ms: float = 0.02):
+    """STN drive for one step: a standard DBS pulse at each onset (ms).
+
+    Pulses that share a slot coincide (one pulse), as with the Fig 3a argmax.
+    """
+    from envs.plant.dbs import DBS_AMPLITUDE_NA_PER_CM2, DBS_PULSE_WIDTH_MS, DbsSpec
+
+    n_steps = int(round(step_s * 1000.0 / dt_ms)) + 1
+    idbs = np.zeros(n_steps, dtype=np.float64)
+    pulse_len = int(round(DBS_PULSE_WIDTH_MS / dt_ms))
+    for slot in np.unique(np.asarray(slots_ms, dtype=np.int64)):
+        start = int(round(float(slot) / dt_ms))
+        idbs[start : min(start + pulse_len, n_steps)] = DBS_AMPLITUDE_NA_PER_CM2
+    return DbsSpec(
+        pick_dbs_freq=DbsSpec.from_frequency_hz(mean_hz).pick_dbs_freq,
+        idbs=idbs,
+        mean_hz=mean_hz,
+    )
+
+
+class SlotAlphabet:
+    """Adapter so ``MehreganEnv`` / ``run_condition`` can play a slot array.
+
+    ``to_dbs_spec(action)`` takes the onsets (ms) directly; ``env.step`` calls
+    it with ``int(action)``, so the training loop sets :attr:`pending` first
+    and steps with action 0.
+    """
+
+    def __init__(self, mean_hz: float, *, step_s: float = 2.0, dt_ms: float = 0.02) -> None:
+        self.mean_hz = mean_hz
+        self.step_duration_s = step_s
+        self.dt_ms = dt_ms
+        self.n_actions = 1
+        self.pending: np.ndarray | None = None
+
+    def to_dbs_spec(self, action):
+        slots = self.pending if np.ndim(action) == 0 else np.asarray(action)
+        return pulse_dbs_spec(slots, mean_hz=self.mean_hz, step_s=self.step_duration_s, dt_ms=self.dt_ms)
