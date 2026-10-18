@@ -303,6 +303,18 @@ def test_fig5_trained_equal_periodic_fails_gap(efficacy_panel, panel: str):
     assert not gates["pass"]
 
 
+@pytest.mark.parametrize("panel", ["5a", "5b"])
+def test_fig5_non_learning_trained_fails_ratio(efficacy_panel, panel: str):
+    if not _has(panel):
+        pytest.skip("no digitization artifact")
+    cfg = efficacy_panel.FIG5A if panel == "5a" else efficacy_panel.FIG5B
+    means, traces = _fig5_paper_inputs(panel)
+    # A random-like pattern near the untreated level (trained/no-stim ~0.99).
+    means["trained_mean"] = 0.99 * means["no_stim_mean"]
+    gates = efficacy_panel.efficacy_gates(cfg, means, traces)
+    assert not gates["trained_no_stim_ratio_near_paper"]
+
+
 @pytest.mark.skipif(not _has("5a"), reason="no digitization artifact")
 def test_fig5a_offset_trained_baseline_fails_shared(efficacy_panel):
     means, traces = _fig5_paper_inputs("5a")

@@ -74,7 +74,7 @@ MEHREGAN_FIG5_SHARED_ROWS_HEAD: tuple[tuple[str, str], ...] = (
 )
 
 MEHREGAN_FIG5_SHARED_ROWS_TAIL: tuple[tuple[str, str], ...] = (
-    ("trained_no_stim_ratio_near_paper", "trained/no-stim late ratio (t ≥ 4 s) vs digitized paper"),
+    ("trained_no_stim_ratio_near_paper", "trained/no-stim late ratio (t ≥ 4 s) within 15% of digitized paper"),
     ("periodic_no_stim_ratio_near_paper", "periodic/no-stim late ratio (t ≥ 4 s) vs digitized paper"),
     ("prestim_level_near_paper", "mean pre-onset level within 10% of digitized paper"),
     ("trained_onset_ratio_near_paper", "trained/no-stim on [2,4] s within 30% of digitized paper (onset speed)"),

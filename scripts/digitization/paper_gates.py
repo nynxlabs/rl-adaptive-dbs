@@ -888,6 +888,9 @@ def fig5_efficacy_gates(
     late_lo: float = 4.0,
     t_end: float = 12.0,
     ratio_tol: float = DEFAULT_RATIO_TOL,
+    # The trained/no-stim ratio is the panel's learning claim: at ±30% a
+    # non-learning random-like pattern (ratio 0.99 vs paper 0.81) passed.
+    trained_ratio_tol: float = 0.15,
     require_cdbs: bool = False,
     skip_paper_ratios: bool = False,
     prestim_spread_tol: float = 0.03,
@@ -951,7 +954,7 @@ def fig5_efficacy_gates(
         paper_metrics = {"no_stim": p_ns, "trained": p_tr, "periodic": p_pe, "cdbs_130": p_cd}
         if all(np.isfinite(v) for v in (p_ns, p_tr, p_pe)):
             gates["trained_no_stim_ratio_near_paper"] = ratio_close(
-                trained, no_stim, p_tr, p_ns, tol=ratio_tol
+                trained, no_stim, p_tr, p_ns, tol=trained_ratio_tol
             )
             gates["periodic_no_stim_ratio_near_paper"] = ratio_close(
                 periodic, no_stim, p_pe, p_ns, tol=ratio_tol
