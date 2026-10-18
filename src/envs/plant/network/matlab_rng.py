@@ -20,6 +20,7 @@ __all__ = [
     "MATLAB_DEFAULT_SEED",
     "MatlabRandomState",
     "init_draws_cache_dir",
+    "init_draws_filename",
     "load_cached_init_draws",
     "resolve_init_draws",
 ]
@@ -58,8 +59,37 @@ def init_draws_cache_dir() -> Path:
     return Path.home() / ".cache" / "rl-adaptive-dbs" / "plant_init"
 
 
-def load_cached_init_draws(seed: int, *, search_dirs: tuple[Path, ...] | None = None) -> NetworkInitDraws | None:
-    """Load ``plant_init_seed{seed}.npz`` from repo fixtures or user cache."""
+def init_draws_filename(seed: int, pd: int = 1) -> str:
+    """Fixture name: ``plant_init_seed{seed}.npz`` (PD, pd=1) or ``…_pd0.npz`` (healthy).
+
+    Kumaravelu's draws depend on ``pd`` only through the cortex→D1 striatum
+    conductance offset, ``gcordrstr = (0.07 - 0.044 pd) + 0.001 rand``; the rest
+    of the draw sequence is identical.
+    """
+    return f"plant_init_seed{seed}.npz" if int(pd) == 1 else f"plant_init_seed{seed}_pd{int(pd)}.npz"
+
+
+def _check_pd(draws: NetworkInitDraws, pd: int, path: Path) -> NetworkInitDraws:
+    """Refuse a fixture whose cortex→D1 conductances belong to the other ``pd``."""
+    lo = 0.07 - 0.044 * int(pd)
+    g = np.asarray(draws.gcordrstr, dtype=np.float64)
+    if g.size and not (np.all(g >= lo - 1e-9) and np.all(g <= lo + 0.001 + 1e-9)):
+        msg = (
+            f"{path.name}: gcordrstr {g.min():.4f}..{g.max():.4f} does not match pd={pd} "
+            f"(expected {lo:.3f}..{lo + 0.001:.3f}); re-export with "
+            f"scripts/plant/export_plant_init_draws.py --pd {pd}"
+        )
+        raise ValueError(msg)
+    return draws
+
+
+def load_cached_init_draws(
+    seed: int,
+    *,
+    pd: int = 1,
+    search_dirs: tuple[Path, ...] | None = None,
+) -> NetworkInitDraws | None:
+    """Load the ``pd``-matched init draws for ``seed`` from repo fixtures or user cache."""
     candidates: list[Path] = []
     if search_dirs is not None:
         candidates.extend(search_dirs)
@@ -67,23 +97,25 @@ def load_cached_init_draws(seed: int, *, search_dirs: tuple[Path, ...] | None = 
     candidates.append(repo_fixtures)
     candidates.append(init_draws_cache_dir())
 
+    name = init_draws_filename(seed, pd)
     for directory in candidates:
-        path = directory / f"plant_init_seed{seed}.npz"
+        path = directory / name
         if path.is_file():
-            return NetworkInitDraws.from_npz(path)
+            return _check_pd(NetworkInitDraws.from_npz(path), pd, path)
     return None
 
 
 def resolve_init_draws(
     seed: int | None,
     *,
+    pd: int = 1,
     export_if_missing: bool = False,
 ) -> NetworkInitDraws | None:
     """Return cached MATLAB IC draws for ``seed``, optionally exporting via Engine."""
     if seed is None:
         return None
 
-    cached = load_cached_init_draws(seed)
+    cached = load_cached_init_draws(seed, pd=pd)
     if cached is not None:
         return cached
 
@@ -106,7 +138,7 @@ def resolve_init_draws(
 
     cache_dir = init_draws_cache_dir()
     cache_dir.mkdir(parents=True, exist_ok=True)
-    out = cache_dir / f"plant_init_seed{seed}.npz"
-    payload = export_fn(seed=seed)
+    out = cache_dir / init_draws_filename(seed, pd)
+    payload = export_fn(seed=seed, pd=pd)
     np.savez_compressed(out, **payload)
     return NetworkInitDraws.from_npz(out)

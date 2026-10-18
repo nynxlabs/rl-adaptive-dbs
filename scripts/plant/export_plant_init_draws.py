@@ -85,17 +85,24 @@ def export_matlab_init_draws(*, seed: int, n: int = 10, pd: int = 1) -> dict[str
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--pd", type=int, choices=(0, 1), default=1, help="1 = PD (6-OHDA), 0 = healthy")
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("tests/fixtures/plant_init_seed42.npz"),
+        default=None,
+        help="default: tests/fixtures/<init_draws_filename(seed, pd)>",
     )
     args = parser.parse_args()
+    if args.output is None:
+        from envs.plant.network.matlab_rng import init_draws_filename
 
-    payload = export_matlab_init_draws(seed=args.seed)
+        args.output = Path("tests/fixtures") / init_draws_filename(args.seed, args.pd)
+
+    payload = export_matlab_init_draws(seed=args.seed, pd=args.pd)
+    payload["pd"] = np.array([args.pd], dtype=np.int64)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(args.output, **payload)
-    print(f"Wrote {args.output} (seed={args.seed})")
+    print(f"Wrote {args.output} (seed={args.seed}, pd={args.pd})")
 
 
 if __name__ == "__main__":
