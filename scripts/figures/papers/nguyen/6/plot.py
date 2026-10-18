@@ -145,7 +145,7 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
 
     ax0 = axes[0]
     ax0.plot(episodes, ab, color="#9ecae1", linewidth=0.8, alpha=0.85, label="Raw")
-    ax0.plot(episodes, ab_smooth, color="#08519c", linewidth=2.0, label="Smoothed")
+    ax0.plot(episodes, ab_smooth, color="#0a64c0", linewidth=2.0, label="Smoothed")
     ax0.axhline(BIOMARKER_THRESHOLD, color="#d62728", linestyle="--", linewidth=1.2, label="θ=150")
     ax0.set_ylabel("α–β Power")
     ax0.set_title("GPi α–β Oscillation Power")

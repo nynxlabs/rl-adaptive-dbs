@@ -101,9 +101,9 @@ SMOOTH_WINDOW = FIG4_SMOOTH  # centred moving average, same as the gates
 
 
 COLOR_REWARD_RAW = "#9ecae1"
-COLOR_REWARD_SMOOTH = "#08519c"
+COLOR_REWARD_SMOOTH = "#0a64c0"
 COLOR_LENGTH_RAW = "#fcbba1"
-COLOR_LENGTH_SMOOTH = "#a50f15"
+COLOR_LENGTH_SMOOTH = "#c81219"
 
 
 _LINKED = load_script_module("figure_linked", Path(__file__).resolve().parents[2] / "_linked.py")

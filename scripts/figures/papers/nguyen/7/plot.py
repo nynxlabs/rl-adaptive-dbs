@@ -156,12 +156,12 @@ def plot_eval(eval_payload: dict[str, Any], out_path: Path) -> dict[str, Any]:
         step_uppers,
         color="#9ecae1",
         alpha=0.30,
-        edgecolor="#08519c",
+        edgecolor="#0a64c0",
         linewidth=0.8,
         label="Replication 2.5–97.5 % of episodes",
         zorder=2,
     )
-    ax.plot(steps, mean_trace, color="#08519c", linewidth=2.2, label="Replication Mean", zorder=3)
+    ax.plot(steps, mean_trace, color="#0a64c0", linewidth=2.2, label="Replication Mean", zorder=3)
     ax.axhline(BIOMARKER_THRESHOLD, color="#d62728", linestyle="--", linewidth=1.2, label="θ=150 (threshold)")
     _paper_overlay.overlay_nguyen_fig7(ax, show_confidence=True)
     ax.set_xlabel("Time Step")

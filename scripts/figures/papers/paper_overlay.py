@@ -68,9 +68,9 @@ RAVI_PAPER_SEA_COLOR = "#2ca02c"
 # Nguyen Fig 4 paper overlays (distinct from replication blues/reds on each panel).
 NGUYEN_REWARD = "#ff7f0e"  # panel (a) — paper reward
 NGUYEN_LENGTH = "#2ca02c"  # panel (b) — paper length
-NGUYEN_SPIKES = "#4a148c"
+NGUYEN_SPIKES = "#8336e2"
 NGUYEN_ENERGY = "#1b7837"
-NGUYEN_POWER = "#08519c"
+NGUYEN_POWER = "#0a64c0"
 NGUYEN_AMP = "#e41a1c"
 NGUYEN_FREQ = "#377eb8"
 NGUYEN_PW = "#4daf4a"

@@ -214,8 +214,8 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
     # relative changes look proportional without scaling one count onto the other.
     ax0 = axes[0]
     ax0.plot(episodes, spikes, color="#7b6ba8", linewidth=0.9, alpha=0.85, label="Raw")
-    ax0.plot(episodes, spike_smooth, color="#4a148c", linewidth=1.8, label="Smoothed")
-    ax0.set_ylabel("Ours: spikes per 100 ms step", color="#4a148c")
+    ax0.plot(episodes, spike_smooth, color="#8336e2", linewidth=1.8, label="Smoothed")
+    ax0.set_ylabel("Ours: spikes per 100 ms step", color="#8336e2")
     ax0.set_title("CBGT Network Spikes (STN and GPi excluded)")
     ax0.grid(True, linestyle="--", alpha=0.6)
     ax0p = ax0.twinx()
