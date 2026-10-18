@@ -10,6 +10,12 @@ agent's settings are 40 Hz / 0.3 ms / 300 (``reset_window_frequency_hz=100``). T
 eval-only; the checkpoint's training config is unchanged. ``--initial-setting-reset``
 runs the reset window at the initial 40 Hz instead (the eval up to v28).
 
+Each eval episode is also a fresh network that keeps its wiring for the whole episode
+(``plant_fixed_network=True``), while training redraws the wiring every 100 ms step. §IV:
+"a random seed for each episode to emulate patient-specific neural responses". Adopted
+Oct 18 2026 with master's OK (docs/figures/nguyen/4.md § Wiring as a setting);
+``--training-plant`` evaluates on the checkpoint's own plant instead (the eval up to v30).
+
 Run:
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/7/plot.py
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/7/plot.py --plot-only
@@ -65,6 +71,8 @@ OUT_STEM = "eval_50ep"
 # the reset window at the simulator defaults, 100 Hz / 300 / 0.3 ms). Applied on top of
 # the checkpoint's config for the eval only; --set overrides it.
 EVAL_RESET_OVERRIDES: dict[str, Any] = {"reset_window_frequency_hz": 100.0}
+# Eval plant: one wiring per eval episode (see the module docstring); --set overrides it.
+EVAL_PLANT_OVERRIDES: dict[str, Any] = {"plant_fixed_network": True}
 
 STYLE = {
     "figure.facecolor": "white",
@@ -220,6 +228,12 @@ def main(argv: list[str] | None = None) -> int:
         "100 Hz (the Fig 7 eval up to v28)",
     )
     parser.add_argument(
+        "--training-plant",
+        action="store_true",
+        help="Evaluate on the checkpoint's own training plant instead of one wiring per "
+        "eval episode (the Fig 7 eval up to v30)",
+    )
+    parser.add_argument(
         "--export-notes",
         action="store_true",
         help="After promote, copy replication PNGs into the notes folder (RL_DBS_NOTES_DIR / export.notes_dir)",
@@ -255,6 +269,8 @@ def main(argv: list[str] | None = None) -> int:
         # The checkpoint's own training config (network shape, observation, plant),
         # plus the eval-start convention unless --initial-setting-reset.
         overrides = {} if args.initial_setting_reset else dict(EVAL_RESET_OVERRIDES)
+        if not args.training_plant:
+            overrides.update(EVAL_PLANT_OVERRIDES)
         overrides.update(parse_config_overrides(args.config_overrides))
         eval_payload = evaluate(
             args.checkpoint,

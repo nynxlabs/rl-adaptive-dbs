@@ -143,7 +143,7 @@ def test_fig4_train_config_uses_published_training_loop() -> None:
     assert cfg.target_soft_update_tau == 0.005 and cfg.target_update_period == 0
     assert cfg.surrogate_gradient == "atan" and cfg.plant_carry and cfg.n_regions == 8
     assert (cfg.replay_warmup_transitions, cfg.replay_update_steps) == (1_650, 64)
-    assert cfg.stn_dbs_spread == 3.0  # distance-based STN recruitment (plant deviation)
+    assert cfg.stn_dbs_spread == 1.0  # Kumaravelu coupling: every STN neuron gets the full current
     assert not cfg.plant_fixed_network  # redrawing plant reproduces Figs 4-6
 
 

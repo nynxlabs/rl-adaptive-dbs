@@ -350,8 +350,11 @@ def fig4_nguyen_config(
     10 ms per step (100 one-ms bins train less stably), linear ε 0.9 → 0.05 over 2,000
     steps (the exponential schedule lands the length drop ~40 episodes late), 64
     minibatches per update, 1,650-transition replay warm-up, rewards scaled by 1e-4 for
-    learning only. Plant deviation (master's OK, Oct 11 2026): distance-based STN
-    recruitment ρ = 3 (``stn_dbs_spread``).
+    learning only. Plant: Kumaravelu's coupling, every STN neuron gets the full DBS current
+    (ρ = 1, as in the authors' published simulator; the Oct 11 2026 ρ = 3 deviation was
+    dropped Oct 18 2026 with master's OK). Training redraws the wiring every 100 ms step;
+    the Fig 7 eval keeps one wiring per episode (docs/figures/nguyen/4.md § Wiring as a
+    setting).
     """
     return SNNConfig(
         seed=seed,
@@ -391,7 +394,7 @@ def fig4_nguyen_config(
         epsilon_decay_steps=2_000,
         epsilon_schedule="linear",
         stimulated_neurons=1,
-        stn_dbs_spread=3.0,
+        stn_dbs_spread=1.0,
         log_episodes=True,
     )
 
