@@ -61,6 +61,8 @@ class TrainResult:
     episode_alpha_beta_means: list[float] = field(default_factory=list)
     # α–β of the episode's last step, the same moment the DBS parameters are read.
     episode_alpha_beta_finals: list[float] = field(default_factory=list)
+    # Every step's α–β reading, per episode (diagnostic; not restored on resume).
+    episode_alpha_beta_steps: list[list[float]] = field(default_factory=list)
     episode_early_stops: list[bool] = field(default_factory=list)
     episode_amplitudes: list[float] = field(default_factory=list)
     episode_frequencies: list[float] = field(default_factory=list)
@@ -419,6 +421,7 @@ class DSQNTrainer:
             if alpha_betas:
                 result.episode_alpha_beta_means.append(float(np.nanmean(alpha_betas)))
                 result.episode_alpha_beta_finals.append(float(alpha_betas[-1]))
+                result.episode_alpha_beta_steps.append([round(v, 3) for v in alpha_betas])
             else:
                 reset_ab = float(reset_info.get("alpha_beta", float("nan")))
                 result.episode_alpha_beta_means.append(reset_ab)
