@@ -129,6 +129,38 @@ def test_fig4a_late_rebound_and_cliff_fail():
     assert not report["gates"]["mid_fade_vs_paper"]
 
 
+@pytest.mark.skipif(not _has("4a"), reason="no digitization artifact")
+def test_fig4a_paper_early_swing_passes():
+    x, y = load_refined(refined_path("4a"))["training"]
+    trace = np.interp(np.arange(300, dtype=float), x, y)
+    report = fig4a_gates(trace)
+    assert report["gates"]["early_swing_near_paper"]
+    assert 0.5 <= report["metrics"]["early_swing_ratio"] <= 2.0
+
+
+@pytest.mark.skipif(not _has("4a"), reason="no digitization artifact")
+def test_fig4a_big_early_swing_fails():
+    x, y = load_refined(refined_path("4a"))["training"]
+    steps = np.arange(300, dtype=float)
+    trace = np.interp(steps, x, y)
+    swung = trace + np.where(steps < 120, 0.15 * (-1.0) ** steps, 0.0)
+    report = fig4a_gates(swung)
+    assert not report["gates"]["early_swing_near_paper"]
+    assert report["metrics"]["early_swing_ratio"] > 2.0
+
+
+@pytest.mark.skipif(not _has("4a"), reason="no digitization artifact")
+def test_fig4a_flat_within_episode_fails():
+    x, y = load_refined(refined_path("4a"))["training"]
+    trace = np.interp(np.arange(300, dtype=float), x, y)
+    flat = trace.copy()
+    for e in range(4):  # steps 0-119: each episode replaced by its own mean
+        flat[30 * e : 30 * (e + 1)] = np.mean(trace[30 * e : 30 * (e + 1)])
+    report = fig4a_gates(flat)
+    assert not report["gates"]["early_swing_near_paper"]
+    assert report["metrics"]["early_swing_ratio"] < 0.5
+
+
 @pytest.mark.skipif(
     not (ARTIFACT / "4b/paper_digitization/curves_wpd_refined_psd.json").exists(),
     reason="no digitization artifact",

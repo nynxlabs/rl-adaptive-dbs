@@ -243,6 +243,7 @@ def evaluate_4a() -> PanelGateStatus:
         GateRow("no_late_rebound", "eps 7–9 mean ≤ eps 5–6 mean + 0.02"),
         GateRow("half_drop_episode_near_paper", "first episode at half the eps 0–3 → 6–9 drop within ±1 of digitized paper"),
         GateRow("per_episode_near_paper", "every episode mean within 20% of digitized paper"),
+        GateRow("early_swing_near_paper", "Within-episode step-to-step spread over eps 0–3 (residual std, at the paper's digitized x) within 0.5–2× the digitized paper's"),
     )
     return PanelGateStatus(
         panel="4a",

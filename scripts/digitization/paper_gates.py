@@ -547,6 +547,29 @@ def fig2_time_gates(
     )
 
 
+def episode_residual_std(
+    x: np.ndarray,
+    y: np.ndarray,
+    *,
+    lo: float,
+    hi: float,
+    steps_per_episode: int = 30,
+) -> float:
+    """Std of y minus its own episode (x // steps_per_episode) mean, over lo <= x < hi."""
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    m = (x >= lo) & (x < hi)
+    x, y = x[m], y[m]
+    if y.size < 4:
+        return float("nan")
+    ep = np.floor(x / steps_per_episode)
+    resid = np.empty_like(y)
+    for e in np.unique(ep):
+        g = ep == e
+        resid[g] = y[g] - np.mean(y[g])
+    return float(np.std(resid))
+
+
 def fig4a_gates(
     beta_trace: list[float] | np.ndarray,
     *,
@@ -566,6 +589,8 @@ def fig4a_gates(
     half_drop_tol_ep: int = 1,
     per_episode_tol: float = 0.20,
     mid_fade_band: tuple[float, float] = (0.5, 2.0),
+    swing_hi: float = 120.0,
+    swing_band: tuple[float, float] = (0.5, 2.0),
 ) -> dict[str, Any]:
     """Training beta vs step: trend, drop, per-episode trajectory vs paper.
 
@@ -627,6 +652,24 @@ def fig4a_gates(
     rebound = float(np.mean(ep_o[7:10]) - np.mean(ep_o[5:7])) if full else float("nan")
     half_o, half_p = _half_drop_ep(ep_o), _half_drop_ep(ep_p)
     ep_rel_err = (ep_o - ep_p) / np.abs(ep_p) if n_ep else np.array([])
+    # Within-episode step-to-step spread over episodes 0-3 (steps < swing_hi).
+    # Ours is sampled at the paper's digitized x: that sampling lowers the metric
+    # by ~0.7-0.9x (the digitizer smooths the curve), so comparing the paper's
+    # spread with ours at the same x compares like with like rather than
+    # crediting the digitizer's smoothing.
+    pm = (px >= 0) & (px < swing_hi)
+    sx = px[pm]
+    p_swing = episode_residual_std(px, py, lo=0, hi=swing_hi, steps_per_episode=spe)
+    swing = episode_residual_std(
+        sx, np.interp(sx, x, y), lo=0, hi=swing_hi, steps_per_episode=spe
+    )
+    swing_full = episode_residual_std(x, y, lo=0, hi=swing_hi, steps_per_episode=spe)
+    # Info only: same metric over the late window.
+    px_late_x = px[(px >= late_lo) & (px < 300.0)]
+    late_swing = episode_residual_std(
+        px_late_x, np.interp(px_late_x, x, y), lo=late_lo, hi=300.0, steps_per_episode=spe
+    )
+    p_late_swing = episode_residual_std(px, py, lo=late_lo, hi=300.0, steps_per_episode=spe)
     gates = {
         "plot_style": n_expected is None or y.size == n_expected,
         "overall_trend_down": end_w < start_w,
@@ -659,6 +702,15 @@ def fig4a_gates(
         "per_episode_near_paper": bool(
             full and np.all(np.isfinite(ep_rel_err)) and np.max(np.abs(ep_rel_err)) <= per_episode_tol
         ),
+        # Within-episode step-to-step variability over episodes 0-3 (steps 0-119,
+        # before the paper's mid fade) vs the digitized paper; two-sided like
+        # mid_fade (a frozen/smoothed trace fails as well as a swinging one).
+        "early_swing_near_paper": bool(
+            np.isfinite(p_swing)
+            and p_swing > 0
+            and np.isfinite(swing)
+            and swing_band[0] <= swing / p_swing <= swing_band[1]
+        ),
     }
     return _gate_pack(
         gates,
@@ -690,12 +742,24 @@ def fig4a_gates(
             "paper_ep0": p_ep0,
             "late_early_ratio": late / early if abs(early) > 1e-12 else float("nan"),
             "paper_late_early_ratio": p_late / p_early if abs(p_early) > 1e-12 else float("nan"),
+            "early_swing": swing,
+            "paper_early_swing": p_swing,
+            "early_swing_ratio": swing / p_swing if p_swing > 0 else float("nan"),
+            "early_swing_full_res": swing_full,
+            "late_swing": late_swing,
+            "paper_late_swing": p_late_swing,
         },
-        paper_ref={"path": str(paper_path or refined_path("4a")), "early_hi": early_hi, "late_lo": late_lo},
+        paper_ref={
+            "path": str(paper_path or refined_path("4a")),
+            "early_hi": early_hi,
+            "late_lo": late_lo,
+            "swing_window": [0.0, swing_hi],
+        },
         notes=[
             "Absolute early/late bands removed; seed changes level.",
             "mid_fade_vs_paper: fade within 0.5–2x the digitized paper mid fade.",
             "ep0_near_paper is the phase-1 digitization target (untreated-like start).",
+            "early_swing_near_paper: within-episode residual std over steps 0-119, ours sampled at the paper's digitized x, within 0.5-2x the paper's.",
         ],
     )
 
