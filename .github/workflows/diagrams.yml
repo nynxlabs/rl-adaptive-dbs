@@ -1,0 +1,43 @@
+name: diagrams
+
+# docs/diagrams/*.mmd are the sources; the SVG + PNG next to each one are committed so
+# GitHub, the docs, and the site show them without running Mermaid. Fail when a source
+# changed without re-rendering (cd scripts/diagrams && npm ci && node render.mjs).
+
+on:
+  push:
+    branches: [main]
+    paths: ["docs/diagrams/**", "scripts/diagrams/**", ".github/workflows/diagrams.yml"]
+  pull_request:
+    paths: ["docs/diagrams/**", "scripts/diagrams/**", ".github/workflows/diagrams.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Diagram renders up to date
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: scripts/diagrams/package-lock.json
+
+      # PNG bytes depend on the font files; render.mjs uses DejaVu Sans only.
+      - name: Install DejaVu fonts
+        run: |
+          dpkg -s fonts-dejavu-core >/dev/null 2>&1 || { sudo apt-get update && sudo apt-get install -y fonts-dejavu-core; }
+
+      - name: Install renderer
+        working-directory: scripts/diagrams
+        run: npm ci --no-audit --no-fund
+
+      - name: Re-render and compare
+        working-directory: scripts/diagrams
+        run: node render.mjs --check

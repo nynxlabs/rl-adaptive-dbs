@@ -1,0 +1,18 @@
+{
+  "name": "rl-adaptive-dbs-diagrams",
+  "private": true,
+  "description": "Render docs/diagrams/*.mmd (Mermaid) to transparent SVG + PNG with Pele and resvg.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "render": "node render.mjs",
+    "check": "node render.mjs --check"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "2.6.2",
+    "pele": "1.6.0"
+  }
+}

@@ -22,9 +22,13 @@ Every paper panel is scored against automated gates, and a panel counts as repli
 
 All three controllers run on one biophysical model of the cortex–basal ganglia–thalamus network in the parkinsonian rat (Kumaravelu, Brocker & Grill, 2016), set up as a reinforcement-learning environment the way Mehregan et al. describe it. Nguyen et al. and Ravivarapu et al. connect through adapters that match their papers' step lengths, observations, and rewards, so no paper gets its own copy of the dynamics. Specs: [docs/plant/README.md](docs/plant/README.md), [docs/plant/environment.md](docs/plant/environment.md). Where a replication departs from a paper or the published model, the panel's tracker labels the deviation; for Mehregan et al., [docs/development/replication-fidelity.md](docs/development/replication-fidelity.md) lists what matches and what diverges.
 
+![Each paper's controller sends a DBS setting through its paper adapter, which stimulates the shared Kumaravelu plant; the plant's LFP beta power comes back through the adapter as the controller's state and reward.](docs/diagrams/loop.png)
+
 ## How we check
 
 Every figure panel has its own gates: numeric checks against curves digitized from the paper, like where a curve starts, which way it trends, and how two conditions are ordered. A panel counts as replicated only when all of its gates pass, so a panel that passes most of its gates is still open. Each tracker lists every gate with its current pass/fail state and the command that reproduces the panel.
+
+![Paper text and figures become a spec and a set of digitized paper curves; the spec drives the plant, training, and the panel plot; gates compare the plot's data against the digitized curves, and a panel reaches the tracker as replicated only when all gates pass, otherwise the spec is revisited.](docs/diagrams/pipeline.png)
 
 ## Quick start
 

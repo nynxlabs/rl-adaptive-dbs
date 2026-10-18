@@ -42,3 +42,6 @@ logs/
 # python scripts/digitization/paper_crops.py build
 docs/controllers/*/figures/images/*/paper.png
 /reference-material/papers/
+
+# Diagram renderer (scripts/diagrams; npm ci)
+node_modules/
