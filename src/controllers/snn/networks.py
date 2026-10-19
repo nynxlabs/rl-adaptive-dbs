@@ -128,6 +128,15 @@ class DSQN(nn.Module):
         in_features = cfg.flat_observation_dim
         if cfg.snn_input_mode == "sequence":
             in_features = cfg.observation_shape[1]
+        self._pool = int(cfg.snn_input_avgpool) if cfg.snn_input_avgpool > 1 else 0
+        if self._pool:
+            if cfg.snn_input_mode != "sequence" or in_features % self._pool:
+                msg = (
+                    f"snn_input_avgpool={cfg.snn_input_avgpool} needs sequence input with a "
+                    f"neuron count divisible by it, got {cfg.snn_input_mode!r} / {in_features}"
+                )
+                raise ValueError(msg)
+            in_features //= self._pool
         if cfg.hidden_layers not in (1, 2):
             msg = f"hidden_layers must be 1 or 2, got {cfg.hidden_layers!r}"
             raise ValueError(msg)
@@ -173,6 +182,8 @@ class DSQN(nn.Module):
         """Row t of the (n × N) spike matrix drives step t; all layers step together."""
         steps, n_neurons = self.config.observation_shape
         x = observation.reshape(observation.shape[0], steps, n_neurons)
+        if self._pool:
+            x = x.reshape(x.shape[0], steps, n_neurons // self._pool, self._pool).mean(dim=-1)
         layers = self.layers
         membranes = [
             torch.zeros(x.shape[0], layer.linear.out_features, device=x.device, dtype=x.dtype)

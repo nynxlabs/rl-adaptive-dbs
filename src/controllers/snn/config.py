@@ -88,6 +88,11 @@ class SNNConfig:
     # and each layer passes spike counts on. "sequence": row t of the matrix drives SNN step t
     # (n steps) and spikes propagate through all layers every step.
     snn_input_mode: str = "static"
+    # Average-pool each row of the spike matrix over groups of this many consecutive
+    # neurons before the first layer (sequence mode; 0 or 1 = off). The authors' published
+    # trainer pools the 80 neurons to 16 channels (``AvgPool1d(kernel_size=5, stride=5)``,
+    # CL-DBS-RL ``scripts/train_rl_rockpool_16ch.py``) for its Xylo target. Candidate only.
+    snn_input_avgpool: int = 0
     # Linear+LIF stages of hidden_size neurons before the output stage. §III.B: "a
     # three-layer spiking neural network with a single hidden layer of 128 LIF neurons"
     # (input → 128 → 9) is 1. The default 2 (input → 128 → 128 → 9) is what every run

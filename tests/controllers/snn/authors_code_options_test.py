@@ -154,3 +154,19 @@ def test_set_parser_types_new_fields() -> None:
     assert parse_config_overrides(
         ["reset_window_frequency_hz=100", "train_fixed_episode_seed=true", "replay_truncation_terminal=0"]
     ) == {"reset_window_frequency_hz": 100.0, "train_fixed_episode_seed": True, "replay_truncation_terminal": False}
+
+
+def test_snn_input_avgpool_pools_neurons_to_channels() -> None:
+    import torch
+
+    cfg = SNNConfig(
+        seed=0, n_regions=8, neurons_per_region=10, sequence_steps=10,
+        snn_input_mode="sequence", hidden_layers=1, snn_input_avgpool=5,
+    )
+    net = DSQN(cfg)
+    assert net.input_layer.linear.in_features == 16
+    obs = torch.zeros(2, cfg.flat_observation_dim)
+    out = net(obs)
+    assert out.spike_counts.shape == (2, cfg.n_action_outputs)
+    with pytest.raises(ValueError):
+        DSQN(SNNConfig(seed=0, snn_input_mode="static", snn_input_avgpool=5))
