@@ -149,6 +149,25 @@ class PaperKnobs:
     critic_adam_eps: float = 1e-8
     # Deviation (candidate): critic scores logits minus the regular-pulse init spike.
     critic_center: bool = False
+    # Deviation candidates (oct 19 2026; controllers.ddpg.perpulse_agents). Any
+    # pp_design other than "faithful" deviates from Figure 3a / Eqs. 4-5:
+    # design: "faithful" (above) | "logits" | "residual" | "offset" | "mixture";
+    # algo: "ddpg" | "td3" | "reinforce"; view: critic input ("raw", "delta",
+    # "regprob", "offhist"). actor_lr overrides the stated 5e-4 (0 = stated).
+    pp_design: str = "faithful"
+    pp_algo: str = "ddpg"
+    pp_view: str = "raw"
+    delta_max: float = 3.0
+    mix_init: float = -3.0
+    actor_lr: float = 0.0
+    twin_critic: bool = False
+    target_noise: float = 0.0
+    policy_delay: int = 1
+    grad_clip: float = 0.0
+    pull_l2: float = 0.0
+    bc_steps: int = 0
+    updates_per_step: int = 1
+    pg_batch: int = 8
 
     def as_dict(self) -> dict[str, Any]:
         head = {}
@@ -165,6 +184,26 @@ class PaperKnobs:
                 "critic_adam_eps": self.critic_adam_eps,
                 "critic_center": self.critic_center,
             }
+            if self.pp_design != "faithful":
+                head.update(
+                    {
+                        "pp_design": self.pp_design,
+                        "pp_algo": self.pp_algo,
+                        "pp_view": self.pp_view,
+                        "delta_max": self.delta_max,
+                        "mix_init": self.mix_init,
+                        "actor_lr": self.actor_lr,
+                        "twin_critic": self.twin_critic,
+                        "target_noise": self.target_noise,
+                        "policy_delay": self.policy_delay,
+                        "grad_clip": self.grad_clip,
+                        "pull_l2": self.pull_l2,
+                        "bc_steps": self.bc_steps,
+                        "updates_per_step": self.updates_per_step,
+                        "pg_batch": self.pg_batch,
+                        "deviates_from_paper": "our best guess of what the authors may have done",
+                    }
+                )
         return {**head, 
             "alphabet": self.alphabet,
             "jitter_fraction": self.jitter_fraction,
@@ -205,6 +244,20 @@ def apply_overrides(knobs: PaperKnobs, pairs: list[str] | None) -> PaperKnobs:
         "actor_adam_eps": float,
         "critic_adam_eps": float,
         "critic_center": lambda v: str(v).lower() in ("1", "true", "yes"),
+        "pp_design": str,
+        "pp_algo": str,
+        "pp_view": str,
+        "delta_max": float,
+        "mix_init": float,
+        "actor_lr": float,
+        "twin_critic": lambda v: str(v).lower() in ("1", "true", "yes"),
+        "target_noise": float,
+        "policy_delay": int,
+        "grad_clip": float,
+        "pull_l2": float,
+        "bc_steps": int,
+        "updates_per_step": int,
+        "pg_batch": int,
     }
     for raw in pairs:
         key, sep, value = raw.partition("=")
@@ -482,28 +535,112 @@ def _train_perpulse(
     ``update_every`` steps once the buffer holds a batch. Each pulse row of the
     noisy logits plays its argmax slot; the critic scores the stored noisy logits.
     """
-    from controllers.ddpg.action_designs import AlgOneAgent, PerPulseLogits, SlotAlphabet, regular_onsets
-
     torch.manual_seed(seed)
     np.random.seed(seed)
     n_pulses = int(round(mean_hz * STEP_S))
-    design = PerPulseLogits(
-        n_pulses=n_pulses, init_bias=knobs.init_bias_scale, noise=knobs.pp_noise, center=knobs.critic_center
+    if knobs.pp_design != "faithful":
+        agent = _deviation_agent(knobs, n_pulses=n_pulses, seed=seed)
+    else:
+        agent = _FaithfulPulseAgent(knobs, n_pulses=n_pulses, seed=seed)
+    env = make_env(mean_hz, knobs)
+    return _perpulse_loop(
+        agent=agent, env=env, knobs=knobs, mean_hz=mean_hz, seed=seed, n_pulses=n_pulses,
+        checkpoint_path=checkpoint_path, num_episodes=num_episodes, log=log, extra=extra,
     )
-    agent = AlgOneAgent(
-        design,
+
+
+class _FaithfulPulseAgent:
+    """Figure 3a head + Alg. 1 (``AlgOneAgent``) behind the per-pulse agent interface."""
+
+    on_policy = False
+
+    def __init__(self, knobs: PaperKnobs, *, n_pulses: int, seed: int) -> None:
+        from controllers.ddpg.action_designs import AlgOneAgent, PerPulseLogits
+
+        self.design = PerPulseLogits(
+            n_pulses=n_pulses, init_bias=knobs.init_bias_scale, noise=knobs.pp_noise, center=knobs.critic_center
+        )
+        self.inner = AlgOneAgent(
+            self.design,
+            state_len=knobs.state_len,
+            actor_lr=ACTOR_LR,
+            critic_lr=CRITIC_LR,
+            gamma=knobs.gamma,
+            tau=knobs.tau,
+            seed=seed,
+            fanin_ref=knobs.fanin_ref,
+            fanin_scope=knobs.fanin_scope,
+            actor_eps=knobs.actor_adam_eps,
+            critic_eps=knobs.critic_adam_eps,
+        )
+        self.actor = self.inner.actor
+
+    def act(self, s: torch.Tensor, sigma: float) -> tuple[torch.Tensor, np.ndarray]:
+        with torch.no_grad():
+            stored = self.design.explore(self.actor(s), sigma, self.inner.gen)[0]
+        return stored, self.design.decode_stored(stored)
+
+    def update(self, s, a, r, s2, d) -> dict:
+        return self.inner.update(s, a, r, s2, d)
+
+    def noise_free(self, s: torch.Tensor) -> np.ndarray:
+        with torch.no_grad():
+            return self.design.decode_raw(self.actor(s))
+
+    def diag(self, s: torch.Tensor) -> dict:
+        with torch.no_grad():
+            raw = self.actor(s)
+        return {"margin": self.design.regular_margin(raw), "logit_std": float(raw.std())}
+
+
+def _deviation_agent(knobs: PaperKnobs, *, n_pulses: int, seed: int):
+    """Candidate agents that deviate from the paper (controllers.ddpg.perpulse_agents)."""
+    from controllers.ddpg.perpulse_agents import AgentKnobs, make_agent
+
+    k = AgentKnobs(
         state_len=knobs.state_len,
-        actor_lr=ACTOR_LR,
+        actor_lr=knobs.actor_lr or ACTOR_LR,
         critic_lr=CRITIC_LR,
         gamma=knobs.gamma,
         tau=knobs.tau,
         seed=seed,
-        fanin_ref=knobs.fanin_ref,
-        fanin_scope=knobs.fanin_scope,
-        actor_eps=knobs.actor_adam_eps,
-        critic_eps=knobs.critic_adam_eps,
+        sigma=knobs.logit_noise_std,
+        twin=knobs.twin_critic,
+        target_noise=knobs.target_noise,
+        policy_delay=knobs.policy_delay,
+        grad_clip=knobs.grad_clip,
+        pull_l2=knobs.pull_l2,
+        bc_steps=knobs.bc_steps,
     )
-    env = make_env(mean_hz, knobs)
+    agent, _ = make_agent(
+        design=knobs.pp_design,
+        algo=knobs.pp_algo,
+        n_pulses=n_pulses,
+        k=k,
+        init_bias=knobs.init_bias_scale,
+        noise=knobs.pp_noise,
+        view=knobs.pp_view,
+        delta_max=knobs.delta_max,
+        mix_init=knobs.mix_init,
+    )
+    return agent
+
+
+def _perpulse_loop(
+    *,
+    agent: Any,
+    env: MehreganEnv,
+    knobs: PaperKnobs,
+    mean_hz: float,
+    seed: int,
+    n_pulses: int,
+    checkpoint_path: Path | None,
+    num_episodes: int,
+    log: Callable[[str], None],
+    extra: dict[str, Any] | None,
+) -> dict[str, Any]:
+    from controllers.ddpg.action_designs import SlotAlphabet, regular_onsets
+
     slots_alpha = SlotAlphabet(mean_hz, step_s=STEP_S, dt_ms=PAPER_DT_MS)
     env.alphabet = slots_alpha  # env.step(0) plays slots_alpha.pending
     reg = regular_onsets(n_pulses)
@@ -539,16 +676,15 @@ def _train_perpulse(
                 obs, info0 = env.reset(seed=seed + episode, options={"keep_plant": True})
             else:
                 obs, info0 = env.reset(seed=seed + episode)
+            if hasattr(agent, "k"):
+                agent.k.sigma = sigma
             reset_beta.append(float(info0["p_beta_norm"]))
             ep_reward = float(info0.get("reward", 0.0))
             s = net_state(obs)
             ep_losses: list[dict[str, float]] = []
             done = False
             while not done:
-                with torch.no_grad():
-                    raw = agent.actor(torch.as_tensor(s).unsqueeze(0))
-                stored = design.explore(raw, sigma, agent.gen)[0]
-                slots = design.decode_stored(stored)
+                stored, slots = agent.act(torch.as_tensor(s).unsqueeze(0), sigma)
                 slots_alpha.pending = slots
                 obs2, reward, terminated, truncated, info = env.step(0)
                 done = bool(terminated or truncated)
@@ -562,8 +698,15 @@ def _train_perpulse(
                 step_rewards.append(float(reward))
                 ep_reward += float(reward)
                 s = s2
-                if len(buf) >= BATCH_SIZE and env_step % knobs.update_every == 0:
-                    idx = rng.choice(len(buf), size=BATCH_SIZE, replace=False)
+                if agent.on_policy:
+                    ready = len(buf) >= knobs.pg_batch and env_step % knobs.update_every == 0
+                else:
+                    ready = len(buf) >= BATCH_SIZE and env_step % knobs.update_every == 0
+                for _ in range(knobs.updates_per_step if ready else 0):
+                    if agent.on_policy:  # the most recent transitions
+                        idx = np.arange(len(buf) - knobs.pg_batch, len(buf))
+                    else:
+                        idx = rng.choice(len(buf), size=BATCH_SIZE, replace=False)
                     ep_losses.append(
                         agent.update(
                             torch.as_tensor(np.stack([buf[i][0] for i in idx])),
@@ -576,9 +719,9 @@ def _train_perpulse(
             episode_rewards.append(ep_reward)
             losses.extend(ep_losses)
             ep_slots = [np.asarray(a) for a in actions[-STEPS_PER_EPISODE:]]
-            with torch.no_grad():
-                nf_raw = agent.actor(torch.as_tensor(net_state(np.array([np.mean(beta_trace[-STEPS_PER_EPISODE:])]))).unsqueeze(0))
-            nf = design.decode_raw(nf_raw)
+            s_mean = torch.as_tensor(net_state(np.array([np.mean(beta_trace[-STEPS_PER_EPISODE:])]))).unsqueeze(0)
+            nf = agent.noise_free(s_mean)
+            extra_diag = agent.diag(s_mean)
             diag = {
                 "episode": episode,
                 "sigma": sigma,
@@ -588,9 +731,7 @@ def _train_perpulse(
                 "nf_on_regular": on_regular(nf),
                 "nf_isi_cv": isi_cv(nf),
                 "nf_distinct_slots": int(np.unique(nf).size),
-                "nf_logit_std": float(nf_raw.std()),
-                "nf_logit_absmax": float(nf_raw.abs().max()),
-                "nf_regular_margin": design.regular_margin(nf_raw),
+                **{f"nf_{k}": v for k, v in extra_diag.items()},
                 "critic_loss": float(np.mean([x["loss_c"] for x in ep_losses])) if ep_losses else float("nan"),
                 "q": float(np.mean([x["q"] for x in ep_losses])) if ep_losses else float("nan"),
                 "updates": len(losses),
@@ -600,8 +741,8 @@ def _train_perpulse(
                 f"episode {episode + 1}/{num_episodes} reward={ep_reward:.2f} mean_beta={diag['mean_beta']:.3f} "
                 f"played_on_reg={diag['played_on_regular']:.2f} nf_on_reg={diag['nf_on_regular']:.2f} "
                 f"nf_isi_cv={diag['nf_isi_cv']:.2f} nf_slots={diag['nf_distinct_slots']} "
-                f"logit_std={diag['nf_logit_std']:.3g} margin={diag['nf_regular_margin']:.3g} "
-                f"critic_loss={diag['critic_loss']:.3g} q={diag['q']:.3g} updates={diag['updates']}"
+                + " ".join(f"{k}={v:.3g}" for k, v in extra_diag.items())
+                + f" critic_loss={diag['critic_loss']:.3g} q={diag['q']:.3g} updates={diag['updates']}"
             )
         if checkpoint_path is not None:
             checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
