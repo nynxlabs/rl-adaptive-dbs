@@ -733,7 +733,7 @@ def _perpulse_loop(
                 "nf_distinct_slots": int(np.unique(nf).size),
                 **{f"nf_{k}": v for k, v in extra_diag.items()},
                 "critic_loss": float(np.mean([x["loss_c"] for x in ep_losses])) if ep_losses else float("nan"),
-                "q": float(np.mean([x["q"] for x in ep_losses])) if ep_losses else float("nan"),
+                "q": float(np.nanmean([x["q"] for x in ep_losses])) if ep_losses and any(np.isfinite(x["q"]) for x in ep_losses) else float("nan"),
                 "updates": len(losses),
             }
             diagnostics.append(diag)

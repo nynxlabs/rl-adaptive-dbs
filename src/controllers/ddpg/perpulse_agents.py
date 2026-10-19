@@ -31,7 +31,8 @@ Critic views (what the critic scores) for the logits / residual designs:
 - ``raw``: the logits (Eq. 4); ``delta``: the logits minus the init spike.
 - ``regprob``: per-pulse probability of the regular slot (90 numbers).
 - ``offhist``: pulse-averaged histogram of the offset from the regular slot
-  (8 bins). Both compressed views score the played one-hot for replayed
+  (8 bins); ``offhist4``: 4 coarse bins (within a quarter period, the two
+  outer quarters, elsewhere). Both compressed views score the played one-hot for replayed
   actions and the exact Gumbel-max choice probabilities
   ``softmax(logits / sigma)`` for Eq. 5, so the actor's view is the expected
   value of the stored one.
@@ -78,6 +79,12 @@ class PulseGrid:
         bins[(off > 0.25) & (off <= 0.5)] = 6
         self.bins = bins
         self.n_bins = 8
+        # Coarse 4-bin view: |offset| <= 0.25 period (incl. exact), (-0.5, -0.25), (0.25, 0.5], far.
+        coarse = torch.full(off.shape, 3, dtype=torch.long)
+        coarse[off.abs() <= 0.25] = 0
+        coarse[(off >= -0.5) & (off < -0.25)] = 1
+        coarse[(off > 0.25) & (off <= 0.5)] = 2
+        self.bins4 = coarse
 
     def spike(self, height: float) -> torch.Tensor:
         s = torch.zeros(self.n_pulses, self.n_slots)
@@ -88,13 +95,14 @@ class PulseGrid:
         """``probs``: (B, n_pulses, n_slots) slot distribution per pulse."""
         if view == "regprob":
             return probs[:, self.is_reg]  # (B, n_pulses)
-        out = torch.zeros(probs.shape[0], self.n_bins, dtype=probs.dtype)
-        idx = self.bins.reshape(1, -1).expand(probs.shape[0], -1)
+        bins, n = (self.bins4, 4) if view == "offhist4" else (self.bins, self.n_bins)
+        out = torch.zeros(probs.shape[0], n, dtype=probs.dtype)
+        idx = bins.reshape(1, -1).expand(probs.shape[0], -1)
         out.scatter_add_(1, idx, probs.reshape(probs.shape[0], -1))
         return out / self.n_pulses
 
     def view_dim(self, view: str) -> int:
-        return self.n_pulses if view == "regprob" else self.n_bins
+        return {"regprob": self.n_pulses, "offhist4": 4}.get(view, self.n_bins)
 
     def on_regular(self, slots: np.ndarray) -> float:
         return float(np.isin(self.reg, slots).mean())
@@ -116,7 +124,7 @@ class LogitsDesign:
 
     def __post_init__(self) -> None:
         self._spike = self.grid.spike(self.init_bias)
-        if self.view in ("regprob", "offhist") and self.noise != "gumbel":
+        if self.view in ("regprob", "offhist", "offhist4") and self.noise != "gumbel":
             msg = "compressed critic views need pp_noise=gumbel (exact choice probabilities)"
             raise ValueError(msg)
 
