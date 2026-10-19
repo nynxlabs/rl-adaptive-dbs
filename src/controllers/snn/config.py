@@ -158,6 +158,11 @@ class SNNConfig:
 
     # Action selection: ``factored`` (3× argmax over ternary groups) or ``joint`` (9-way)
     action_scheme: str = "factored"
+    # Spike-count ties (paper silent, §III.B): ``membrane`` gives a tied head to the higher
+    # output membrane potential; ``first`` takes the first tied index (−1, decrease), which is
+    # what ``torch.argmax`` does in the spike-count branch of the authors' published
+    # ``get_action_dict`` (CL-DBS-RL ``src/utils/action_utils_rockpool.py``). Candidate only.
+    action_tie_break: str = "membrane"
 
     # Per-parameter ternary delta sensitivities (open — keep params in plausible ranges)
     amplitude_sensitivity: float = 10.0  # nA/cm² per +1

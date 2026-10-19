@@ -58,8 +58,9 @@ def select_action(
     """Argmax on spike counts with optional ε-greedy exploration.
 
     ``membrane`` (output membrane potentials, same shape as ``spike_counts``) breaks
-    spike-count ties. Returns ``(action_index, ternary_deltas)`` where ``action_index`` is
-    the discrete index used for replay (joint: 0–8; factored: flattened group argmax).
+    spike-count ties unless ``config.action_tie_break == "first"``. Returns
+    ``(action_index, ternary_deltas)`` where ``action_index`` is the discrete index used
+    for replay (joint: 0–8; factored: flattened group argmax).
     """
     cfg = (config or SNNConfig()).with_variant_defaults()
     counts = np.asarray(spike_counts, dtype=np.float64).reshape(-1)
@@ -68,7 +69,7 @@ def select_action(
         raise ValueError(msg)
 
     mem = None
-    if membrane is not None:
+    if membrane is not None and cfg.action_tie_break != "first":
         mem = np.asarray(membrane, dtype=np.float64).reshape(-1)
         if mem.shape != counts.shape:
             msg = f"membrane shape {mem.shape} != spike counts shape {counts.shape}"

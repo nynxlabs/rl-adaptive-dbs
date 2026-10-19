@@ -311,6 +311,9 @@ def test_spike_count_ties_break_by_membrane_potential() -> None:
     assert ternary.tolist() == [0, 0, 1]
     _, legacy = select_action(counts, config=cfg)
     assert legacy.tolist() == [-1, -1, 0]
+    first = SNNConfig(seed=0, action_tie_break="first")
+    _, ternary_first = select_action(counts, config=first, membrane=membrane)
+    assert ternary_first.tolist() == [-1, -1, 0]
 
 
 class _RecordingPlant(_SpikeMockPlant):
