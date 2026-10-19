@@ -77,3 +77,19 @@ def test_td3_update_runs() -> None:
     a = torch.zeros(8, 6)
     out = agent.update(s, a, -torch.ones(8), s, torch.zeros(8))
     assert len(agent.critics) == 2 and np.isfinite(out["loss_c"])
+
+
+def test_init_width_spreads_the_init_bias() -> None:
+    grid = PulseGrid(6)
+    spike = grid.spike(2.0, width_ms=3).view(6, grid.n_slots)
+    assert int((spike[0] > 0).sum()) == 4  # slot 0 and 1..3 ms after it (clipped at the step start)
+    assert int((spike[1] > 0).sum()) == 7
+
+
+def test_qat_agent_wraps_the_actor_with_the_averaging_constant() -> None:
+    k = AgentKnobs(state_len=1, seed=0, qat=True, qat_avg_const=0.1)
+    agent, _ = make_agent(design="logits", algo="ddpg", n_pulses=6, k=k, init_bias=1.0, noise="gumbel",
+                          view="offhist4", delta_max=3.0, mix_init=-3.0)
+    assert type(agent.actor).__name__ == "QATActor"
+    fq = agent.actor.quant.activation_post_process
+    assert fq.activation_post_process.averaging_constant == pytest.approx(0.1)

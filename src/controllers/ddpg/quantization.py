@@ -42,7 +42,7 @@ def qat_backend() -> str:
     return "fbgemm"
 
 
-def _default_qat_qconfig() -> torch.ao.quantization.QConfig:
+def _default_qat_qconfig(averaging_constant: float | None = None) -> torch.ao.quantization.QConfig:
     """Eager-mode QAT qconfig emulating **int8** (Mehregan §III.D).
 
     PyTorch's fbgemm default sets ``reduce_range=True`` on activations, i.e.
@@ -50,6 +50,8 @@ def _default_qat_qconfig() -> torch.ao.quantization.QConfig:
     int8 kernels, not part of the paper. The paper rounds weights and
     activations "to emulate int8 values", so activations use the full 0..255
     range here; weights keep the default per-channel symmetric int8.
+    ``averaging_constant`` sets the activation observer's moving-average
+    constant (paper-silent; PyTorch's default 0.01 when ``None``).
     """
     backend = qat_backend()
     torch.backends.quantized.engine = backend
@@ -60,6 +62,7 @@ def _default_qat_qconfig() -> torch.ao.quantization.QConfig:
         quant_max=255,
         dtype=torch.quint8,
         reduce_range=False,
+        **({"averaging_constant": averaging_constant} if averaging_constant is not None else {}),
     )
     return torch.ao.quantization.QConfig(activation=activation, weight=default.weight)
 
@@ -74,16 +77,17 @@ def _assign_qat_qconfig(module: nn.Module, qconfig: torch.ao.quantization.QConfi
 class QATActor(nn.Module):
     """Actor with fake-quant input and dequant logits (Mehregan §III.D)."""
 
-    def __init__(self, actor: Actor, *, prepared: bool = True) -> None:
+    def __init__(self, actor: nn.Module, *, prepared: bool = True, averaging_constant: float | None = None) -> None:
         super().__init__()
         self.quant = torch.ao.quantization.QuantStub()
         self.actor = actor
         self.dequant = torch.ao.quantization.DeQuantStub()
+        self.averaging_constant = averaging_constant
         if prepared:
             self._enable_fake_quant()
 
     def _enable_fake_quant(self) -> None:
-        qconfig = _default_qat_qconfig()
+        qconfig = _default_qat_qconfig(self.averaging_constant)
         _assign_qat_qconfig(self, qconfig)
         torch.ao.quantization.prepare_qat(self, inplace=True)
 

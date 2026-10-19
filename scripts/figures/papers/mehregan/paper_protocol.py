@@ -168,6 +168,14 @@ class PaperKnobs:
     bc_steps: int = 0
     updates_per_step: int = 1
     pg_batch: int = 8
+    # Onset candidates (oct 19 2026): init bias spread over +-init_width ms;
+    # per-step exploration temperature sigma * exp(U(-sigma_jitter, sigma_jitter));
+    # critic-only updates before the first actor update.
+    init_width: int = 0
+    sigma_jitter: float = 0.0
+    critic_warmup: int = 0
+    # QAT activation observer averaging constant for per-pulse QAT (0 = PyTorch default 0.01).
+    qat_avg_const: float = 0.0
 
     def as_dict(self) -> dict[str, Any]:
         head = {}
@@ -201,6 +209,10 @@ class PaperKnobs:
                         "bc_steps": self.bc_steps,
                         "updates_per_step": self.updates_per_step,
                         "pg_batch": self.pg_batch,
+                        "init_width": self.init_width,
+                        "sigma_jitter": self.sigma_jitter,
+                        "critic_warmup": self.critic_warmup,
+                        "qat_avg_const": self.qat_avg_const,
                         "deviates_from_paper": "our best guess of what the authors may have done",
                     }
                 )
@@ -258,6 +270,10 @@ def apply_overrides(knobs: PaperKnobs, pairs: list[str] | None) -> PaperKnobs:
         "bc_steps": int,
         "updates_per_step": int,
         "pg_batch": int,
+        "init_width": int,
+        "sigma_jitter": float,
+        "critic_warmup": int,
+        "qat_avg_const": float,
     }
     for raw in pairs:
         key, sep, value = raw.partition("=")
@@ -387,12 +403,14 @@ def train_paper(
     ``actions``, ``episode_rewards``, ``step_rewards``, and run metadata.
     """
     if knobs.action_head == "perpulse":
-        if variant != "paper" or qat_freeze_observer_after is not None or episode_hook or trainer_hook:
-            msg = "action_head=perpulse supports the fp32 train only"
+        qat_ok = variant == "qat" and knobs.pp_design != "faithful"
+        if (variant != "paper" and not qat_ok) or qat_freeze_observer_after is not None or episode_hook or trainer_hook:
+            msg = "action_head=perpulse supports the fp32 train, and QAT for the deviation designs"
             raise NotImplementedError(msg)
         return _train_perpulse(
             mean_hz=mean_hz,
             seed=seed,
+            qat=variant == "qat",
             knobs=knobs,
             checkpoint_path=checkpoint_path,
             num_episodes=num_episodes,
@@ -522,6 +540,7 @@ def _train_perpulse(
     *,
     mean_hz: float,
     seed: int,
+    qat: bool = False,
     knobs: PaperKnobs,
     checkpoint_path: Path | None,
     num_episodes: int,
@@ -539,13 +558,14 @@ def _train_perpulse(
     np.random.seed(seed)
     n_pulses = int(round(mean_hz * STEP_S))
     if knobs.pp_design != "faithful":
-        agent = _deviation_agent(knobs, n_pulses=n_pulses, seed=seed)
+        agent = _deviation_agent(knobs, n_pulses=n_pulses, seed=seed, qat=qat)
     else:
         agent = _FaithfulPulseAgent(knobs, n_pulses=n_pulses, seed=seed)
     env = make_env(mean_hz, knobs)
     return _perpulse_loop(
         agent=agent, env=env, knobs=knobs, mean_hz=mean_hz, seed=seed, n_pulses=n_pulses,
-        checkpoint_path=checkpoint_path, num_episodes=num_episodes, log=log, extra=extra,
+        checkpoint_path=checkpoint_path, num_episodes=num_episodes, log=log,
+        extra={**(extra or {}), "qat": qat},
     )
 
 
@@ -593,7 +613,7 @@ class _FaithfulPulseAgent:
         return {"margin": self.design.regular_margin(raw), "logit_std": float(raw.std())}
 
 
-def _deviation_agent(knobs: PaperKnobs, *, n_pulses: int, seed: int):
+def _deviation_agent(knobs: PaperKnobs, *, n_pulses: int, seed: int, qat: bool = False):
     """Candidate agents that deviate from the paper (controllers.ddpg.perpulse_agents)."""
     from controllers.ddpg.perpulse_agents import AgentKnobs, make_agent
 
@@ -611,6 +631,9 @@ def _deviation_agent(knobs: PaperKnobs, *, n_pulses: int, seed: int):
         grad_clip=knobs.grad_clip,
         pull_l2=knobs.pull_l2,
         bc_steps=knobs.bc_steps,
+        critic_warmup=knobs.critic_warmup,
+        qat=qat,
+        qat_avg_const=knobs.qat_avg_const,
     )
     agent, _ = make_agent(
         design=knobs.pp_design,
@@ -622,6 +645,7 @@ def _deviation_agent(knobs: PaperKnobs, *, n_pulses: int, seed: int):
         view=knobs.pp_view,
         delta_max=knobs.delta_max,
         mix_init=knobs.mix_init,
+        init_width=knobs.init_width,
     )
     return agent
 
@@ -645,6 +669,7 @@ def _perpulse_loop(
     env.alphabet = slots_alpha  # env.step(0) plays slots_alpha.pending
     reg = regular_onsets(n_pulses)
     rng = np.random.default_rng(seed)
+    rng_sigma = np.random.default_rng(seed + 31)
 
     def net_state(obs: np.ndarray) -> np.ndarray:
         v = (float(np.asarray(obs).reshape(-1)[-1]) - knobs.state_offset) * knobs.state_scale
@@ -684,7 +709,8 @@ def _perpulse_loop(
             ep_losses: list[dict[str, float]] = []
             done = False
             while not done:
-                stored, slots = agent.act(torch.as_tensor(s).unsqueeze(0), sigma)
+                sig_t = sigma * float(np.exp(rng_sigma.uniform(-knobs.sigma_jitter, knobs.sigma_jitter))) if knobs.sigma_jitter else sigma
+                stored, slots = agent.act(torch.as_tensor(s).unsqueeze(0), sig_t)
                 slots_alpha.pending = slots
                 obs2, reward, terminated, truncated, info = env.step(0)
                 done = bool(terminated or truncated)
@@ -854,6 +880,82 @@ def load_qat_actor(path: Path) -> nn.Module:
     return qat
 
 
+# --- Per-pulse checkpoints (candidate; see PaperKnobs.action_head) -----------
+
+
+def is_perpulse_checkpoint(path: Path) -> bool:
+    payload = torch.load(path, map_location="cpu", weights_only=False)
+    return isinstance(payload, dict) and payload.get("action_head") == "perpulse"
+
+
+def load_perpulse(path: Path) -> tuple[nn.Module, Any, dict[str, Any]]:
+    """Rebuild a per-pulse actor from its checkpoint: ``(actor, design, payload)``.
+
+    QAT checkpoints come back as the fake-quant ``QATActor`` with observers off.
+    """
+    payload = torch.load(path, map_location="cpu", weights_only=False)
+    knobs = apply_overrides(PaperKnobs(), [f"{k}={v}" for k, v in payload["knobs"].items()
+                                            if k in PaperKnobs.__dataclass_fields__ and v is not None])
+    n_pulses = int(payload["n_pulses"])
+    seed = 0
+    if knobs.pp_design == "faithful":
+        agent = _FaithfulPulseAgent(knobs, n_pulses=n_pulses, seed=seed)
+        design = agent.design
+    else:
+        agent = _deviation_agent(knobs, n_pulses=n_pulses, seed=seed, qat=bool(payload.get("qat")))
+        design = agent.d
+    agent.actor.load_state_dict(payload["actor_state_dict"])
+    if payload.get("qat"):
+        agent.actor.apply(torch.ao.quantization.disable_observer)
+    agent.actor.eval()
+    return agent.actor, design, payload
+
+
+def perpulse_policy(module: nn.Module, design: Any, *, state_len: int, knobs: dict[str, Any]) -> Policy:
+    """Deployed per-pulse policy: argmax slot of each pulse row, no exploration."""
+    module.eval()
+    dtype = _module_dtype(module)
+    offset, scale = float(knobs.get("state_offset", 0.0)), float(knobs.get("state_scale", 1.0))
+
+    def act(state: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        v = (float(np.asarray(state).reshape(-1)[-1]) - offset) * scale
+        with torch.no_grad():
+            raw = module(torch.full((1, state_len), v, dtype=dtype)).float()
+        return design.decode_raw(raw), np.zeros(0)
+
+    return act
+
+
+def perpulse_core(module: nn.Module) -> nn.Module:
+    return module.actor if isinstance(module, QATActor) else module
+
+
+def perpulse_ptq(module: nn.Module, kind: str, *, state_len: int, calib: np.ndarray | None = None) -> nn.Module:
+    """PTQ of a per-pulse actor: ``fp16``, ``int8`` (dynamic) or ``int8_static``.
+
+    ``int8_static`` (calibrated PTQ, qnnpack): quant/dequant stubs around the
+    actor, per-tensor int8 weights and activations, calibrated on the network
+    inputs ``calib`` ($P_\\beta/1000$ values; default 0.25-0.60).
+    """
+    src = copy.deepcopy(perpulse_core(module)).cpu().eval()
+    if kind == "fp16":
+        return src.half()
+    if kind == "int8":
+        return torch.ao.quantization.quantize_dynamic(src, {nn.Linear}, dtype=torch.qint8)
+    if kind == "int8_static":
+        torch.backends.quantized.engine = "qnnpack"
+        wrapped = torch.ao.quantization.QuantWrapper(src)
+        wrapped.qconfig = torch.ao.quantization.get_default_qconfig("qnnpack")
+        torch.ao.quantization.prepare(wrapped, inplace=True)
+        values = np.linspace(0.25, 0.60, 36) if calib is None else np.asarray(calib, dtype=float)
+        with torch.no_grad():
+            for v in values:
+                wrapped(torch.full((1, state_len), float(v)))
+        return torch.ao.quantization.convert(wrapped, inplace=False)
+    msg = f"unknown PTQ kind {kind!r}"
+    raise ValueError(msg)
+
+
 # --- Closed-loop eval -------------------------------------------------------
 
 
@@ -897,8 +999,9 @@ def run_condition(
         if policy is not None:
             state = np.array([beta / obs_scale], dtype=np.float32)
             action, logits = policy(state)
-            actions.append(action)
-            logits_rows.append([float(v) for v in logits])
+            actions.append(action if np.ndim(action) == 0 else [int(v) for v in action])
+            if len(logits):
+                logits_rows.append([float(v) for v in logits])
             spec = alphabet.to_dbs_spec(action)
         elif fixed_spec is not None:
             spec = fixed_spec

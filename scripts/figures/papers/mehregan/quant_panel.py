@@ -203,30 +203,57 @@ def run_eval(
     knobs: Any,
 ) -> dict[str, Any]:
     alphabet = _PP.make_alphabet(cfg.mean_hz, knobs)
-    fp32 = _PP.load_fp32_actor(fp32_checkpoint)
-    modules: dict[str, torch.nn.Module] = {
-        "fp32": fp32,
-        "ptq_int8": _PP.ptq_actor(fp32, "int8"),
-        "ptq_fp16": _PP.ptq_actor(fp32, "fp16"),
-    }
+    perpulse = _PP.is_perpulse_checkpoint(fp32_checkpoint)
+    if perpulse:
+        # Per-pulse candidate (deviates from the paper): play slot arrays; extra
+        # static/calibrated int8 PTQ condition (not gated, reported alongside).
+        from controllers.ddpg.action_designs import SlotAlphabet
+
+        fp32, design, payload = _PP.load_perpulse(fp32_checkpoint)
+        state_len, pknobs = payload["state_len"], payload["knobs"]
+        alphabet = SlotAlphabet(cfg.mean_hz, step_s=_PP.STEP_S, dt_ms=_PP.PAPER_DT_MS)
+
+        def policy_for(mod: torch.nn.Module, des: Any = design, kn: Any = pknobs) -> Any:
+            return _PP.perpulse_policy(mod, des, state_len=state_len, knobs=kn)
+
+        modules: dict[str, torch.nn.Module] = {
+            "fp32": fp32,
+            "ptq_int8": _PP.perpulse_ptq(fp32, "int8", state_len=state_len),
+            "ptq_fp16": _PP.perpulse_ptq(fp32, "fp16", state_len=state_len),
+            "ptq_int8_static": _PP.perpulse_ptq(fp32, "int8_static", state_len=state_len),
+        }
+    else:
+        fp32 = _PP.load_fp32_actor(fp32_checkpoint)
+        policy_for = _PP.module_policy
+        modules = {
+            "fp32": fp32,
+            "ptq_int8": _PP.ptq_actor(fp32, "int8"),
+            "ptq_fp16": _PP.ptq_actor(fp32, "fp16"),
+        }
     t0 = time.time()
     conditions = {
-        name: _PP.run_condition(seed=seed, alphabet=alphabet, policy=_PP.module_policy(mod))
+        name: _PP.run_condition(seed=seed, alphabet=alphabet, policy=policy_for(mod))
         for name, mod in modules.items()
     }
     for name, cond in conditions.items():
-        print(f"{name} actions {cond['actions']}", flush=True)
+        print(f"{name} actions {cond['actions'] if not perpulse else len(cond['actions'])}", flush=True)
     qat_seeds: dict[str, dict[str, Any]] = {}
     for train_seed, path in sorted(qat_checkpoints.items()):
-        cond = _PP.run_condition(
-            seed=seed, alphabet=alphabet, policy=_PP.module_policy(_PP.load_qat_actor(path))
-        )
-        logits = np.asarray(cond["logits"], dtype=float)
-        cond["n_tied_at_max"] = [int(np.sum(np.isclose(r, r.max()))) for r in logits]
+        if perpulse:
+            qmod, qdes, qpay = _PP.load_perpulse(path)
+            cond = _PP.run_condition(seed=seed, alphabet=alphabet,
+                                     policy=_PP.perpulse_policy(qmod, qdes, state_len=qpay["state_len"], knobs=qpay["knobs"]))
+            cond["n_tied_at_max"] = []
+        else:
+            cond = _PP.run_condition(
+                seed=seed, alphabet=alphabet, policy=_PP.module_policy(_PP.load_qat_actor(path))
+            )
+            logits = np.asarray(cond["logits"], dtype=float)
+            cond["n_tied_at_max"] = [int(np.sum(np.isclose(r, r.max()))) for r in logits]
         cond["checkpoint"] = str(path)
         qat_seeds[str(train_seed)] = cond
         print(
-            f"qat seed {train_seed} actions {cond['actions']} tied {cond['n_tied_at_max']}",
+            f"qat seed {train_seed} late {np.mean(cond['trace'][-15:]):.1f} tied {cond['n_tied_at_max']}",
             flush=True,
         )
     drift = {
@@ -326,6 +353,18 @@ def plot_panel(cfg: QuantPanel, payload: dict[str, Any], *, out_path: Path) -> d
         "qat_seed_actions": {s: c["actions"] for s, c in qat.items()},
         "qat_seed_n_tied_at_max": {s: c.get("n_tied_at_max") for s, c in qat.items()},
         "ptq_logit_drift": payload.get("ptq_logit_drift"),
+        # Per-pulse candidates only: static/calibrated int8 PTQ (reported, not gated).
+        **(
+            {
+                "ptq_int8_static_post_mean": _PP.post_mean(conds["ptq_int8_static"], lo=4.0),
+                "ptq_int8_static_pre_mean": _PP.pre_mean(conds["ptq_int8_static"]),
+                "ptq_int8_static_mean_abs_diff_vs_fp32": float(
+                    np.mean(np.abs(np.asarray(conds["ptq_int8_static"]["trace"]) - np.asarray(conds["fp32"]["trace"])))
+                ),
+            }
+            if "ptq_int8_static" in conds
+            else {}
+        ),
     }
 
 

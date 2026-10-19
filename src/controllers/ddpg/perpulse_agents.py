@@ -86,9 +86,15 @@ class PulseGrid:
         coarse[(off > 0.25) & (off <= 0.5)] = 2
         self.bins4 = coarse
 
-    def spike(self, height: float) -> torch.Tensor:
+    def spike(self, height: float, width_ms: int = 0) -> torch.Tensor:
+        """Init logits: ``height`` on each pulse's regular slot (and the slots within ``width_ms``)."""
         s = torch.zeros(self.n_pulses, self.n_slots)
-        s[self.is_reg] = height
+        if width_ms > 0:
+            slots = torch.arange(self.n_slots).unsqueeze(0)
+            near = (slots - torch.as_tensor(self.reg).unsqueeze(1)).abs() <= width_ms
+            s[near] = height
+        else:
+            s[self.is_reg] = height
         return s.reshape(-1)
 
     def compress(self, probs: torch.Tensor, view: str) -> torch.Tensor:
@@ -119,11 +125,12 @@ class LogitsDesign:
     init_bias: float = 1.0
     residual: bool = False
     delta_max: float = 3.0
-    view: str = "raw"  # raw | delta | regprob | offhist
+    view: str = "raw"  # raw | delta | regprob | offhist | offhist4
     noise: str = "gauss"
+    init_width: int = 0  # ms either side of the regular slot that share the init bias
 
     def __post_init__(self) -> None:
-        self._spike = self.grid.spike(self.init_bias)
+        self._spike = self.grid.spike(self.init_bias, self.init_width)
         if self.view in ("regprob", "offhist", "offhist4") and self.noise != "gumbel":
             msg = "compressed critic views need pp_noise=gumbel (exact choice probabilities)"
             raise ValueError(msg)
@@ -303,6 +310,9 @@ class AgentKnobs:
     grad_clip: float = 0.0  # global grad-norm clip (0 = off)
     pull_l2: float = 0.0  # actor loss + pull_l2 * mean(raw^2) (residual / offset: pull toward the init)
     bc_steps: int = 0  # behaviour-clone the head to the regular pattern before training
+    critic_warmup: int = 0  # critic-only updates before the first actor update
+    qat: bool = False  # wrap the actor in the paper's fake-quant QATActor (Fig 6 QAT)
+    qat_avg_const: float = 0.0  # QAT activation observer averaging constant (0 = PyTorch default)
     pg_baseline: float = 0.9  # REINFORCE: EMA factor of the reward baseline
 
 
@@ -318,6 +328,10 @@ class DDPGPulseAgent:
         design.init_actor(self.actor)
         if k.bc_steps:
             behaviour_clone(self.actor, design, k)
+        if k.qat:
+            from controllers.ddpg.quantization import QATActor
+
+            self.actor = QATActor(self.actor, averaging_constant=k.qat_avg_const or None)
         n_critics = 2 if k.twin else 1
         self.critics = [ViewCritic(state_len=k.state_len, view_dim=design.view_dim) for _ in range(n_critics)]
         self.actor_t = clone_module(self.actor)
@@ -364,7 +378,7 @@ class DDPGPulseAgent:
         self.opt_c.step()
         self.n_updates += 1
         out = {"loss_c": loss_c.item(), "q": float("nan")}
-        if self.n_updates % self.k.policy_delay == 0:
+        if self.n_updates > self.k.critic_warmup and self.n_updates % self.k.policy_delay == 0:
             c0 = self.critics[0]
             for p in c0.parameters():
                 p.requires_grad_(False)
@@ -460,11 +474,11 @@ def behaviour_clone(actor: HeadActor, design, k: AgentKnobs, *, lr: float = 1e-3
 
 
 def make_agent(*, design: str, algo: str, n_pulses: int, k: AgentKnobs, init_bias: float, noise: str,
-               view: str, delta_max: float, mix_init: float):
+               view: str, delta_max: float, mix_init: float, init_width: int = 0):
     grid = PulseGrid(n_pulses)
     if design in ("logits", "residual"):
         d = LogitsDesign(grid, init_bias=init_bias, residual=design == "residual", delta_max=delta_max,
-                         view=view, noise=noise)
+                         view=view, noise=noise, init_width=init_width)
     elif design == "offset":
         d = OffsetDesign(grid)
     elif design == "mixture":

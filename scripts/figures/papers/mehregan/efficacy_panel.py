@@ -125,16 +125,21 @@ def _linked_png(path: Path) -> Path:
 
 def run_eval(cfg: EfficacyPanel, *, checkpoint: Path, seed: int, knobs: Any) -> dict[str, Any]:
     alphabet = _PP.make_alphabet(cfg.mean_hz, knobs)
-    actor = _PP.load_fp32_actor(checkpoint)
+    periodic = _PP.regular_spec(alphabet)
+    if _PP.is_perpulse_checkpoint(checkpoint):
+        # Per-pulse candidate (deviates from the paper): play slot arrays.
+        from controllers.ddpg.action_designs import SlotAlphabet
+
+        actor, design, payload = _PP.load_perpulse(checkpoint)
+        policy = _PP.perpulse_policy(actor, design, state_len=payload["state_len"], knobs=payload["knobs"])
+        alphabet = SlotAlphabet(cfg.mean_hz, step_s=_PP.STEP_S, dt_ms=_PP.PAPER_DT_MS)
+    else:
+        policy = _PP.module_policy(_PP.load_fp32_actor(checkpoint))
     t0 = time.time()
     conditions: dict[str, dict[str, Any]] = {
         "no_stim": _PP.run_condition(seed=seed, alphabet=alphabet),
-        "periodic": _PP.run_condition(
-            seed=seed, alphabet=alphabet, fixed_spec=_PP.regular_spec(alphabet)
-        ),
-        "trained": _PP.run_condition(
-            seed=seed, alphabet=alphabet, policy=_PP.module_policy(actor)
-        ),
+        "periodic": _PP.run_condition(seed=seed, alphabet=alphabet, fixed_spec=periodic),
+        "trained": _PP.run_condition(seed=seed, alphabet=alphabet, policy=policy),
     }
     if cfg.with_cdbs:
         conditions["cdbs_130"] = _PP.run_condition(
