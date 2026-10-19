@@ -371,6 +371,13 @@ Readings the paper doesn't state or contradicts, kept for `--candidate` experime
 | `mask_episode_end=False` | Bootstrap the Q-target through the 30-step time limit (Algorithm 1 stores no done flag) |
 | `stim_cost` | Subtract a cost per stimulating step from the training reward (not in Eq. (7)); logged rewards stay Eq. (7) |
 | `update_cadence="episode"`, `updates_per_episode` | Gradient steps after each episode instead of every step (against Algorithm 1) |
+| `actor_entropy_coef` | Entropy bonus on the actor's softmax (no entropy term in Algorithm 1) |
+| `hidden_layers` | MLP depth for actor, critic and predictive model (paper-silent; default 2) |
+| `state_mode="window"` / `"mean_stim"` | Network input is the full Eq. (4) window, or $\bar P_\beta$ plus the last $n_{\mathrm{obs}}$ actions (§14.1) |
+| `evaluate(..., action_mode="gumbel")` | Hardened Gumbel-Softmax (Gumbel-max) actions at inference instead of argmax (§14.2) |
+| `evaluate_reseeded(..., keep_window_frac)` | Table II: keep the newest share of the Eq. (4) window across a reseed instead of re-prefilling all of it (§14.13) |
+
+Screen results (oct 19 2026): [docs/figures/ravivarapu/4a.md](../../figures/ravivarapu/4a.md) § Candidate screen (oct 19 2026).
 
 ## 16. References
 
