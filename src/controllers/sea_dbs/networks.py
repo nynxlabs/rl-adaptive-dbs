@@ -10,14 +10,14 @@ import torch.nn.functional as F
 from torch import Tensor
 
 
-def _mlp(in_dim: int, hidden: int, out_dim: int) -> nn.Sequential:
-    return nn.Sequential(
-        nn.Linear(in_dim, hidden),
-        nn.ReLU(),
-        nn.Linear(hidden, hidden),
-        nn.ReLU(),
-        nn.Linear(hidden, out_dim),
-    )
+def _mlp(in_dim: int, hidden: int, out_dim: int, layers: int = 2) -> nn.Sequential:
+    mods: list[nn.Module] = []
+    width = in_dim
+    for _ in range(max(1, int(layers))):
+        mods += [nn.Linear(width, hidden), nn.ReLU()]
+        width = hidden
+    mods.append(nn.Linear(width, out_dim))
+    return nn.Sequential(*mods)
 
 
 class Actor(nn.Module):
@@ -29,11 +29,12 @@ class Actor(nn.Module):
         state_dim: int,
         n_actions: int = 2,
         hidden_size: int = 64,
+        hidden_layers: int = 2,
     ) -> None:
         super().__init__()
         self.n_actions = n_actions
         # Paper §V.A: "All networks are initialized randomly" (PyTorch default init).
-        self.net = _mlp(state_dim, hidden_size, n_actions)
+        self.net = _mlp(state_dim, hidden_size, n_actions, hidden_layers)
 
     def forward(self, state: Tensor) -> Tensor:
         return self.net(state)
@@ -47,10 +48,12 @@ class Actor(nn.Module):
 class Critic(nn.Module):
     """Q(s, a) with one-hot action input."""
 
-    def __init__(self, *, state_dim: int, n_actions: int = 2, hidden_size: int = 64) -> None:
+    def __init__(
+        self, *, state_dim: int, n_actions: int = 2, hidden_size: int = 64, hidden_layers: int = 2
+    ) -> None:
         super().__init__()
         self.n_actions = n_actions
-        self.net = _mlp(state_dim + n_actions, hidden_size, 1)
+        self.net = _mlp(state_dim + n_actions, hidden_size, 1, hidden_layers)
 
     def forward(self, state: Tensor, action_one_hot: Tensor) -> Tensor:
         x = torch.cat([state, action_one_hot], dim=-1)
@@ -60,9 +63,11 @@ class Critic(nn.Module):
 class PredictiveModel(nn.Module):
     """f_theta(s, a) -> r_hat (Eq. 8)."""
 
-    def __init__(self, *, state_dim: int, n_actions: int = 2, hidden_size: int = 64) -> None:
+    def __init__(
+        self, *, state_dim: int, n_actions: int = 2, hidden_size: int = 64, hidden_layers: int = 2
+    ) -> None:
         super().__init__()
-        self.net = _mlp(state_dim + n_actions, hidden_size, 1)
+        self.net = _mlp(state_dim + n_actions, hidden_size, 1, hidden_layers)
 
     def forward(self, state: Tensor, action_one_hot: Tensor) -> Tensor:
         x = torch.cat([state, action_one_hot], dim=-1)

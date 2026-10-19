@@ -81,11 +81,13 @@ class SEA_DBSTrainer:
             state_dim=state_dim,
             n_actions=n_actions,
             hidden_size=config.hidden_size,
+            hidden_layers=config.hidden_layers,
         )
         self.critic = critic or Critic(
             state_dim=state_dim,
             n_actions=n_actions,
             hidden_size=config.hidden_size,
+            hidden_layers=config.hidden_layers,
         )
         self.predictive_model: PredictiveModel | None
         if self.config.use_predictive_model:
@@ -93,6 +95,7 @@ class SEA_DBSTrainer:
                 state_dim=state_dim,
                 n_actions=n_actions,
                 hidden_size=config.hidden_size,
+                hidden_layers=config.hidden_layers,
             )
         else:
             self.predictive_model = None
@@ -237,6 +240,11 @@ class SEA_DBSTrainer:
             actor_action_oh = probs
         actor_q = self.critic(states, actor_action_oh)
         actor_loss = -actor_q.mean()
+        if cfg.actor_entropy_coef > 0.0:
+            # Candidate (not in Algorithm 1): entropy bonus on the actor's softmax.
+            log_p = F.log_softmax(logits, dim=-1)
+            entropy = -(log_p.exp() * log_p).sum(dim=-1)
+            actor_loss = actor_loss - float(cfg.actor_entropy_coef) * entropy.mean()
         for param in self.critic.parameters():
             param.requires_grad_(False)
         self.actor_optimizer.zero_grad(set_to_none=True)

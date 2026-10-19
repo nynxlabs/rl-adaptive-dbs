@@ -48,6 +48,7 @@ StepPulseMode = Literal["carrier", "per_step"]
 UpdateCadence = Literal["step", "episode"]
 GumbelActionSampling = Literal["relaxed", "hard"]
 CriticActionInput = Literal["one_hot", "logits"]
+StateMode = Literal["mean", "window", "mean_stim"]
 
 
 @dataclass(frozen=True)
@@ -106,6 +107,11 @@ class SEADBSConfig:
     # window holds n_obs untreated samples (the history before the episode).
     prefill_obs_window: bool = True
     state_dim: int = 1  # default: mean P_bar only (replication.md §14.1)
+    # Candidate readings of the Eq. (4) state (replication.md §14.1; default ``mean``):
+    # ``window`` feeds the n_obs normalized P_beta estimates (oldest first) instead of
+    # their mean; ``mean_stim`` appends the last n_obs actions (0 / 1, oldest first;
+    # zeros after reset) to P_bar. Network input size is ``obs_dim``.
+    state_mode: StateMode = "mean"
 
     # Table I
     actor_lr: float = ACTOR_LR
@@ -157,8 +163,14 @@ class SEADBSConfig:
     critic_action_input: CriticActionInput = "one_hot"
     logit_noise_std: float = 1.0
 
-    # MLP topology (§14.9 — open)
+    # MLP topology (§14.9 — open). ``hidden_layers`` hidden ReLU layers of
+    # ``hidden_size`` units in the actor, critic and predictive model.
     hidden_size: int = 64
+    hidden_layers: int = 2
+    # Candidate (paper-silent; no entropy term in Algorithm 1): add
+    # -coef * H(softmax(actor logits)) to the actor loss, which bounds the stim
+    # logit margin instead of letting Adam grow it without limit.
+    actor_entropy_coef: float = 0.0
 
     # Plant / DBS carrier (§14.10)
     carrier_hz: float = DEFAULT_CARRIER_HZ
@@ -190,6 +202,15 @@ class SEADBSConfig:
         return max(self.step_duration_s, self.biomarker_window_s)
 
     @property
+    def obs_dim(self) -> int:
+        """Network input size for ``state_mode``."""
+        if self.state_mode == "window":
+            return int(self.n_obs)
+        if self.state_mode == "mean_stim":
+            return 1 + int(self.n_obs)
+        return int(self.state_dim)
+
+    @property
     def use_predictive_model(self) -> bool:
         return self.variant in {"baseline-pm", "paper"}
 
@@ -210,6 +231,9 @@ class SEADBSConfig:
     def with_variant_defaults(self) -> SEADBSConfig:
         if self.critic_action_input not in {"one_hot", "logits"}:
             msg = f"unknown critic_action_input {self.critic_action_input!r}"
+            raise ValueError(msg)
+        if self.state_mode not in {"mean", "window", "mean_stim"}:
+            msg = f"unknown state_mode {self.state_mode!r}"
             raise ValueError(msg)
         if self.variant in {"baseline", "baseline-pm", "baseline-gs", "paper"}:
             return self

@@ -36,7 +36,7 @@ def save_checkpoint(
         "sea_dbs_config": asdict(config),
         "actor_state_dict": actor.state_dict(),
         "critic_state_dict": critic.state_dict(),
-        "state_dim": int(config.state_dim),
+        "state_dim": int(config.obs_dim),
         "n_actions": int(config.n_actions),
     }
     if predictive_model is not None:
@@ -74,9 +74,10 @@ def load_actor_from_payload(
 ) -> tuple[Actor, SEADBSConfig]:
     config = config_from_dict(payload["sea_dbs_config"])
     actor = Actor(
-        state_dim=int(payload.get("state_dim", config.state_dim)),
+        state_dim=int(payload.get("state_dim", config.obs_dim)),
         n_actions=int(payload.get("n_actions", config.n_actions)),
         hidden_size=config.hidden_size,
+        hidden_layers=config.hidden_layers,
     )
     actor.load_state_dict(payload["actor_state_dict"])
     actor.to(device)

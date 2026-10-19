@@ -137,8 +137,13 @@ def evaluate_ablation_steps(
     n_steps: int = ABLATION_EVAL_STEPS,
     carrier_hz: float | None = None,
     use_fp16_ptq: bool = False,
+    action_mode: str = "argmax",
 ) -> dict[str, Any]:
-    """Short PSD eval trace (Figs 5–7 — untreated t=0 + 10 stimulation steps)."""
+    """Short PSD eval trace (Figs 5–7 — untreated t=0 + 10 stimulation steps).
+
+    ``action_mode="gumbel"`` is a candidate reading (hardened Gumbel-Softmax at
+    inference, = Gumbel-max); panels use argmax (spec §14.2).
+    """
     return evaluate(
         checkpoint,
         config=config,
@@ -147,7 +152,7 @@ def evaluate_ablation_steps(
         max_steps=n_steps,
         carrier_hz=carrier_hz or INFERENCE_CARRIER_50HZ,
         use_fp16_ptq=use_fp16_ptq,
-        action_mode="argmax",
+        action_mode=action_mode,
     )
 
 
@@ -177,10 +182,15 @@ def evaluate_reseeded(
     plant: Any | None = None,
     horizon: int | None = None,
     carrier_hz: float | None = None,
+    keep_window_frac: float = 0.0,
 ) -> dict[str, Any]:
     """Argmax rollout with the plant reseeded every ``reseed_every`` steps (Table II).
 
-    ``horizon`` defaults to ``table2_horizon(reseed_every)``.
+    ``horizon`` defaults to ``table2_horizon(reseed_every)``. ``keep_window_frac``
+    (candidate reading, default 0 = full reset): at each reseed after the first,
+    the newest ``round(frac * n_obs)`` Eq. (4) samples of the previous block stay in
+    the window and only the rest is re-prefilled with the new seed's untreated
+    level (1 = the history carries across the reseed).
     """
     from controllers.sea_dbs.reward import sea_dbs_reward
 
@@ -209,7 +219,14 @@ def evaluate_reseeded(
         for block in range(int(horizon) // n):
             seed = int(cfg.seed) + block
             block_seeds.append(seed)
+            prev = list(env._obs_window)
             state, _info = env.reset(seed=seed)
+            keep = int(round(float(keep_window_frac) * cfg.n_obs))
+            if block > 0 and keep > 0 and prev:
+                fresh = list(env._obs_window)[: cfg.n_obs - keep]
+                env._obs_window.clear()
+                env._obs_window.extend(fresh + prev[-keep:])
+                state = env._observation_from_window()
             for _step in range(n):
                 state_t = torch.as_tensor(state, dtype=torch.float32, device=cfg.device).unsqueeze(0)
                 with torch.no_grad():
@@ -244,4 +261,5 @@ def evaluate_reseeded(
         "n_obs": cfg.n_obs,
         "prefill_obs_window": cfg.prefill_obs_window,
         "plant_integration_mode": cfg.plant_integration_mode,
+        "keep_window_frac": float(keep_window_frac),
     }

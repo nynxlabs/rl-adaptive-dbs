@@ -493,3 +493,80 @@ def test_episode_update_cadence_runs_updates_after_each_episode() -> None:
         assert trainer._update_count == 3 * 3  # noqa: SLF001
     finally:
         env.close()
+
+
+@pytest.mark.parametrize(("mode", "dim"), [("mean", 1), ("window", 4), ("mean_stim", 5)])
+def test_state_mode_observation(mode: str, dim: int) -> None:
+    cfg = SEADBSConfig(state_mode=mode, n_obs=4, observation_scale=1000.0)
+    assert cfg.obs_dim == dim
+    env = SEA_DBSEnvAdapter(plant=_LevelPlant(), config=cfg)
+    obs, _ = env.reset(seed=0)
+    assert obs.shape == (dim,)
+    obs, *_ = env.step(1)
+    if mode == "window":
+        assert obs.tolist() == pytest.approx([0.22, 0.22, 0.22, 0.15])
+    elif mode == "mean_stim":
+        assert obs.tolist() == pytest.approx([(3 * 0.22 + 0.15) / 4, 0.0, 0.0, 0.0, 1.0])
+    obs, _ = env.reset(seed=1)
+    if mode == "mean_stim":
+        assert obs[1:].tolist() == [0.0] * 4
+    env.close()
+
+
+def test_hidden_layers_and_checkpoint_roundtrip(tmp_path) -> None:
+    from controllers.sea_dbs.checkpoint import load_actor_from_payload, load_checkpoint, save_checkpoint
+    from controllers.sea_dbs.networks import Actor, Critic
+
+    cfg = SEADBSConfig(hidden_layers=3, state_mode="window", n_obs=4)
+    actor = Actor(state_dim=cfg.obs_dim, hidden_size=8, hidden_layers=3)
+    assert sum(isinstance(m, torch.nn.Linear) for m in actor.net) == 4
+    cfg = replace(cfg, hidden_size=8)
+    critic = Critic(state_dim=cfg.obs_dim, hidden_size=8, hidden_layers=3)
+    ckpt = save_checkpoint(tmp_path / "a.pt", actor=actor, critic=critic, config=cfg)
+    loaded, _ = load_actor_from_payload(load_checkpoint(ckpt))
+    x = torch.rand(2, 4)
+    assert torch.allclose(loaded(x), actor(x))
+
+
+def test_default_mlp_matches_two_layer_shape() -> None:
+    from controllers.sea_dbs.networks import Actor
+
+    torch.manual_seed(0)
+    a = Actor(state_dim=1)
+    assert [type(m).__name__ for m in a.net] == ["Linear", "ReLU", "Linear", "ReLU", "Linear"]
+
+
+def test_actor_entropy_bonus_changes_update_only_when_on() -> None:
+    def run(coef: float) -> torch.Tensor:
+        cfg = SEADBSConfig(variant="paper", actor_entropy_coef=coef).for_smoke(episodes=2, max_steps=8)
+        env = SEA_DBSEnvAdapter(plant=_LevelPlant(), config=cfg)
+        try:
+            trainer = SEA_DBSTrainer(env, cfg)
+            trainer.train_episodes()
+            return torch.cat([p.detach().flatten() for p in trainer.actor.parameters()])
+        finally:
+            env.close()
+
+    assert torch.equal(run(0.0), run(0.0))
+    assert not torch.equal(run(0.0), run(1.0))
+
+
+def test_table2_keep_window_frac_carries_history(tmp_path) -> None:
+    from controllers.sea_dbs.checkpoint import save_checkpoint
+    from controllers.sea_dbs.eval import evaluate_reseeded
+    from controllers.sea_dbs.networks import Actor, Critic
+
+    cfg = SEADBSConfig(observation_scale=1000.0, n_obs=4)
+    torch.manual_seed(0)
+    actor = Actor(state_dim=1)
+    with torch.no_grad():  # always stimulate
+        actor.net[-1].bias.copy_(torch.tensor([-100.0, 100.0]))
+    ckpt = save_checkpoint(tmp_path / "a.pt", actor=actor, critic=Critic(state_dim=1), config=cfg)
+    full = evaluate_reseeded(ckpt, reseed_every=4, horizon=8, plant=_LevelPlant(), config=cfg)
+    half = evaluate_reseeded(
+        ckpt, reseed_every=4, horizon=8, plant=_LevelPlant(), config=cfg, keep_window_frac=0.5
+    )
+    # Block 1 step 1: full reset -> 3 untreated + 1 stim; half carry -> 1 untreated + 3 stim.
+    assert full["p_beta_norm"][4] == pytest.approx((3 * 0.22 + 0.15) / 4)
+    assert half["p_beta_norm"][4] == pytest.approx((0.22 + 3 * 0.15) / 4)
+    assert half["p_beta_norm"][:4] == full["p_beta_norm"][:4]

@@ -72,7 +72,7 @@ class SEA_DBSEnvAdapter(gym.Env):
         self.observation_space = spaces.Box(
             low=-np.finfo(np.float32).max,
             high=np.finfo(np.float32).max,
-            shape=(self.config.state_dim,),
+            shape=(self.config.obs_dim,),
             dtype=np.float32,
         )
         self.action_space = spaces.Discrete(self.config.n_actions)
@@ -81,6 +81,8 @@ class SEA_DBSEnvAdapter(gym.Env):
         self._episode_seed: int | None = None
         self._step_count = 0
         self._obs_window: deque[float] = deque(maxlen=self.config.n_obs)
+        # Last n_obs actions, for ``state_mode="mean_stim"`` (zeros after reset).
+        self._act_window: deque[float] = deque([0.0] * self.config.n_obs, maxlen=self.config.n_obs)
         # Eval may override via set_carrier_hz; reset must not clobber that.
         self._carrier_hz = float(self.config.carrier_hz)
         # ``trailing`` step mode: GPi spike times (s, episode clock incl. warm-up),
@@ -118,6 +120,14 @@ class SEA_DBSEnvAdapter(gym.Env):
 
     def _observation_from_window(self) -> np.ndarray:
         mean_norm = self._mean_p_beta()
+        mode = self.config.state_mode
+        if mode == "window":
+            vals = list(self._obs_window)
+            # Left-pad with the oldest estimate if the window isn't full yet.
+            pad = [vals[0] if vals else 0.0] * (self.config.n_obs - len(vals))
+            return np.asarray(pad + vals, dtype=np.float32)
+        if mode == "mean_stim":
+            return np.asarray([mean_norm, *self._act_window], dtype=np.float32)
         return np.array([mean_norm], dtype=np.float32)
 
     def _raw_p_beta(self, result: IntegrateResult) -> float:
@@ -264,6 +274,7 @@ class SEA_DBSEnvAdapter(gym.Env):
             }
         self._plant.reset(seed=seed)
         self._obs_window.clear()
+        self._act_window.extend([0.0] * self.config.n_obs)
 
         if self._is_trailing():
             raws = self._trailing_reset()
@@ -318,6 +329,7 @@ class SEA_DBSEnvAdapter(gym.Env):
             )
             raw = self._raw_p_beta(result)
         self._obs_window.append(self._normalize_p_beta(raw))
+        self._act_window.append(float(int(action) == 1))
         obs = self._observation_from_window()
         mean_norm = self._mean_p_beta()
         reward_eq7 = sea_dbs_reward(
