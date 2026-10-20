@@ -165,8 +165,13 @@ class SEADBSConfig:
 
     # MLP topology (§14.9 — open). ``hidden_layers`` hidden ReLU layers of
     # ``hidden_size`` units in the actor, critic and predictive model.
-    hidden_size: int = 64
-    hidden_layers: int = 2
+    # Convention since oct 19 2026: one hidden layer of 32 units, a network size
+    # the paper doesn't state — our best guess of what the authors may have done.
+    # The oct 19 candidate screen (docs/figures/ravivarapu/4a.md § Tried so far)
+    # found 1 x 32 the only size that slows SEA-DBS's saturation without
+    # destabilizing it; 2 x 64 was the default before.
+    hidden_size: int = 32
+    hidden_layers: int = 1
     # Candidate (paper-silent; no entropy term in Algorithm 1): add
     # -coef * H(softmax(actor logits)) to the actor loss, which bounds the stim
     # logit margin instead of letting Adam grow it without limit.
@@ -255,6 +260,10 @@ class SEADBSConfig:
         )
 
 
+# Network size of checkpoints saved before ``hidden_layers`` existed (oct 19 2026).
+LEGACY_HIDDEN_LAYERS: int = 2
+LEGACY_HIDDEN_SIZE: int = 64
+
 # Knobs removed in the honest-replication pass. Old checkpoints still carry them;
 # ``config_from_dict`` drops them (they only ever changed training, never the
 # saved actor weights' meaning).
@@ -295,7 +304,12 @@ def config_from_dict(raw: dict[str, Any]) -> SEADBSConfig:
     if unknown:
         msg = f"unknown SEADBSConfig fields in checkpoint: {sorted(unknown)}"
         raise ValueError(msg)
-    return SEADBSConfig(**{k: v for k, v in raw.items() if k in known})
+    kwargs = {k: v for k, v in raw.items() if k in known}
+    # Checkpoints from before oct 19 2026 predate ``hidden_layers`` (and stored
+    # their width); they are all two hidden layers.
+    kwargs.setdefault("hidden_layers", LEGACY_HIDDEN_LAYERS)
+    kwargs.setdefault("hidden_size", LEGACY_HIDDEN_SIZE)
+    return SEADBSConfig(**kwargs)
 
 
 def fig4_ravivarapu_config(

@@ -321,8 +321,9 @@ def test_table2_reseed_resets_plant_every_n_steps(tmp_path) -> None:
             return None
 
     cfg = SEADBSConfig(seed=3, observation_scale=1000.0, n_obs=4, prefill_obs_window=True)
-    actor = Actor(state_dim=cfg.state_dim, n_actions=cfg.n_actions, hidden_size=cfg.hidden_size)
-    critic = Critic(state_dim=cfg.state_dim, n_actions=cfg.n_actions, hidden_size=cfg.hidden_size)
+    net = {"hidden_size": cfg.hidden_size, "hidden_layers": cfg.hidden_layers}
+    actor = Actor(state_dim=cfg.state_dim, n_actions=cfg.n_actions, **net)
+    critic = Critic(state_dim=cfg.state_dim, n_actions=cfg.n_actions, **net)
     ckpt = save_checkpoint(tmp_path / "a.pt", actor=actor, critic=critic, config=cfg)
     out = evaluate_reseeded(ckpt, reseed_every=5, horizon=20, plant=_FakePlant(), config=cfg)
     assert resets == [3, 4, 5, 6]
@@ -558,10 +559,11 @@ def test_table2_keep_window_frac_carries_history(tmp_path) -> None:
 
     cfg = SEADBSConfig(observation_scale=1000.0, n_obs=4)
     torch.manual_seed(0)
-    actor = Actor(state_dim=1)
+    net = {"hidden_size": cfg.hidden_size, "hidden_layers": cfg.hidden_layers}
+    actor = Actor(state_dim=1, **net)
     with torch.no_grad():  # always stimulate
         actor.net[-1].bias.copy_(torch.tensor([-100.0, 100.0]))
-    ckpt = save_checkpoint(tmp_path / "a.pt", actor=actor, critic=Critic(state_dim=1), config=cfg)
+    ckpt = save_checkpoint(tmp_path / "a.pt", actor=actor, critic=Critic(state_dim=1, **net), config=cfg)
     full = evaluate_reseeded(ckpt, reseed_every=4, horizon=8, plant=_LevelPlant(), config=cfg)
     half = evaluate_reseeded(
         ckpt, reseed_every=4, horizon=8, plant=_LevelPlant(), config=cfg, keep_window_frac=0.5
@@ -570,3 +572,14 @@ def test_table2_keep_window_frac_carries_history(tmp_path) -> None:
     assert full["p_beta_norm"][4] == pytest.approx((3 * 0.22 + 0.15) / 4)
     assert half["p_beta_norm"][4] == pytest.approx((0.22 + 3 * 0.15) / 4)
     assert half["p_beta_norm"][:4] == full["p_beta_norm"][:4]
+
+
+def test_default_network_is_one_hidden_layer_of_32() -> None:
+    from controllers.sea_dbs.config import config_from_dict
+
+    cfg = SEADBSConfig()
+    assert (cfg.hidden_layers, cfg.hidden_size) == (1, 32)
+    # Checkpoints saved before hidden_layers existed are 2 x 64.
+    legacy = {k: v for k, v in vars(cfg).items() if k not in {"hidden_layers", "hidden_size"}}
+    old = config_from_dict(legacy)
+    assert (old.hidden_layers, old.hidden_size) == (2, 64)
