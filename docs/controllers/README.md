@@ -88,7 +88,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 |:-----:|:---------------:|
 | ![Digitized from Fig. 2b of Mehregan et al. (2024) (our redraw)](ddpg/figures/images/2b/digitized_v1.png) | ![Replication Fig. 2b](ddpg/figures/images/2b/error_index_v16.png) |
 
-**Notes:** The Kumaravelu reference uses constant thalamic bias current instead of the So et al. (2012) SMC pulse drive the Error Index metric assumes. For this panel I restored **So-style SMC pulses into thalamus** (documented hybrid convention in [plant.md](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/docs/plant.md)). Seed 0. Minor polish: the red trace sits slightly low at $t = 12$ s.
+**Notes:** The Kumaravelu reference uses constant thalamic bias current instead of the So et al. (2012) SMC pulse drive the Error Index metric assumes. For this panel I restored **So-style SMC pulses into thalamus** (documented hybrid convention in [plant.md](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/docs/plant/README.md)). Seed 0. Minor polish: the red trace sits slightly low at $t = 12$ s.
 
 <div style="page-break-after: always;"></div>
 
