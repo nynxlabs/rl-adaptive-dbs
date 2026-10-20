@@ -50,7 +50,7 @@ group (Windows, macOS, Linux), else Poppler's `pdftoppm` if it is on PATH.
 the rendered pages; you only need it to add a panel.
 
 Ravivarapu et al. is also on arXiv under CC BY 4.0 (arXiv:2507.06326v1). Its
-six panels are committed as `docs/controllers/sea_dbs/figures/images/<panel>/arxiv_v1.png`;
+six panels are committed as `docs/controllers/sea-dbs/figures/images/<panel>/arxiv_v1.png`;
 `paper_crops.py build --arxiv` rebuilds them, downloading the arXiv PDF into
 the papers folder if it is missing.
 

@@ -1701,7 +1701,7 @@ def promote_nguyen_7(
 
 
 def resolve_ravivarapu_doc(checkout: Path | None = None) -> Path:
-    """Ravivarapu tracker ``docs/controllers/sea_dbs/README.md``."""
+    """Ravivarapu tracker ``docs/controllers/sea-dbs/README.md``."""
     return resolve_tracker("ravivarapu", checkout)
 
 
@@ -1824,7 +1824,7 @@ def promote_ravivarapu_4a(*, manifest: dict[str, Any], png_path: Path, update_do
         repo_rel=repo_rel_posix(png_path),
         status_line=_ravivarapu_4a_status_line(manifest),
         status_after_caption=False,
-        placeholder="*Not yet generated.* Target: `docs/controllers/sea_dbs/figures/images/4a/training_psd.png`",
+        placeholder="*Not yet generated.* Target: `docs/controllers/sea-dbs/figures/images/4a/training_psd.png`",
     )
     refresh_ravivarapu_gate_tables(update_docs=update_docs)
     materialize_ship_png(png_path, PAPER_RAVIVARAPU_4A_PNG)
@@ -1852,7 +1852,7 @@ def promote_ravivarapu_4b(*, manifest: dict[str, Any], png_path: Path, update_do
         replication_alt="Replication Fig 4b",
         repo_rel=repo_rel_posix(png_path),
         status_line=None,
-        placeholder="*Not yet generated.* Target: `docs/controllers/sea_dbs/figures/images/4b/training_reward.png`",
+        placeholder="*Not yet generated.* Target: `docs/controllers/sea-dbs/figures/images/4b/training_reward.png`",
         extra=_status,
     )
     refresh_ravivarapu_gate_tables(update_docs=update_docs)

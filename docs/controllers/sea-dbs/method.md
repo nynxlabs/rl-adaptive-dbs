@@ -4,7 +4,7 @@ This document specifies the **SEA-DBS** (sample-efficient actor–critic) contro
 
 **Companion spec:** The shared **Kumaravelu et al. (2016)** plant — [plant.md](../../plant/README.md). **Mehregan et al.** Gymnasium API — [environment.md](../../plant/environment.md). **This document is authoritative for the Ravivarapu controller**—binary actions, predictive reward modeling, Gumbel-Softmax exploration, timing, reward shape, and training—unless the others explicitly describe the same quantity.
 
-**Scheduling:** SEA-DBS replication is **Phase 6** and is **active in parallel** with Nguyen ([roadmap.md](../../development/roadmap.md)). Panel tracker and **qualitative gates:** [docs/controllers/sea_dbs/README.md](README.md) (all panels Fail with documented gaps after the oct 2026 honest-replication pass, §15). Gate design notes: [docs/controllers/sea_dbs/gate_readouts.md](README.md#gate-design). Mehregan panel set is Pass — [docs/controllers/ddpg/README.md](../ddpg/README.md).
+**Scheduling:** SEA-DBS replication is **Phase 6** and is **active in parallel** with Nguyen ([roadmap.md](../../development/roadmap.md)). Panel tracker and **qualitative gates:** [docs/controllers/sea-dbs/README.md](README.md) (all panels Fail with documented gaps after the oct 2026 honest-replication pass, §15). Gate design notes: [docs/controllers/sea-dbs/gate_readouts.md](README.md#gate-design). Mehregan panel set is Pass — [docs/controllers/ddpg/README.md](../ddpg/README.md).
 
 ---
 
@@ -87,9 +87,9 @@ Why 150 ms: it is the shortest window in which the paper's 50 Hz stimulation sup
 | 150 ms | $0.69 \pm 0.06$ | $1.13 \pm 0.20$ | — |
 | 200 ms | $0.65 \pm 0.14$ | $1.21 \pm 0.26$ | — |
 
-The paper's Fig 5a SEA-DBS end/start ratio is $0.67$. 30 Hz raises beta at every window, so Fig 5b's declining curves are out of reach of any policy on this plant ([docs/controllers/sea_dbs/figures/5b.md](figures/5b.md)).
+The paper's Fig 5a SEA-DBS end/start ratio is $0.67$. 30 Hz raises beta at every window, so Fig 5b's declining curves are out of reach of any policy on this plant ([docs/controllers/sea-dbs/figures/5b.md](figures/5b.md)).
 
-**The paper's 2 ms step (`step_mode="trailing"`, oct 17 2026):** one continuous 60 ms simulation per episode, the agent acting every 2 ms, $P_\beta$ from a trailing window of GPi spikes (`trailing_window_s`, 100–300 ms tried) filled by an untreated warm-up at reset; `step_pulse_mode` = `carrier` (gated phase-continuous train) or `per_step` (one pulse per step). No stimulation pattern lowers beta within 60 ms on Kumaravelu, the learners stop stimulating, and Fig 4a passes 11–14 of 28 gates vs 15 for the 150 ms shot, so the shot stays the default ([docs/controllers/sea_dbs/figures/4a.md](figures/4a.md) § The paper's 2 ms step).
+**The paper's 2 ms step (`step_mode="trailing"`, oct 17 2026):** one continuous 60 ms simulation per episode, the agent acting every 2 ms, $P_\beta$ from a trailing window of GPi spikes (`trailing_window_s`, 100–300 ms tried) filled by an untreated warm-up at reset; `step_pulse_mode` = `carrier` (gated phase-continuous train) or `per_step` (one pulse per step). No stimulation pattern lowers beta within 60 ms on Kumaravelu, the learners stop stimulating, and Fig 4a passes 11–14 of 28 gates vs 15 for the 150 ms shot, so the shot stays the default ([docs/controllers/sea-dbs/figures/4a.md](figures/4a.md) § The paper's 2 ms step).
 
 **Continuous plant (diagnostic only):** `plant_integration_mode="continuous"` carries the network state across the episode's segments (PythonPlant `carry=True`). Open-loop (`scripts/probes/ravivarapu_openloop_traces.py`, seeds 0–4): untreated beta drifts up from 0.43 to ~0.53 over 10 segments, and always-on 50 Hz falls to 0.32 by step 5 and rebounds to ~0.36. Neither matches the paper's steady 50 Hz decline better than independent shots, so training and evals keep `disconnected`.
 
@@ -165,7 +165,7 @@ $$
 \tau_t = \max\left(\tau_{\min},\, \tau_0\, e^{-\lambda_\tau t}\right)
 $$
 
-$\tau_0$, $\tau_{\min}$, and $\lambda_\tau$ are **not** in Table I — **intentionally open**. **Chosen:** $\tau_0 = 200$, $\tau_{\min} = 1$, $\lambda_\tau = \ln(200)/4500 \approx 1.18 \times 10^{-3}$ per env step ($t$ counts env steps), so $\tau$ anneals from a near-uniform relaxed sample to $\tau = 1$ over exactly the 4,500 training steps — "initially a high $\tau$ promotes exploration; over time, decreasing $\tau$ sharpens the policy" (§IV.C). "High" is relative to the actor's logits: at Table I learning rates the stim logit margin reaches ~15–20 within ~15 episodes, so the cited Gumbel-Softmax defaults (Jang et al. 2016: $\tau = \max(0.5, e^{-rt})$, i.e. $\tau_0 = 1$) and $\tau_0 \in \{10, 50\}$ leave SEA-DBS stimulating 70–90 % of steps from the first episodes. Candidate table: [docs/controllers/sea_dbs/figures/4a.md](figures/4a.md) § Exploration conventions.
+$\tau_0$, $\tau_{\min}$, and $\lambda_\tau$ are **not** in Table I — **intentionally open**. **Chosen:** $\tau_0 = 200$, $\tau_{\min} = 1$, $\lambda_\tau = \ln(200)/4500 \approx 1.18 \times 10^{-3}$ per env step ($t$ counts env steps), so $\tau$ anneals from a near-uniform relaxed sample to $\tau = 1$ over exactly the 4,500 training steps — "initially a high $\tau$ promotes exploration; over time, decreasing $\tau$ sharpens the policy" (§IV.C). "High" is relative to the actor's logits: at Table I learning rates the stim logit margin reaches ~15–20 within ~15 episodes, so the cited Gumbel-Softmax defaults (Jang et al. 2016: $\tau = \max(0.5, e^{-rt})$, i.e. $\tau_0 = 1$) and $\tau_0 \in \{10, 50\}$ leave SEA-DBS stimulating 70–90 % of steps from the first episodes. Candidate table: [docs/controllers/sea-dbs/figures/4a.md](figures/4a.md) § Exploration conventions.
 
 **Executed action (chosen):** the binary action is **sampled from the relaxed probabilities** $\tilde a$ of Eq. (11), $a_t \sim \mathrm{Categorical}(\tilde a)$ (`gs_action_sampling="relaxed"`). Fig. 3 says actions "are sampled from the resulting distribution", and §IV.C says a high $\tau$ promotes exploration. Gumbel-max ($\arg\max \tilde a$) gives the same action for every $\tau$, so with it Eq. (14) would not affect exploration at all. `gs_action_sampling="hard"` keeps Gumbel-max for comparison; screened with $n_{\mathrm{obs}} = 10$ it is worse (SEA-DBS stimulates 90 % of steps over episodes 0–15, 4a 14 of 27). A slower anneal ($\lambda_\tau = 3 \times 10^{-4}$, $\tau$ still ~52 at the end) does not slow SEA-DBS either: stim duty is 1.0 by episode 40–50, because Adam scales the actor's steps independently of the $1/\tau$ gradient factor and the stim logit margin outgrows any $\tau$. The actor loss uses the relaxed sample (straight-through is not needed). **Ablation:** `variant=baseline-gs` enables GS without predictive modeling.[^gs]
 
@@ -317,7 +317,7 @@ Table I fixes actor/critic learning rates, $\gamma$, buffer **8192**, and batch 
 
 ### 9. Actor/critic network topology
 
-Scope notes full layer counts and widths are out of scope where the paper is silent. **Fixed:** DDPG backbone with binary logits output. **Chosen (oct 19 2026):** actor, critic and predictive model are MLPs with **one hidden layer of 32 ReLU units** (`hidden_layers=1`, `hidden_size=32`) — a network size the paper doesn't state, our best guess of what the authors may have done. The candidate screen tried depth 1–3 and widths 16–2048: larger or deeper networks reach always-stimulate sooner, and 1 × 32 was the only size that slows SEA-DBS's saturation without destabilizing it (Fig 4a 18–21 / 28 per seed vs 11–19 for the previous 2 × 64; [docs/controllers/sea_dbs/figures/4a.md](figures/4a.md) § Tried so far). Checkpoints saved before `hidden_layers` existed load as 2 × 64. The same networks are used in train, eval and FP16 PTQ. It sits far below the paper's ~65 MB (Fig 6), which stays an open question.
+Scope notes full layer counts and widths are out of scope where the paper is silent. **Fixed:** DDPG backbone with binary logits output. **Chosen (oct 19 2026):** actor, critic and predictive model are MLPs with **one hidden layer of 32 ReLU units** (`hidden_layers=1`, `hidden_size=32`) — a network size the paper doesn't state, our best guess of what the authors may have done. The candidate screen tried depth 1–3 and widths 16–2048: larger or deeper networks reach always-stimulate sooner, and 1 × 32 was the only size that slows SEA-DBS's saturation without destabilizing it (Fig 4a 18–21 / 28 per seed vs 11–19 for the previous 2 × 64; [docs/controllers/sea-dbs/figures/4a.md](figures/4a.md) § Tried so far). Checkpoints saved before `hidden_layers` existed load as 2 × 64. The same networks are used in train, eval and FP16 PTQ. It sits far below the paper's ~65 MB (Fig 6), which stays an open question.
 
 ### 10. Stimulation carrier frequency at inference
 
@@ -329,7 +329,7 @@ $\beta_t = 0.35$ implies consistent scaling of $\bar{P}_\beta$ between observati
 
 ### 12. Observation window on reset
 
-Eq. (4) makes the state a window of the last $n_{\mathrm{obs}}$ beta estimates. **Chosen:** $n_{\mathrm{obs}} = 10$ and, on reset, the window holds $n_{\mathrm{obs}}$ untreated samples (the history before the episode; `prefill_obs_window=True`), in training and eval alike. Ten is the paper's inference horizon (Figs 5–7 plot 10 stimulation steps). Each step is an independent plant shot, so the window mean reaches its floor exactly at step $n_{\mathrm{obs}}$: with $n_{\mathrm{obs}} = 5$ every inference trace was flat after step 5, while the digitized Figs 5–7 keep falling through step 10. Screen (always-on 50 Hz, seed 0, Fig 5a gates): $n_{\mathrm{obs}} = 5 / 6 / 8 / 10 / 12$ pass $8 / 11 / 12 / 12 / 12$ of 17; 10 is the only value that passes both early-MAE gates of Figs 6 and 7 too. Fig 4 training with 5 and 10 gives the same gate count ([docs/controllers/sea_dbs/figures/4a.md](figures/4a.md) § Convention screen).
+Eq. (4) makes the state a window of the last $n_{\mathrm{obs}}$ beta estimates. **Chosen:** $n_{\mathrm{obs}} = 10$ and, on reset, the window holds $n_{\mathrm{obs}}$ untreated samples (the history before the episode; `prefill_obs_window=True`), in training and eval alike. Ten is the paper's inference horizon (Figs 5–7 plot 10 stimulation steps). Each step is an independent plant shot, so the window mean reaches its floor exactly at step $n_{\mathrm{obs}}$: with $n_{\mathrm{obs}} = 5$ every inference trace was flat after step 5, while the digitized Figs 5–7 keep falling through step 10. Screen (always-on 50 Hz, seed 0, Fig 5a gates): $n_{\mathrm{obs}} = 5 / 6 / 8 / 10 / 12$ pass $8 / 11 / 12 / 12 / 12$ of 17; 10 is the only value that passes both early-MAE gates of Figs 6 and 7 too. Fig 4 training with 5 and 10 gives the same gate count ([docs/controllers/sea-dbs/figures/4a.md](figures/4a.md) § Convention screen).
 
 ### 13. Table II protocol
 
@@ -358,11 +358,11 @@ Before this pass every Ravivarapu panel was marked Pass, but the passes rested o
 | Different training config for +PM / +GS | Fig 7 | +PM / +GS trained on library defaults (other plant, other learning rates) while Baseline / SEA-DBS came from the tuned Fig 4 config |
 | Loosened gates | `ravivarapu_gates.py` | Fig 4a gap bands and level tolerances widened to admit tuned runs; Fig 5a steps 3–5 MAE 0.015 → 0.020; Fig 7 GS gate with a −5.0 margin on ~0.4-scale data (always true) |
 
-Kept as labeled conventions (paper-silent): 150 ms shot, 50 Hz training carrier, scale 472, $n_{\mathrm{obs}} = 10$ with prefill (5 until the oct 12 convention screen), independent shots, Gumbel schedule defaults, Baseline ε-greedy, Polyak 0.005, one update per env step, one-hidden-layer 32-unit MLPs (2 × 64 until oct 19 2026), seed 0, and the display-only 10-episode rolling mean on Figs 4a/4b (gates use raw episodes). Panel results: [docs/controllers/sea_dbs/README.md](README.md).
+Kept as labeled conventions (paper-silent): 150 ms shot, 50 Hz training carrier, scale 472, $n_{\mathrm{obs}} = 10$ with prefill (5 until the oct 12 convention screen), independent shots, Gumbel schedule defaults, Baseline ε-greedy, Polyak 0.005, one update per env step, one-hidden-layer 32-unit MLPs (2 × 64 until oct 19 2026), seed 0, and the display-only 10-episode rolling mean on Figs 4a/4b (gates use raw episodes). Panel results: [docs/controllers/sea-dbs/README.md](README.md).
 
 ### Candidate readings (config flags, all off by default)
 
-Readings the paper doesn't state or contradicts, kept for `--candidate` experiments only ([docs/controllers/sea_dbs/figures/4a.md](figures/4a.md) § Candidate readings, § The paper's 2 ms step):
+Readings the paper doesn't state or contradicts, kept for `--candidate` experiments only ([docs/controllers/sea-dbs/figures/4a.md](figures/4a.md) § Candidate readings, § The paper's 2 ms step):
 
 | Flag | Reading |
 |------|---------|
@@ -377,7 +377,7 @@ Readings the paper doesn't state or contradicts, kept for `--candidate` experime
 | `evaluate(..., action_mode="gumbel")` | Hardened Gumbel-Softmax (Gumbel-max) actions at inference instead of argmax (§14.2) |
 | `evaluate_reseeded(..., keep_window_frac)` | Table II: keep the newest share of the Eq. (4) window across a reseed instead of re-prefilling all of it (§14.13) |
 
-Screen results (oct 19 2026): [docs/controllers/sea_dbs/figures/4a.md](figures/4a.md) § Candidate screen (oct 19 2026).
+Screen results (oct 19 2026): [docs/controllers/sea-dbs/figures/4a.md](figures/4a.md) § Candidate screen (oct 19 2026).
 
 ## 16. References
 

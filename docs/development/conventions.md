@@ -12,7 +12,7 @@ Panel work is organized around **paper panels**, not roadmap phase numbers. Ship
 |-------|---------|
 | Mehregan | [docs/controllers/ddpg/README.md](../controllers/ddpg/README.md) |
 | Nguyen | [docs/controllers/snn/README.md](../controllers/snn/README.md) |
-| Ravivarapu | [docs/controllers/sea_dbs/README.md](../controllers/sea_dbs/README.md) |
+| Ravivarapu | [docs/controllers/sea-dbs/README.md](../controllers/sea-dbs/README.md) |
 
 1. **Exit criteria first** — list qualitative gates in the panel tracker (or the figure page under [docs/controllers/](../controllers/)) before large sweeps.
 2. **Ship surface** — committed train+plot entry points live under `scripts/figures/papers/<paper>/<panel>/plot.py`. Shared helpers: `scripts/figures/papers/promote.py` (versioned PNGs + tracker captions), `paper_overlay.py` (digitized paper curves on axes), `export_notes_images.py` (`--export-notes`), and `scripts/lib/` when imported by panel scripts.
@@ -33,7 +33,7 @@ Panel work is organized around **paper panels**, not roadmap phase numbers. Ship
 |-------|-----------|-----------|
 | Plant | [plant.md](../plant/README.md) | `src/envs/` (dynamics backend) |
 | Environment (Mehregan API) | [environment.md](../plant/environment.md) | `src/envs/` |
-| Controller | [controllers/ddpg/replication.md](../controllers/ddpg/method.md), [controllers/snn/replication.md](../controllers/snn/method.md), [controllers/sea_dbs/replication.md](../controllers/sea_dbs/method.md) | `src/controllers/<name>/` |
+| Controller | [controllers/ddpg/replication.md](../controllers/ddpg/method.md), [controllers/snn/replication.md](../controllers/snn/method.md), [controllers/sea-dbs/replication.md](../controllers/sea-dbs/method.md) | `src/controllers/<name>/` |
 | Benchmarks | [benchmarking.md](../guides/benchmarking.md) | `src/benchmarks/` + `rl-dbs benchmark` |
 | CLI | [cli.md](../guides/cli.md) | `src/rl_adaptive_dbs/cli.py` |
 | User config | [cli.md](../guides/cli.md) §2.3, §5.6 | `src/rl_adaptive_dbs/user_config.py`, `env_factory.py` |
@@ -64,7 +64,7 @@ Panel work is organized around **paper panels**, not roadmap phase numbers. Ship
 
 ## Cross-controller benchmarking
 
-All controllers share the **Kumaravelu et al. (2016)** parkinsonian plant, but each paper defines its own **RL interface** (step length, observation, action, reward). The shared `envs/` package implements the **Mehregan et al.** Gym API ([environment.md](../plant/environment.md)); `ddpg` can train on it directly. **Nguyen** and **Ravivarapu** need adapters (see [controllers/snn/replication.md](../controllers/snn/method.md), [controllers/sea_dbs/replication.md](../controllers/sea_dbs/method.md)).
+All controllers share the **Kumaravelu et al. (2016)** parkinsonian plant, but each paper defines its own **RL interface** (step length, observation, action, reward). The shared `envs/` package implements the **Mehregan et al.** Gym API ([environment.md](../plant/environment.md)); `ddpg` can train on it directly. **Nguyen** and **Ravivarapu** need adapters (see [controllers/snn/replication.md](../controllers/snn/method.md), [controllers/sea-dbs/replication.md](../controllers/sea-dbs/method.md)).
 
 | Comparison type | What is held fixed | What differs | When to use |
 |-----------------|-------------------|--------------|-------------|

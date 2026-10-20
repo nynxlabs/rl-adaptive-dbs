@@ -17,14 +17,17 @@ REPO = Path(__file__).resolve().parents[2]
 def test_layout_paths(tmp_path: Path) -> None:
     assert doc_paths.tracker_path("mehregan", tmp_path) == tmp_path / "docs/controllers/ddpg/README.md"
     assert doc_paths.figure_page("ravivarapu", "table2", tmp_path) == (
-        tmp_path / "docs/controllers/sea_dbs/figures/table2.md"
+        tmp_path / "docs/controllers/sea-dbs/figures/table2.md"
     )
     assert doc_paths.figure_images_dir("nguyen", "4", tmp_path) == (
         tmp_path / "docs/controllers/snn/figures/images/4"
     )
     assert doc_paths.all_trackers(tmp_path) == tuple(
-        tmp_path / "docs/controllers" / ctrl / "README.md" for ctrl in ("ddpg", "snn", "sea_dbs")
+        tmp_path / "docs/controllers" / ctrl / "README.md" for ctrl in ("ddpg", "snn", "sea-dbs")
     )
+    # The controller id keeps its underscore; only the docs folder uses a hyphen.
+    assert doc_paths.controller_for("ravivarapu") == "sea_dbs"
+    assert doc_paths.docs_dir_for("ravivarapu") == "sea-dbs"
     assert doc_paths.panel_for_marker_id("ravivarapu", "t2") == "table2"
     assert doc_paths.panel_for_marker_id("nguyen", "4") == "4"
     with pytest.raises(KeyError, match="unknown paper"):
@@ -45,6 +48,11 @@ def test_hrefs_are_relative_to_each_doc() -> None:
         "nguyen",
         "images/4/x.png",
     )
+    assert doc_paths.split_figures_rel("docs/controllers/sea-dbs/figures/images/4a/x.png") == (
+        "ravivarapu",
+        "images/4a/x.png",
+    )
+    assert doc_paths.split_figures_rel("docs/controllers/" + "sea_dbs/figures/images/4a/x.png") is None
     assert doc_paths.split_figures_rel("artifacts/figures/papers/nguyen/4/x.png") is None
     assert doc_paths.repo_rel_posix("/x/repo/.worktrees/t/docs/controllers/snn/figures/images/4/a.png") == (
         "docs/controllers/snn/figures/images/4/a.png"

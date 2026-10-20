@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Train one SEA-DBS variant with config overrides, then roll it out at 50 / 30 Hz.
 
-Diagnostic probe for paper-silent conventions (docs/controllers/sea_dbs/figures/*.md).
+Diagnostic probe for paper-silent conventions (docs/controllers/sea-dbs/figures/*.md).
 Trains on ``fig4_ravivarapu_config`` plus ``--set FIELD=VALUE`` overrides, saves
 the checkpoint, and records the per-episode PSD / stim duty plus the deterministic
 (argmax) 10-step inference traces the Figs 5–7 panels use. Panel results still

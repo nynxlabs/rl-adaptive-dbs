@@ -15,7 +15,7 @@ Phases and implementation status for **rl-adaptive-dbs**. Contributor rules: [co
 | Fig 5b | **Pass** | 30 Hz post-train efficacy; `BurstPatternAlphabet` |
 | Fig 6a, 6b | **Open** | PTQ/QAT panels — [ddpg/replication.md](../controllers/ddpg/method.md) §6 |
 
-**How this relates to phases:** Phases 1–3 (specs, environment, DDPG) and most Phase 4 **infrastructure** (benchmark runner, `rl-dbs`, `rl-dbs-tui`, PTQ/QAT hooks) are **done**. **Setup scripts:** Python-only path **re-verified on maintainer WSL** (2026-07-18); Multipass / Sandbox and `--with-matlab` still pending — [setup.md](../guides/setup.md) § Setup script verification status. Mehregan panel set is **Pass** (Figs 1b–6b) — polish/digitization notes in [replication-fidelity.md](replication-fidelity.md). **Phase 5 (Nguyen / SNN)** and **Phase 6 (SEA-DBS)** are active in parallel — trackers [docs/controllers/snn/README.md](../controllers/snn/README.md) and [docs/controllers/sea_dbs/README.md](../controllers/sea_dbs/README.md). Phases 7–9 (cross-controller comparison, fusion, native plant) stay deferred until needed.
+**How this relates to phases:** Phases 1–3 (specs, environment, DDPG) and most Phase 4 **infrastructure** (benchmark runner, `rl-dbs`, `rl-dbs-tui`, PTQ/QAT hooks) are **done**. **Setup scripts:** Python-only path **re-verified on maintainer WSL** (2026-07-18); Multipass / Sandbox and `--with-matlab` still pending — [setup.md](../guides/setup.md) § Setup script verification status. Mehregan panel set is **Pass** (Figs 1b–6b) — polish/digitization notes in [replication-fidelity.md](replication-fidelity.md). **Phase 5 (Nguyen / SNN)** and **Phase 6 (SEA-DBS)** are active in parallel — trackers [docs/controllers/snn/README.md](../controllers/snn/README.md) and [docs/controllers/sea-dbs/README.md](../controllers/sea-dbs/README.md). Phases 7–9 (cross-controller comparison, fusion, native plant) stay deferred until needed.
 
 **Parallel tracks:**
 
@@ -44,7 +44,7 @@ Draft specs that define scope, interfaces, and paper-aligned intent—not final 
 | Mehregan Gym API | [environment.md](../plant/environment.md) | — |
 | DDPG controller | [controllers/ddpg/replication.md](../controllers/ddpg/method.md) | — |
 | SNN controller | [controllers/snn/replication.md](../controllers/snn/method.md) | — |
-| SEA-DBS controller | [controllers/sea_dbs/replication.md](../controllers/sea_dbs/method.md) | — |
+| SEA-DBS controller | [controllers/sea-dbs/replication.md](../controllers/sea-dbs/method.md) | — |
 | Comparison protocol | [benchmarking.md](../guides/benchmarking.md) | — |
 
 ### Phase 2 — Environment for the first controller (complete)
@@ -91,7 +91,7 @@ Replicate the shared plant and Mehregan et al. Gym API before any controller wor
 
 | Package | Paper | Notes |
 |---------|--------|--------|
-| `controllers/sea_dbs/` | Ravivarapu et al. | Spec: [controllers/sea_dbs/replication.md](../controllers/sea_dbs/method.md); adapter for SEA-DBS I/O |
+| `controllers/sea_dbs/` | Ravivarapu et al. | Spec: [controllers/sea-dbs/replication.md](../controllers/sea-dbs/method.md); adapter for SEA-DBS I/O |
 
 - Replicate `controllers/sea_dbs/`; extend or wrap `envs/` only via the **adapter** (no duplicated CBGT dynamics).
 - Extend `rl-dbs train` / `eval` to `sea_dbs`.
@@ -115,7 +115,7 @@ Replicate the shared plant and Mehregan et al. Gym API before any controller wor
 - Native Python plant ([plant.md](../plant/README.md) §9); drop MATLAB dependency after equivalence **and speedup** gates. **In progress (TASK-17):** parity + **≈10×** speed pass (Numba JIT); default flip blocked on `mehregan_eval` baseline — [native-plant-port.md](history/native-plant-port.md).
 - Modular layout: swappable plant backends, controller packages, adapters, and benchmark runner; CI on smoke tests + selected suites.
 - **Expand** `rl-dbs` for `snn` / `sea_dbs` train/eval (Phase 5–6); TUI v1 is **done** ([cli.md](../guides/cli.md), [tui.md](../guides/tui.md)).
-- Optional per-controller work beyond paper replication: [controllers/ddpg/extensions.md](../controllers/ddpg/extensions.md), [controllers/snn/extensions.md](../controllers/snn/extensions.md), [controllers/sea_dbs/extensions.md](../controllers/sea_dbs/extensions.md), and broader framework ideas (other oscillatory conditions, patient-specific robustness, etc.).
+- Optional per-controller work beyond paper replication: [controllers/ddpg/extensions.md](../controllers/ddpg/extensions.md), [controllers/snn/extensions.md](../controllers/snn/extensions.md), [controllers/sea-dbs/extensions.md](../controllers/sea-dbs/extensions.md), and broader framework ideas (other oscillatory conditions, patient-specific robustness, etc.).
 
 Phases 9+ are intentionally open; prioritize equivalence and replication paths before large refactors.
 
@@ -131,10 +131,10 @@ Phases 9+ are intentionally open; prioritize equivalence and replication paths b
 | [environment.md](../plant/environment.md) | Draft | — |
 | [controllers/ddpg/replication.md](../controllers/ddpg/method.md) | Draft | — |
 | [controllers/snn/replication.md](../controllers/snn/method.md) | Draft | Adapter + DSQN timing in spec |
-| [controllers/sea_dbs/replication.md](../controllers/sea_dbs/method.md) | Draft | Adapter + binary action / Eq. (7) in spec |
+| [controllers/sea-dbs/replication.md](../controllers/sea-dbs/method.md) | Draft | Adapter + binary action / Eq. (7) in spec |
 | [controllers/ddpg/extensions.md](../controllers/ddpg/extensions.md) | Outline | CV post-replication directions |
 | [controllers/snn/extensions.md](../controllers/snn/extensions.md) | Outline | CV post-replication directions |
-| [controllers/sea_dbs/extensions.md](../controllers/sea_dbs/extensions.md) | Outline | CV post-replication directions |
+| [controllers/sea-dbs/extensions.md](../controllers/sea-dbs/extensions.md) | Outline | CV post-replication directions |
 | [controllers/fusion.md](../controllers/fusion.md) | Outline | SEA-DBS + DSQN synthesis |
 | [benchmarking.md](../guides/benchmarking.md) | Draft | Suites + `results/` layout; runner + CLI integration — Phase 4 |
 | [cli.md](../guides/cli.md) | Draft | Phase 4 — start `rl-dbs` (`benchmark`, `info`, `ddpg` train/eval) |
@@ -142,7 +142,7 @@ Phases 9+ are intentionally open; prioritize equivalence and replication paths b
 | `envs/` (`src/envs/`) | Done | `MatlabPlant`, `MehreganEnv`, $P_\beta$, baselines (`run_baseline_rollout`) |
 | `controllers/ddpg/` (`src/controllers/ddpg/`) | Done (FP + PTQ/QAT) | Full-precision `paper` / `init-30hz`; PTQ/QAT in `quantization.py` |
 | `controllers/snn/` (`src/controllers/snn/`) | In progress | Phase 5 active — adapter + DSQN; train/eval + Fig 3–7 — [docs/controllers/snn/README.md](../controllers/snn/README.md) |
-| `controllers/sea_dbs/` | In progress | Phase 6 active — Fig 4a/4b Pass; Figs 5–7 open — [docs/controllers/sea_dbs/README.md](../controllers/sea_dbs/README.md) |
+| `controllers/sea_dbs/` | In progress | Phase 6 active — Fig 4a/4b Pass; Figs 5–7 open — [docs/controllers/sea-dbs/README.md](../controllers/sea-dbs/README.md) |
 | [matlab.md](../guides/matlab.md) + `scripts/matlab/` | Done (WSL) | Fresh validation: Multipass (Linux) pending; **Sandbox (Windows) passed** 2026-06-30 — [fresh-validation.md](fresh-validation.md) |
 | Project setup script | **Partial** | WSL python-only pass 2026-07-18 (`setup.sh --validate`, 291 pytest); Multipass / Sandbox + `--with-matlab` pending — [setup.md](../guides/setup.md), [fresh-validation.md](fresh-validation.md) |
 | MATLAB plant bridge | Done | `envs/plant/` + `envs/mehregan/`; `@pytest.mark.matlab` equivalence suite |
@@ -151,9 +151,9 @@ Phases 9+ are intentionally open; prioritize equivalence and replication paths b
 | `rl-dbs` CLI | Partial | `benchmark`, `summary`, `info`, `config show`, `train`/`eval` (`ddpg`); `snn` Phase 5; `sea_dbs` Phase 6 |
 | `rl-dbs-tui` | Done (v1) | Six tabs ([Textual](https://textual.textualize.io/)); Run tab launches detached jobs; Settings persistence |
 | Thread limits (`thread_limits.py`, `run.py`) | Done | Default 3-thread cap for plant-heavy CLI + `python -m rl_adaptive_dbs.run` |
-| Figure panel scripts (`scripts/figures/papers/`) | Partial | Mehregan: 1b–6b Pass — [docs/controllers/ddpg/README.md](../controllers/ddpg/README.md); Nguyen: Fig 3 Pass, 4–7 open — [docs/controllers/snn/README.md](../controllers/snn/README.md); Ravivarapu: 4a/4b Pass — [docs/controllers/sea_dbs/README.md](../controllers/sea_dbs/README.md) |
+| Figure panel scripts (`scripts/figures/papers/`) | Partial | Mehregan: 1b–6b Pass — [docs/controllers/ddpg/README.md](../controllers/ddpg/README.md); Nguyen: Fig 3 Pass, 4–7 open — [docs/controllers/snn/README.md](../controllers/snn/README.md); Ravivarapu: 4a/4b Pass — [docs/controllers/sea-dbs/README.md](../controllers/sea-dbs/README.md) |
 
-**Scheduling axis:** parallel figure tracks — Nguyen ([docs/controllers/snn/README.md](../controllers/snn/README.md): Fig 4–7) and Ravivarapu ([docs/controllers/sea_dbs/README.md](../controllers/sea_dbs/README.md): Figs 5–7); Mehregan panel set Pass.
+**Scheduling axis:** parallel figure tracks — Nguyen ([docs/controllers/snn/README.md](../controllers/snn/README.md): Fig 4–7) and Ravivarapu ([docs/controllers/sea-dbs/README.md](../controllers/sea-dbs/README.md): Figs 5–7); Mehregan panel set Pass.
 
 **Phase map (reference):** Phases 1–4 infrastructure largely **complete**; Phase 5 (Nguyen) and Phase 6 (SEA-DBS) **active in parallel**; Phases 7+ deferred. **Setup scripts:** WSL python-only verified 2026-07-18; fresh VMs and MATLAB path outstanding ([setup.md](../guides/setup.md) § Setup script verification status, [fresh-validation.md](fresh-validation.md)).
 
@@ -165,7 +165,7 @@ Phases 9+ are intentionally open; prioritize equivalence and replication paths b
 |-----|------|
 | [docs/controllers/ddpg/README.md](../controllers/ddpg/README.md) | Mehregan panel replication tracker |
 | [docs/controllers/snn/README.md](../controllers/snn/README.md) | Nguyen DSQN panel replication tracker |
-| [docs/controllers/sea_dbs/README.md](../controllers/sea_dbs/README.md) | Ravivarapu SEA-DBS panel replication tracker |
+| [docs/controllers/sea-dbs/README.md](../controllers/sea-dbs/README.md) | Ravivarapu SEA-DBS panel replication tracker |
 | [replication-fidelity.md](replication-fidelity.md) | Mehregan verified / divergent / added |
 | [setup.md](../guides/setup.md) | Setup and how to use the repo |
 | [testing.md](testing.md) | pytest layout, markers, what to test |

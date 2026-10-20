@@ -38,7 +38,7 @@ Each benchmark run should be uniquely described by:
 
 Every controller trains against the **same** Kumaravelu et al. (2016) CBGT model ([plant.md](../plant/README.md)). The **Gymnasium contract in `envs/`** follows **Mehregan et al.** (2 s steps, $P_\beta$-only state, pattern actions, Eq. (8) reward) — [environment.md](../plant/environment.md). That is the right default for `ddpg` and for **baselines** shared across papers.
 
-**Nguyen et al.** and **Ravivarapu et al.** use different step durations, observations, actions, and reward shapes (see [controllers/snn/replication.md](../controllers/snn/method.md), [controllers/sea_dbs/replication.md](../controllers/sea_dbs/method.md)). Their packages implement **adapters** around the shared plant wrapper—they do not fork the biophysical network.
+**Nguyen et al.** and **Ravivarapu et al.** use different step durations, observations, actions, and reward shapes (see [controllers/snn/replication.md](../controllers/snn/method.md), [controllers/sea-dbs/replication.md](../controllers/sea-dbs/method.md)). Their packages implement **adapters** around the shared plant wrapper—they do not fork the biophysical network.
 
 ### 3.2 Per-paper suites (primary — replication)
 
@@ -48,7 +48,7 @@ Use a **named suite per source paper** so eval matches that paper’s protocol. 
 |------------|----------------------|--------------|
 | `mehregan_eval` | Shared `envs/` API: 2 s steps, $P_\beta$, Eq. (8) | [environment.md](../plant/environment.md), [controllers/ddpg/replication.md](../controllers/ddpg/method.md) |
 | `nguyen_eval` | Adapter: 100 ms steps, spike obs, α–β (7–35 Hz), **Nguyen Eq. (7)** reward | [controllers/snn/replication.md](../controllers/snn/method.md) |
-| `sea_dbs_eval` | Adapter: 2 ms × 30 steps × 150 episodes, binary pulse, **Ravivarapu Eq. (7)** reward | [controllers/sea_dbs/replication.md](../controllers/sea_dbs/method.md) |
+| `sea_dbs_eval` | Adapter: 2 ms × 30 steps × 150 episodes, binary pulse, **Ravivarapu Eq. (7)** reward | [controllers/sea-dbs/replication.md](../controllers/sea-dbs/method.md) |
 
 **Baselines** for `mehregan_eval` (and optionally reused as plant-only checks in other suites):
 

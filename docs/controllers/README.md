@@ -4,13 +4,13 @@
 |------------|-------|--------------------------|--------|
 | DDPG (`ddpg`) | Mehregan et al. | [ddpg/README.md](ddpg/README.md) | [ddpg/method.md](ddpg/method.md) |
 | Deep spiking Q-network (`snn`) | Nguyen et al. | [snn/README.md](snn/README.md) | [snn/method.md](snn/method.md) |
-| SEA-DBS (`sea_dbs`) | Ravivarapu et al. | [sea_dbs/README.md](sea_dbs/README.md) | [sea_dbs/method.md](sea_dbs/method.md) |
+| SEA-DBS (`sea_dbs`) | Ravivarapu et al. | [sea-dbs/README.md](sea-dbs/README.md) | [sea-dbs/method.md](sea-dbs/method.md) |
 
 Each figure has its own page under `<controller>/figures/<panel>.md`: what the paper shows, status, how to reproduce it, gates, deviations and conventions, what was tried, and open questions. [fusion.md](fusion.md) covers cross-controller work.
 
 This is a short, visual summary of my **qualitative replications** of three adaptive deep brain stimulation (DBS) reinforcement-learning papers, all running on one shared simulated parkinsonian brain circuit. Each section shows **the paper's panel** next to **my reproduction**. For Mehregan et al. and Nguyen et al. the paper side is my redraw of the values digitized from the published figure (the published figures aren't reproduced here); for Ravivarapu et al. it is the figure from the authors' CC BY 4.0 arXiv version ([LICENSING.md](../../LICENSING.md#figures-from-the-replicated-papers)), with a plain-language note on what I checked. These are still rough. I'm not claiming these are 100% correct, but I wanted to show the progress I've made so far. There's a lot of refactoring, cleaning up, organizing, and small improvements I want to add everywhere, so these will keep getting refined.
 
-I built these from the paper text and figures. Mehregan and Ravivarapu have no released training or environment source; for Nguyen, where the ISCAS paper is silent I follow the same group's June 2026 follow-up paper (its published training loop and hyperparameters) and the code released with it (the Fig. 7 evaluation reset window). The shared dynamics use the **Kumaravelu et al. (2016)** cortex-basal ganglia-thalamus model. Full run commands, manifests, and internal gates live in the per-paper trackers: [Mehregan](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/docs/controllers/ddpg/README.md), [Nguyen](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/docs/controllers/snn/README.md), [Ravivarapu](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/docs/controllers/sea_dbs/README.md).
+I built these from the paper text and figures. Mehregan and Ravivarapu have no released training or environment source; for Nguyen, where the ISCAS paper is silent I follow the same group's June 2026 follow-up paper (its published training loop and hyperparameters) and the code released with it (the Fig. 7 evaluation reset window). The shared dynamics use the **Kumaravelu et al. (2016)** cortex-basal ganglia-thalamus model. Full run commands, manifests, and internal gates live in the per-paper trackers: [Mehregan](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/docs/controllers/ddpg/README.md), [Nguyen](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/docs/controllers/snn/README.md), [Ravivarapu](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/docs/controllers/sea-dbs/README.md).
 
 **Status (October 14, 2026):** Mehregan 7/9 (Fig. 6a and 6b fail on QAT), Ravivarapu 0/7, Nguyen 4/5 (Fig. 7 passes 13 of its 14 gates). The October 12–14 gate audits withdrew the earlier Ravivarapu passes and the Mehregan Fig. 6 passes: they rested on mechanisms the papers don't describe or on gates that were too loose. The per-paper trackers have the current gates.
 
@@ -254,7 +254,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 **Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson's Disease (SEA-DBS).** An actor-critic that picks binary pulse actions every 2 ms, adding a **predictive reward model (PM)** and **Gumbel-Softmax exploration (GS)** on top of a DDPG baseline.
 
-**Status: every Ravivarapu panel currently fails.** The earlier passes rested on mechanisms the paper doesn't describe (scheduled actor boosts, per-variant plants and learning rates, hand-picked eval seeds, loosened gates), which were removed in October 2026. With one training config as the paper specifies, two root causes dominate: Eq. (7) has no stimulation cost, so every variant learns to stimulate on every step and their rollouts coincide; and on the Kumaravelu model, 30 Hz stimulation raises beta. The [Ravivarapu tracker](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/docs/controllers/sea_dbs/README.md) lists all five root causes and every gate. The images below are the current, failing replications.
+**Status: every Ravivarapu panel currently fails.** The earlier passes rested on mechanisms the paper doesn't describe (scheduled actor boosts, per-variant plants and learning rates, hand-picked eval seeds, loosened gates), which were removed in October 2026. With one training config as the paper specifies, two root causes dominate: Eq. (7) has no stimulation cost, so every variant learns to stimulate on every step and their rollouts coincide; and on the Kumaravelu model, 30 Hz stimulation raises beta. The [Ravivarapu tracker](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/docs/controllers/sea-dbs/README.md) lists all five root causes and every gate. The images below are the current, failing replications.
 
 ## Fig. 4a: Training beta PSD vs episode
 
@@ -264,7 +264,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (arXiv version, CC BY 4.0) | My replication |
 |:-----:|:---------------:|
-| ![Fig. 4a of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea_dbs/figures/images/4a/arxiv_v1.png) | ![Replication Fig. 4a](sea_dbs/figures/images/4a/training_psd_v82.png) |
+| ![Fig. 4a of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea-dbs/figures/images/4a/arxiv_v1.png) | ![Replication Fig. 4a](sea-dbs/figures/images/4a/training_psd_v82.png) |
 
 **Notes:** Displayed with a 10-episode rolling mean; gates run on the raw per-episode values.
 
@@ -276,7 +276,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (arXiv version, CC BY 4.0) | My replication |
 |:-----:|:---------------:|
-| ![Fig. 4b of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea_dbs/figures/images/4b/arxiv_v1.png) | ![Replication Fig. 4b](sea_dbs/figures/images/4b/training_reward_v20.png) |
+| ![Fig. 4b of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea-dbs/figures/images/4b/arxiv_v1.png) | ![Replication Fig. 4b](sea-dbs/figures/images/4b/training_reward_v20.png) |
 
 <div style="page-break-after: always;"></div>
 
@@ -288,8 +288,8 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (arXiv version, CC BY 4.0) | My replication |
 |:-----:|:---------------:|
-| ![Fig. 5a of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea_dbs/figures/images/5a/arxiv_v1.png) | ![Replication Fig. 5a](sea_dbs/figures/images/5a/inference_50hz_v24.png) |
-| ![Fig. 5b of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea_dbs/figures/images/5b/arxiv_v1.png) | ![Replication Fig. 5b](sea_dbs/figures/images/5b/inference_30hz_v24.png) |
+| ![Fig. 5a of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea-dbs/figures/images/5a/arxiv_v1.png) | ![Replication Fig. 5a](sea-dbs/figures/images/5a/inference_50hz_v24.png) |
+| ![Fig. 5b of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea-dbs/figures/images/5b/arxiv_v1.png) | ![Replication Fig. 5b](sea-dbs/figures/images/5b/inference_30hz_v24.png) |
 
 ---
 
@@ -299,7 +299,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (arXiv version, CC BY 4.0) | My replication |
 |:-----:|:---------------:|
-| ![Fig. 6 of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea_dbs/figures/images/6/arxiv_v1.png) | ![Replication Fig. 6](sea_dbs/figures/images/6/ptq_fp16_50hz_v24.png) |
+| ![Fig. 6 of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea-dbs/figures/images/6/arxiv_v1.png) | ![Replication Fig. 6](sea-dbs/figures/images/6/ptq_fp16_50hz_v24.png) |
 
 **Notes:** The SEA-DBS networks shrink from 52 KB to 26 KB (the paper reports about 65 MB to 33 MB for its larger network); the halving is what matters here.
 
@@ -311,7 +311,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (arXiv version, CC BY 4.0) | My replication |
 |:-----:|:---------------:|
-| ![Fig. 7 of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea_dbs/figures/images/7/arxiv_v1.png) | ![Replication Fig. 7](sea_dbs/figures/images/7/ablation_psd_v29.png) |
+| ![Fig. 7 of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea-dbs/figures/images/7/arxiv_v1.png) | ![Replication Fig. 7](sea-dbs/figures/images/7/ablation_psd_v29.png) |
 
 <div style="page-break-after: always;"></div>
 
@@ -359,7 +359,7 @@ Every panel has its own `scripts/figures/papers/<paper>/<panel>/plot.py`; `--plo
 
 | Panel set | Topic | Status |
 |-----------|-------|--------|
-| Ravivarapu Figs. 4a–7, Table II | Variants coincide as always-on policies (no stimulation cost in Eq. (7)); 30 Hz raises beta on our plant | Open — [docs/controllers/sea_dbs/README.md](sea_dbs/README.md) |
+| Ravivarapu Figs. 4a–7, Table II | Variants coincide as always-on policies (no stimulation cost in Eq. (7)); 30 Hz raises beta on our plant | Open — [docs/controllers/sea-dbs/README.md](sea-dbs/README.md) |
 | Mehregan Fig. 6a / 6b | QAT policies suppress beta instead of staying high | Open — [docs/controllers/ddpg/README.md](ddpg/README.md) |
 | Nguyen Fig. 7 | Evaluation start: step 0 reads 197 vs the paper's 153 | Open — [docs/controllers/snn/README.md](snn/README.md) |
 | Cross-controller benchmarking | All three controllers on the same plant metrics | Planned — [docs/guides/benchmarking.md](../guides/benchmarking.md) |

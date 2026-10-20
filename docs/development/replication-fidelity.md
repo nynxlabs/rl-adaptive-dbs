@@ -6,7 +6,7 @@ Single source of truth for **what we have replicated**, **what diverges**, and *
 
 **How to use:** Before training, benchmarking, or claiming paper alignment, check the tables below and the relevant panel in [docs/controllers/ddpg/README.md](../controllers/ddpg/README.md). When a row says **verified**, cite the evidence column. When a row says **deviation** or **hypothesis**, do not treat it as paper-grounded without further validation.
 
-**Other controllers:** Nguyen (SNN) and Ravivarapu (SEA-DBS) have separate replication specs under `docs/controllers/snn/` and `docs/controllers/sea_dbs/`. This document covers **Mehregan DDPG** only.
+**Other controllers:** Nguyen (SNN) and Ravivarapu (SEA-DBS) have separate replication specs under `docs/controllers/snn/` and `docs/controllers/sea-dbs/`. This document covers **Mehregan DDPG** only.
 
 ---
 

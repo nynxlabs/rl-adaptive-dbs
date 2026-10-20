@@ -35,6 +35,18 @@ PAPER_CONTROLLER: dict[str, str] = {
 CONTROLLER_PAPER: dict[str, str] = {ctrl: paper for paper, ctrl in PAPER_CONTROLLER.items()}
 PAPERS: tuple[str, ...] = tuple(PAPER_CONTROLLER)
 
+# Docs folder names use hyphens; controller ids (Python packages, configs,
+# CLI names, artifact paths) keep their underscores. Ids missing here use the
+# id itself as the folder name.
+CONTROLLER_DOCS_DIR: dict[str, str] = {
+    "ddpg": "ddpg",
+    "snn": "snn",
+    "sea_dbs": "sea-dbs",
+}
+DOCS_DIR_PAPER: dict[str, str] = {
+    CONTROLLER_DOCS_DIR.get(ctrl, ctrl): paper for paper, ctrl in PAPER_CONTROLLER.items()
+}
+
 # Marker ids that differ from the panel (plot script folder) name.
 MARKER_PANEL_ALIASES: dict[str, dict[str, str]] = {
     "ravivarapu": {"t2": "table2"},
@@ -44,7 +56,7 @@ CONTROLLERS_DOCS_REL = PurePosixPath("docs/controllers")
 
 
 def controller_for(paper: str) -> str:
-    """Controller folder name for ``paper`` (``mehregan`` → ``ddpg``)."""
+    """Controller id for ``paper`` (``mehregan`` → ``ddpg``); see ``docs_dir_for`` for the docs folder."""
     try:
         return PAPER_CONTROLLER[paper]
     except KeyError:
@@ -57,9 +69,15 @@ def panel_for_marker_id(paper: str, marker_id: str) -> str:
     return MARKER_PANEL_ALIASES.get(paper, {}).get(marker_id, marker_id)
 
 
+def docs_dir_for(paper: str) -> str:
+    """Docs folder name for ``paper`` (``ravivarapu`` → ``sea-dbs``, not the id ``sea_dbs``)."""
+    controller = controller_for(paper)
+    return CONTROLLER_DOCS_DIR.get(controller, controller)
+
+
 def controller_docs_rel(paper: str) -> PurePosixPath:
-    """``docs/controllers/<controller>`` (repo-relative)."""
-    return CONTROLLERS_DOCS_REL / controller_for(paper)
+    """``docs/controllers/<docs dir>`` (repo-relative)."""
+    return CONTROLLERS_DOCS_REL / docs_dir_for(paper)
 
 
 def figures_rel(paper: str) -> PurePosixPath:
@@ -159,7 +177,7 @@ def split_figures_rel(repo_rel: str) -> tuple[str, str] | None:
     parts = PurePosixPath(repo_rel.replace("\\", "/")).parts
     if len(parts) < 5 or parts[0] != "docs" or parts[1] != "controllers" or parts[3] != "figures":
         return None
-    paper = CONTROLLER_PAPER.get(parts[2])
+    paper = DOCS_DIR_PAPER.get(parts[2])
     if paper is None:
         return None
     return paper, "/".join(parts[4:])

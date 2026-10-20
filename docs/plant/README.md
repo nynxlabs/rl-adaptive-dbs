@@ -145,7 +145,7 @@ with PythonPlant() as plant:
     # result.gpi_spikes[i] — spike times for GPi neuron i
 ```
 
-MATLAB vendor args and return packing: [kumaravelu_vendor_patches.md](vendor_patches.md). Tests: `tests/envs/matlab_plant_test.py` ([development/testing.md](../development/testing.md)).
+MATLAB vendor args and return packing: [vendor-patches.md](vendor-patches.md). Tests: `tests/envs/matlab_plant_test.py` ([development/testing.md](../development/testing.md)).
 
 ### Mehregan Fig 2a — GPi $P_\beta$ time series (2026-07-11)
 
@@ -274,4 +274,4 @@ Reference uses specific `Fs`, `fpass`, and tapers. **Open:** whether adapters ma
 
 - Kumaravelu et al. (2016) — plant dynamics; MATLAB from [ModelDBRepository/206232](https://github.com/ModelDBRepository/206232), fetched into `reference-material/KumaraveluEtAl2016/` with `python scripts/matlab/fetch_kumaravelu.py`.
 - Mehregan et al. — RL environment using this plant; [environment.md](environment.md).
-- Nguyen et al., Ravivarapu et al. — adapters on the same plant; [controllers/snn/replication.md](../controllers/snn/method.md), [controllers/sea_dbs/replication.md](../controllers/sea_dbs/method.md).
+- Nguyen et al., Ravivarapu et al. — adapters on the same plant; [controllers/snn/replication.md](../controllers/snn/method.md), [controllers/sea-dbs/replication.md](../controllers/sea-dbs/method.md).

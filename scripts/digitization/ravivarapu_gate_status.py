@@ -1,4 +1,4 @@
-"""Evaluate Ravivarapu panel gates and refresh gate tables in the figure pages + tracker (``docs/controllers/sea_dbs/``)."""
+"""Evaluate Ravivarapu panel gates and refresh gate tables in the figure pages + tracker (``docs/controllers/sea-dbs/``)."""
 
 from __future__ import annotations
 

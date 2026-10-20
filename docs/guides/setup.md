@@ -330,7 +330,7 @@ Typical flow (details in [development/conventions.md](../development/conventions
 | Mehregan env (reward, RL timing, Gym API) | [environment.md](../plant/environment.md) |
 | DDPG (Mehregan) | [controllers/ddpg/replication.md](../controllers/ddpg/method.md) |
 | SNN (Nguyen) | [controllers/snn/replication.md](../controllers/snn/method.md) |
-| SEA-DBS (Ravivarapu) | [controllers/sea_dbs/replication.md](../controllers/sea_dbs/method.md) |
+| SEA-DBS (Ravivarapu) | [controllers/sea-dbs/replication.md](../controllers/sea-dbs/method.md) |
 | Cross-controller eval | [benchmarking.md](benchmarking.md) |
 | CLI (`rl-dbs`) | [cli.md](cli.md) |
 | TUI (`rl-dbs-tui`) | [tui.md](tui.md) |

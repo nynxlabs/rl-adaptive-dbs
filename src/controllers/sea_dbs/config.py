@@ -1,10 +1,10 @@
-"""SEA-DBS hyperparameters (Ravivarapu et al., docs/controllers/sea_dbs/method.md).
+"""SEA-DBS hyperparameters (Ravivarapu et al., docs/controllers/sea-dbs/method.md).
 
 Every Ravivarapu panel (Figs 4–7) trains and evaluates with **one** config: the
 variants differ only in which paper components they switch on (predictive
 model, Gumbel-Softmax). Values the paper states (Table I, §V.A, Eq. (7)) are
 fixed; paper-silent values are labeled conventions below and in
-``docs/controllers/sea_dbs/method.md``.
+``docs/controllers/sea-dbs/method.md``.
 """
 
 from __future__ import annotations
@@ -101,7 +101,7 @@ class SEADBSConfig:
     # inference horizon (Figs 5–7 plot 10 stimulation steps). With independent
     # plant shots the window mean reaches its floor exactly at step n_obs; the
     # digitized Fig 5a curves keep falling through step 10 (n_obs = 5 floored at
-    # step 5). Same value in training and eval (docs/controllers/sea_dbs/figures/5a.md).
+    # step 5). Same value in training and eval (docs/controllers/sea-dbs/figures/5a.md).
     n_obs: int = 10
     # Convention: Eq. (4) state is a window of *past* beta estimates; on reset the
     # window holds n_obs untreated samples (the history before the episode).
@@ -135,7 +135,7 @@ class SEADBSConfig:
     # stim logit margin reaches ~15–20 within ~15 episodes at Table I learning
     # rates, so tau must start ~10x that to explore at all; Jang et al.'s
     # tau_0 = 1 (and tau_0 = 10, 50) leave SEA-DBS stimulating 70–90 % of
-    # steps from the first episodes (docs/controllers/sea_dbs/figures/4a.md).
+    # steps from the first episodes (docs/controllers/sea-dbs/figures/4a.md).
     gs_tau0: float = 200.0
     gs_tau_min: float = 1.0
     gs_lambda: float = 1.18e-3
@@ -167,7 +167,7 @@ class SEADBSConfig:
     # ``hidden_size`` units in the actor, critic and predictive model.
     # Convention since oct 19 2026: one hidden layer of 32 units, a network size
     # the paper doesn't state — our best guess of what the authors may have done.
-    # The oct 19 candidate screen (docs/controllers/sea_dbs/figures/4a.md § Tried so far)
+    # The oct 19 candidate screen (docs/controllers/sea-dbs/figures/4a.md § Tried so far)
     # found 1 x 32 the only size that slows SEA-DBS's saturation without
     # destabilizing it; 2 x 64 was the default before.
     hidden_size: int = 32

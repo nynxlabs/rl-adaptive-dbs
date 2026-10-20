@@ -30,7 +30,7 @@ Walks through install (optional), `MATLAB_ROOT`, license, `uv sync`, shell persi
 | **MATLAB** (R2024b+; repo tested on **R2025b**) | Run `simulate_network_model.m` and the plant bridge |
 | **Valid license** | Batch mode and `matlab.engine` both require it |
 | **`matlabengine` (Python)** | `import matlab.engine` from the project venv — version must match your MATLAB release |
-| **Toolboxes** | **Base MATLAB** for Phase 2 bridge (`CTX_BG_TH_network`; our integration patches in [kumaravelu_vendor_patches.md](../plant/vendor_patches.md)). Full upstream `simulate_network_model` also needs **Signal Processing Toolbox** (`dpss` in `make_Spectrum`) — biomarkers for Mehregan are computed in Python per [plant.md](../plant/README.md) |
+| **Toolboxes** | **Base MATLAB** for Phase 2 bridge (`CTX_BG_TH_network`; our integration patches in [vendor-patches.md](../plant/vendor-patches.md)). Full upstream `simulate_network_model` also needs **Signal Processing Toolbox** (`dpss` in `make_Spectrum`) — biomarkers for Mehregan are computed in Python per [plant.md](../plant/README.md) |
 | **OS extras** | Headless **Linux/WSL** only: `xvfb` + GTK libs (§3.1) |
 
 Default `MATLAB_ROOT` assumed by scripts: **`~/MATLAB`** (Linux/macOS) or your MathWorks install path (§2). Override when your install lives elsewhere.
@@ -349,7 +349,7 @@ uv run python scripts/matlab/fetch_kumaravelu.py --check    # verify the fetched
 uv run python scripts/matlab/fetch_kumaravelu.py --source DIR   # offline, from a downloaded copy of the upstream files
 ```
 
-The output (`simulate_network_model.m`, `run_simulate_network_model.q`, `readme.txt`, `plant_band_power.m`) is gitignored. After editing those files, record the change with `--update-patches` (rewrites the `.patch` files and `manifest.json` in the private package's `matlab_patches/`) and describe it in [kumaravelu_vendor_patches.md](../plant/vendor_patches.md). `MatlabPlant` and `scripts/plant/export_plant_init_draws.py` raise an error naming the fetch command when the model is missing, and `@pytest.mark.matlab` tests skip.
+The output (`simulate_network_model.m`, `run_simulate_network_model.q`, `readme.txt`, `plant_band_power.m`) is gitignored. After editing those files, record the change with `--update-patches` (rewrites the `.patch` files and `manifest.json` in the private package's `matlab_patches/`) and describe it in [vendor-patches.md](../plant/vendor-patches.md). `MatlabPlant` and `scripts/plant/export_plant_init_draws.py` raise an error naming the fetch command when the model is missing, and `@pytest.mark.matlab` tests skip.
 
 ```bash
 source scripts/matlab/env.sh
@@ -357,7 +357,7 @@ cd reference-material/KumaraveluEtAl2016
 matlab -batch "simulate_network_model(1,1,0,1,true); exit"
 ```
 
-Fifth argument `dynamics_only=true` returns after `CTX_BG_TH_network` (our patch; see [kumaravelu_vendor_patches.md](../plant/vendor_patches.md)).
+Fifth argument `dynamics_only=true` returns after `CTX_BG_TH_network` (our patch; see [vendor-patches.md](../plant/vendor-patches.md)).
 
 **Full upstream script** (optional, for `.mat` reference dumps):
 
