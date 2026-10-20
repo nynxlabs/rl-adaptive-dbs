@@ -93,3 +93,24 @@ def test_qat_agent_wraps_the_actor_with_the_averaging_constant() -> None:
     assert type(agent.actor).__name__ == "QATActor"
     fq = agent.actor.quant.activation_post_process
     assert fq.activation_post_process.averaging_constant == pytest.approx(0.1)
+
+
+def test_ipi_view_of_a_regular_train_sits_in_the_period_bin() -> None:
+    grid = PulseGrid(60)  # 30 Hz: period 33.3 ms -> bin "28-35"
+    hard = torch.nn.functional.one_hot(torch.as_tensor(grid.reg), grid.n_slots).float().unsqueeze(0)
+    h = grid.compress(hard, "ipi")[0]
+    assert h.shape == (11,) and float(h.sum()) == pytest.approx(1.0, abs=1e-4)
+    assert int(h.argmax()) == 7 and float(h[7]) > 0.99
+
+
+def test_ipi_view_sees_pairs_that_the_offset_view_pools() -> None:
+    grid = PulseGrid(60)
+    half = int(grid.period // 2) - 1
+    shift = torch.as_tensor(grid.reg + half).clamp(max=grid.n_slots - 1)
+    pairs = torch.as_tensor(grid.reg + np.where(np.arange(60) % 2 == 0, half, -half)).clamp(0, grid.n_slots - 1)
+    def hard(t):
+        return torch.nn.functional.one_hot(t, grid.n_slots).float().unsqueeze(0)
+    off_shift, off_pairs = grid.compress(hard(shift), "offhist4"), grid.compress(hard(pairs), "offhist4")
+    ipi_shift, ipi_pairs = grid.compress(hard(shift), "ipi"), grid.compress(hard(pairs), "ipi")
+    assert float((off_shift[0, :3].sum() - off_pairs[0, :3].sum()).abs()) < 0.05  # both "outer quarter"
+    assert float((ipi_shift - ipi_pairs).abs().sum()) > 1.0  # the interval view tells them apart
