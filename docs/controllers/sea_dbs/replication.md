@@ -317,7 +317,7 @@ Table I fixes actor/critic learning rates, $\gamma$, buffer **8192**, and batch 
 
 ### 9. Actor/critic network topology
 
-Scope notes full layer counts and widths are out of scope where the paper is silent. **Fixed:** DDPG backbone with binary logits output. **Open:** hidden sizes and depth. **Decide in** `controllers/sea_dbs/` and keep fixed across train, eval, and FP16 PTQ.
+Scope notes full layer counts and widths are out of scope where the paper is silent. **Fixed:** DDPG backbone with binary logits output. **Chosen (oct 19 2026):** actor, critic and predictive model are MLPs with **one hidden layer of 32 ReLU units** (`hidden_layers=1`, `hidden_size=32`) — a network size the paper doesn't state, our best guess of what the authors may have done. The candidate screen tried depth 1–3 and widths 16–2048: larger or deeper networks reach always-stimulate sooner, and 1 × 32 was the only size that slows SEA-DBS's saturation without destabilizing it (Fig 4a 18–21 / 28 per seed vs 11–19 for the previous 2 × 64; [docs/figures/ravivarapu/4a.md](../../figures/ravivarapu/4a.md) § Tried so far). Checkpoints saved before `hidden_layers` existed load as 2 × 64. The same networks are used in train, eval and FP16 PTQ. It sits far below the paper's ~65 MB (Fig 6), which stays an open question.
 
 ### 10. Stimulation carrier frequency at inference
 
@@ -358,7 +358,7 @@ Before this pass every Ravivarapu panel was marked Pass, but the passes rested o
 | Different training config for +PM / +GS | Fig 7 | +PM / +GS trained on library defaults (other plant, other learning rates) while Baseline / SEA-DBS came from the tuned Fig 4 config |
 | Loosened gates | `ravivarapu_gates.py` | Fig 4a gap bands and level tolerances widened to admit tuned runs; Fig 5a steps 3–5 MAE 0.015 → 0.020; Fig 7 GS gate with a −5.0 margin on ~0.4-scale data (always true) |
 
-Kept as labeled conventions (paper-silent): 150 ms shot, 50 Hz training carrier, scale 472, $n_{\mathrm{obs}} = 10$ with prefill (5 until the oct 12 convention screen), independent shots, Gumbel schedule defaults, Baseline ε-greedy, Polyak 0.005, one update per env step, 64-unit MLPs, seed 0, and the display-only 10-episode rolling mean on Figs 4a/4b (gates use raw episodes). Panel results: [figures/ravivarapu/replications.md](../../../figures/ravivarapu/replications.md).
+Kept as labeled conventions (paper-silent): 150 ms shot, 50 Hz training carrier, scale 472, $n_{\mathrm{obs}} = 10$ with prefill (5 until the oct 12 convention screen), independent shots, Gumbel schedule defaults, Baseline ε-greedy, Polyak 0.005, one update per env step, one-hidden-layer 32-unit MLPs (2 × 64 until oct 19 2026), seed 0, and the display-only 10-episode rolling mean on Figs 4a/4b (gates use raw episodes). Panel results: [figures/ravivarapu/replications.md](../../../figures/ravivarapu/replications.md).
 
 ### Candidate readings (config flags, all off by default)
 
@@ -372,7 +372,7 @@ Readings the paper doesn't state or contradicts, kept for `--candidate` experime
 | `stim_cost` | Subtract a cost per stimulating step from the training reward (not in Eq. (7)); logged rewards stay Eq. (7) |
 | `update_cadence="episode"`, `updates_per_episode` | Gradient steps after each episode instead of every step (against Algorithm 1) |
 | `actor_entropy_coef` | Entropy bonus on the actor's softmax (no entropy term in Algorithm 1) |
-| `hidden_layers` | MLP depth for actor, critic and predictive model (paper-silent; default 2) |
+| `hidden_layers`, `hidden_size` | MLP depth and width for actor, critic and predictive model (paper-silent; default 1 × 32 since oct 19 2026, 2 × 64 before) |
 | `state_mode="window"` / `"mean_stim"` | Network input is the full Eq. (4) window, or $\bar P_\beta$ plus the last $n_{\mathrm{obs}}$ actions (§14.1) |
 | `evaluate(..., action_mode="gumbel")` | Hardened Gumbel-Softmax (Gumbel-max) actions at inference instead of argmax (§14.2) |
 | `evaluate_reseeded(..., keep_window_frac)` | Table II: keep the newest share of the Eq. (4) window across a reseed instead of re-prefilling all of it (§14.13) |
