@@ -44,7 +44,7 @@ def _markdown_link_targets(markdown_path: Path) -> list[tuple[str, Path]]:
 
 @pytest.mark.parametrize("heading", PLANT_REQUIRED_SECTIONS)
 def test_plant_md_has_required_sections(heading: str) -> None:
-    assert PLANT_MD.is_file(), "docs/plant.md must exist"
+    assert PLANT_MD.is_file(), "docs/plant/README.md must exist"
     content = PLANT_MD.read_text(encoding="utf-8")
     assert heading in content, f"missing section: {heading}"
 

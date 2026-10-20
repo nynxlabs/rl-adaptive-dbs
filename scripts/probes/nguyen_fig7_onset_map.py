@@ -11,7 +11,7 @@ network does by itself. Conditions:
 - ``healthy_off``: healthy network (``pd = 0``), stimulation off
 
 For each segment it records GPi alpha-beta (the eval's measure), the GPi spike count, and for
-steps 0-2 a 10 ms GPi spike histogram. See docs/figures/nguyen/7.md § Onset on the
+steps 0-2 a 10 ms GPi spike histogram. See docs/controllers/snn/figures/7.md § Onset on the
 distance-based plant. Run from the repo root:
 
     RL_DBS_MAX_THREADS=1 .venv/bin/python scripts/probes/nguyen_fig7_onset_map.py \\

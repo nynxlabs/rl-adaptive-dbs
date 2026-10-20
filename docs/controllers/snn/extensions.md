@@ -1,6 +1,6 @@
 # SNN extensions — post-replication directions
 
-*Exploratory work beyond Nguyen et al. paper replication. See [replication.md](replication.md) for the paper-accurate spec.*
+*Exploratory work beyond Nguyen et al. paper replication. See [replication.md](method.md) for the paper-accurate spec.*
 
 ---
 
@@ -43,4 +43,4 @@ Nguyen et al. Eq. (7) includes an energy term but the coefficients are unspecifi
 
 ---
 
-*Each direction should be scoped as a named **variant** in the benchmarking framework (see [benchmarking.md](../../benchmarking.md) §2) when implemented.*
+*Each direction should be scoped as a named **variant** in the benchmarking framework (see [benchmarking.md](../../guides/benchmarking.md) §2) when implemented.*

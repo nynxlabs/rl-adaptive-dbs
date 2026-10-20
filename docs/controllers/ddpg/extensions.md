@@ -1,12 +1,12 @@
 # DDPG extensions — post-replication directions
 
-*Exploratory work beyond Mehregan et al. paper replication. See [replication.md](replication.md) for the paper-accurate spec.*
+*Exploratory work beyond Mehregan et al. paper replication. See [replication.md](method.md) for the paper-accurate spec.*
 
 ---
 
 ## 1. Quantization deeper dives
 
-Paper-aligned **PTQ** and **QAT** for Mehregan et al. are implemented in [replication.md](replication.md) §6 (`controllers/ddpg/quantization.py`). This section covers extensions **beyond** §IV.A.3:
+Paper-aligned **PTQ** and **QAT** for Mehregan et al. are implemented in [replication.md](method.md) §6 (`controllers/ddpg/quantization.py`). This section covers extensions **beyond** §IV.A.3:
 
 - **Mixed-precision quantization** — different bitwidths per layer based on sensitivity analysis.
 - **Quantization-aware fine-tuning** — start from a PTQ checkpoint and fine-tune with fake quantization for fewer training episodes than full QAT.
@@ -36,4 +36,4 @@ The paper specifies a CNN-over-temporal-state actor but gives no layer dimension
 
 ---
 
-*Each direction should be scoped as a named **variant** in the benchmarking framework (see [benchmarking.md](../../benchmarking.md) §2) when implemented.*
+*Each direction should be scoped as a named **variant** in the benchmarking framework (see [benchmarking.md](../../guides/benchmarking.md) §2) when implemented.*

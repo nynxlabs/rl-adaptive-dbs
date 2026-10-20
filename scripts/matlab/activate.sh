@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Open MathWorks Product Authorizer (Linux/WSL; xvfb when headless).
-# macOS / Windows: activate via MATLAB GUI — docs/matlab.md §4.
+# macOS / Windows: activate via MATLAB GUI — docs/guides/matlab.md §4.
 set -euo pipefail
 
 _matlab_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install MATLAB R2025b to ~/MATLAB via MathWorks Package Manager (Linux/WSL only).
-# macOS / Windows: use MathWorks installer — docs/matlab.md §3.2 / §3.3.
+# macOS / Windows: use MathWorks installer — docs/guides/matlab.md §3.2 / §3.3.
 set -euo pipefail
 
 release="${MATLAB_RELEASE:-R2025b}"
@@ -33,4 +33,4 @@ fi
 echo ""
 echo "MATLAB installed to $destination"
 echo "Next: bash scripts/matlab/setup.sh   # interactive connect + license + verify"
-echo "  or: docs/matlab.md §2"
+echo "  or: docs/guides/matlab.md §2"

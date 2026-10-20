@@ -2,7 +2,7 @@
 
 Do **not** treat this directory as the ship surface. Panel replication lives under `scripts/figures/papers/`.
 
-**Keep here only** reusable / extension diagnostics that still have a docs home. Findings from one-off panel probes belong in `docs/figures/<paper>/<panel>.md` and the panel `plot.py`; delete the probe once that is done.
+**Keep here only** reusable / extension diagnostics that still have a docs home. Findings from one-off panel probes belong in `docs/controllers/<controller>/figures/<panel>.md` and the panel `plot.py`; delete the probe once that is done.
 
 ## Current contents
 

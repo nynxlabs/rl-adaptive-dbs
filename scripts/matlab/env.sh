@@ -13,7 +13,7 @@ export RL_ADAPTIVE_DBS_ROOT="${RL_ADAPTIVE_DBS_ROOT:-$_repo_root}"
 export RL_ADAPTIVE_DBS_MATLAB_MODEL="${RL_ADAPTIVE_DBS_MATLAB_MODEL:-$_repo_root/reference-material/KumaraveluEtAl2016}"
 if [ ! -f "$RL_ADAPTIVE_DBS_MATLAB_MODEL/simulate_network_model.m" ]; then
   echo "matlab/env.sh: Kumaravelu model not found in $RL_ADAPTIVE_DBS_MATLAB_MODEL" >&2
-  echo "  Fetch it: python scripts/matlab/fetch_kumaravelu.py (docs/matlab.md)" >&2
+  echo "  Fetch it: python scripts/matlab/fetch_kumaravelu.py (docs/guides/matlab.md)" >&2
 fi
 
 _matlab_bin=""
@@ -25,7 +25,7 @@ fi
 
 if [ -z "$_matlab_bin" ]; then
   echo "matlab/env.sh: MATLAB not found at MATLAB_ROOT=$MATLAB_ROOT" >&2
-  echo "  Set MATLAB_ROOT to your install (docs/matlab.md §2)" >&2
+  echo "  Set MATLAB_ROOT to your install (docs/guides/matlab.md §2)" >&2
   return 1 2>/dev/null || exit 1
 fi
 

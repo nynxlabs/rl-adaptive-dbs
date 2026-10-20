@@ -2,9 +2,9 @@
 """Refresh replication image paths in ``<notes_dir>/reports/2026-08-10.md``.
 
 The 2026-08-10 report gallery embeds use **co-located copies** under
-``reports/images/gallery/`` (``./images/gallery/rep_*.png``) so notes apps
+``docs/reports/images/gallery/`` (``./images/gallery/rep_*.png``) so notes apps
 resolve them from the note folder regardless of its root. Ship PNGs under
-``figures/<paper>/images/`` are still refreshed for trackers.
+``docs/controllers/<controller>/figures/images/`` are still refreshed for trackers.
 
 ``sync_report3_gallery_ships()`` copies tracker versioned PNGs into ship paths.
 ``sync_report3_gallery_embeds()`` copies bytes beside the report.
@@ -47,7 +47,7 @@ REPORT3_SHIP_PATHS: dict[str, tuple[str, str]] = {
     "Rep R4a": ("ravivarapu", "images/4a/training_psd.png"),
 }
 
-# Co-located gallery filenames (beside ``reports/2026-08-10.md``).
+# Co-located gallery filenames (beside ``docs/reports/2026-08-10.md``).
 REPORT3_GALLERY_FILES: dict[str, str] = {
     "Rep 1b": "rep_1b.png",
     "Rep 2a": "rep_2a.png",
@@ -506,7 +506,7 @@ def sync_report3_gallery_ships(*, verbose: bool = True) -> list[dict[str, str]]:
 
 
 def sync_report3_gallery_embeds(*, verbose: bool = True) -> list[dict[str, str]]:
-    """Copy gallery PNG bytes into ``reports/images/gallery/`` beside the 2026-08-10 report."""
+    """Copy gallery PNG bytes into ``docs/reports/images/gallery/`` beside the 2026-08-10 report."""
     gallery_dir = report3_gallery_dir()
     gallery_dir.mkdir(parents=True, exist_ok=True)
     copied: list[dict[str, str]] = []
@@ -601,12 +601,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--ships-only",
         action="store_true",
-        help="Only materialize ship PNGs; do not rewrite reports/2026-08-10.md.",
+        help="Only materialize ship PNGs; do not rewrite docs/reports/2026-08-10.md.",
     )
     parser.add_argument(
         "--captions-only",
         action="store_true",
-        help="Only refresh panel notes (claim, status, captions, gates) in reports/2026-08-10.md.",
+        help="Only refresh panel notes (claim, status, captions, gates) in docs/reports/2026-08-10.md.",
     )
     parser.add_argument("-q", "--quiet", action="store_true")
     args = parser.parse_args(argv)

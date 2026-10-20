@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Materialize replication figure PNGs into the notes folder.
 
-Scans ``figures/<paper>/replications.md`` for ``![...](images/...)`` links and
+Scans ``docs/controllers/<controller>/README.md`` for ``![...](images/...)`` links and
 copies bytes into ``<notes_dir>/figures/`` (``RL_DBS_NOTES_DIR`` /
 ``export.notes_dir``, or detected from symlinked trackers — see
 ``rl_adaptive_dbs.notes_export``).
@@ -102,7 +102,7 @@ def iter_report3_image_links() -> list[tuple[str, str]]:
 
 
 def iter_materialized_repo_pngs() -> list[tuple[str, str]]:
-    """Real (non-symlink) replication PNGs under ``figures/<paper>/images/``."""
+    """Real (non-symlink) replication PNGs under ``docs/controllers/<controller>/figures/images/``."""
     out: list[tuple[str, str]] = []
     seen: set[tuple[str, str]] = set()
     for paper in _PAPERS:
@@ -237,7 +237,7 @@ def push_all(
 
 
 def push_repo_rel_png(repo_rel: str, *, dry_run: bool = False) -> None:
-    """Push a single ``figures/<paper>/images/...`` path, then refresh all links."""
+    """Push a single ``docs/controllers/<controller>/figures/images/...`` path, then refresh all links."""
     text = repo_rel.replace("\\", "/")
     marker = "figures/"
     idx = text.find(marker)

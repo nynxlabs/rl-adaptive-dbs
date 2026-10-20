@@ -56,7 +56,7 @@ _paper_overlay = load_script_module("figure_paper_overlay", _OVERLAY)
 _COMMON = Path(__file__).resolve().parents[1] / "common.py"
 _common = load_script_module("ravivarapu_common", _COMMON)
 
-FIGURES_DIR = Path("figures/ravivarapu/images/4a")
+FIGURES_DIR = Path("docs/controllers/sea_dbs/figures/images/4a")
 CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/4")
 SHARED_SERIES = CACHE_DIR / "series.json"
 DEFAULT_MANIFEST = CACHE_DIR / "manifest_4a.json"

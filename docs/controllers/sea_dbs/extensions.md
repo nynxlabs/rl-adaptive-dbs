@@ -1,6 +1,6 @@
 # SEA-DBS extensions — post-replication directions
 
-*Exploratory work beyond Ravivarapu et al. paper replication. See [replication.md](replication.md) for the paper-accurate spec.*
+*Exploratory work beyond Ravivarapu et al. paper replication. See [replication.md](method.md) for the paper-accurate spec.*
 
 ---
 
@@ -45,4 +45,4 @@ Ravivarapu evaluates fixed carrier frequencies (30 Hz, 50 Hz) at inference. Exte
 
 ---
 
-*Each direction should be scoped as a named **variant** in the benchmarking framework (see [benchmarking.md](../../benchmarking.md) §2) when implemented.*
+*Each direction should be scoped as a named **variant** in the benchmarking framework (see [benchmarking.md](../../guides/benchmarking.md) §2) when implemented.*

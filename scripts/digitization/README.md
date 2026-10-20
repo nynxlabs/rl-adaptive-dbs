@@ -22,7 +22,7 @@ Multiple extraction routes, one output schema.
 ## paper crops (local only)
 
 The tools here read the published figure as
-`figures/<paper>/images/<panel>/paper.png`. Those crops are the publishers'
+`docs/controllers/<controller>/figures/images/<panel>/paper.png`. Those crops are the publishers'
 figures, so they are **not in the repository** (gitignored) — build them from
 your own copy of each paper:
 
@@ -30,7 +30,7 @@ your own copy of each paper:
    and `ravivarapu.pdf` (gitignored; `paper_1.pdf`, `paper_2.pdf`,
    `paper_3.pdf` work too). The script also looks in `--papers-dir`, then
    `RL_DBS_PAPERS_DIR`, then `<notes_dir>/papers/` (`export.notes_dir` /
-   `RL_DBS_NOTES_DIR`, [docs/cli.md](../../docs/cli.md) §5.6), before that
+   `RL_DBS_NOTES_DIR`, [docs/guides/cli.md](../../docs/guides/cli.md) §5.6), before that
    default folder.
 2. Build all crops, or a few:
 
@@ -50,7 +50,7 @@ group (Windows, macOS, Linux), else Poppler's `pdftoppm` if it is on PATH.
 the rendered pages; you only need it to add a panel.
 
 Ravivarapu et al. is also on arXiv under CC BY 4.0 (arXiv:2507.06326v1). Its
-six panels are committed as `figures/ravivarapu/images/<panel>/arxiv_v1.png`;
+six panels are committed as `docs/controllers/sea_dbs/figures/images/<panel>/arxiv_v1.png`;
 `paper_crops.py build --arxiv` rebuilds them, downloading the arXiv PDF into
 the papers folder if it is missing.
 
@@ -76,7 +76,7 @@ pointwise wiggle RMSE.
 ```bash
 # automated PIL extraction
 uv run python scripts/digitization/extract_pil.py \
-    --png figures/mehregan/images/1b/paper.png \
+    --png docs/controllers/ddpg/figures/images/1b/paper.png \
     --config scripts/digitization/figs/mehregan_fig1b.json \
     --out artifacts/figures/papers/mehregan/1b/paper_digitization/curves_pil.json
 
@@ -102,7 +102,7 @@ uv run python scripts/digitization/compare_curves.py \
 uv run python scripts/digitization/pil_to_wpd.py \
     --curves artifacts/figures/papers/mehregan/1b/paper_digitization/curves_pil.json \
     --config scripts/digitization/figs/mehregan_fig1b.json \
-    --png figures/mehregan/images/1b/paper.png \
+    --png docs/controllers/ddpg/figures/images/1b/paper.png \
     --out artifacts/figures/papers/mehregan/1b/paper_digitization/fig1b_pil_seed.wpd.json \
     --tar artifacts/figures/papers/mehregan/1b/paper_digitization/fig1b_pil_seed.wpd.tar
 # then in WPD: File → Load Project → pick the .tar (image + points in one step)
@@ -166,7 +166,7 @@ uv run python scripts/digitization/redraw_digitized.py --panel mehregan/4a --pan
 
 - input: `curves_*.json` under `--artifacts` (default `artifacts/figures/papers`).
   `artifacts/` is gitignored, so from a worktree pass the main checkout's folder.
-- output: `figures/<paper>/images/<panel>/digitized_v<N>.png` (`--version`, default 1).
+- output: `docs/controllers/<controller>/figures/images/<panel>/digitized_v<N>.png` (`--version`, default 1).
   `--out-root` defaults to `figures/`.
 - every image has the caption `Digitized from Fig. X of <paper>` and the footer
   `Our redraw of values read off the published figure; not the original figure.`

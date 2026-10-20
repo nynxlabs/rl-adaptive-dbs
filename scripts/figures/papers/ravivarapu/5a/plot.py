@@ -56,7 +56,7 @@ _overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
 CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/5a")
-FIGURES_DIR = Path("figures/ravivarapu/images/5a")
+FIGURES_DIR = Path("docs/controllers/sea_dbs/figures/images/5a")
 OUT_STEM = "inference_50hz"
 VARIANTS = ("baseline", "paper")
 CARRIER_HZ = INFERENCE_CARRIER_50HZ

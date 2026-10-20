@@ -2,7 +2,7 @@
 
 The digitization tools (``extract_pil.py``, ``pil_to_wpd.py``,
 ``nguyen_fig3_boxplot.py``) and the configs in ``figs/`` read pixel boxes off
-``figures/<paper>/images/<panel>/paper.png``. Those crops are the publishers'
+``docs/controllers/<controller>/figures/images/<panel>/paper.png``. Those crops are the publishers'
 figures, so they are **not** in this repository: each user builds them locally
 from their own copy of the papers. ``paper.png`` is gitignored.
 
@@ -573,21 +573,21 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--arxiv", action="store_true", help="use the arXiv source (Ravivarapu, CC BY 4.0) instead of the publisher PDFs")
         p.add_argument("--renderer", choices=("pdfium", "pdftoppm"), help="force a renderer (default: pypdfium2 if installed)")
 
-    p = sub.add_parser("build", help="write figures/<paper>/images/<panel>/paper.png (or arxiv_v1.png with --arxiv)")
+    p = sub.add_parser("build", help="write docs/controllers/<controller>/figures/images/<panel>/paper.png (or arxiv_v1.png with --arxiv)")
     common(p)
     p.add_argument("--out-root", help="write under this folder instead of the repo (same figures/... layout)")
     p.set_defaults(func=cmd_build)
 
     p = sub.add_parser("verify", help="compare freshly rendered crops with existing ones")
     common(p)
-    p.add_argument("--reference-root", help="folder holding figures/<paper>/images/<panel>/<name> (default: the repo)")
+    p.add_argument("--reference-root", help="folder holding docs/controllers/<controller>/figures/images/<panel>/<name> (default: the repo)")
     p.add_argument("--reference-name", help="reference file name (default: the source's output name)")
     p.add_argument("--min-corr", type=float, default=0.95)
     p.set_defaults(func=cmd_verify)
 
     p = sub.add_parser("calibrate", help="locate panels in the PDF by matching reference crops; --write updates the spec")
     common(p)
-    p.add_argument("--reference-root", help="folder holding figures/<paper>/images/<panel>/<name> (default: the repo)")
+    p.add_argument("--reference-root", help="folder holding docs/controllers/<controller>/figures/images/<panel>/<name> (default: the repo)")
     p.add_argument("--reference-name", help="reference crop file name (default: paper.png)")
     p.add_argument("--page", type=int, help="search only this page (1-based)")
     p.add_argument("--refine", action="store_true", help="skip the coarse scan; start from the spec's current box")

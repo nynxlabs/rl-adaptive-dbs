@@ -21,7 +21,7 @@ faithful), ``shape`` (``mono`` | ``bi``), ``gap`` (ms), ``ratio`` (R), ``dt`` (m
 ``sampling`` (``round`` | ``charge`` | ``hold``). ``mono`` alone is the baseline.
 Alpha-beta always uses the reference spectrum grid (0.01 ms; spike times are in seconds), so
 a coarse ``dt`` changes only the dynamics; ``ab_native`` in the output is the value on the
-coarse grid. See docs/figures/nguyen/5.md § Pulse shape and integration step. Run from the
+coarse grid. See docs/controllers/snn/figures/5.md § Pulse shape and integration step. Run from the
 repo root:
 
     RL_DBS_MAX_THREADS=1 .venv/bin/python scripts/probes/nguyen_width_mechanisms.py \\

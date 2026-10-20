@@ -21,7 +21,7 @@ Usage:
     uv run python scripts/digitization/pil_to_wpd.py \\
         --curves artifacts/.../curves_pil.json \\
         --config scripts/digitization/figs/mehregan_fig1b.json \\
-        --png figures/mehregan/images/1b/paper.png \\
+        --png docs/controllers/ddpg/figures/images/1b/paper.png \\
         --out artifacts/.../fig1b_pil_seed.wpd.json \\
         --tar artifacts/.../fig1b_pil_seed.wpd.tar
 """

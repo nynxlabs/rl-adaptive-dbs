@@ -4,14 +4,14 @@
 #   cp .rl-dbs.example.yaml .rl-dbs.yaml
 #
 # Discovery order: --config PATH, RL_DBS_CONFIG, then walk parents for .rl-dbs.yaml.
-# CLI flags override file values. Keys: docs/cli.md §5.6
+# CLI flags override file values. Keys: docs/guides/cli.md §5.6
 #
 # Unset keys use built-in paper defaults (envs/plant/config.py, envs/mehregan/config.py).
 
 plant:
   # Integration step in milliseconds (Kumaravelu reference default: 0.01).
   dt_ms: 0.01
-  # 1 = parkinsonian, 0 = healthy (docs/plant.md).
+  # 1 = parkinsonian, 0 = healthy (docs/plant/README.md).
   pd: 1
   corstim: 0
   neurons_per_region: 10

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Interactive MATLAB setup for rl-adaptive-dbs (connect, license, Python engine, verify).
-# See docs/matlab.md. Non-interactive: set MATLAB_ROOT + license, then bash scripts/matlab/verify.sh.
+# See docs/guides/matlab.md. Non-interactive: set MATLAB_ROOT + license, then bash scripts/matlab/verify.sh.
 set -euo pipefail
 
 _matlab_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -68,7 +68,7 @@ guess_matlab_root() {
 
 say "=== rl-adaptive-dbs — MATLAB setup ==="
 say "Repo: $repo_root"
-say "Guide: docs/matlab.md"
+say "Guide: docs/guides/matlab.md"
 say ""
 
 if [[ ! -t 0 ]]; then
@@ -112,7 +112,7 @@ else
         bash "$_matlab_dir/install.sh"
         default_root="$HOME/MATLAB"
       else
-        say "Install manually: docs/matlab.md §3.1 or https://www.mathworks.com/downloads/"
+        say "Install manually: docs/guides/matlab.md §3.1 or https://www.mathworks.com/downloads/"
       fi
       if [[ "$os" == wsl ]] && ask_yn "Install WSL headless packages (xvfb, GTK libs)?" y; then
         say "Running apt-get (may prompt for sudo)..."
@@ -121,15 +121,15 @@ else
       fi
       ;;
     macos)
-      say "Install from MathWorks (macOS installer): docs/matlab.md §3.2"
+      say "Install from MathWorks (macOS installer): docs/guides/matlab.md §3.2"
       say "  https://www.mathworks.com/downloads/"
       ;;
     windows-bash)
-      say "Install from MathWorks (Windows): docs/matlab.md §3.3"
+      say "Install from MathWorks (Windows): docs/guides/matlab.md §3.3"
       say "  https://www.mathworks.com/downloads/"
       ;;
     *)
-      say "See docs/matlab.md for your platform."
+      say "See docs/guides/matlab.md for your platform."
       ;;
   esac
 fi

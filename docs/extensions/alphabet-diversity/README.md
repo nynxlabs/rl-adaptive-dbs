@@ -76,7 +76,7 @@ Near-hub gated pipeline (skip Fig 6a train if diversity gates fail):
 bash scripts/probes/alphabet_diversity/run_near_hub_pipeline.sh
 ```
 
-`plot_large_alphabet_landscape.py` — side-by-side ranking plot from `alphabet_diversity_large_n.json` (diagnostic PNG under `figures/mehregan/images/6a/`).
+`plot_large_alphabet_landscape.py` — side-by-side ranking plot from `alphabet_diversity_large_n.json` (diagnostic PNG under `docs/controllers/ddpg/figures/images/6a/`).
 
 ---
 
@@ -107,6 +107,6 @@ See module docstrings in `src/envs/mehregan/extensions/alphabet_diversity/` for 
 
 ## See also
 
-- [figures/mehregan/replications.md](../../../figures/mehregan/replications.md) § Fig 6a — shipped panel status
-- [environment.md](../../environment.md) — default Mehregan API
+- [docs/controllers/ddpg/README.md](../../controllers/ddpg/README.md) § Fig 6a — shipped panel status
+- [environment.md](../../plant/environment.md) — default Mehregan API
 - [controllers/ddpg/extensions.md](../../controllers/ddpg/extensions.md) — quantization deeper dives

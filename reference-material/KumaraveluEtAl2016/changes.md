@@ -44,7 +44,7 @@ Upstream: [ModelDB 206232](https://github.com/ModelDBRepository/206232), commit 
 
 `spikes_to_cell` packs `find_spike_times` output because nested struct arrays cannot cross the Python engine.
 
-**Why:** Phase 2 calls network dynamics only; Mehregan $P_\beta$ (13–35 Hz) is computed in Python ([`docs/plant.md`](../../docs/plant.md)). `bash scripts/matlab/verify.sh` uses `simulate_network_model(1,1,0,1,true)` (no return values).
+**Why:** Phase 2 calls network dynamics only; Mehregan $P_\beta$ (13–35 Hz) is computed in Python ([`docs/plant/README.md`](../../docs/plant/README.md)). `bash scripts/matlab/verify.sh` uses `simulate_network_model(1,1,0,1,true)` (no return values).
 
 **Default:** `dynamics_only = false` — preserves upstream script shape when the fifth argument is omitted.
 

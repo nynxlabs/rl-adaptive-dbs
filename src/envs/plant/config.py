@@ -23,7 +23,7 @@ KUMARAVELU_GGITH: float = 0.112
 
 @dataclass(frozen=True)
 class PlantConfig:
-    """Non-Gym plant settings per docs/plant.md."""
+    """Non-Gym plant settings per docs/plant/README.md."""
 
     dt_ms: float = 0.01
     pd: int = 1
@@ -44,7 +44,7 @@ class PlantConfig:
     ggith: float = KUMARAVELU_GGITH
     # STN neurons spread over distances r0..spread*r0 from the DBS contact, each taking
     # (r0/r)^2 of the DBS current (``dbs.stn_dbs_gains``). 1.0 = Kumaravelu: every STN
-    # neuron gets the full current. Not in Kumaravelu or Nguyen (docs/figures/nguyen/5.md).
+    # neuron gets the full current. Not in Kumaravelu or Nguyen (docs/controllers/snn/figures/5.md).
     stn_dbs_spread: float = 1.0
 
     def smc_enabled(self) -> bool:

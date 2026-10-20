@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export markdown outreach reports (notes-folder ``reports/*.md``) to PDF.
+"""Export markdown outreach reports (notes-folder ``docs/reports/*.md``) to PDF.
 
 Pipeline: preprocess Markdown (math, optional page breaks) → HTML → WeasyPrint.
 
@@ -11,7 +11,7 @@ Usage::
         -o "$RL_DBS_NOTES_DIR"/reports/2026-08-10.pdf
 
     # One long scroll (no forced page breaks):
-    uv run python -m rl_adaptive_dbs.run scripts/reports/export_pdf.py reports/2026-08-10.md --continuous
+    uv run python -m rl_adaptive_dbs.run scripts/reports/export_pdf.py docs/reports/2026-08-10.md --continuous
 
 Requires system libraries for WeasyPrint on Linux (Pango, Cairo). On Debian/Ubuntu::
 
@@ -239,7 +239,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "input_md",
         type=Path,
-        help="Markdown report (e.g. reports/2026-08-10.md)",
+        help="Markdown report (e.g. docs/reports/2026-08-10.md)",
     )
     parser.add_argument(
         "-o",

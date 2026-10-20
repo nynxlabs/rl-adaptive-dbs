@@ -1,6 +1,6 @@
 """Follow a panel's images folder into a linked notes folder, when it has one.
 
-A panel folder ``figures/<paper>/images/<panel>/`` can hold symlinks into an
+A panel folder ``docs/controllers/<controller>/figures/images/<panel>/`` can hold symlinks into an
 external notes folder. New versioned replication PNGs should land there too,
 so the notes and the repo see the same file. The marker is ``paper.png`` when
 it is a symlink; ``paper.png`` is a local-only crop that may be missing or a

@@ -5,8 +5,8 @@ Every threshold is anchored on the refined paper digitization
 ordering, shared starts, window levels, drops, gaps and timing vs the paper,
 with tolerances sized to the paper's own effect and our seed-to-seed noise.
 A gate that needs digitization fails closed when it is missing. Panel notes:
-``docs/figures/ravivarapu/<panel>.md``; gate audit (oct 14 2026):
-``docs/figures/ravivarapu/4a.md`` § Gate audit.
+``docs/controllers/sea_dbs/figures/<panel>.md``; gate audit (oct 14 2026):
+``docs/controllers/sea_dbs/figures/4a.md`` § Gate audit.
 """
 from __future__ import annotations
 

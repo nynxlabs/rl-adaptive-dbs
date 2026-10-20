@@ -13,7 +13,7 @@ runs the reset window at the initial 40 Hz instead (the eval up to v28).
 Each eval episode is also a fresh network that keeps its wiring for the whole episode
 (``plant_fixed_network=True``), while training redraws the wiring every 100 ms step. §IV:
 "a random seed for each episode to emulate patient-specific neural responses". Adopted
-Oct 18 2026 with master's OK (docs/figures/nguyen/4.md § Wiring as a setting);
+Oct 18 2026 with master's OK (docs/controllers/snn/figures/4.md § Wiring as a setting);
 ``--training-plant`` evaluates on the checkpoint's own plant instead (the eval up to v30).
 
 Run:
@@ -62,7 +62,7 @@ from controllers.snn.eval import evaluate
 FIG4_CACHE = Path("artifacts/figures/papers/nguyen/4")
 FIG4_CHECKPOINT = FIG4_CACHE / "checkpoint.pt"
 FIG3_MANIFEST = Path("artifacts/figures/papers/nguyen/3/manifest.json")
-FIGURES_DIR = Path("figures/nguyen/images/7")
+FIGURES_DIR = Path("docs/controllers/snn/figures/images/7")
 CACHE_DIR = Path("artifacts/figures/papers/nguyen/7")
 DEFAULT_EVAL = CACHE_DIR / "eval.json"
 DEFAULT_MANIFEST = CACHE_DIR / "manifest.json"

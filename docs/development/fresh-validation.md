@@ -1,8 +1,8 @@
 # Fresh machine validation (Phase 4)
 
-Portability gate: confirm the repo **installs and passes basic checks** on clean Linux and Windows hosts — not only your daily WSL checkout. Day-to-day install and training workflows live in [setup.md](../setup.md). Pytest layout: [testing.md](testing.md).
+Portability gate: confirm the repo **installs and passes basic checks** on clean Linux and Windows hosts — not only your daily WSL checkout. Day-to-day install and training workflows live in [setup.md](../guides/setup.md). Pytest layout: [testing.md](testing.md).
 
-**Verification status:** Fresh-host scripts and the `validate-fresh.sh` CLI smoke block were added during Phase 4 alongside `rl-dbs`, `rl-dbs-tui`, and expanded dependency groups. **Maintainer WSL pass (2026-07-18):** `setup.sh --python-only --non-interactive --validate` succeeded after syncing `dev` + `figures` and fixing fixture-path / MATLAB-engine skip logic — see [setup.md](../setup.md) § Setup script verification status. **Multipass / Windows Sandbox** have not been re-run since that expansion (last Sandbox pass: 2026-06-30).
+**Verification status:** Fresh-host scripts and the `validate-fresh.sh` CLI smoke block were added during Phase 4 alongside `rl-dbs`, `rl-dbs-tui`, and expanded dependency groups. **Maintainer WSL pass (2026-07-18):** `setup.sh --python-only --non-interactive --validate` succeeded after syncing `dev` + `figures` and fixing fixture-path / MATLAB-engine skip logic — see [setup.md](../guides/setup.md) § Setup script verification status. **Multipass / Windows Sandbox** have not been re-run since that expansion (last Sandbox pass: 2026-06-30).
 
 ---
 
@@ -101,7 +101,7 @@ Manual: `bash scripts/validation/validate-fresh.sh --log-file .validation-logs/m
 
 On another machine, edit the default WSL path in `scripts/validation/validation-repo.ps1`.
 
-**Pass (Python-only):** `bash scripts/validation/validate-fresh.sh` exits 0 and prints a report block. Shorthand after setup on an existing clone: `bash scripts/setup.sh --python-only --non-interactive --validate`. **With MATLAB (optional, on WSL — not in Sandbox):** `bash scripts/matlab/verify.sh` after `source scripts/matlab/env.sh` — [matlab.md](../matlab.md).
+**Pass (Python-only):** `bash scripts/validation/validate-fresh.sh` exits 0 and prints a report block. Shorthand after setup on an existing clone: `bash scripts/setup.sh --python-only --non-interactive --validate`. **With MATLAB (optional, on WSL — not in Sandbox):** `bash scripts/matlab/verify.sh` after `source scripts/matlab/env.sh` — [matlab.md](../guides/matlab.md).
 
 **What `validate-fresh.sh` runs:** `setup.sh --python-only --non-interactive --skip-tests`, then import check, `pytest -m "not matlab"`, and CLI smoke (`rl-dbs info`, `rl-dbs benchmark --dry-run`). It does **not** run full training or MATLAB suites.
 
@@ -116,7 +116,7 @@ On another machine, edit the default WSL path in `scripts/validation/validation-
 
 Launch has **no artificial timeout** in our scripts — Multipass runs until the VM is up or the hypervisor reports failure. A VM in `Starting` for a long time may still be booting under load; see Troubleshooting if it never reaches **Running**.
 
-Record OS version, blockers, and doc fixes in [roadmap.md](roadmap.md) or [matlab.md](../matlab.md) when something fails only on one platform.
+Record OS version, blockers, and doc fixes in [roadmap.md](roadmap.md) or [matlab.md](../guides/matlab.md) when something fails only on one platform.
 
 ---
 

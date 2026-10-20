@@ -1,10 +1,10 @@
 # Replication fidelity — Mehregan et al. (adaptive DBS / quantization)
 
-Single source of truth for **what we have replicated**, **what diverges**, and **what we added** when reproducing Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning*. This document consolidates findings from ~150 tasks; detailed specs remain in [environment.md](../environment.md), [plant.md](../plant.md), and [controllers/ddpg/replication.md](../controllers/ddpg/replication.md).
+Single source of truth for **what we have replicated**, **what diverges**, and **what we added** when reproducing Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning*. This document consolidates findings from ~150 tasks; detailed specs remain in [environment.md](../plant/environment.md), [plant.md](../plant/README.md), and [controllers/ddpg/replication.md](../controllers/ddpg/method.md).
 
-**Scheduling:** day-to-day Mehregan validation follows **figure panels** ([figures/mehregan/replications.md](../../figures/mehregan/replications.md)), not phase numbers. This doc explains *why* a panel passes or fails; the figure doc records *status* and run commands.
+**Scheduling:** day-to-day Mehregan validation follows **figure panels** ([docs/controllers/ddpg/README.md](../controllers/ddpg/README.md)), not phase numbers. This doc explains *why* a panel passes or fails; the figure doc records *status* and run commands.
 
-**How to use:** Before training, benchmarking, or claiming paper alignment, check the tables below and the relevant panel in [figures/mehregan/replications.md](../../figures/mehregan/replications.md). When a row says **verified**, cite the evidence column. When a row says **deviation** or **hypothesis**, do not treat it as paper-grounded without further validation.
+**How to use:** Before training, benchmarking, or claiming paper alignment, check the tables below and the relevant panel in [docs/controllers/ddpg/README.md](../controllers/ddpg/README.md). When a row says **verified**, cite the evidence column. When a row says **deviation** or **hypothesis**, do not treat it as paper-grounded without further validation.
 
 **Other controllers:** Nguyen (SNN) and Ravivarapu (SEA-DBS) have separate replication specs under `docs/controllers/snn/` and `docs/controllers/sea_dbs/`. This document covers **Mehregan DDPG** only.
 
@@ -14,31 +14,31 @@ Single source of truth for **what we have replicated**, **what diverges**, and *
 
 | Area | Paper / spec | Our implementation | Evidence |
 |------|--------------|-------------------|----------|
-| **Plant model** | Kumaravelu et al. (2016) CBGT, parkinsonian (`pd=1`), STN DBS | Fetched MATLAB reference + native `PythonPlant` port | TASK-106; `tests/envs/plant_backend_equivalence_test.py`; [plant.md](../plant.md) §8 |
+| **Plant model** | Kumaravelu et al. (2016) CBGT, parkinsonian (`pd=1`), STN DBS | Fetched MATLAB reference + native `PythonPlant` port | TASK-106; `tests/envs/plant_backend_equivalence_test.py`; [plant.md](../plant/README.md) §8 |
 | **Python vs MATLAB plant** | Same dynamics on shared grid | GPi spikes and $P_\beta$ match within ~1e-15 spike-time atol / &lt;1% $P_\beta$ rel error (init fixtures) | TASK-106; `python_integrator_fixed_ic_test.py` (private `kumaravelu_plant` package) |
-| **Beta biomarker** | Eq. (1): GPi PSD integral **13–35 Hz**, mean over $n=10$ neurons | `envs/plant/biomarkers.py` (band; PSD code in the private `kumaravelu_plant.biomarkers`) — 13–35 Hz (not Kumaravelu default 7–35) | [environment.md](../environment.md) §3.1; TASK-109 |
-| **Fig. 1b (GPi PSD)** | Healthy, PD, PD + 130 Hz cDBS GPi PSD panel | `scripts/figures/papers/mehregan/1b/plot.py`; seeds 0–9 mean, 10 s segment; qualitative $P_\beta$ ordering matches paper | 2026-07-09; [plant.md](../plant.md) §8.1; [figures/mehregan/replications.md](../../figures/mehregan/replications.md) |
-| **Fig. 2a (GPi $P_\beta$ time series)** | PD no treatment vs PD + 130 Hz cDBS; 12 s, 2 s onset at $t=2$ | `scripts/figures/papers/mehregan/2a/plot.py`; seed 0 qualitative match; 130 Hz suppresses beta after onset | 2026-07-09; [plant.md](../plant.md) §8.2; [figures/mehregan/replications.md](../../figures/mehregan/replications.md) |
-| **Fig. 2b (Error Index time series)** | So-style SMC→TH drive; blue below red after $t=2$ | `scripts/figures/papers/mehregan/2b/plot.py`; path A hybrid; seed 0 | 2026-07-13; [plant.md](../plant.md) §8.3; [figures/mehregan/replications.md](../../figures/mehregan/replications.md) |
-| **Fig. 4a (training $P_\beta$ vs step)** | 45 Hz DDPG; noisy early, drop ~step 130–150 | `scripts/figures/papers/mehregan/4a/plot.py`; seed 0, softmax τ 3→1.4 + one_hot, L=1; phase-1 ep0 (~0.50) before late floor | 2026-08-13; [figures/mehregan/replications.md](../../figures/mehregan/replications.md); [docs/figures/mehregan/4a.md](../figures/mehregan/4a.md) |
-| **Fig. 4b (reward + PSD vs episode)** | Episodes 0–8: reward↑ toward 0, episode-mean PSD↓ to ~0.37 | `scripts/figures/papers/mehregan/4b/plot.py`; paired live Fig 4a `series.json`, **seed 0**; phase-1 ep0 PSD then late ≥ $β_t$ | 2026-08-13; [figures/mehregan/replications.md](../../figures/mehregan/replications.md); [docs/figures/mehregan/4b.md](../figures/mehregan/4b.md) |
-| **Reward Eq. (8)** | $\beta_t = 0.35$; positive below threshold; quadratic penalty at/above; **no energy term** | `MehreganEnvConfig.beta_threshold=0.35`; linear branch negated to match Fig. 3c prose (TASK-78) | TASK-109; [environment.md](../environment.md) §6 |
-| **DBS amplitude** | 300 nA/cm² | `DbsSpec.amplitude` default | [plant.md](../plant.md) §4 |
-| **Pulse width** | 0.3 ms | `DbsSpec.pulse_width_ms=0.3` | [plant.md](../plant.md) §4 |
-| **RL step duration** | 2 s simulated time per transition | `step_duration_s=2.0` | [environment.md](../environment.md) §5 |
-| **Episode length** | 30 steps per episode | `max_episode_steps=30` | [environment.md](../environment.md) §5 |
-| **Training hyperparameters (§IV.A.1)** | actor_lr $5\times10^{-4}$, critic_lr $10^{-3}$, buffer 8192, batch 32 | `DDPGConfig` defaults | [controllers/ddpg/replication.md](../controllers/ddpg/replication.md) §4 |
-| **Reported training budget** | 10 episodes | `num_episodes=10` default | [controllers/ddpg/replication.md](../controllers/ddpg/replication.md) §4.4 |
-| **State / observation** | Within-step biomarker series over full 2 s segment (interpretation II) | `state_mode=within_step`, `state_length=16` default; $L$ sub-window $P_\beta$ / `observation_scale` | TASK-158; [environment.md](../environment.md) §3.2 |
-| **Reward Eq. (8) input** | Biomarker window = segment length (§IV.A.1) | `reward_state_mode=full_segment` — whole-step $P_\beta$ for $s_{\mathrm{sum}}$; CNN obs stays within-step | TASK-162; [environment.md](../environment.md) §3.2 |
+| **Beta biomarker** | Eq. (1): GPi PSD integral **13–35 Hz**, mean over $n=10$ neurons | `envs/plant/biomarkers.py` (band; PSD code in the private `kumaravelu_plant.biomarkers`) — 13–35 Hz (not Kumaravelu default 7–35) | [environment.md](../plant/environment.md) §3.1; TASK-109 |
+| **Fig. 1b (GPi PSD)** | Healthy, PD, PD + 130 Hz cDBS GPi PSD panel | `scripts/figures/papers/mehregan/1b/plot.py`; seeds 0–9 mean, 10 s segment; qualitative $P_\beta$ ordering matches paper | 2026-07-09; [plant.md](../plant/README.md) §8.1; [docs/controllers/ddpg/README.md](../controllers/ddpg/README.md) |
+| **Fig. 2a (GPi $P_\beta$ time series)** | PD no treatment vs PD + 130 Hz cDBS; 12 s, 2 s onset at $t=2$ | `scripts/figures/papers/mehregan/2a/plot.py`; seed 0 qualitative match; 130 Hz suppresses beta after onset | 2026-07-09; [plant.md](../plant/README.md) §8.2; [docs/controllers/ddpg/README.md](../controllers/ddpg/README.md) |
+| **Fig. 2b (Error Index time series)** | So-style SMC→TH drive; blue below red after $t=2$ | `scripts/figures/papers/mehregan/2b/plot.py`; path A hybrid; seed 0 | 2026-07-13; [plant.md](../plant/README.md) §8.3; [docs/controllers/ddpg/README.md](../controllers/ddpg/README.md) |
+| **Fig. 4a (training $P_\beta$ vs step)** | 45 Hz DDPG; noisy early, drop ~step 130–150 | `scripts/figures/papers/mehregan/4a/plot.py`; seed 0, softmax τ 3→1.4 + one_hot, L=1; phase-1 ep0 (~0.50) before late floor | 2026-08-13; [docs/controllers/ddpg/README.md](../controllers/ddpg/README.md); [docs/controllers/ddpg/figures/4a.md](../controllers/ddpg/figures/4a.md) |
+| **Fig. 4b (reward + PSD vs episode)** | Episodes 0–8: reward↑ toward 0, episode-mean PSD↓ to ~0.37 | `scripts/figures/papers/mehregan/4b/plot.py`; paired live Fig 4a `series.json`, **seed 0**; phase-1 ep0 PSD then late ≥ $β_t$ | 2026-08-13; [docs/controllers/ddpg/README.md](../controllers/ddpg/README.md); [docs/controllers/ddpg/figures/4b.md](../controllers/ddpg/figures/4b.md) |
+| **Reward Eq. (8)** | $\beta_t = 0.35$; positive below threshold; quadratic penalty at/above; **no energy term** | `MehreganEnvConfig.beta_threshold=0.35`; linear branch negated to match Fig. 3c prose (TASK-78) | TASK-109; [environment.md](../plant/environment.md) §6 |
+| **DBS amplitude** | 300 nA/cm² | `DbsSpec.amplitude` default | [plant.md](../plant/README.md) §4 |
+| **Pulse width** | 0.3 ms | `DbsSpec.pulse_width_ms=0.3` | [plant.md](../plant/README.md) §4 |
+| **RL step duration** | 2 s simulated time per transition | `step_duration_s=2.0` | [environment.md](../plant/environment.md) §5 |
+| **Episode length** | 30 steps per episode | `max_episode_steps=30` | [environment.md](../plant/environment.md) §5 |
+| **Training hyperparameters (§IV.A.1)** | actor_lr $5\times10^{-4}$, critic_lr $10^{-3}$, buffer 8192, batch 32 | `DDPGConfig` defaults | [controllers/ddpg/replication.md](../controllers/ddpg/method.md) §4 |
+| **Reported training budget** | 10 episodes | `num_episodes=10` default | [controllers/ddpg/replication.md](../controllers/ddpg/method.md) §4.4 |
+| **State / observation** | Within-step biomarker series over full 2 s segment (interpretation II) | `state_mode=within_step`, `state_length=16` default; $L$ sub-window $P_\beta$ / `observation_scale` | TASK-158; [environment.md](../plant/environment.md) §3.2 |
+| **Reward Eq. (8) input** | Biomarker window = segment length (§IV.A.1) | `reward_state_mode=full_segment` — whole-step $P_\beta$ for $s_{\mathrm{sum}}$; CNN obs stays within-step | TASK-162; [environment.md](../plant/environment.md) §3.2 |
 | **Actor CNN (Fig. 3a)** | Conv1→32→AvgPool→Conv→64→AvgPool→Linear(256)→Linear(256)→logits | `controllers/ddpg/networks.py` | TASK-146 |
 | **Critic fusion (Fig. 3b)** | State trunk + action branch; **element-wise add** | `CriticNetwork` add fusion | TASK-146 |
-| **Action selection** | Discrete patterns; softmax + argmax at deploy | `select_action(logits)` | [controllers/ddpg/replication.md](../controllers/ddpg/replication.md) §3.2 |
-| **Init mean frequency** | Regular pulses at **45 Hz** (main); **30 Hz** ablation | Variants `paper` / `init-30hz`; pattern mode `pattern_mean_hz` | [benchmarking.md](../benchmarking.md) |
-| **Pattern semantics (Option C)** | Fixed mean rate; agent shapes temporal pattern, not scalar frequency | `FixedMeanPatternAlphabet` — 41 patterns at fixed `mean_hz` | TASK-83/84; [environment.md](../environment.md) §4.2 |
+| **Action selection** | Discrete patterns; softmax + argmax at deploy | `select_action(logits)` | [controllers/ddpg/replication.md](../controllers/ddpg/method.md) §3.2 |
+| **Init mean frequency** | Regular pulses at **45 Hz** (main); **30 Hz** ablation | Variants `paper` / `init-30hz`; pattern mode `pattern_mean_hz` | [benchmarking.md](../guides/benchmarking.md) |
+| **Pattern semantics (Option C)** | Fixed mean rate; agent shapes temporal pattern, not scalar frequency | `FixedMeanPatternAlphabet` — 41 patterns at fixed `mean_hz` | TASK-83/84; [environment.md](../plant/environment.md) §4.2 |
 | **Pattern landscape (Eq. 8)** | At 30 Hz init, irregular &gt; periodic (Fig. 5b) | `FixedMeanPatternAlphabet` 1-step + 30-step probes | TASK-156: at 30 Hz (`dt_ms=0.02`), pattern 0 worst (41/41); best irregular action 19 (1-step) / mid-irregular action 10 (30-step total −106 vs pattern 0 −278). At 45 Hz pattern 0 remains best open-loop. |
 | **Fig 5b gate (30 Hz)** | Trained policy Pβ &lt; no-stim and &lt; periodic 30 Hz | ±1/3 ISI alphabet: 0/41 open-loop beaters at `dt_ms=0.02` (TASK-176) | **Pass (2026-07-23):** `BurstPatternAlphabet` retrain + trailing eval v2 — trained≈367 &lt; no-stim≈488 &lt; periodic≈639. Constant action 5. Artifacts: `fig5b_alphabet_redesign_oracle_30hz.json`, `artifacts/figures/papers/mehregan/5b/`. |
-| **PTQ / QAT hooks** | §III.D quantization experiments | `controllers/ddpg/quantization.py`; benchmark slugs `ptq-fp16`, `ptq-int8`, `qat` | [controllers/ddpg/replication.md](../controllers/ddpg/replication.md) §6 |
+| **PTQ / QAT hooks** | §III.D quantization experiments | `controllers/ddpg/quantization.py`; benchmark slugs `ptq-fp16`, `ptq-int8`, `qat` | [controllers/ddpg/replication.md](../controllers/ddpg/method.md) §6 |
 
 ---
 
@@ -106,7 +106,7 @@ Questions that block **qualitative** claims about matching paper figures. Track 
 | 2 | Exact STN **waveform** (rectangular on/off vs charge-balanced / biphasic)? | Plant drive semantics | **Open** — we use Kumaravelu rectangular pulses |
 | 3 | Does the paper use **charge-balanced** waveforms? | Energy delivery fidelity | **Open** — Kumaravelu reference is monophasic rectangular |
 | 4 | How are Mehregan's **discrete patterns** constructed (alphabet, jitter, boundaries)? | Pattern-mode hypothesis validation | **Open** — our ±1/3 ISI / 41-pattern scheme is documented hypothesis |
-| 5 | Post-training **eval segment duration** within the 10 s budget | Benchmark comparability | **Open** — 1.6 s/segment hypothesis in [environment.md](../environment.md) §8 |
+| 5 | Post-training **eval segment duration** within the 10 s budget | Benchmark comparability | **Open** — 1.6 s/segment hypothesis in [environment.md](../plant/environment.md) §8 |
 | 6 | Does **pattern 0** (regular train) beat irregular patterns on the paper's landscape? | Fig. 5b irregular &gt; periodic at 30 Hz | **Settled (TASK-156, Branch A)** — at **30 Hz** with `plant.dt_ms=0.02`, pattern 0 ranks **41/41** (1-step) and loses every 30-step constant-policy rollout; **≥1 irregular clearly beats pattern 0** on both probes. At **45 Hz**, pattern 0 still ranks **1/41** (1-step) and wins 30-step rollouts — open-loop landscape is mean-rate dependent, not a global contradiction of Fig. 5b (which is 30 Hz specific). Evidence: `artifacts/ddpg/q6_landscape_*.json`. **DDPG retrain still gated** — landscape shows irregular *can* win at 30 Hz, but trained-policy acceptance criteria unchanged; COO must greenlight before TASK-70/83. |
 
 ---
@@ -115,7 +115,7 @@ Questions that block **qualitative** claims about matching paper figures. Track 
 
 | Experiment | Action space | Plant backend | Benchmark status | Notes |
 |------------|--------------|---------------|------------------|-------|
-| Phase 4 `mehregan_eval` | Scalar frequency | MATLAB (legacy) | **Complete** (TASK-9/94) | See [phase4-results.md](phase4-results.md); DDPG converged to ~112.5 Hz constant policy (expected for scalar mode) |
+| Phase 4 `mehregan_eval` | Scalar frequency | MATLAB (legacy) | **Complete** (TASK-9/94) | See [phase4-results.md](history/phase4-results.md); DDPG converged to ~112.5 Hz constant policy (expected for scalar mode) |
 | Pattern-mode training | `fixed_mean_pattern` | PythonPlant | **TASK-159 FAIL** | `within_step` L=16, greedy+logits, 30 Hz, dt=0.02, seed 0 — **Fig 4a FAIL** (β_norm flat: 0.245→0.246), **Fig 4b FAIL** (ep1≈ep10 ~32.5; best ep4=36.6), **Fig 5b FAIL** (trained Pβ 574.8 &gt; no-stim 503.4; beats periodic 648.4). Constant policy action 20. Artifacts: `pattern_train_30hz_L16_fig45_*`. TASK-70 remains blocked. |
 | Paper-protocol eval | Either | PythonPlant | Partial (TASK-108) | 10 s eval harness exists |
 | QAT / PTQ | Scalar (checkpoints) | MATLAB | **Complete** for scalar suite | QAT underperforms FP on mean $P_\beta$ |

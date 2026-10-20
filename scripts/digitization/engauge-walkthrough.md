@@ -32,7 +32,7 @@ Optional: open a panel image immediately. `paper.png` is a local-only crop
 
 ```bash
 export DISPLAY=:0
-engauge -import figures/mehregan/images/1b/paper.png
+engauge -import docs/controllers/ddpg/figures/images/1b/paper.png
 ```
 
 If the window does not appear, confirm WSLg is healthy (`/mnt/wslg`

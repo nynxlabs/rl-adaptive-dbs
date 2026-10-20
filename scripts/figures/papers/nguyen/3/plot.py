@@ -13,9 +13,9 @@ Run:
 Plant sampling only — no RL training; checkpoint resume is not applicable.
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/3/plot.py --n-iterations 50
 
-Each run writes ``figures/nguyen/images/3/alpha_beta_dist_vN.png`` (N
+Each run writes ``docs/controllers/snn/figures/images/3/alpha_beta_dist_vN.png`` (N
 auto-increments) and updates the replication image link in
-``figures/nguyen/replications.md``.
+``docs/controllers/snn/README.md``.
 """
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ import numpy as np
 from controllers.snn.reward import alpha_beta_power
 from envs.plant import DbsSpec, PlantConfig, PythonPlant
 
-FIGURES_DIR = Path("figures/nguyen/images/3")
+FIGURES_DIR = Path("docs/controllers/snn/figures/images/3")
 FIGURE_DIR = Path("artifacts/figures/papers/nguyen/3")
 DEFAULT_SAMPLES = FIGURE_DIR / "samples.json"
 DEFAULT_MANIFEST = FIGURE_DIR / "manifest.json"

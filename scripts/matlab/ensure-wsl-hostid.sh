@@ -3,7 +3,7 @@
 # fixed Host ID. Create bond0 with the MAC from the active license so batch mode works.
 # The licensed MAC comes from MATLAB_WSL_BOND_MAC, or from the config file written by
 # install-wsl-hostid-persist.sh. With neither set there is nothing to enforce.
-# See docs/matlab.md §8 (Licensing Error 9).
+# See docs/guides/matlab.md §8 (Licensing Error 9).
 set -euo pipefail
 
 if [ "$(uname -s)" != "Linux" ] || ! grep -qi microsoft /proc/version 2>/dev/null; then

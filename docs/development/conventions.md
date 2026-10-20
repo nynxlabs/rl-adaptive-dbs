@@ -1,6 +1,6 @@
 # Conventions
 
-Contributor rules for **rl-adaptive-dbs** — layout, spec-driven workflow, and cross-controller comparison. Paper-aligned behavior lives in the **specs** under `docs/`. Priorities and phase map: [roadmap.md](roadmap.md). **Panel checklist:** [figures/mehregan/replications.md](../../figures/mehregan/replications.md).
+Contributor rules for **rl-adaptive-dbs** — layout, spec-driven workflow, and cross-controller comparison. Paper-aligned behavior lives in the **specs** under `docs/`. Priorities and phase map: [roadmap.md](roadmap.md). **Panel checklist:** [docs/controllers/ddpg/README.md](../controllers/ddpg/README.md).
 
 ---
 
@@ -10,15 +10,15 @@ Panel work is organized around **paper panels**, not roadmap phase numbers. Ship
 
 | Paper | Tracker |
 |-------|---------|
-| Mehregan | [figures/mehregan/replications.md](../../figures/mehregan/replications.md) |
-| Nguyen | [figures/nguyen/replications.md](../../figures/nguyen/replications.md) |
-| Ravivarapu | [figures/ravivarapu/replications.md](../../figures/ravivarapu/replications.md) |
+| Mehregan | [docs/controllers/ddpg/README.md](../controllers/ddpg/README.md) |
+| Nguyen | [docs/controllers/snn/README.md](../controllers/snn/README.md) |
+| Ravivarapu | [docs/controllers/sea_dbs/README.md](../controllers/sea_dbs/README.md) |
 
 1. **Exit criteria first** — list qualitative gates in the panel tracker (or [docs/figures/](../figures/) lab notebook) before large sweeps.
 2. **Ship surface** — committed train+plot entry points live under `scripts/figures/papers/<paper>/<panel>/plot.py`. Shared helpers: `scripts/figures/papers/promote.py` (versioned PNGs + tracker captions), `paper_overlay.py` (digitized paper curves on axes), `export_notes_images.py` (`--export-notes`), `update_report3.py` (`--update-report`), and `scripts/lib/` when imported by panel scripts.
-3. **Always version + promote** — every train / eval / `--plot-only` (including cosmetics) allocates `{stem}_vN.png`, refreshes the tracker link/gates, and should pass `--export-notes --update-report` so the notes folder (`export.notes_dir`, [cli.md](../cli.md) §5.6) and the 2026-08-10 report stay current.
+3. **Always version + promote** — every train / eval / `--plot-only` (including cosmetics) allocates `{stem}_vN.png`, refreshes the tracker link/gates, and should pass `--export-notes --update-report` so the notes folder (`export.notes_dir`, [cli.md](../guides/cli.md) §5.6) and the 2026-08-10 report stay current.
 4. **Promote, don’t thrash** — `scripts/probes/` is diagnostic-only (currently alphabet-diversity extension probes). Fold stable panel findings into the panel `plot.py` and `docs/figures/`, then delete the one-off probe.
-5. **Specs follow panels** — plant/training/convention changes that unblock a panel update [plant.md](../plant.md), [environment.md](../environment.md), or the relevant [controllers/](../controllers/) spec and [replication-fidelity.md](replication-fidelity.md).
+5. **Specs follow panels** — plant/training/convention changes that unblock a panel update [plant.md](../plant/README.md), [environment.md](../plant/environment.md), or the relevant [controllers/](../controllers/) spec and [replication-fidelity.md](replication-fidelity.md).
 
 ---
 
@@ -31,25 +31,25 @@ Panel work is organized around **paper panels**, not roadmap phase numbers. Ship
 
 | Layer | Spec path | Code path |
 |-------|-----------|-----------|
-| Plant | [plant.md](../plant.md) | `src/envs/` (dynamics backend) |
-| Environment (Mehregan API) | [environment.md](../environment.md) | `src/envs/` |
-| Controller | [controllers/ddpg/replication.md](../controllers/ddpg/replication.md), [controllers/snn/replication.md](../controllers/snn/replication.md), [controllers/sea_dbs/replication.md](../controllers/sea_dbs/replication.md) | `src/controllers/<name>/` |
-| Benchmarks | [benchmarking.md](../benchmarking.md) | `src/benchmarks/` + `rl-dbs benchmark` |
-| CLI | [cli.md](../cli.md) | `src/rl_adaptive_dbs/cli.py` |
-| User config | [cli.md](../cli.md) §2.3, §5.6 | `src/rl_adaptive_dbs/user_config.py`, `env_factory.py` |
-| TUI | [tui.md](../tui.md) | `src/rl_adaptive_dbs/tui/` (`*_data.py` loaders + Textual `app.py`) |
+| Plant | [plant.md](../plant/README.md) | `src/envs/` (dynamics backend) |
+| Environment (Mehregan API) | [environment.md](../plant/environment.md) | `src/envs/` |
+| Controller | [controllers/ddpg/replication.md](../controllers/ddpg/method.md), [controllers/snn/replication.md](../controllers/snn/method.md), [controllers/sea_dbs/replication.md](../controllers/sea_dbs/method.md) | `src/controllers/<name>/` |
+| Benchmarks | [benchmarking.md](../guides/benchmarking.md) | `src/benchmarks/` + `rl-dbs benchmark` |
+| CLI | [cli.md](../guides/cli.md) | `src/rl_adaptive_dbs/cli.py` |
+| User config | [cli.md](../guides/cli.md) §2.3, §5.6 | `src/rl_adaptive_dbs/user_config.py`, `env_factory.py` |
+| TUI | [tui.md](../guides/tui.md) | `src/rl_adaptive_dbs/tui/` (`*_data.py` loaders + Textual `app.py`) |
 
 ## Naming and layout
 
 - Python packages match directories: `ddpg`, `snn`, `sea_dbs`.
-- Controller docs mirror packages: `docs/controllers/ddpg/replication.md`, etc.
+- Controller docs mirror packages: `docs/controllers/ddpg/method.md`, etc.
 - Default paper-replication benchmark variant: `paper`.
 - Distribution name `rl-adaptive-dbs` (hyphen); imports `envs`, `controllers` (underscore, no hyphen).
 
 ## Cross-platform code
 
 - Use `pathlib`, `uv run`; avoid hard-coded POSIX-only paths in library code.
-- Document OS-specific steps only in [venv.md](venv.md) or [setup.md](../setup.md).
+- Document OS-specific steps only in [venv.md](venv.md) or [setup.md](../guides/setup.md).
 
 ## Documentation
 
@@ -64,14 +64,14 @@ Panel work is organized around **paper panels**, not roadmap phase numbers. Ship
 
 ## Cross-controller benchmarking
 
-All controllers share the **Kumaravelu et al. (2016)** parkinsonian plant, but each paper defines its own **RL interface** (step length, observation, action, reward). The shared `envs/` package implements the **Mehregan et al.** Gym API ([environment.md](../environment.md)); `ddpg` can train on it directly. **Nguyen** and **Ravivarapu** need adapters (see [controllers/snn/replication.md](../controllers/snn/replication.md), [controllers/sea_dbs/replication.md](../controllers/sea_dbs/replication.md)).
+All controllers share the **Kumaravelu et al. (2016)** parkinsonian plant, but each paper defines its own **RL interface** (step length, observation, action, reward). The shared `envs/` package implements the **Mehregan et al.** Gym API ([environment.md](../plant/environment.md)); `ddpg` can train on it directly. **Nguyen** and **Ravivarapu** need adapters (see [controllers/snn/replication.md](../controllers/snn/method.md), [controllers/sea_dbs/replication.md](../controllers/sea_dbs/method.md)).
 
 | Comparison type | What is held fixed | What differs | When to use |
 |-----------------|-------------------|--------------|-------------|
 | **Within-paper** (`*_eval` suite) | Plant + that paper’s timing, obs, action, reward | Variants (PTQ, ablations, hyperparameters) | Replication and ablations |
 | **Cross-paper** (optional suite) | Plant, seeds, integration step; often **$P_\beta$** logged for all | Per-controller training/eval protocol via adapters | High-level “same plant” tables—not claimable as identical to any single paper’s Table/Figure |
 
-Do **not** put `snn` and `ddpg` in one suite and assume the same **reward_sum** or **episode_length** are comparable without reading the suite manifest: Nguyen uses **100 ms** steps and **α–β** feedback; SEA-DBS uses **2 ms** steps and **Eq. (7)** reward; Mehregan uses **2 s** steps and **Eq. (8)**. Cross-paper runs should log **plant-level** metrics (e.g. raw $P_\beta$, stim duty cycle) plus `adapter: true` and `suite` name. Details: [benchmarking.md](../benchmarking.md) §3, §5.
+Do **not** put `snn` and `ddpg` in one suite and assume the same **reward_sum** or **episode_length** are comparable without reading the suite manifest: Nguyen uses **100 ms** steps and **α–β** feedback; SEA-DBS uses **2 ms** steps and **Eq. (7)** reward; Mehregan uses **2 s** steps and **Eq. (8)**. Cross-paper runs should log **plant-level** metrics (e.g. raw $P_\beta$, stim duty cycle) plus `adapter: true` and `suite` name. Details: [benchmarking.md](../guides/benchmarking.md) §3, §5.
 
 ## Panel script checkpoint resume
 

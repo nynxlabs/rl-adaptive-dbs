@@ -7,7 +7,7 @@ Eval-only on the Fig 4 checkpoints: one deterministic (argmax) rollout of 30
 blocks of n steps per variant and interval at 50 Hz on the training plant
 setup, the plant reset with the next seed at every block, so every n visits
 plant seeds 0–29 (``evaluate_reseeded``;
-convention in ``docs/controllers/sea_dbs/replication.md`` §14.13). Avg PSD is
+convention in ``docs/controllers/sea_dbs/method.md`` §14.13). Avg PSD is
 the mean Eq. (5) observation × 1000 (paper units). Avg Reward is reported
 both as the mean step reward and as Eq. (7) of Avg PSD (the paper's column
 equals the latter in all eight cells); gates use PSD only.
@@ -61,7 +61,7 @@ from ravivarapu_gates import (  # noqa: E402
 )
 
 CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/table2")
-FIGURES_DIR = Path("figures/ravivarapu/images/table2")
+FIGURES_DIR = Path("docs/controllers/sea_dbs/figures/images/table2")
 OUT_STEM = "avg_psd"
 VARIANTS = ("baseline", "paper")
 PSD_UNITS = 1000.0

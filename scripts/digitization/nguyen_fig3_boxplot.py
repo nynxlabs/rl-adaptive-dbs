@@ -9,7 +9,7 @@ the two mean lines from pixel rows, with the y axis calibrated on the eight tick
 
 Writes ``artifacts/figures/papers/nguyen/paper_digitization/curves_fig3_boxplot.json``.
 
-Reads ``figures/nguyen/images/3/paper.png``, a local-only crop built from your own copy of
+Reads ``docs/controllers/snn/figures/images/3/paper.png``, a local-only crop built from your own copy of
 the paper by ``paper_crops.py build --panel nguyen/3`` (never committed); the pixel
 columns below are measured on that crop.
 """
@@ -98,7 +98,7 @@ def read_fig3(png: Path = PAPER_PNG) -> dict:
     return {
         "figure": "nguyen_fig3",
         "method": "pil-pixel-read",
-        "source": "figures/nguyen/images/3/paper.png",
+        "source": "docs/controllers/snn/figures/images/3/paper.png",
         "units": "GPi alpha-beta oscillation power (paper y axis)",
         "y_per_pixel": round(abs(slope), 3),
         "note": (

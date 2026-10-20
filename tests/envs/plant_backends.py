@@ -16,7 +16,7 @@ PlantBackendName = Literal["matlab", "python"]
 
 BACKEND_NAMES: tuple[PlantBackendName, ...] = ("matlab", "python")
 
-# Equivalence gates (docs/plant.md §8, native-plant-port.md §5).
+# Equivalence gates (docs/plant/README.md §8, native-plant-port.md §5).
 # Spike times are on the shared 0.01 ms grid — target exact match (0 ms atol).
 SPIKE_TIME_ATOL_MS: float = 0.0
 # One Kumaravelu dt step (0.01 ms); short-segment tests may allow a few steps drift.

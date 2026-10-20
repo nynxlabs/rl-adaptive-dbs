@@ -862,7 +862,7 @@ def fig5_spikes_energy_gates(
     """Fig 5 spike count + DBS energy vs digitized paper curves (``FIG5_CHECKS``).
 
     Required rows are scale-free (shape, timing, ratios). Absolute spike and
-    energy levels are report-only (pending maintainer decision; docs/figures/nguyen/5.md).
+    energy levels are report-only (pending maintainer decision; docs/controllers/snn/figures/5.md).
     """
     spikes = np.asarray(episode_spikes, dtype=float)
     energies = np.asarray(episode_energies, dtype=float)
@@ -1057,7 +1057,7 @@ def fig6_training_gates(
     pw_left = abs(pw_late - INIT_PW) / max(INIT_PW, 1e-9) > 0.05
     # Report-only (pending maintainer decision): amplitude and pulse width sit far above the
     # plant's charge threshold in every reachable state, so where they settle does not move
-    # α–β (docs/figures/nguyen/6.md). Old frequency heuristics are superseded by FIG6_FREQ_CHECKS.
+    # α–β (docs/controllers/snn/figures/6.md). Old frequency heuristics are superseded by FIG6_FREQ_CHECKS.
     report = {
         **power.get("report", {}),
         "amp_left_init": amp_left,
@@ -1099,7 +1099,7 @@ def fig6_training_gates(
 # Paper §IV: "We evaluate our trained model against 50 test episodes".
 PAPER_FIG7_EPISODES = 50
 FIG7_STEPS = 26  # reset reading + 25 steps (band traced at steps 0–25)
-FIG7_BAND_Z = 1.96  # the shaded band reads as ±1.96 SD of single episodes (docs/figures/nguyen/7.md)
+FIG7_BAND_Z = 1.96  # the shaded band reads as ±1.96 SD of single episodes (docs/controllers/snn/figures/7.md)
 FIG7_PEARSON_MIN = 0.80  # paper shifted one step: r = 0.77
 FIG7_PEAK_STEP_SLACK = 1
 FIG7_WINDOWS: dict[str, tuple[int, int]] = {  # inclusive step ranges

@@ -14,7 +14,7 @@ Run:
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/4a/plot.py
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/4a/plot.py --plot-only
 
-Writes ``figures/mehregan/images/4a/training_beta_vN.png`` (N auto-increments),
+Writes ``docs/controllers/ddpg/figures/images/4a/training_beta_vN.png`` (N auto-increments),
 ``artifacts/figures/papers/mehregan/4a/series.json`` and ``checkpoint.pt``
 (fp32 actor for Fig 5a / 6a).
 """
@@ -59,7 +59,7 @@ _OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
 _overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
-FIGURES_DIR = Path("figures/mehregan/images/4a")
+FIGURES_DIR = Path("docs/controllers/ddpg/figures/images/4a")
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/4a")
 DEFAULT_SERIES = CACHE_DIR / "series.json"
 DEFAULT_CHECKPOINT = CACHE_DIR / "checkpoint.pt"

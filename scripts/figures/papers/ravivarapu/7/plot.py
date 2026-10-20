@@ -54,7 +54,7 @@ _paper_overlay = _overlay_import.load_paper_overlay()
 
 CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/7")
 FIG5A_SERIES = Path("artifacts/figures/papers/ravivarapu/5a/series.json")
-FIGURES_DIR = Path("figures/ravivarapu/images/7")
+FIGURES_DIR = Path("docs/controllers/sea_dbs/figures/images/7")
 OUT_STEM = "ablation_psd"
 VARIANTS = ("baseline", "baseline-pm", "baseline-gs", "paper")
 FIG4_VARIANTS = ("baseline", "paper")

@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 IN_JSON = Path("artifacts/ddpg/alphabet_diversity_large_n.json")
-OUT_DIR = Path("figures/mehregan/images/6a")
+OUT_DIR = Path("docs/controllers/ddpg/figures/images/6a")
 OUT_STEM = "large_alphabet_landscape"
 
 

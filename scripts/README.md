@@ -9,7 +9,7 @@
 | **`matlab/`** | MATLAB Engine install / env / verify for the Kumaravelu plant |
 | **`plant/`** | Plant fixture exporters (e.g. init draws for Python ↔ MATLAB parity) |
 | **`validation/`** | Fresh-host / Multipass / Windows sandbox validation |
-| **`reports/`** | Export outreach report Markdown → PDF (`export_pdf.py`) |
+| **`docs/reports/`** | Export outreach report Markdown → PDF (`export_pdf.py`) |
 | **`probes/`** | Diagnostic-only. Keep only reusable extension probes; delete one-off panel thrash after findings land in `docs/figures/` + panel `plot.py` |
 | **`check_mehregan_replication.py`** | Assess a DDPG replication summary JSON against the checklist |
 | **`replicate_mehregan_ddpg.py`** | Full Mehregan DDPG train+eval entry (MATLAB plant) |

@@ -1,6 +1,6 @@
 """Calibrate the Nguyen Fig 4–7 gate tolerances against seed-to-seed noise.
 
-Noise model (docs/figures/nguyen/4.md § Frozen DSQN layers, gate calibration): for a
+Noise model (docs/controllers/snn/figures/4.md § Frozen DSQN layers, gate calibration): for a
 config with N finished seeds, each seed's per-episode series minus the config's mean
 series, inflated by √(N/(N−1)), is one residual. A synthetic *faithful run* is the
 digitized paper curve on the episode grid plus one residual:

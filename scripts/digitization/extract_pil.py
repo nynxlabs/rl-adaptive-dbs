@@ -7,7 +7,7 @@ white background, distinct saturated curve colors, small images.
 Usage (after `cd` to repo root, with venv active):
 
     uv run python scripts/digitization/extract_pil.py \
-        --png figures/mehregan/images/1b/paper.png \
+        --png docs/controllers/ddpg/figures/images/1b/paper.png \
         --config scripts/digitization/figs/mehregan_fig1b.json \
         --out artifacts/figures/papers/mehregan/1b/paper_digitization/curves_pil.json
 

@@ -1,6 +1,6 @@
 """Run Nguyen Fig 4 trains for several variants × seeds, then gate Figs 4–6 on each.
 
-Diagnostic driver for multi-seed comparisons (docs/figures/nguyen/4.md): every job
+Diagnostic driver for multi-seed comparisons (docs/controllers/snn/figures/4.md): every job
 trains ``scripts/figures/papers/nguyen/4/plot.py`` with ``--set`` overrides into its own
 candidate folder, then replots Figs 5 and 6 from that series with ``--plot-only``.
 Nothing touches the panel's official series, manifests, tracker or PNG versions.

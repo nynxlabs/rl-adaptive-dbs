@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Project setup: Python (uv) + optional MATLAB. See docs/setup.md.
+# Project setup: Python (uv) + optional MATLAB. See docs/guides/setup.md.
 set -euo pipefail
 
 _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -85,7 +85,7 @@ done
 
 say "=== rl-adaptive-dbs setup ==="
 say "Repo: $repo_root"
-say "Guide: docs/setup.md"
+say "Guide: docs/guides/setup.md"
 say ""
 
 if ! command -v uv >/dev/null 2>&1; then
@@ -165,4 +165,4 @@ say "=== setup complete ==="
 if [[ "$RUN_VALIDATE" -eq 0 ]]; then
   say "Fresh-host report: bash scripts/validation/validate-fresh.sh"
 fi
-say "Next: docs/setup.md §5 (day-to-day commands)"
+say "Next: docs/guides/setup.md §5 (day-to-day commands)"

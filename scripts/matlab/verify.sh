@@ -21,13 +21,13 @@ if [ -x "$MATLAB_ROOT/bin/matlab" ]; then
 elif [ -x "$MATLAB_ROOT/bin/matlab.exe" ]; then
   pass "MATLAB binary at $MATLAB_ROOT/bin/matlab.exe"
 else
-  die "MATLAB binary missing — set MATLAB_ROOT (docs/matlab.md §2) or run scripts/matlab/install.sh (Linux/WSL)"
+  die "MATLAB binary missing — set MATLAB_ROOT (docs/guides/matlab.md §2) or run scripts/matlab/install.sh (Linux/WSL)"
 fi
 
 if matlab -batch "license('test','MATLAB'); exit" >/dev/null 2>&1; then
   pass "MATLAB license (batch)"
 else
-  die "MATLAB not licensed — see docs/matlab.md §2 (existing) or §4 (activate)"
+  die "MATLAB not licensed — see docs/guides/matlab.md §2 (existing) or §4 (activate)"
 fi
 
 model_dir="$RL_ADAPTIVE_DBS_MATLAB_MODEL"
@@ -46,7 +46,7 @@ fi
 if matlab -batch "cd('$model_dir'); simulate_network_model(1,1,0,1,true); exit" >/dev/null 2>&1; then
   pass "plant dynamics smoke (simulate_network_model dynamics_only)"
 else
-  die "plant dynamics smoke failed — see docs/matlab.md §7"
+  die "plant dynamics smoke failed — see docs/guides/matlab.md §7"
 fi
 
 if uv run python -c "import matlab.engine" >/dev/null 2>&1; then

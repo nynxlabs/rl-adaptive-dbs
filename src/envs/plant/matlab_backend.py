@@ -39,7 +39,7 @@ def model_dir(*, require: bool = True) -> Path:
         msg = (
             f"Kumaravelu MATLAB model not found in {path} (simulate_network_model.m is missing). "
             f"It is not redistributed with this repository; fetch it with `{FETCH_COMMAND}` "
-            "or set RL_ADAPTIVE_DBS_MATLAB_MODEL (docs/matlab.md)."
+            "or set RL_ADAPTIVE_DBS_MATLAB_MODEL (docs/guides/matlab.md)."
         )
         raise FileNotFoundError(msg)
     return path
@@ -60,7 +60,7 @@ class IntegrateResult:
 
 
 class MatlabPlant:
-    """Non-Gym Kumaravelu plant via matlab.engine (docs/plant.md §7)."""
+    """Non-Gym Kumaravelu plant via matlab.engine (docs/plant/README.md §7)."""
 
     def __init__(
         self,

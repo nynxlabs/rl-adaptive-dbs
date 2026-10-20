@@ -50,7 +50,7 @@ _OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
 _overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
-FIGURES_DIR = Path("figures/mehregan/images/4b")
+FIGURES_DIR = Path("docs/controllers/ddpg/figures/images/4b")
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/4b")
 FIG4A_CACHE_DIR = Path("artifacts/figures/papers/mehregan/4a")
 DEFAULT_FIG4A_SERIES = FIG4A_CACHE_DIR / "series.json"
@@ -570,12 +570,12 @@ def main() -> int:
         "--no-update-docs",
         dest="update_docs",
         action="store_false",
-        help="Skip figures/mehregan/replications.md updates",
+        help="Skip docs/controllers/ddpg/README.md updates",
     )
     parser.add_argument(
         "--update-checklist",
         action="store_true",
-        help="Rewrite Fig 4b checklist in figures/mehregan/replications.md (off by default; passed panels use Status only)",
+        help="Rewrite Fig 4b checklist in docs/controllers/ddpg/README.md (off by default; passed panels use Status only)",
     )
     parser.set_defaults(update_checklist=False)
     parser.set_defaults(update_docs=True)

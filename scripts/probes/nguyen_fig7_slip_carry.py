@@ -11,7 +11,7 @@ Two monkeypatches on the eval env, both guesses at unpublished environment detai
   with amplitude 0 on a fresh network; the initial setting takes over from step 1.
 
 Every point is a plant reading. Best match so far (Oct 8 2026): the ``noterm-s4`` Fig 4 candidate
-with both patches passes every Fig 7 gate. See docs/figures/nguyen/7.md
+with both patches passes every Fig 7 gate. See docs/controllers/snn/figures/7.md
 § Reset-order slip with a carried network. Run from the repo root (the gates read the digitized
 paper curve by relative path).
 

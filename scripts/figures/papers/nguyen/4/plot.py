@@ -12,9 +12,9 @@ Run:
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/4/plot.py --plot-only
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/4/plot.py --smoke
 
-Each run writes ``figures/nguyen/images/4/training_reward_length_vN.png`` (N
+Each run writes ``docs/controllers/snn/figures/images/4/training_reward_length_vN.png`` (N
 auto-increments), caches training series + checkpoint under
-``artifacts/figures/papers/nguyen/4/``, and updates ``figures/nguyen/replications.md``.
+``artifacts/figures/papers/nguyen/4/``, and updates ``docs/controllers/snn/README.md``.
 
 First-100 trains are ~15–20 min. Prefer tmux:
 
@@ -86,7 +86,7 @@ data_ylim = _plot_axes.data_ylim
 _OVERLAY = Path(__file__).resolve().parents[2] / "paper_overlay.py"
 _paper_overlay = load_script_module("figure_paper_overlay", _OVERLAY)
 
-FIGURES_DIR = Path("figures/nguyen/images/4")
+FIGURES_DIR = Path("docs/controllers/snn/figures/images/4")
 CACHE_DIR = Path("artifacts/figures/papers/nguyen/4")
 DEFAULT_SERIES = CACHE_DIR / "series.json"
 DEFAULT_CHECKPOINT = CACHE_DIR / "checkpoint.pt"

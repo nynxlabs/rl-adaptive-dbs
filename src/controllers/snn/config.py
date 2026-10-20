@@ -1,4 +1,4 @@
-"""SNN / DSQN hyperparameters (Nguyen et al., docs/controllers/snn/replication.md)."""
+"""SNN / DSQN hyperparameters (Nguyen et al., docs/controllers/snn/method.md)."""
 
 from __future__ import annotations
 
@@ -34,16 +34,16 @@ class SNNConfig:
     plant_carry: bool = False
     # With plant_carry: keep one network (wiring, conductances) for the whole episode
     # instead of redrawing it every 100 ms segment. Off by default: the redrawing plant
-    # reproduces Figs 4-6 and the fixed network does not (docs/figures/nguyen/4.md).
+    # reproduces Figs 4-6 and the fixed network does not (docs/controllers/snn/figures/4.md).
     plant_fixed_network: bool = False
     # Candidate between the two (in neither paper nor the authors' code): keep one wiring
     # for this many 100 ms segments, then redraw. 0 = off; ignored with plant_fixed_network.
     plant_network_hold_steps: int = 0
     # STN DBS recruitment by distance (``PlantConfig.stn_dbs_spread``); 1.0 = Kumaravelu.
-    # A plant deviation, not in the paper (docs/figures/nguyen/5.md).
+    # A plant deviation, not in the paper (docs/controllers/snn/figures/5.md).
     stn_dbs_spread: float = 1.0
     # Conventions from the authors' published environment (github.com/howyoubinh/CL-DBS-RL,
-    # docs/figures/nguyen/4.md § Authors' published code). All off by default.
+    # docs/controllers/snn/figures/4.md § Authors' published code). All off by default.
     # Frequency of the reset window (the 100 ms simulated before the first action). 0 = the
     # episode's initial frequency (40 Hz). The authors' reset() runs it at 100 Hz / 300 /
     # 0.3 ms, then sets 40 Hz / 0.3 ms / 300 for the first action.
@@ -71,7 +71,7 @@ class SNNConfig:
     # Paper §III: an episode terminates after t_u sub-threshold steps. False keeps
     # training episodes running to the horizon (Eq. 7 non-terminated reward every step)
     # and only flags where they would have stopped. A deviation from the paper, kept
-    # for the Fig 7 probe (docs/figures/nguyen/7.md); not adopted without approval.
+    # for the Fig 7 probe (docs/controllers/snn/figures/7.md); not adopted without approval.
     terminate_on_subthreshold: bool = True
 
     # DSQN topology
@@ -343,7 +343,7 @@ def fig4_nguyen_config(
     *,
     num_episodes: int = TRAIN_EPISODES,
 ) -> SNNConfig:
-    """Nguyen Fig. 4–6 training config (docs/figures/nguyen/4.md, 6.md).
+    """Nguyen Fig. 4–6 training config (docs/controllers/snn/figures/4.md, 6.md).
 
     Paper-stated: Eq. (7) reward with unnormalized d, θ = 150, init 300 nA/cm² / 40 Hz /
     0.3 ms, 25-step episodes, replay update every 128 transitions, binary spikes, and the
@@ -363,7 +363,7 @@ def fig4_nguyen_config(
     learning only. Plant: Kumaravelu's coupling, every STN neuron gets the full DBS current
     (ρ = 1, as in the authors' published simulator; the Oct 11 2026 ρ = 3 deviation was
     dropped Oct 18 2026 with master's OK). Training redraws the wiring every 100 ms step;
-    the Fig 7 eval keeps one wiring per episode (docs/figures/nguyen/4.md § Wiring as a
+    the Fig 7 eval keeps one wiring per episode (docs/controllers/snn/figures/4.md § Wiring as a
     setting).
     """
     return SNNConfig(

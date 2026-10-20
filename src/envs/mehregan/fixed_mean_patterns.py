@@ -6,7 +6,7 @@ constant by construction and the agent shapes only the *irregularity* of the
 train (§IV.A.2, Fig. 5b). This module implements that action space as a discrete
 alphabet of precomputed STN drive traces on the plant time grid.
 
-Paper-silent choices (documented in docs/environment.md §4.2):
+Paper-silent choices (documented in docs/plant/environment.md §4.2):
 
 - ``n_patterns = 41`` — matches the scalar-frequency alphabet / actor head size,
   so no DDPG topology change is needed.

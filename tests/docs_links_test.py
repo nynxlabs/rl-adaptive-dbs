@@ -9,7 +9,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-# Public-facing docs. reports/ holds frozen copies of sent reports and is excluded.
+# Public-facing docs. docs/reports/ holds frozen copies of sent reports and is excluded.
 PUBLIC_MARKDOWN = sorted(
     [REPO_ROOT / "README.md"]
     + list((REPO_ROOT / "docs").rglob("*.md"))

@@ -1,6 +1,6 @@
 # Testing
 
-How to run and extend **pytest** checks for **rl-adaptive-dbs**. Setup and `uv` usage: [setup.md](../setup.md). Roadmap: [roadmap.md](roadmap.md). Conventions: [conventions.md](conventions.md).
+How to run and extend **pytest** checks for **rl-adaptive-dbs**. Setup and `uv` usage: [setup.md](../guides/setup.md). Roadmap: [roadmap.md](roadmap.md). Conventions: [conventions.md](conventions.md).
 
 ---
 
@@ -109,8 +109,8 @@ Naming: files `*_test.py`, functions `test_*` (pytest default discovery).
 | **Unit** | `tests/` | reward math, observation windows, adapter shapes |
 | **Integration** | `tests/` | `reset` / `step`, episode length, baseline policies |
 | **Equivalence / regression** | `tests/` with `@pytest.mark.matlab` or `slow` | GPi spikes (`matlab_plant_test.py`); $P_\beta$ vs MATLAB (`matlab_biomarkers_test.py`, needs `dpss`) |
-| **Paper replication** | Figure panel scripts + [figures/mehregan/replications.md](../../figures/mehregan/replications.md) | train+plot under `scripts/figures/papers/`; qualitative gates |
-| **Benchmark suites** | `rl-dbs benchmark` + `results/` | full suites per [benchmarking.md](../benchmarking.md); smoke subsets in pytest only |
+| **Paper replication** | Figure panel scripts + [docs/controllers/ddpg/README.md](../controllers/ddpg/README.md) | train+plot under `scripts/figures/papers/`; qualitative gates |
+| **Benchmark suites** | `rl-dbs benchmark` + `results/` | full suites per [benchmarking.md](../guides/benchmarking.md); smoke subsets in pytest only |
 
 Keep CI fast: default runs should pass without MATLAB; skip or mark heavy checks.
 
@@ -135,7 +135,7 @@ def test_p_beta_matches_reference_segment() -> None:
     ...
 ```
 
-**Skip logic:** `tests/conftest.py` defines `matlab_available()` (batch license check) and `matlab_engine_available()` (license **and** `import matlab.engine`). Collection skips `@pytest.mark.matlab` when the engine is unavailable. Parametrized plant fixtures (`plant_backend` with id `matlab`) skip the MATLAB arm when only the binary is installed — e.g. after `uv sync --group dev --group figures` without `--group matlab`. With MATLAB, run `source scripts/matlab/env.sh` and `uv sync --group matlab` first ([matlab.md](../matlab.md)).
+**Skip logic:** `tests/conftest.py` defines `matlab_available()` (batch license check) and `matlab_engine_available()` (license **and** `import matlab.engine`). Collection skips `@pytest.mark.matlab` when the engine is unavailable. Parametrized plant fixtures (`plant_backend` with id `matlab`) skip the MATLAB arm when only the binary is installed — e.g. after `uv sync --group dev --group figures` without `--group matlab`. With MATLAB, run `source scripts/matlab/env.sh` and `uv sync --group matlab` first ([matlab.md](../guides/matlab.md)).
 
 **Default pytest subset:** `pytest -m "not matlab"` is what `scripts/setup.sh` runs. That suite still needs the **figures** group (`matplotlib`) for `tests/scripts/fig2a_trailing_window_test.py`.
 

@@ -1,0 +1,277 @@
+# Plant specification (Kumaravelu et al., 2016 CBGT model)
+
+This document is the **authoritative spec for the shared biophysical plant**: the **cortex–basal ganglia–thalamus (CBGT)** network for the **6-OHDA–lesioned (parkinsonian) rat**, with **DBS delivered in the STN**. All controllers and adapters drive **one** instance of this dynamics model—no duplicated CBGT code under `controllers/`.
+
+**Related specs:**
+
+- **Mehregan Gymnasium API** (2 s RL steps, pattern actions, Eq. (8) reward, baselines) — [environment.md](environment.md).
+- **Per-controller RL interfaces** (timing, observations, rewards) — [controllers/](../controllers/).
+- **Equivalence testing** — [development/testing.md](../development/testing.md) §3 (`@pytest.mark.matlab`).
+
+---
+
+## 1. Scope
+
+| In scope | Out of scope |
+|----------|----------------|
+| Kumaravelu et al. (2016) **network topology**, neuron models, pathology flag, **STN DBS** waveform parameters in the reference script | Mehregan **RL** step duration, reward Eq. (8), discrete pattern alphabet cardinality ([environment.md](environment.md)) |
+| **Plant integration** ($\Delta t$), simulated-time segments, IC reset | DDPG / DSQN / SEA-DBS **training loops** ([controllers/](../controllers/)) |
+| **Biomarker primitives** from GPi spiking (PSD, band integrals); which band applies is **suite- or adapter-specific** | Benchmark **run manifests** and cross-paper tables ([benchmarking.md](../guides/benchmarking.md)) |
+
+The plant layer exposes **dynamics + actuation + spike/biomarker outputs**. The `envs/` package wraps it with the Mehregan RL contract; Nguyen and SEA-DBS adapters subsample or re-window the same plant without reimplementing dynamics.
+
+---
+
+## 2. Reference and provenance
+
+- **Publication:** Kumaravelu, K., Brocker, D. T., Grill, W. M. (2016). *A biophysical model of the cortex–basal ganglia–thalamus network in the 6-OHDA lesioned rat model of Parkinson’s disease.* *Journal of Computational Neuroscience*, 40, 207–229.
+- **Reference MATLAB (fetched, not bundled):** `python scripts/matlab/fetch_kumaravelu.py` downloads the pinned upstream revision into `reference-material/KumaraveluEtAl2016/` and applies our integration patches from the private `kumaravelu_plant` package when it is installed ([changes.md](../../reference-material/KumaraveluEtAl2016/changes.md); licensing: [LICENSING.md](../../LICENSING.md)) — entry script `simulate_network_model.m`, network routine `CTX_BG_TH_network` in the same file. Citation and provenance: the fetched `readme.txt`.
+- **Upstream:** [ModelDBRepository/206232](https://github.com/ModelDBRepository/206232).
+
+**Replication default:** **Parkinsonian** runs use `pd = 1` in the reference script (`pd = 0` is healthy). RL work in this repo targets the **parkinsonian** regime unless a benchmark explicitly includes healthy controls.
+
+---
+
+## 3. Network topology and dynamics
+
+- **Regions:** Cortex (excitatory / inhibitory populations), direct and indirect striatum, **STN**, **GPe**, **GPi**, thalamus; inter-region connections as in Kumaravelu et al. (2016).
+- **Units per region:** **$n = 10$** neurons per structure in the reference implementation (`n = 10` in `simulate_network_model.m`).
+- **Neuron models:** The reference uses **Izhikevich** dynamics for cortical populations and **Hodgkin–Huxley–type** dynamics for basal ganglia and thalamus. Adaptive DBS papers often describe the model uniformly as “HH-type”; **match the reference implementation** for fidelity, not the prose shorthand alone.
+- **Pathology:** `pd = 1` selects parkinsonian (6-OHDA lesioned) parameters with exaggerated **beta** oscillations versus `pd = 0` (healthy).
+- **Outputs used downstream:** At minimum, **GPi action-potential trains** for biomarker computation; the reference also saves STN, GPe, striatal, cortical, and thalamic APs.
+
+---
+
+## 4. STN DBS actuation
+
+The reference drives DBS as a **current injected in STN** (`Idbs` passed to `CTX_BG_TH_network`).
+
+| Parameter | Reference default (`simulate_network_model.m`) | Notes |
+|-----------|-----------------------------------------------|--------|
+| **Pulse width** `PW` | **0.3 ms** | Rectangular pulse |
+| **Amplitude** | **300 nA/cm²** | Constant within pulse |
+| **Carrier pattern** | Scalar **frequency in Hz** via `pick_dbs_freq` indexing `freqs = 0:5:200` | `pick_dbs_freq == 1` → **no DBS** (`Idbs = 0`); otherwise `creatdbs` builds a pulse train at `pattern` Hz |
+| **Optional cortical stimulus** | `corstim` | Off (`0`) for standard DBS-only runs |
+
+**Pulse train construction (`creatdbs`):** For frequency `pattern` Hz, pulses of width `PW` at amplitude `amplitude` are placed with inter-pulse interval `isi = 1000 / pattern` ms on the integration grid.
+
+**Mehregan discrete patterns:** Mehregan et al. apply a **discrete STN pattern alphabet** at the RL layer ([environment.md](environment.md) §4). The plant must accept a **drive specification** per simulated segment (frequency, pulse train, or precomputed `Idbs` waveform). **Open:** exact mapping from Mehregan pattern indices to STN current—**decide in** the MATLAB/Python bridge; keep stable across training, eval, and quantization.
+
+**Baselines (plant-level):** **No stimulation**, conventional **~130 Hz** cDBS, and periodic **45 Hz** (and **30 Hz** where papers compare)—implemented as fixed `pattern` / `Idbs` settings with documented seeds.
+
+---
+
+## 5. Integration and simulated time
+
+| Quantity | Reference (`simulate_network_model.m`) | Mehregan replication target |
+|----------|----------------------------------------|-----------------------------|
+| **Integration step** $\Delta t$ | **0.01 ms** (`dt = 0.01`) | Mehregan §IV.A.1 reports **0.02 ms** for the computational plant |
+| **Default segment in reference script** | **2000 ms** (`tmax = 2000`) per call | RL **segment length** is set by the env or adapter (e.g. **2 s** Mehregan, **100 ms** Nguyen, **2 ms** SEA-DBS)—the plant integrates whatever duration the caller requests |
+
+**Implementation note:** For Mehregan-aligned replication, default plant config should use **$\Delta t = 0.02$ ms** unless released Mehregan training code specifies otherwise. If the bridge keeps the reference **0.01 ms** step, **document the deviation** and validate biomarker statistics ($P_\beta$, baseline traces) under the same protocols.
+
+**Episode / IC reset:** A new RL episode draws **new initial conditions** (reference: randomized membrane voltages per population, drawn as −62 mV plus Gaussian noise with a 5 mV standard deviation). The plant `reset` (or equivalent) must support reproducible seeds for benchmarking.
+
+**Carried segments:** `PythonPlant.integrate(..., carry=True)` continues voltages, gates, Ca and synapses from the previous segment. Each call still draws the network's wiring permutations and heterogeneous conductances (`gcorsna`, `gsngen`, …) afresh, as a fresh call of the reference script would. Two exceptions: seeds with cached MATLAB init draws (`plant_init_seed*.npz` in the private `kumaravelu_plant` package) reuse those draws every call, and `fixed_network=True` keeps the first segment's draws until `reset`. Nguyen uses the redrawing default; `SNNConfig.plant_fixed_network` opts in to one network per episode (why: [docs/controllers/snn/4.md](../controllers/snn/figures/4.md) § One network per episode). Non-carried calls are unaffected by either option.
+
+---
+
+## 6. Biomarkers from GPi spiking
+
+Biomarker **definitions differ by paper**; the plant and wrapper should compute spectra from **GPi spike trains** and expose band integrals consistently.
+
+### 6.1 Reference script (Kumaravelu MATLAB)
+
+After simulation, `make_Spectrum(GPi_APs, params)` computes a multitaper PSD (`mtspectrumpt`, Chronux-style parameters in-script: `Fs` from `dt`, `fpass = [1 100]`, `tapers = [3 5]`). The reference integrates power over **7–35 Hz**:
+
+It keeps the PSD values strictly between 7 and 35 Hz and integrates them over frequency with the trapezoid rule; the result is named `gpi_alpha_beta_area`.
+
+This **`gpi_alpha_beta_area`** is the reference’s “alpha–beta” scalar for GPi.
+
+### 6.2 Mehregan $P_\beta$ (13–35 Hz)
+
+Mehregan Eq. (1) integrates GPi spike PSD over **13–35 Hz**, averaged over **$n = 10$** GPi neurons:
+
+$$
+P_\beta = \frac{1}{n} \sum_{j=1}^{n} \int_{\omega = 2\pi \cdot 13\,\mathrm{Hz}}^{2\pi \cdot 35\,\mathrm{Hz}} P_j^{\mathrm{GPi}}(\omega)\, d\omega
+$$
+
+**Replication:** Use **13–35 Hz** for Mehregan fidelity even when wrapping the reference script—**re-band** or post-process; do not silently use the reference’s **7–35 Hz** integral for Mehregan metrics ([environment.md](environment.md) §3.1).
+
+### 6.3 Nguyen $\alpha$–$\beta$ feedback
+
+Nguyen uses **7–35 Hz** GPi oscillation power for reward and early termination ([controllers/snn/replication.md](../controllers/snn/method.md)). That aligns with the **reference integral band**, not Mehregan’s **13–35 Hz** $P_\beta$ alone.
+
+### 6.4 Logging for cross-controller comparison
+
+For optional **plant-level** suites ([benchmarking.md](../guides/benchmarking.md) §3.3), log **raw GPi traces** and/or **multiple band integrals** ($P_\beta$, 7–35 Hz, duty cycle) so adapters are not conflated in tables.
+
+---
+
+## 7. Target plant wrapper API
+
+The plant lives under `envs/plant/` as a **non-Gym** service the Mehregan `Env` and adapters call. The Kumaravelu dynamics port (network, Python backend, spectrum code, and init-draw data) is in the private `kumaravelu_plant` package; the public modules keep the config, DBS, and biomarker interfaces and resolve the private code on first use (without the package, plant use raises `PlantUnavailableError`; see [LICENSING.md](../../LICENSING.md)).
+
+### Implemented (Phase 2, partial)
+
+| Symbol | Module | Notes |
+|--------|--------|--------|
+| `MatlabPlant` | `envs.plant` | `matlab.engine` bridge to `simulate_network_model(..., dynamics_only=true)` |
+| `PythonPlant` | `envs.plant` | Native NumPy port of Kumaravelu CBGT network (private `kumaravelu_plant` package; [native-plant-port.md](../development/history/native-plant-port.md)); **GPi / $P_\beta$ parity with MATLAB** when init draws come from `plant_init_export` fixtures (see below) |
+| `PlantConfig` | `envs.plant` | `pd`, `dt_ms` (reference **0.01 ms**), `corstim` |
+| `DbsSpec` | `envs.plant` | `pick_dbs_freq` index; `DbsSpec.none()`, `from_frequency_hz(hz)` |
+| `IntegrateResult` | `envs.plant` | `gpi_spikes` (10 neurons, times in **seconds**), `info` |
+
+**Backend selection:** `.rl-dbs.yaml` → `plant.backend: python` (default since TASK-63, 2026-07-06) or `matlab`; env override `RL_DBS_PLANT_BACKEND`. `rl-dbs info plant` shows the resolved backend. `mehregan_eval` baseline gate passed on Python ([native-plant-port.md](../development/history/native-plant-port.md) §5); parity and **≥10×** speed gates met (2026-07-03).
+
+**Python init draws:** MATLAB’s `randperm(n, k)` for heterogeneous STN→GPe/GPi conductances is not reproducible from NumPy’s `Generator` alone. `PythonPlant.reset(seed=N)` loads the draws that match the plant's `pd` — `plant_init_seed{N}.npz` for PD (`pd=1`), `plant_init_seed{N}_pd0.npz` for healthy (`pd=0`) — loaded from the private `kumaravelu_plant` package's `data/` folder, then `~/.cache/rl-adaptive-dbs/plant_init/`. `scripts/plant/export_plant_init_draws.py --seed N --pd P` writes to the package's `data/` folder by default. The two differ only in the cortex→D1 striatum conductances (`gcordrstr = (0.07 - 0.044 pd) + 0.001 rand`); the loader refuses a file whose `gcordrstr` belongs to the other `pd`. Until Oct 18 2026 only PD exports existed, so healthy runs on seeds 0–4, 7, 11 and 42 used the PD value ($\approx 0.026$ instead of $\approx 0.07$). With matching init draws, 2 s GPi spike trains and $P_\beta$ match MATLAB within documented tolerances (`python_integrator_fixed_ic_test.py` in the private package, and `tests/envs/plant_backend_equivalence_test.py`).
+
+**Performance (2026-07-03, WSL, seed=42, 2 s, no DBS):** MATLAB **≈58–66 s**; PythonPlant **≈6–7 s** with Numba JIT (`kumaravelu_plant.network.numba_loop`, private) — **≈10× faster** than MATLAB. NumPy fallback loop remains when Numba is unavailable or trace/debug hooks are requested. The Numba path records GPi spikes in a per-neuron buffer: **512** for a 2 s segment; longer single-shot integrates auto-size via `default_gpi_spike_buffer_size` (`ceil(duration_s × 80 Hz) + 64`, at least 512). Callers may still pass `gpi_spike_buffer_size` (Fig 2a uses a 60 Hz helper). Without a duration-scaled buffer, trains truncate after ~12 s.
+
+**Hodgkin–Huxley `vtrap`:** striatal Na/K/M rates are of the form $x/(1-e^{-x/k})$. MATLAB has no guard; 2 s segments almost never land exactly on $V=-54,-52,-30,-27$. Sequential 2 s carry (and long single-shot integrates) can, and Numba then raises `ZeroDivisionError`. Python/Numba replace those divisions with the usual HH limit ($k$ or $-k$ as $x\to 0$) and floor time constants off 0/inf. Same class of numerical stability as the Ca floor, not a paper parameter.
+
+**Intracellular Ca floor:** STN Ca reversal is `log(Cao/Ca)`. MATLAB has no floor; 2 s segments stay positive. Sequential 2 s carry across an episode (Mehregan Fig 4a `continuous`, ≳20 s of Ca accumulation) can drive Ca to 0 and `ZeroDivisionError` in Numba. Python/Numba clamp STN/GPe/GPi Ca at **10⁻⁸ mM** before the Nernst/IAHP divisions. This is numerical stability for long sequential segments, not a paper parameter.
+
+```python
+from envs.plant import DbsSpec, MatlabPlant, PythonPlant
+
+# MATLAB backend (default)
+with MatlabPlant() as plant:
+    result = plant.reset(seed=42).integrate(2.0, DbsSpec.none())
+
+# Native Python (opt-in via config or explicit construction)
+with PythonPlant() as plant:
+    result = plant.reset(seed=42).integrate(2.0, DbsSpec.none())
+    # result.gpi_spikes[i] — spike times for GPi neuron i
+```
+
+MATLAB vendor args and return packing: [kumaravelu_vendor_patches.md](vendor_patches.md). Tests: `tests/envs/matlab_plant_test.py` ([development/testing.md](../development/testing.md)).
+
+### Mehregan Fig 2a — GPi $P_\beta$ time series (2026-07-11)
+
+Qualitative replication of Mehregan et al. Fig. 2a — GPi beta-band power ($P_\beta$, Eq. (1)) over **12 s** for **PD no treatment** vs **PD + 130 Hz cDBS**.
+
+| Item | Convention |
+|------|------------|
+| **Script** | `scripts/figures/papers/mehregan/2a/plot.py` |
+| **Artifacts** | `artifacts/figures/papers/mehregan/2a/` (`series.json`, `manifest.json`); PNG `docs/controllers/ddpg/figures/images/2a/beta_power.png` |
+| **Backend** | `PythonPlant` (default) |
+| **Protocol** | **14 s** simulate (2 s pre-roll + 12 s display); plot axis = sim **− 2 s**; DBS at **sim 4 s**; **0.2 s** trailing / **2 s** backward window; windows end at **sim 14 s** (display $t=12$ → `[12, 14]`) |
+| **Spike buffer** | Fig 2a alone passes `gpi_spike_buffer_size` ≈ **904** (`ceil(14 s × 60 Hz) + 64`) — Numba default **512**/neuron truncates GPi spikes on long integrates and caused an artificial end-of-trace cliff |
+| **Plot** | Dense line trace 0–12 s; dashed vertical at **2 s**; y-axis label **PSD** |
+| **Alt mode** | `--sampling segment` — six whole-segment **2 s** bins (step plot) |
+| **Seeds** | Default **0**; `--seeds` for mean across multiple IC draws |
+| **Comparison** | [docs/controllers/ddpg/README.md](../controllers/ddpg/README.md) |
+
+```bash
+uv run python scripts/figures/papers/mehregan/2a/plot.py
+uv run python scripts/figures/papers/mehregan/2a/plot.py --plot-only
+```
+
+### Mehregan Fig 2b — Error Index time series (2026-07-12)
+
+Windowed Error Index (EI, Mehregan Eq. 2 / Gao Eq. 6) over **12 s** for **PD no treatment** vs **PD + 130 Hz cDBS**.
+
+| Item | Convention |
+|------|------------|
+| **Script** | `scripts/figures/papers/mehregan/2b/plot.py` |
+| **Artifacts** | `artifacts/figures/papers/mehregan/2b/`; PNG `docs/controllers/ddpg/figures/images/2b/error_index_v2.png` (canonical; plot auto-versions) |
+| **Protocol** | Same trailing-window timing as Fig 2a; **2 s** EI window; TH spike buffer enlarged for 14 s integrates |
+| **Path A (default)** | So-style SMC **into TH** (So et al., 2012): `smc_site='thalamic'`, `iappth_baseline=0` (no Kumaravelu cerebellar bias), `ggith=0.112`, BoC amp **3.5** µA/cm², 5 ms pulses. Restores blue-below-red ordering. |
+| **SMC drive** | `PlantConfig(smc_schedule='boc', smc_site='thalamic'|'cortical', iappth_baseline=..., ggith=...)` — TH path is Fig 2b default; cortical `Iappco` remains for probes (does not match paper EI ordering). |
+| **SMCτ source** | `smc_pulse_source='drive'` (default) or `'cor_spikes'` |
+| **EI definition** | `envs.plant.biomarkers.error_index` — Mehregan Eq. (2) / Gao et al. (ICCPS 2020) Eqs. (4)–(6): misfires / (n · |SMC|); 25 ms TH response window |
+| **Plot** | Dense line 0–12 s; y-axis **Error Index** 0–0.4; dashed vertical at **2 s** |
+| **Comparison** | [docs/controllers/ddpg/README.md](../controllers/ddpg/README.md) |
+
+```bash
+uv run --group figures python scripts/figures/papers/mehregan/2b/plot.py
+uv run --group figures python scripts/figures/papers/mehregan/2b/plot.py --plot-only
+```
+
+**Biomarkers (implemented):** `error_index`, `smc_pulse_times_from_trace` / `smc_pulse_times_from_iappco`, `smc_pulse_times_from_cor_spikes`, `resolve_smc_pulse_times`; TH spikes via `record_th_spikes=True` on `integrate`.
+
+**Mehregan Gym (implemented):** `envs.mehregan.MehreganEnv` — see [environment.md](environment.md); baselines via `run_baseline_rollout`.
+
+### Target surface
+
+| Method | Behavior |
+|--------|----------|
+| `reset(seed=None)` | Parkinsonian ICs (`pd = 1`); optional RNG seed |
+| `integrate(duration_s, dbs_spec, *, record_spikes=True, gpi_spike_buffer_size=None)` | Advance dynamics for `duration_s` simulated seconds with STN drive `dbs_spec`; return GPi (and optionally other) APs, last biomarker samples, info. When `gpi_spike_buffer_size` is omitted, the Numba GPi buffer scales with duration (`default_gpi_spike_buffer_size`; 2 s stays **512**). Fig 2a may still pass an explicit 60 Hz helper. |
+| `config` | $\Delta t$, `pd`, default DBS waveform parameters, biomarker bands |
+
+**Not in the plant API:** Gymnasium `step`/`reset` return shapes, Mehregan reward, or controller actions—the **environment** and **adapters** map RL actions to `dbs_spec` and call `integrate` for the correct **segment duration**.
+
+---
+
+## 8. Equivalence and validation
+
+Before trusting the Python/MATLAB bridge for training:
+
+1. **Fixed seed, `pd = 1`, no DBS:** compare GPi traces or $P_\beta$ / 7–35 Hz integral to a reference `.mat` output from `simulate_network_model.m`.
+2. **Fixed DBS frequency** (e.g. 130 Hz, 45 Hz): match pulse timing and biomarker level within documented tolerance.
+3. **$\Delta t$:** if using 0.02 ms vs reference 0.01 ms, document and run (1)–(2) under the chosen step.
+4. **Band:** confirm Mehregan metrics use **13–35 Hz** even when the reference script returns **7–35 Hz**.
+
+**PythonPlant status (2026-07-03):** Gates (1)–(2) pass for seeds with exported init fixtures (`plant_init_seed{N}.npz`). Spike times match on the shared **0.01 ms** grid (0 ms atol); $P_\beta$ relative error **< 1%**. Cross-backend suite: `tests/envs/plant_backend_equivalence_test.py`. **≥10×** speedup vs MATLAB on 2 s integrate is met via Numba JIT; default-backend flip awaits `mehregan_eval` baseline on Python ([native-plant-port.md](../development/history/native-plant-port.md) §5).
+
+Mark heavy checks `@pytest.mark.matlab` ([development/testing.md](../development/testing.md)). CI defaults should skip MATLAB.
+
+---
+
+## 9. Native Python plant (`PythonPlant`)
+
+**Status (TASK-17, 2026-07-03):** Implemented in `kumaravelu_plant/python_backend.py` (private package) with the same `integrate` / `reset` contract as `MatlabPlant`. Dynamics port: `kumaravelu_plant/network/` (private package; [native-plant-port.md](../development/history/native-plant-port.md)).
+
+| Gate | Status |
+|------|--------|
+| GPi spike parity (2 s, fixed init draws) | **Pass** |
+| $P_\beta$ parity (< 1% rel error) | **Pass** |
+| DBS ordering (130 Hz / 45 Hz lowers beta vs none) | **Pass** (`plant_backend_equivalence_test.py`) |
+| ≥10× speedup vs MATLAB (2 s integrate) | **Pass** (Numba JIT, WSL ≈6.5 s vs MATLAB ≈66 s, seed=42) |
+| Default backend flip to `python` | **Done** (TASK-63, 2026-07-06) |
+
+Default is `python`; opt into MATLAB via `plant.backend: matlab` or `RL_DBS_PLANT_BACKEND=matlab`. Treat the fetched MATLAB in **`reference-material/KumaraveluEtAl2016/`** (`python scripts/matlab/fetch_kumaravelu.py`) as the dynamics reference for audits; Python is validated against it via exported init fixtures and parametrized `@pytest.mark.matlab` tests.
+
+---
+
+## 10. Open questions / TBD
+
+### 1. Integration step $\Delta t$
+
+**Fixed:** Mehregan replication target **0.02 ms**; reference default **0.01 ms**. **Open:** released Mehregan code value. **Decide in** plant config; validate biomarkers if keeping 0.01 ms.
+
+### 2. Mehregan pattern → STN current
+
+**Fixed:** actuation is STN-injected DBS per Kumaravelu et al. (2016). **Open:** encoding of discrete Mehregan patterns. **Decide in** env bridge ([environment.md](environment.md) §4).
+
+**Implemented:** `envs/mehregan/patterns.py` — action index → `pick_dbs_freq` (see [environment.md](environment.md) §11.3).
+
+### 3. Multitaper / PSD parameters
+
+Reference uses specific `Fs`, `fpass`, and tapers. **Open:** whether adapters may share one PSD implementation for all bands. **Decide in** `envs/` biomarker module; document if diverging from reference `make_Spectrum`.
+
+### 4. Healthy vs parkinsonian eval
+
+**Fixed:** training targets **parkinsonian** (`pd = 1`). **Open:** whether benchmarks include `pd = 0` controls. **Decide in** suite manifests.
+
+---
+
+## 11. Consistency checklist
+
+- [x] Single plant backend; **no** CBGT dynamics under `controllers/`.
+- [x] **$n = 10$** neurons per region; reference Kumaravelu topology via `MatlabPlant`.
+- [x] STN DBS via Kumaravelu `PW`, amplitude, and `pick_dbs_freq` / `Idbs` waveform.
+- [x] Mehregan metrics: GPi **13–35 Hz** $P_\beta$ (`envs.plant.biomarkers`); Nguyen **7–35 Hz** deferred to adapter.
+- [x] $\Delta t$ **0.01 ms** (reference default) documented in `PlantConfig`; Mehregan **0.02 ms** target noted in §10.
+- [x] Equivalence tests: GPi spike reproducibility, $P_\beta$, `MehreganEnv` rollouts (`tests/envs/*_test.py`, `@pytest.mark.matlab`).
+- [x] `PythonPlant` GPi / $P_\beta$ parity vs MATLAB (init fixtures; default backend `python` since TASK-63).
+
+---
+
+## 12. References
+
+- Kumaravelu et al. (2016) — plant dynamics; MATLAB from [ModelDBRepository/206232](https://github.com/ModelDBRepository/206232), fetched into `reference-material/KumaraveluEtAl2016/` with `python scripts/matlab/fetch_kumaravelu.py`.
+- Mehregan et al. — RL environment using this plant; [environment.md](environment.md).
+- Nguyen et al., Ravivarapu et al. — adapters on the same plant; [controllers/snn/replication.md](../controllers/snn/method.md), [controllers/sea_dbs/replication.md](../controllers/sea_dbs/method.md).

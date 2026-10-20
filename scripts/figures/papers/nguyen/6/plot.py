@@ -53,7 +53,7 @@ from controllers.snn.config import (
 FIG4_CACHE = Path("artifacts/figures/papers/nguyen/4")
 FIG4_SERIES = FIG4_CACHE / "series.json"
 FIG4_MANIFEST = FIG4_CACHE / "manifest.json"
-FIGURES_DIR = Path("figures/nguyen/images/6")
+FIGURES_DIR = Path("docs/controllers/snn/figures/images/6")
 CACHE_DIR = Path("artifacts/figures/papers/nguyen/6")
 DEFAULT_MANIFEST = CACHE_DIR / "manifest.json"
 OUT_STEM = "alpha_beta_params"

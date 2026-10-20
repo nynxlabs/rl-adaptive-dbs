@@ -91,4 +91,4 @@ Beyond the hierarchical architecture:
 
 ---
 
-*Fusion work should be tracked as a separate benchmarking suite (e.g. `fusion_eval`) once both individual replications are complete. See [../benchmarking.md](../benchmarking.md) §2 for variant naming conventions.*
+*Fusion work should be tracked as a separate benchmarking suite (e.g. `fusion_eval`) once both individual replications are complete. See [../benchmarking.md](../guides/benchmarking.md) §2 for variant naming conventions.*

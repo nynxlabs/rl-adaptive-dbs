@@ -1,5 +1,5 @@
 # Mehregan et al. eval suite — baselines + full-precision DDPG variants.
-# Spec: docs/benchmarking.md §5, docs/environment.md §8
+# Spec: docs/guides/benchmarking.md §5, docs/plant/environment.md §8
 name: mehregan_eval
 version: 1
 protocol: mehregan

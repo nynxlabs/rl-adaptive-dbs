@@ -2,7 +2,7 @@
 
 Each panel's digitized values (``curves_*.json`` under the artifacts root, read off
 the published figure) are drawn with matplotlib and saved as
-``figures/<paper>/images/<panel>/digitized_v<N>.png``. The caption says the figure
+``docs/controllers/<controller>/figures/images/<panel>/digitized_v<N>.png``. The caption says the figure
 is ``Digitized from Fig. X of <paper>``, and the footer says it is our redraw.
 
     uv run python scripts/digitization/redraw_digitized.py --all
@@ -68,7 +68,7 @@ class Panel:
     """A redrawn figure. One axis gives a single plot; two or four give a grid."""
 
     paper: str
-    fig: str  # "4a", "3", ... ; the output folder is figures/<paper>/images/<fig>/
+    fig: str  # "4a", "3", ... ; the output folder is docs/controllers/<controller>/figures/images/<fig>/
     axes: tuple[Axis, ...]
 
 

@@ -67,7 +67,7 @@ class EfficacyPanel:
 
     @property
     def figures_dir(self) -> Path:
-        return Path(f"figures/mehregan/images/{self.panel}")
+        return Path(f"docs/controllers/ddpg/figures/images/{self.panel}")
 
     @property
     def cache_dir(self) -> Path:

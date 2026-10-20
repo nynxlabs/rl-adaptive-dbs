@@ -47,7 +47,7 @@ from controllers.snn.energy import dbs_energy_index
 FIG4_CACHE = Path("artifacts/figures/papers/nguyen/4")
 FIG4_SERIES = FIG4_CACHE / "series.json"
 FIG4_MANIFEST = FIG4_CACHE / "manifest.json"
-FIGURES_DIR = Path("figures/nguyen/images/5")
+FIGURES_DIR = Path("docs/controllers/snn/figures/images/5")
 CACHE_DIR = Path("artifacts/figures/papers/nguyen/5")
 DEFAULT_MANIFEST = CACHE_DIR / "manifest.json"
 OUT_STEM = "spikes_energy"
@@ -114,7 +114,7 @@ def network_spikes(series: dict[str, Any]) -> np.ndarray:
 
     The stimulated STN fires about once per DBS pulse and GPi, its direct target, follows
     it, so including either makes the count track stimulation frequency rather than the
-    rest of the network's response (docs/figures/nguyen/5.md).
+    rest of the network's response (docs/controllers/snn/figures/5.md).
     """
     by_pop = np.asarray(series["episode_spikes_per_step_by_population"], dtype=float)
     if by_pop.ndim != 2 or by_pop.shape[1] != len(CBGT_POPULATIONS):
@@ -130,7 +130,7 @@ def final_setting_energy(series: dict[str, Any]) -> np.ndarray | None:
     The panel plots the trainer's per-step mean × 25 (``episode_energies``). The paper does
     not say how an episode's energy is formed; its late level (~2,040) equals Eq. (6) at its
     late Fig. 6 setting × 25, which this metric reproduces for our run
-    (docs/figures/nguyen/5.md § Dose-response and the late energy gap).
+    (docs/controllers/snn/figures/5.md § Dose-response and the late energy gap).
     """
     keys = ("episode_frequencies", "episode_amplitudes", "episode_pulse_widths")
     if not all(k in series for k in keys):
