@@ -232,14 +232,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     # Former name, kept so existing commands keep working.
     parser.add_argument("--push-kb", dest="export_notes", action="store_true", help=argparse.SUPPRESS)
-    parser.add_argument(
-        "--update-report",
-        action="store_true",
-        help="After promote, refresh the 2026-08-10 report gallery image links in the notes folder",
-    )
     args = parser.parse_args(argv)
     _figure_promote.set_export_notes_images(args.export_notes)
-    _figure_promote.set_update_report3(args.update_report)
 
     if args.out is None:
         FIGURES_DIR.mkdir(parents=True, exist_ok=True)

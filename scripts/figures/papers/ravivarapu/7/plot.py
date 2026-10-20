@@ -7,7 +7,7 @@ train here with the identical config. Eval is the Fig 5a rollout (training
 plant setup, 50 Hz, untreated t=0 plus 10 argmax actions).
 
 Run:
-  uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/7/plot.py --export-notes --update-report
+  uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/7/plot.py --export-notes
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/7/plot.py --plot-only
 """
 from __future__ import annotations
@@ -190,13 +190,11 @@ def main() -> int:
         help=f"Save checkpoint every N episodes (default {_resume_cli.DEFAULT_CHECKPOINT_INTERVAL})",
     )
     _resume_cli.add_export_notes_arg(parser)
-    _resume_cli.add_update_report3_arg(parser)
     _parallel_series.add_parallel_series_argument(parser)
     _common.add_no_promote_arg(parser)
     args = parser.parse_args()
     if args.no_promote:
         args.export_notes = False
-        args.update_report = False
     _resume_cli.configure_promote_publish(args, _figure_promote)
     steps = 5 if args.smoke else ABLATION_EVAL_STEPS
     series_path = CACHE_DIR / "series.json"

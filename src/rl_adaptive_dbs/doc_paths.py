@@ -12,8 +12,6 @@ Each replicated paper maps to one controller folder under ``docs/controllers/``:
 - ``docs/controllers/<controller>/figures/images/<panel>/`` — that panel's
   images. Links from a figure page are ``images/<panel>/…``; from the tracker
   they are ``figures/images/<panel>/…``.
-- ``docs/reports/`` — dated reports; their image links are
-  ``../controllers/<controller>/figures/images/…``.
 
 A notes folder (``rl_adaptive_dbs.notes_export``) mirrors these repo-relative
 paths. Everything here is plain path arithmetic — no heavy imports.
@@ -43,7 +41,6 @@ MARKER_PANEL_ALIASES: dict[str, dict[str, str]] = {
 }
 
 CONTROLLERS_DOCS_REL = PurePosixPath("docs/controllers")
-REPORTS_REL = PurePosixPath("docs/reports")
 
 
 def controller_for(paper: str) -> str:
@@ -125,10 +122,6 @@ def all_trackers(root: Path = REPO) -> tuple[Path, ...]:
     return tuple(tracker_path(paper, root) for paper in PAPERS)
 
 
-def reports_dir(root: Path = REPO) -> Path:
-    return Path(root) / REPORTS_REL
-
-
 def main_checkout_root(checkout: Path) -> Path:
     """The main repo checkout when ``checkout`` is ``.../.worktrees/<name>``."""
     resolved = Path(checkout).resolve()
@@ -152,7 +145,7 @@ def repo_rel_posix(path: Path | str, root: Path | None = None) -> str:
             return Path(text).relative_to(Path(root)).as_posix()
         except ValueError:
             pass
-    for marker in ("docs/controllers/", "docs/reports/", "artifacts/", "docs/"):
+    for marker in ("docs/controllers/", "artifacts/", "docs/"):
         if text.startswith(marker):
             return text
         idx = text.rfind(f"/{marker}")

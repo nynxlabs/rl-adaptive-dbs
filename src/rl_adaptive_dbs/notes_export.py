@@ -1,11 +1,10 @@
 """Locate the optional notes folder that figure promotion mirrors into.
 
-``--export-notes`` / ``--update-report`` copy replication PNGs and refresh the
-2026-08-10 report gallery in a notes folder outside the repo. The notes folder
-mirrors repo-relative paths: the repo's ``docs/controllers/ddpg/README.md`` is
-``<notes_dir>/docs/controllers/ddpg/README.md``, its images are under
-``<notes_dir>/docs/controllers/<controller>/figures/images/``, and the report is
-``<notes_dir>/docs/reports/2026-08-10.md`` (``rl_adaptive_dbs.doc_paths``).
+``--export-notes`` copies replication PNGs into a notes folder outside the
+repo. The notes folder mirrors repo-relative paths: the repo's
+``docs/controllers/ddpg/README.md`` is ``<notes_dir>/docs/controllers/ddpg/README.md``
+and its images are under ``<notes_dir>/docs/controllers/<controller>/figures/images/``
+(``rl_adaptive_dbs.doc_paths``).
 
 Resolution order:
 
@@ -27,7 +26,7 @@ from rl_adaptive_dbs.user_config import resolve_config
 NOTES_DIR_HINT = (
     "no notes folder configured for figure export: set RL_DBS_NOTES_DIR or "
     "export.notes_dir in .rl-dbs.yaml (folder mirroring the repo's docs/, e.g. "
-    "docs/controllers/<controller>/ and docs/reports/2026-08-10.md)"
+    "docs/controllers/<controller>/)"
 )
 
 

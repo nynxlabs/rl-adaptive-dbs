@@ -21,7 +21,7 @@ def add_no_promote_arg(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help=(
             "Write the PNG and manifest locally only: skip the docs promote, the "
-            "notes-folder PNG link, --export-notes, and --update-report (worktree iteration)"
+            "notes-folder PNG link, and --export-notes (worktree iteration)"
         ),
     )
 

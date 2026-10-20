@@ -46,7 +46,7 @@ _CANDIDATE_OUTPUTS = {
     "--out": "replication_v1.png",
 }
 _NO_PROMOTE_FLAGS = ("--no-update-docs", "--no-promote")
-_PROMOTE_FLAGS = ("--export-notes", "--update-report")
+_PROMOTE_FLAGS = ("--export-notes",)
 _FORBIDDEN_CGROUPS = ("synara.service", "hermes", "cursor")
 _INSTALLABLE = ("series.json", "checkpoint.pt", "checkpoint.metrics.json")
 

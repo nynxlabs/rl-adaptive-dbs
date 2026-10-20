@@ -22,7 +22,6 @@ from rl_adaptive_dbs import doc_paths
 from rl_adaptive_dbs.panel import load_script_module
 
 import argparse
-import importlib.util
 import re
 import shutil
 from pathlib import Path
@@ -93,28 +92,6 @@ def iter_tracker_image_links() -> list[tuple[str, str]]:
     return out
 
 
-def iter_report3_image_links() -> list[tuple[str, str]]:
-    """Image links in ``<notes_dir>/docs/reports/2026-08-10.md`` that point into figures folders."""
-    out: list[tuple[str, str]] = []
-    seen: set[tuple[str, str]] = set()
-    try:
-        report_path = Path(__file__).resolve().parent / "update_report3.py"
-        spec = importlib.util.spec_from_file_location("update_report3", report_path)
-        if spec is None or spec.loader is None:
-            return out
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        report_file = mod.report3_path()
-    except FileNotFoundError:
-        return out
-    if not report_file.is_file():
-        return out
-    report_rel = (doc_paths.REPORTS_REL / report_file.name).as_posix()
-    for paper, rel in _doc_image_links(report_file, report_rel):
-        _add_link(seen, out, paper, rel)
-    return out
-
-
 def iter_materialized_repo_pngs() -> list[tuple[str, str]]:
     """Real (non-symlink) replication PNGs under ``docs/controllers/<controller>/figures/images/``."""
     out: list[tuple[str, str]] = []
@@ -135,12 +112,11 @@ def iter_materialized_repo_pngs() -> list[tuple[str, str]]:
 
 
 def iter_all_push_targets(*, include_repo_materialized: bool = True) -> list[tuple[str, str]]:
-    """Union of tracker/page links, the 2026-08-10 report gallery, and materialized repo PNGs."""
+    """Union of tracker/page links and materialized repo PNGs."""
     out: list[tuple[str, str]] = []
     seen: set[tuple[str, str]] = set()
-    for links in (iter_tracker_image_links(), iter_report3_image_links()):
-        for paper, rel in links:
-            _add_link(seen, out, paper, rel)
+    for paper, rel in iter_tracker_image_links():
+        _add_link(seen, out, paper, rel)
     if include_repo_materialized:
         for paper, rel in iter_materialized_repo_pngs():
             _add_link(seen, out, paper, rel)
@@ -269,7 +245,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--tracker-only",
         action="store_true",
-        help="only tracker + figure page links (skip the 2026-08-10 report + materialized repo PNG scan)",
+        help="only tracker + figure page links (skip the materialized repo PNG scan)",
     )
     parser.add_argument("-q", "--quiet", action="store_true")
     args = parser.parse_args(argv)

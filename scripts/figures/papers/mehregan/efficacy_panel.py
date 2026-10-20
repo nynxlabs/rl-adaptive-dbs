@@ -274,7 +274,6 @@ def main(cfg: EfficacyPanel, doc: str | None = None) -> int:
     parser.add_argument("--no-update-docs", dest="update_docs", action="store_false")
     parser.set_defaults(update_docs=True)
     _resume_cli.add_export_notes_arg(parser)
-    _resume_cli.add_update_report3_arg(parser)
     args = parser.parse_args()
     _resume_cli.configure_promote_publish(args, _figure_promote)
 

@@ -14,7 +14,6 @@ FLAGS = {
     "--no-update-docs",
     "--abort-on-fail",
     "--export-notes",
-    "--update-report",
 }
 
 
@@ -45,7 +44,7 @@ def test_explicit_output_flag_wins_and_promote_run_publishes() -> None:
     )
     assert args.count("--series") == 1 and "--abort-on-fail" not in args
     promote = panel_cli.build_panel_args("nguyen/4", [], candidate=None, flags=FLAGS)
-    assert "--export-notes" in promote and "--update-report" in promote
+    assert "--export-notes" in promote
     assert "--no-update-docs" not in promote
 
 

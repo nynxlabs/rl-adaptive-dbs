@@ -610,14 +610,8 @@ def main() -> int:
     )
     # Former name, kept so existing commands keep working.
     parser.add_argument("--push-kb", dest="export_notes", action="store_true", help=argparse.SUPPRESS)
-    parser.add_argument(
-        "--update-report",
-        action="store_true",
-        help="After promote, refresh the 2026-08-10 report gallery image links in the notes folder",
-    )
     args = parser.parse_args()
     _figure_promote.set_export_notes_images(args.export_notes)
-    _figure_promote.set_update_report3(args.update_report)
 
     payload = _load_fig4a_payload(args.fig4a_series, args.fig4a_manifest)
     all_rewards = _episode_rewards_from_payload(payload)

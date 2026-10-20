@@ -420,11 +420,6 @@ def main() -> int:
     # Former name, kept so existing commands keep working.
     parser.add_argument("--push-kb", dest="export_notes", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
-        "--update-report",
-        action="store_true",
-        help="After promote, refresh Report 3 gallery image links in the notes folder",
-    )
-    parser.add_argument(
         "--dt-ms",
         type=float,
         default=None,
@@ -444,7 +439,6 @@ def main() -> int:
     )
     args = parser.parse_args()
     _figure_promote.set_export_notes_images(args.export_notes)
-    _figure_promote.set_update_report3(args.update_report)
 
     if args.duration_s <= 0:
         print("--duration-s must be positive", file=sys.stderr)

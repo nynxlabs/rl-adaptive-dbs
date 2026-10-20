@@ -8,7 +8,7 @@ deterministic (argmax) actions. Model size is the actor's parameter bytes at
 fp32 vs fp16 (plus the full actor+critic+predictive-model set for reference).
 
 Run:
-  uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/6/plot.py --export-notes --update-report
+  uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/6/plot.py --export-notes
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/6/plot.py --plot-only
 """
 from __future__ import annotations
@@ -127,13 +127,11 @@ def main() -> int:
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--plot-only", action="store_true", help="Replot from cached series.json (no eval)")
     _resume_cli.add_export_notes_arg(parser)
-    _resume_cli.add_update_report3_arg(parser)
     _parallel_series.add_parallel_series_argument(parser)
     _common.add_no_promote_arg(parser)
     args = parser.parse_args()
     if args.no_promote:
         args.export_notes = False
-        args.update_report = False
     _resume_cli.configure_promote_publish(args, _figure_promote)
     steps = 5 if args.smoke else ABLATION_EVAL_STEPS
     n_expected = steps + 1 if args.smoke else INFERENCE_PSD_SAMPLES

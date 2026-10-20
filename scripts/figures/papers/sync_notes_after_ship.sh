@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run on the main checkout after landing a figure ship from a worktree.
-# Copies tracker-linked PNGs into the notes folder and refreshes the 2026-08-10 report
+# Copies tracker-linked PNGs into the notes folder
 # (see rl_adaptive_dbs.notes_export for where that folder comes from).
 #
 # If the checkout uses vault-md githooks, their restore hook does the same
@@ -31,7 +31,6 @@ if [[ -n "$hooks" && -f "${hooks}/restore-vault-md-symlinks.sh" ]]; then
   VAULT_MD_REPO_ROOT="$REPO_ROOT" bash "${hooks}/restore-vault-md-symlinks.sh"
 else
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/export_notes_images.py
-  uv run python -m rl_adaptive_dbs.run scripts/figures/papers/update_report3.py
 fi
 
-echo "sync_notes_after_ship: notes-folder replication images + the 2026-08-10 report refreshed"
+echo "sync_notes_after_ship: notes-folder replication images refreshed"

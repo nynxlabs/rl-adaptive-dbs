@@ -13,7 +13,7 @@ both as the mean step reward and as Eq. (7) of Avg PSD (the paper's column
 equals the latter in all eight cells); gates use PSD only.
 
 Run:
-  uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/table2/plot.py --export-notes --update-report
+  uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/table2/plot.py --export-notes
   uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/table2/plot.py --plot-only
 """
 from __future__ import annotations
@@ -125,13 +125,11 @@ def main() -> int:
     parser.add_argument("--smoke", action="store_true", help="2 blocks, n = 10 and 20 only")
     parser.add_argument("--plot-only", action="store_true", help="Replot from cached series.json (no eval)")
     _resume_cli.add_export_notes_arg(parser)
-    _resume_cli.add_update_report3_arg(parser)
     _parallel_series.add_parallel_series_argument(parser)
     _common.add_no_promote_arg(parser)
     args = parser.parse_args()
     if args.no_promote:
         args.export_notes = False
-        args.update_report = False
     _resume_cli.configure_promote_publish(args, _figure_promote)
     series_path = CACHE_DIR / "series.json"
     n_blocks = 2 if args.smoke else TABLE2_N_BLOCKS

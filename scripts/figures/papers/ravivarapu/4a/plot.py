@@ -358,7 +358,6 @@ def main() -> int:
             raise SystemExit("--cache-dir is for candidates; pass --no-promote too")
     if args.no_promote:
         args.export_notes = False
-        args.update_report = False
     _resume_cli.configure_promote_publish(args, _figure_promote)
 
     t0 = time.time()

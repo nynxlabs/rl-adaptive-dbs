@@ -387,7 +387,7 @@ def _push_notes_image(ship_repo_rel: str) -> None:
 def materialize_ship_png(source: Path, ship_repo_rel: str) -> Path:
     """Copy a versioned replication PNG to a stable ship path (repo + linked notes folder).
 
-    The 2026-08-10 report and other gallery embeds use unversioned ship names (e.g.
+    Gallery embeds use unversioned ship names (e.g.
     ``training_beta.png``) so links from notes apps stay valid after each
     ``_vN`` promote. ``ship_repo_rel`` is repo-relative
     (``docs/controllers/<controller>/figures/images/<panel>/<name>.png``).
@@ -1001,39 +1001,8 @@ def _export_notes_images_after_promote(
         print(f"warning: export_notes_images failed: {exc}", file=sys.stderr)
 
 
-_UPDATE_REPORT3 = False
-
-
-def set_update_report3(enabled: bool) -> None:
-    """Enable/disable the 2026-08-10 report gallery refresh after promote (``--update-report``)."""
-    global _UPDATE_REPORT3
-    _UPDATE_REPORT3 = bool(enabled)
-
-
-def update_report3_enabled() -> bool:
-    return _UPDATE_REPORT3
-
-
-def _update_report3_after_promote(*, update_docs: bool = True) -> None:
-    if not update_report3_enabled() or not update_docs:
-        return
-    try:
-        report_path = Path(__file__).resolve().parent / "update_report3.py"
-        spec = importlib.util.spec_from_file_location("update_report3", report_path)
-        if spec is None or spec.loader is None:
-            return
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        mod.sync_report3_gallery_ships(verbose=False)
-        mod.sync_report3_gallery_embeds(verbose=False)
-        mod.update_report3(verbose=False)
-    except Exception as exc:
-        print(f"warning: update_report3 failed: {exc}", file=sys.stderr)
-
-
 def _after_promote_publish(*png_paths: Path, update_docs: bool = True) -> None:
     _export_notes_images_after_promote(*png_paths, update_docs=update_docs)
-    _update_report3_after_promote(update_docs=update_docs)
 
 
 def _promote_mehregan_docs(
@@ -1740,7 +1709,7 @@ PAPER_RAVIVARAPU_DOC = resolve_ravivarapu_doc()
 
 
 def require_notes_dir() -> Path:
-    """Notes folder for ``--export-notes`` / ``--update-report`` (``rl_adaptive_dbs.notes_export``)."""
+    """Notes folder for ``--export-notes`` (``rl_adaptive_dbs.notes_export``)."""
     from rl_adaptive_dbs.notes_export import require_notes_dir as _require_notes_dir
 
     return _require_notes_dir(doc_paths.all_trackers(REPO_ROOT), repo_root=REPO_ROOT)

@@ -618,7 +618,6 @@ def main(argv: list[str] | None = None) -> int:
         args.out = smoke_dir / f"{OUT_STEM}_v1.png"
         args.no_update_docs = True
         args.export_notes = False
-        args.update_report = False
         print(f"smoke outputs -> {smoke_dir}", flush=True)
     _resume_cli.configure_promote_publish(args, _figure_promote)
 

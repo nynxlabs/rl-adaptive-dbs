@@ -35,7 +35,7 @@ def test_hrefs_are_relative_to_each_doc() -> None:
     png = "docs/controllers/ddpg/figures/images/1b/gpi_psd_v3.png"
     assert doc_paths.doc_link(png, "docs/controllers/ddpg/figures/1b.md") == "images/1b/gpi_psd_v3.png"
     assert doc_paths.doc_link(png, "docs/controllers/ddpg/README.md") == "figures/images/1b/gpi_psd_v3.png"
-    assert doc_paths.doc_link(png, "docs/reports/2026-08-10.md") == (
+    assert doc_paths.doc_link(png, "docs/guides/cli.md") == (
         "../controllers/ddpg/figures/images/1b/gpi_psd_v3.png"
     )
     assert doc_paths.resolve_doc_href("images/1b/x.png", "docs/controllers/ddpg/figures/1b.md") == (
