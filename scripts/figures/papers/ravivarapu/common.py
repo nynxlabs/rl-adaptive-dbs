@@ -20,7 +20,7 @@ def add_no_promote_arg(parser: argparse.ArgumentParser) -> None:
         "--no-promote",
         action="store_true",
         help=(
-            "Write the PNG and manifest locally only: skip the tracker promote, the "
+            "Write the PNG and manifest locally only: skip the docs promote, the "
             "notes-folder PNG link, --export-notes, and --update-report (worktree iteration)"
         ),
     )
@@ -47,7 +47,7 @@ def linked_png(path: Path, promote_module: Any, *, promote: bool = True) -> Path
 
     With ``promote`` the PNG lands in the notes folder the main checkout's
     panel folder links into (``paper.png`` or another symlinked PNG there;
-    ``papers/_linked.py``), so tracker and gallery links resolve.
+    ``papers/_linked.py``), so figure page and gallery links resolve.
     Without it the PNG stays a plain local file (worktree iteration).
     """
     path = Path(path)

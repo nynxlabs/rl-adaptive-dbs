@@ -1,4 +1,4 @@
-"""Evaluate Ravivarapu panel gates and refresh gate tables in ``replications.md``."""
+"""Evaluate Ravivarapu panel gates and refresh gate tables in the figure pages + tracker (``docs/controllers/sea_dbs/``)."""
 
 from __future__ import annotations
 
@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any
+
+from rl_adaptive_dbs.doc_paths import DocSet, panel_for_marker_id
 
 _REPO = Path(__file__).resolve().parents[2]
 _DIG = Path(__file__).resolve().parent
@@ -378,7 +380,7 @@ def inject_summary_table(text: str, statuses: dict[str, PanelGateStatus]) -> str
         re.DOTALL,
     )
     if not pattern.search(text):
-        raise ValueError("missing summary markers in Ravivarapu replications doc")
+        raise ValueError("missing summary markers in the Ravivarapu tracker")
 
     def _repl(match: re.Match[str]) -> str:
         return f"{match.group(1)}\n{block}\n{match.group(3)}"
@@ -387,26 +389,28 @@ def inject_summary_table(text: str, statuses: dict[str, PanelGateStatus]) -> str
 
 
 def refresh_gate_tables(doc_path: Path) -> dict[str, PanelGateStatus]:
-    """Replace ``<!-- gates-{panel}:start/end -->`` blocks in the tracker doc."""
-    text = doc_path.read_text(encoding="utf-8")
+    """Refresh ``<!-- gates-{panel}:start/end -->`` blocks and the tracker summary.
+
+    ``doc_path`` is the paper tracker (``docs/controllers/<controller>/README.md``).
+    Each panel's gate block is written in its figure page ``figures/<panel>.md``
+    beside the tracker, or in the tracker when the page does not have it yet.
+    """
+    docs = DocSet([doc_path])
     statuses: dict[str, PanelGateStatus] = {}
     for panel in RAVIVARAPU_GATE_ROWS:
         status = evaluate_panel(panel)
         statuses[panel] = status
-        block = render_gate_block(status)
-        pattern = re.compile(
-            rf"(<!-- gates-{re.escape(panel)}:start -->)(.*?)(<!-- gates-{re.escape(panel)}:end -->)",
-            re.DOTALL,
+        view = docs.panel_view(doc_path, panel_for_marker_id("ravivarapu", panel))
+        view.replace_marker(
+            f"gates-{panel}",
+            render_gate_block(status),
+            error=f"missing gates markers for panel {panel} in {view.missing_label()}",
         )
-        if not pattern.search(text):
-            raise ValueError(f"missing gates markers for panel {panel} in {doc_path}")
-
-        def _repl(match: re.Match[str], *, _block: str = block) -> str:
-            return f"{match.group(1)}\n{_block}\n{match.group(3)}"
-
-        text = pattern.sub(_repl, text, count=1)
-    text = inject_summary_table(text, statuses)
-    doc_path.write_text(text, encoding="utf-8")
+    tracker_text = docs.text(doc_path)
+    if tracker_text is None:
+        raise FileNotFoundError(doc_path)
+    docs.set_text(doc_path, inject_summary_table(tracker_text, statuses))
+    docs.save()
     return statuses
 
 

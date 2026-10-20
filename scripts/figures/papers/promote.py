@@ -1,12 +1,23 @@
-"""Refresh ``docs/controllers/ddpg/README.md`` after paper figure plot scripts run.
+"""Refresh the paper replication docs after paper figure plot scripts run.
 
-Plot scripts write replication PNGs under ``docs/controllers/<controller>/figures/images/`` and JSON caches under
-``artifacts/figures/papers/``. This module updates caption markers + replication image
-links in the comparison doc.
+Plot scripts write replication PNGs under
+``docs/controllers/<controller>/figures/images/<panel>/`` and JSON caches under
+``artifacts/figures/papers/``. This module updates the docs those runs feed
+(paths: ``rl_adaptive_dbs.doc_paths``):
+
+- each panel's page ``docs/controllers/<controller>/figures/<panel>.md`` —
+  ``caption-<id>`` / ``gates-<id>`` marker blocks, the ``**Status:**`` line
+  after the caption, and the replication image links (relative to the page,
+  ``images/<panel>/…``);
+- the paper tracker ``docs/controllers/<controller>/README.md`` — the
+  ``summary`` block and panel table.
+
+While panel blocks are still moving out of the tracker, every per-panel edit
+looks in the figure page first and falls back to the tracker (``DocSet``).
 
 When run from a git worktree under ``.worktrees/``, shared doc/figure paths resolve to
-the **main checkout** (which may symlink ``docs/controllers/<controller>/README.md`` to a notes folder) so promote does not leave a
-detached worktree copy of the index.
+the **main checkout** (whose docs may be symlinks into a notes folder) so promote does
+not leave a detached worktree copy of the docs.
 """
 
 from __future__ import annotations
@@ -20,50 +31,62 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from rl_adaptive_dbs import doc_paths
+from rl_adaptive_dbs.doc_paths import DocSet
+
 
 def main_checkout_root(checkout: Path | None = None) -> Path:
     """Return the main repo checkout if ``checkout`` is ``.../.worktrees/<name>``."""
-    resolved = (checkout or Path(__file__).resolve().parents[3]).resolve()
-    parts = resolved.parts
-    if ".worktrees" in parts:
-        idx = parts.index(".worktrees")
-        if idx > 0:
-            return Path(*parts[:idx])
-    return resolved
+    return doc_paths.main_checkout_root(checkout or Path(__file__).resolve().parents[3])
 
 
 CHECKOUT_ROOT = Path(__file__).resolve().parents[3]
 REPO_ROOT = main_checkout_root(CHECKOUT_ROOT)
 
 
-def resolve_paper_1_doc(checkout: Path | None = None) -> Path:
-    """Path to ``docs/controllers/ddpg/README.md`` that plot/promote should update.
+def resolve_tracker(paper: str, checkout: Path | None = None) -> Path:
+    """Tracker ``docs/controllers/<controller>/README.md`` that plot/promote should update.
 
     Prefers the main checkout path (possibly a symlink into a notes folder) so worktree runs update
     the shared doc the main branch and any notes app see.
     """
-    root = main_checkout_root(checkout or CHECKOUT_ROOT)
-    return root / "figures" / "mehregan" / "replications.md"
+    return doc_paths.tracker_path(paper, main_checkout_root(checkout or CHECKOUT_ROOT))
+
+
+def resolve_figure_page(paper: str, panel: str, checkout: Path | None = None) -> Path:
+    """Figure page ``docs/controllers/<controller>/figures/<panel>.md`` (main checkout)."""
+    return doc_paths.figure_page(paper, panel, main_checkout_root(checkout or CHECKOUT_ROOT))
+
+
+def panel_docs(paper: str, panel: str) -> DocSet:
+    """Editable ``[figure page, tracker]`` pair for one panel (page first)."""
+    return DocSet.for_panel(_tracker_for(paper), panel, root=REPO_ROOT)
+
+
+def _image_rel(paper: str, panel: str, name: str) -> str:
+    """Repo-relative ``docs/controllers/<controller>/figures/images/<panel>/<name>``."""
+    return (doc_paths.figure_images_rel(paper, panel) / name).as_posix()
+
+
+def resolve_paper_1_doc(checkout: Path | None = None) -> Path:
+    """Mehregan tracker ``docs/controllers/ddpg/README.md``."""
+    return resolve_tracker("mehregan", checkout)
 
 
 PAPER_1_DOC = resolve_paper_1_doc()
 
 
 def refresh_mehregan_gate_tables(*, update_docs: bool = True) -> None:
-    """Refresh per-panel gate tables (with live Pass column) in the Mehregan tracker."""
+    """Refresh per-panel gate tables (with live Pass column) in the Mehregan pages + tracker."""
     if not update_docs or not PAPER_1_DOC.exists():
         return
     digitization = Path(__file__).resolve().parents[2] / "digitization"
     path = digitization / "mehregan_gate_status.py"
     if not path.is_file():
         return
-    import importlib.util
-
     spec = importlib.util.spec_from_file_location("mehregan_gate_status", path)
     if spec is None or spec.loader is None:
         return
-    import sys
-
     mod = importlib.util.module_from_spec(spec)
     # dataclasses need the module registered before exec when loaded via importlib.
     sys.modules[spec.name] = mod
@@ -72,9 +95,8 @@ def refresh_mehregan_gate_tables(*, update_docs: bool = True) -> None:
 
 
 def resolve_nguyen_doc(checkout: Path | None = None) -> Path:
-    """Path to ``docs/controllers/snn/README.md`` (Nguyen tracker)."""
-    root = main_checkout_root(checkout or CHECKOUT_ROOT)
-    return root / "figures" / "nguyen" / "replications.md"
+    """Nguyen tracker ``docs/controllers/snn/README.md``."""
+    return resolve_tracker("nguyen", checkout)
 
 
 PAPER_NGUYEN_DOC = resolve_nguyen_doc()
@@ -82,12 +104,12 @@ PAPER_NGUYEN_DOC = resolve_nguyen_doc()
 PAPER_2_DOC = PAPER_NGUYEN_DOC
 PAPER_NGUYEN_2_3_MANIFEST = "artifacts/figures/papers/nguyen/3/manifest.json"
 PAPER_NGUYEN_2_3_REPLICATION_ALT = "Replication Fig 3"
-PAPER_NGUYEN_3_PNG = "docs/controllers/snn/figures/images/3/alpha_beta_dist.png"
+PAPER_NGUYEN_3_PNG = _image_rel("nguyen", "3", "alpha_beta_dist.png")
 PAPER_NGUYEN_4_MANIFEST = "artifacts/figures/papers/nguyen/4/manifest.json"
 PAPER_NGUYEN_4_REPLICATION_ALT = "Replication Fig 4"  # legacy single-image trackers
 PAPER_NGUYEN_4_REPLICATION_BEST_ALT = "Replication Fig 4 — best"
 PAPER_NGUYEN_4_REPLICATION_LATEST_ALT = "Replication Fig 4 — latest"
-PAPER_NGUYEN_4_PNG = "docs/controllers/snn/figures/images/4/training_reward_length.png"
+PAPER_NGUYEN_4_PNG = _image_rel("nguyen", "4", "training_reward_length.png")
 PAPER_NGUYEN_5_MANIFEST = "artifacts/figures/papers/nguyen/5/manifest.json"
 PAPER_NGUYEN_5_REPLICATION_ALT = "Replication Fig 5"
 PAPER_NGUYEN_6_MANIFEST = "artifacts/figures/papers/nguyen/6/manifest.json"
@@ -267,41 +289,41 @@ NGUYEN_MANIFEST_BY_PANEL: dict[str, str] = {
     "7": PAPER_NGUYEN_7_MANIFEST,
 }
 
-PAPER_1B_PNG = "docs/controllers/ddpg/figures/images/1b/gpi_psd.png"
+PAPER_1B_PNG = _image_rel("mehregan", "1b", "gpi_psd.png")
 PAPER_1B_MANIFEST = "artifacts/figures/papers/mehregan/1b/manifest.json"
-PAPER_2A_PNG = "docs/controllers/ddpg/figures/images/2a/beta_power.png"
+PAPER_2A_PNG = _image_rel("mehregan", "2a", "beta_power.png")
 PAPER_2A_MANIFEST = "artifacts/figures/papers/mehregan/2a/manifest.json"
-PAPER_2B_PNG = "docs/controllers/ddpg/figures/images/2b/error_index.png"
+PAPER_2B_PNG = _image_rel("mehregan", "2b", "error_index.png")
 PAPER_2B_MANIFEST = "artifacts/figures/papers/mehregan/2b/manifest.json"
-PAPER_4A_PNG = "docs/controllers/ddpg/figures/images/4a/training_beta.png"
+PAPER_4A_PNG = _image_rel("mehregan", "4a", "training_beta.png")
 PAPER_4A_MANIFEST = "artifacts/figures/papers/mehregan/4a/manifest.json"
-PAPER_4B_PNG = "docs/controllers/ddpg/figures/images/4b/training_reward.png"
-PAPER_4B_COMBINED_PNG = "docs/controllers/ddpg/figures/images/4b/training_fig4b.png"
+PAPER_4B_PNG = _image_rel("mehregan", "4b", "training_reward.png")
+PAPER_4B_COMBINED_PNG = _image_rel("mehregan", "4b", "training_fig4b.png")
 PAPER_4B_MANIFEST = "artifacts/figures/papers/mehregan/4b/manifest.json"
-PAPER_1B_REF = "docs/controllers/ddpg/figures/images/1b/digitized_v1.png"
-PAPER_2A_REF = "docs/controllers/ddpg/figures/images/2a/digitized_v1.png"
-PAPER_2B_REF = "docs/controllers/ddpg/figures/images/2b/digitized_v1.png"
+PAPER_1B_REF = _image_rel("mehregan", "1b", "digitized_v1.png")
+PAPER_2A_REF = _image_rel("mehregan", "2a", "digitized_v1.png")
+PAPER_2B_REF = _image_rel("mehregan", "2b", "digitized_v1.png")
 PAPER_1B_REPLICATION_ALT = "Replication Fig 1b"
 PAPER_2A_REPLICATION_ALT = "Replication Fig 2a"
 PAPER_2B_REPLICATION_ALT = "Replication Fig 2b"
-PAPER_4A_REF = "docs/controllers/ddpg/figures/images/4a/digitized_v1.png"
+PAPER_4A_REF = _image_rel("mehregan", "4a", "digitized_v1.png")
 PAPER_4A_REPLICATION_ALT = "Replication Fig 4a"
-PAPER_4B_REF = "docs/controllers/ddpg/figures/images/4b/digitized_v1.png"
+PAPER_4B_REF = _image_rel("mehregan", "4b", "digitized_v1.png")
 PAPER_4B_REPLICATION_ALT = "Replication Fig 4b reward"
 PAPER_4B_PSD_REPLICATION_ALT = "Replication Fig 4b PSD"
-PAPER_5A_PNG = "docs/controllers/ddpg/figures/images/5a/efficacy_45hz.png"
+PAPER_5A_PNG = _image_rel("mehregan", "5a", "efficacy_45hz.png")
 PAPER_5A_MANIFEST = "artifacts/figures/papers/mehregan/5a/manifest.json"
 PAPER_5A_REPLICATION_ALT = "Replication Fig 5a"
-PAPER_5B_PNG = "docs/controllers/ddpg/figures/images/5b/efficacy_30hz.png"
+PAPER_5B_PNG = _image_rel("mehregan", "5b", "efficacy_30hz.png")
 PAPER_5B_MANIFEST = "artifacts/figures/papers/mehregan/5b/manifest.json"
 PAPER_5B_REPLICATION_ALT = "Replication Fig 5b"
-PAPER_6A_PNG = "docs/controllers/ddpg/figures/images/6a/ptq_qat_45hz.png"
+PAPER_6A_PNG = _image_rel("mehregan", "6a", "ptq_qat_45hz.png")
 PAPER_6A_MANIFEST = "artifacts/figures/papers/mehregan/6a/manifest.json"
-PAPER_6A_REF = "docs/controllers/ddpg/figures/images/6a/digitized_v1.png"
+PAPER_6A_REF = _image_rel("mehregan", "6a", "digitized_v1.png")
 PAPER_6A_REPLICATION_ALT = "Replication Fig 6a"
-PAPER_6B_PNG = "docs/controllers/ddpg/figures/images/6b/ptq_qat_30hz.png"
+PAPER_6B_PNG = _image_rel("mehregan", "6b", "ptq_qat_30hz.png")
 PAPER_6B_MANIFEST = "artifacts/figures/papers/mehregan/6b/manifest.json"
-PAPER_6B_REF = "docs/controllers/ddpg/figures/images/6b/digitized_v1.png"
+PAPER_6B_REF = _image_rel("mehregan", "6b", "digitized_v1.png")
 PAPER_6B_REPLICATION_ALT = "Replication Fig 6b"
 
 _VERSIONED_PNG_RE = re.compile(r"^(?P<stem>.+)_v(?P<ver>\d+)\.png$")
@@ -334,21 +356,41 @@ def parse_png_version(path: Path) -> int | None:
 
 
 def repo_rel_posix(path: Path) -> str:
-    """Normalize a figure path to repo-relative POSIX (``figures/...``)."""
-    text = path.as_posix()
-    marker = "figures/"
-    idx = text.find(marker)
-    if idx >= 0:
-        return text[idx:]
-    return text
+    """Normalize a figure path to repo-relative POSIX (``docs/controllers/…`` / ``artifacts/…``)."""
+    path = Path(path)
+    if path.is_absolute():
+        for root in (CHECKOUT_ROOT, REPO_ROOT):
+            rel = doc_paths.rel_to_root(path, root)
+            if rel is not None:
+                return rel
+    return doc_paths.repo_rel_posix(path)
+
+
+def _push_notes_image(ship_repo_rel: str) -> None:
+    """Copy one ``docs/controllers/<controller>/figures/images/…`` PNG into the notes folder."""
+    try:
+        push_path = Path(__file__).resolve().parent / "export_notes_images.py"
+        spec = importlib.util.spec_from_file_location("export_notes_images", push_path)
+        if spec is None or spec.loader is None:
+            return
+        split = doc_paths.split_figures_rel(ship_repo_rel)
+        if split is None:
+            return
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        paper, rel = split
+        mod.push_image(paper, rel, dry_run=False)
+    except Exception:
+        pass
 
 
 def materialize_ship_png(source: Path, ship_repo_rel: str) -> Path:
     """Copy a versioned replication PNG to a stable ship path (repo + linked notes folder).
 
     The 2026-08-10 report and other gallery embeds use unversioned ship names (e.g.
-  ``training_beta.png``) so links from notes apps stay valid after each
-    ``_vN`` promote.
+    ``training_beta.png``) so links from notes apps stay valid after each
+    ``_vN`` promote. ``ship_repo_rel`` is repo-relative
+    (``docs/controllers/<controller>/figures/images/<panel>/<name>.png``).
     """
     source = Path(source).resolve()
     if not source.is_file():
@@ -357,51 +399,12 @@ def materialize_ship_png(source: Path, ship_repo_rel: str) -> Path:
     ship_repo_rel = ship_repo_rel.replace("\\", "/")
     repo_dest = REPO_ROOT / ship_repo_rel
     repo_dest.parent.mkdir(parents=True, exist_ok=True)
-    if source.resolve() == repo_dest.resolve():
-        try:
-            push_path = Path(__file__).resolve().parent / "export_notes_images.py"
-            spec = importlib.util.spec_from_file_location("export_notes_images", push_path)
-            if spec is not None and spec.loader is not None:
-                mod = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(mod)
-                tail = ship_repo_rel.removeprefix("figures/")
-                paper, _, rel = tail.partition("/")
-                if paper and rel:
-                    mod.push_image(paper, rel, dry_run=False)
-        except Exception:
-            pass
-        return repo_dest
-    if repo_dest.is_symlink():
-        repo_dest.unlink()
-    shutil.copy2(source, repo_dest)
-    try:
-        push_path = Path(__file__).resolve().parent / "export_notes_images.py"
-        spec = importlib.util.spec_from_file_location("export_notes_images", push_path)
-        if spec is not None and spec.loader is not None:
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
-            tail = ship_repo_rel.removeprefix("figures/")
-            paper, _, rel = tail.partition("/")
-            if paper and rel:
-                mod.push_image(paper, rel, dry_run=False)
-    except Exception:
-        pass
+    if source.resolve() != repo_dest.resolve():
+        if repo_dest.is_symlink():
+            repo_dest.unlink()
+        shutil.copy2(source, repo_dest)
+    _push_notes_image(ship_repo_rel)
     return repo_dest
-
-
-def _doc_figure_link(repo_rel: str) -> str:
-    """Markdown image URL from a replication tracker to a repo ``figures/...`` asset."""
-    if repo_rel.startswith("figures/"):
-        tail = repo_rel.removeprefix("figures/")
-        paper, _, rest = tail.partition("/")
-        if rest.startswith("images/"):
-            return rest
-    return repo_rel
-
-
-# Mirror PNGs into the main checkout (symlink-backed) even when plotting from a worktree.
-DOCS_FIGURE_PAPERS = REPO_ROOT / "docs" / "figures" / "papers"
-CANONICAL_FIGURE_PAPERS = REPO_ROOT / "figures" / "papers"
 
 
 def materialize_docs_figure_papers() -> int:
@@ -409,14 +412,49 @@ def materialize_docs_figure_papers() -> int:
     return 0
 
 
-def _set_markdown_image_link(text: str, *, alt: str, repo_rel: str) -> str:
-    """Replace ``![alt](...)`` with a docs/figures-local link (``papers/...``)."""
-    link = _doc_figure_link(repo_rel)
-    pattern = re.compile(rf"!\[{re.escape(alt)}\]\([^)]+\)")
-    if not pattern.search(text):
-        msg = f"missing markdown image for alt={alt!r} in {PAPER_1_DOC}"
-        raise ValueError(msg)
-    return pattern.sub(f"![{alt}]({link})", text, count=1)
+def _image_pattern(alt: str) -> re.Pattern[str]:
+    return re.compile(rf"!\[{re.escape(alt)}\]\([^)]+\)")
+
+
+def set_image_link(
+    docs: DocSet,
+    *,
+    alt: str,
+    repo_rel: str,
+    required: bool = True,
+) -> Path | None:
+    """Point ``![alt](…)`` at ``repo_rel`` in the first doc that has it.
+
+    The href is relative to that doc (``images/<panel>/…`` from a figure page,
+    ``figures/images/<panel>/…`` from the tracker).
+    """
+    pattern = _image_pattern(alt)
+    doc = docs.search(pattern)
+    if doc is None:
+        if required:
+            msg = f"missing markdown image for alt={alt!r} in {docs.missing_label()}"
+            raise ValueError(msg)
+        return None
+    href = docs.href(repo_rel, doc)
+    docs.sub(pattern, lambda _m: f"![{alt}]({href})", count=1, path=doc)
+    return doc
+
+
+def replace_placeholder(docs: DocSet, placeholder: str, *, alt: str, repo_rel: str) -> Path | None:
+    """Swap a ``*Not yet generated.*`` placeholder for ``![alt](…)``."""
+    return docs.replace(
+        placeholder,
+        lambda doc: f"![{alt}]({docs.href(repo_rel, doc)})",
+        count=1,
+    )
+
+
+def _tracker_for(paper: str) -> Path:
+    return {
+        "mehregan": PAPER_1_DOC,
+        "nguyen": PAPER_NGUYEN_DOC,
+        "ravivarapu": PAPER_RAVIVARAPU_DOC,
+    }[paper]
 
 
 def _today() -> str:
@@ -494,67 +532,9 @@ def _caption_2a(manifest: dict[str, Any]) -> str:
 
 
 def papers_tracker_image_link(png_path: Path, *, doc: Path | None = None) -> str:
-    """Markdown image path relative to a paper ``replications.md`` tracker."""
-    import os
-
-    repo_rel = repo_rel_posix(Path(png_path))
-    tracker = (doc or PAPER_1_DOC).resolve()
-    abs_png = (REPO_ROOT / repo_rel).resolve()
-    try:
-        tracker.relative_to(REPO_ROOT.resolve())
-    except ValueError:
-        # Tracker symlinked outside the repo (outside REPO_ROOT): use repo-relative
-        # ``docs/controllers/<controller>/figures/images/...`` → ``images/...`` under that tracker.
-        for prefix in ("docs/controllers/snn/", "docs/controllers/ddpg/", "docs/controllers/sea_dbs/"):
-            if repo_rel.startswith(prefix):
-                return repo_rel[len(prefix) :]
-        return repo_rel
-    return Path(os.path.relpath(abs_png, tracker.parent)).as_posix()
-
-
-def _set_papers_tracker_image_link(
-    text: str,
-    *,
-    alt: str,
-    link: str,
-    doc: Path,
-) -> str:
-    pattern = re.compile(rf"!\[{re.escape(alt)}\]\([^)]+\)")
-    if not pattern.search(text):
-        msg = f"missing markdown image for alt={alt!r} in {doc}"
-        raise ValueError(msg)
-    return pattern.sub(f"![{alt}]({link})", text, count=1)
-
-
-def _set_papers_tracker_image_link_if_present(
-    text: str,
-    *,
-    alt: str,
-    link: str,
-) -> str:
-    pattern = re.compile(rf"!\[{re.escape(alt)}\]\([^)]+\)")
-    if pattern.search(text):
-        return pattern.sub(f"![{alt}]({link})", text, count=1)
-    return text
-
-
-def _replace_marker_in(text: str, marker: str, body: str, *, doc: Path) -> str:
-    pattern = re.compile(
-        rf"(<!-- {marker}:start -->)(.*?)(<!-- {marker}:end -->)",
-        re.DOTALL,
-    )
-    if not pattern.search(text):
-        msg = f"missing marker block {marker} in {doc}"
-        raise ValueError(msg)
-
-    def _repl(match: re.Match[str]) -> str:
-        return f"{match.group(1)}\n{body}\n{match.group(3)}"
-
-    return pattern.sub(_repl, text, count=1)
-
-
-def _replace_marker(text: str, marker: str, body: str) -> str:
-    return _replace_marker_in(text, marker, body, doc=PAPER_1_DOC)
+    """Markdown image href from ``doc`` (a tracker or figure page) to ``png_path``."""
+    target = doc or PAPER_1_DOC
+    return DocSet([target], root=REPO_ROOT).href(repo_rel_posix(Path(png_path)), target)
 
 
 def _load_nguyen_manifest(manifest_rel: str) -> dict[str, Any] | None:
@@ -833,13 +813,14 @@ def render_nguyen_summary_table() -> str:
 
 
 def refresh_nguyen_summary_in_text(text: str) -> str:
+    """Refresh the ``summary`` block of the Nguyen tracker text."""
     block = render_nguyen_summary_table()
     pattern = re.compile(
         r"(<!-- summary:start -->)(.*?)(<!-- summary:end -->)",
         re.DOTALL,
     )
     if not pattern.search(text):
-        raise ValueError("missing summary markers in Nguyen replications doc")
+        raise ValueError("missing summary markers in the Nguyen tracker")
 
     def _repl(match: re.Match[str]) -> str:
         return f"{match.group(1)}\n{block}\n{match.group(3)}"
@@ -847,106 +828,33 @@ def refresh_nguyen_summary_in_text(text: str) -> str:
     return pattern.sub(_repl, text, count=1)
 
 
-def refresh_nguyen_gate_tables_in_text(text: str) -> str:
-    """Replace all ``gates-<panel>`` marker blocks from on-disk manifests."""
-    text = refresh_nguyen_summary_in_text(text)
+def refresh_nguyen_gate_tables_in_docs(docs: DocSet) -> None:
+    """Refresh the tracker summary and every ``gates-<panel>`` block from on-disk manifests.
+
+    Gate blocks are written in each panel's figure page, or in the tracker when
+    the page does not have the block yet. Edits stay in ``docs`` until ``save()``.
+    """
+    tracker = PAPER_NGUYEN_DOC
+    text = docs.text(tracker)
+    if text is not None:
+        docs.set_text(tracker, refresh_nguyen_summary_in_text(text))
     for panel, manifest_rel in NGUYEN_MANIFEST_BY_PANEL.items():
         marker = f"gates-{panel}"
-        if f"<!-- {marker}:start -->" not in text:
+        view = docs.panel_view(tracker, panel)
+        if not view.has_marker(marker):
             continue
         manifest = _load_nguyen_manifest(manifest_rel)
         body = _format_nguyen_gates_table(panel, manifest, manifest_rel=manifest_rel)
-        text = _replace_marker_in(text, marker, body, doc=PAPER_NGUYEN_DOC)
-    return text
+        view.replace_marker(marker, body)
 
 
 def refresh_nguyen_gate_tables(*, update_docs: bool = True) -> None:
-    """Refresh Nguyen gate tables in the tracker from manifest JSON on disk."""
+    """Refresh Nguyen gate tables (figure pages) and summary (tracker) from manifest JSON."""
     if not update_docs or not PAPER_NGUYEN_DOC.exists():
         return
-    text = PAPER_NGUYEN_DOC.read_text(encoding="utf-8")
-    PAPER_NGUYEN_DOC.write_text(refresh_nguyen_gate_tables_in_text(text), encoding="utf-8")
-
-
-def _default_paper_1_doc(*, caption_1b: str, caption_2a: str) -> str:
-    link_1b_ref = _doc_figure_link(PAPER_1B_REF)
-    link_1b_png = _doc_figure_link(PAPER_1B_PNG)
-    link_2a_ref = _doc_figure_link(PAPER_2A_REF)
-    link_2a_png = _doc_figure_link(PAPER_2A_PNG)
-    return f"""# Mehregan et al.  — figure comparisons
-
-Side-by-side **digitized paper panel** (our redraw of the values read off the paper) vs **our replication** for qualitative checks. Plot scripts write replication PNGs to `docs/controllers/ddpg/figures/images/`; JSON caches to `artifacts/figures/papers/`.
-
-| Panel | Script | Spec |
-|-------|--------|------|
-| Fig 1b — GPi PSD | `scripts/figures/papers/mehregan/1b/plot.py` | [plant.md](../plant.md) |
-| Fig 2a — GPi $P_\\beta$ time series | `scripts/figures/papers/mehregan/2a/plot.py` | [plant.md](../plant.md) |
-
----
-
-## Fig 1b — GPi PSD
-
-Mean GPi multitaper power spectral density (1–50 Hz) for three conditions: **healthy control**, **PD no treatment**, and **PD + 130 Hz STN cDBS**. In the paper panel, untreated PD shows a sharp beta-band peak (~12–13 Hz) well above healthy; 130 Hz cDBS suppresses that peak while leaving a smaller secondary bump at higher frequency. Our replication should preserve the ordering **PD > healthy** on beta power and **130 Hz cDBS < PD** (see [plant.md](../plant.md); seeds 0–9 mean in manifest).
-
-### Digitized paper (Mehregan et al.) — our redraw
-
-![Digitized paper Fig 1b (our redraw)]({link_1b_ref})
-
-### Replication
-
-![Replication Fig 1b]({link_1b_png})
-
-<!-- caption-1b:start -->
-**Caption:** {caption_1b}
-
-**Manifest:** `{PAPER_1B_MANIFEST}`
-<!-- caption-1b:end -->
-
----
-
-## Fig 2a — GPi $P_\\beta$ time series
-
-GPi beta-band power ($P_\\beta$, Eq. 1, 13–35 Hz) over **12 s**: **PD no treatment** (red) vs **PD + 130 Hz cDBS** (blue). Both traces share a high, overlapping baseline for **0–2 s** (no STN stimulation). A dashed vertical at **2 s** marks cDBS onset for the blue trace only. After onset, blue falls quickly to a low plateau; red stays elevated. Dense continuous lines (not 2 s step bins).
-
-### Digitized paper (Mehregan et al.) — our redraw
-
-![Digitized paper Fig 2a (our redraw)]({link_2a_ref})
-
-### Replication
-
-![Replication Fig 2a]({link_2a_png})
-
-<!-- caption-2a:start -->
-**Caption:** {caption_2a}
-
-**Manifest:** `{PAPER_2A_MANIFEST}`
-<!-- caption-2a:end -->
-
-### Side-by-side checklist
-
-Qualitative gates first; numeric bands are approximate (paper read from panel; replication from `{PAPER_2A_MANIFEST}`, seed 0).
-
-| Check | Paper | Replication | Match? |
-|-------|-------|-------------|--------|
-| **Plot style** | Dense line trace, 0–12 s | Dense trailing line (`--sampling trailing`, 61 points) | ✓ |
-| **Axes** | Time (sec) 0–12; y **PSD** ~100–600 | Same labels and range | ✓ |
-| **Legend** | PD no Treatment; PD 130 Hz Treatment | Same labels and colors | ✓ |
-| **DBS onset marker** | Dashed vertical at **2 s** | Dashed vertical at 2 s | ✓ |
-| **0–2 s overlap** | Red and blue identical | Identical (max Δ = 0) | ✓ |
-| **$t=0$ baseline** | ~460–470 (high, not zero) | ~513 | ✓ (same band) |
-| **$t=2$ level** | ~480 | ~472 | ✓ |
-| **Blue drop after 2 s** | Sharp fall; ~300 by $t \\approx 3$ | ~298 at $t=3$ | ✓ |
-| **Blue floor** | ~160–170 by $t \\approx 4$; ripple ~160–210 | ~150 at $t=4$; ~160–170 for $t=4$–12 | ✓ |
-| **Red after 2 s** | Stays high ~430–500; no downward trend | High ~440–530; wiggles through $t=12$ | ✓ |
-| **Separation after onset** | Blue clearly below red | Large gap from $t \\approx 3$ onward | ✓ |
-| **$t=12$ red** | ~435 (still high) | **~503** (window sim `[12, 14]`) | ~✓ (slightly high) |
-| **$t=12$ blue** | ~185 (stable low floor) | **~160** (ripple, not flat) | ~✓ (still ~25 below paper) |
-| **End behavior** | Both traces wiggle at $t=12$ | Sliding windows through sim 14; no flat tail | ✓ |
-
-**Protocol (2026-07-11):** trailing windows end at sim **14 s**; Fig 2a alone passes enlarged GPI spike buffer (904). Re-run: `uv run python scripts/figures/papers/mehregan/2a/plot.py`.
-
-**Remaining gaps:** blue floor ~25 below paper at $t=12$; single seed (0).
-"""
+    docs = DocSet([PAPER_NGUYEN_DOC], root=REPO_ROOT)
+    refresh_nguyen_gate_tables_in_docs(docs)
+    docs.save()
 
 
 def _caption_2b(manifest: dict[str, Any]) -> str:
@@ -1039,73 +947,21 @@ def _caption_block(caption: str, manifest_path: str) -> str:
     return f"**Caption:** {caption}\n\n**Manifest:** `{manifest_path}`"
 
 
-def _read_caption_from_doc(marker: str) -> str | None:
-    if not PAPER_1_DOC.exists():
-        return None
-    text = PAPER_1_DOC.read_text()
-    pattern = re.compile(
-        rf"<!-- {marker}:start -->\n\*\*Caption:\*\* (.*?)\n\n\*\*Manifest:",
-        re.DOTALL,
-    )
-    match = pattern.search(text)
-    if not match:
-        return None
-    return match.group(1).strip()
-
-
-def _ensure_paper_1_doc(
+def _set_caption(
+    docs: DocSet,
+    marker: str,
+    caption: str,
+    manifest_path: str,
     *,
-    caption_1b: str | None = None,
-    caption_2a: str | None = None,
-    caption_2b: str | None = None,
-    caption_4a: str | None = None,
+    required: bool = False,
 ) -> None:
-    cap_1b = caption_1b or _read_caption_from_doc("caption-1b") or "see manifest"
-    cap_2a = caption_2a or _read_caption_from_doc("caption-2a") or "see manifest"
-    if not PAPER_1_DOC.exists():
-        PAPER_1_DOC.parent.mkdir(parents=True, exist_ok=True)
-        PAPER_1_DOC.write_text(_default_paper_1_doc(caption_1b=cap_1b, caption_2a=cap_2a))
-        return
-    text = PAPER_1_DOC.read_text()
-    if caption_1b is not None:
-        text = _replace_marker(
-            text,
-            "caption-1b",
-            _caption_block(caption_1b, PAPER_1B_MANIFEST),
-        )
-    if caption_2a is not None:
-        text = _replace_marker(
-            text,
-            "caption-2a",
-            _caption_block(caption_2a, PAPER_2A_MANIFEST),
-        )
-    if caption_2b is not None and "<!-- caption-2b:start -->" in text:
-        text = _replace_marker(
-            text,
-            "caption-2b",
-            _caption_block(caption_2b, PAPER_2B_MANIFEST),
-        )
-    if caption_4a is not None and "<!-- caption-4a:start -->" in text:
-        text = _replace_marker(
-            text,
-            "caption-4a",
-            _caption_block(caption_4a, PAPER_4A_MANIFEST),
-        )
-    PAPER_1_DOC.write_text(text)
+    """Write a ``caption-<id>`` block (figure page first, then the tracker).
 
-
-def _ensure_paper_1_doc_4b(*, caption_4b: str) -> None:
-    if not PAPER_1_DOC.exists():
+    With ``required=False`` a missing block is skipped; otherwise it raises.
+    """
+    if not required and not docs.has_marker(marker):
         return
-    text = PAPER_1_DOC.read_text()
-    if "<!-- caption-4b:start -->" not in text:
-        return
-    text = _replace_marker(
-        text,
-        "caption-4b",
-        _caption_block(caption_4b, PAPER_4B_MANIFEST),
-    )
-    PAPER_1_DOC.write_text(text)
+    docs.replace_marker(marker, _caption_block(caption, manifest_path))
 
 
 _EXPORT_NOTES_IMAGES = False
@@ -1180,6 +1036,27 @@ def _after_promote_publish(*png_paths: Path, update_docs: bool = True) -> None:
     _update_report3_after_promote(update_docs=update_docs)
 
 
+def _promote_mehregan_docs(
+    panel: str,
+    *,
+    caption: str,
+    manifest_path: str,
+    alt: str,
+    repo_rel: str,
+    caption_required: bool = False,
+    placeholder: str | None = None,
+) -> None:
+    """Caption + replication image link for one Mehregan panel (figure page, else tracker)."""
+    docs = panel_docs("mehregan", panel)
+    if not docs.exists():
+        return
+    _set_caption(docs, f"caption-{panel}", caption, manifest_path, required=caption_required)
+    if placeholder:
+        replace_placeholder(docs, placeholder, alt=alt, repo_rel=repo_rel)
+    set_image_link(docs, alt=alt, repo_rel=repo_rel)
+    docs.save()
+
+
 def promote_1b(
     *,
     manifest: dict[str, Any],
@@ -1187,19 +1064,24 @@ def promote_1b(
     png_path: Path,
     update_docs: bool = True,
 ) -> dict[str, str]:
-    """Refresh Fig 1b caption + replication image link in ``docs/controllers/ddpg/README.md``."""
+    """Refresh Fig 1b caption + replication image link (``docs/controllers/ddpg/figures/1b.md``)."""
     caption = _caption_1b(manifest)
     repo_rel = repo_rel_posix(png_path)
     if update_docs:
-        _ensure_paper_1_doc(caption_1b=caption, caption_2a=None, caption_2b=None)
-        text = PAPER_1_DOC.read_text()
-        text = _set_markdown_image_link(text, alt=PAPER_1B_REPLICATION_ALT, repo_rel=repo_rel)
-        PAPER_1_DOC.write_text(text)
+        _promote_mehregan_docs(
+            "1b",
+            caption=caption,
+            manifest_path=PAPER_1B_MANIFEST,
+            alt=PAPER_1B_REPLICATION_ALT,
+            repo_rel=repo_rel,
+        caption_required=True,
+        )
     refresh_mehregan_gate_tables(update_docs=update_docs)
     materialize_ship_png(png_path, PAPER_1B_PNG)
     _after_promote_publish(png_path, update_docs=update_docs)
     return {
         "png": str(png_path),
+        "png_repo_rel": repo_rel,
         "manifest": PAPER_1B_MANIFEST,
         "curves": str(curves_path),
         "caption": caption,
@@ -1214,20 +1096,25 @@ def promote_2a(
     png_path: Path,
     update_docs: bool = True,
 ) -> dict[str, str]:
-    """Refresh Fig 2a caption + replication image link in ``docs/controllers/ddpg/README.md``."""
+    """Refresh Fig 2a caption + replication image link (``docs/controllers/ddpg/figures/2a.md``)."""
     caption = _caption_2a(manifest)
     repo_rel = repo_rel_posix(png_path)
     if update_docs:
-        _ensure_paper_1_doc(caption_1b=None, caption_2a=caption, caption_2b=None)
-        text = PAPER_1_DOC.read_text()
-        text = _set_markdown_image_link(text, alt=PAPER_2A_REPLICATION_ALT, repo_rel=repo_rel)
-        PAPER_1_DOC.write_text(text)
+        _promote_mehregan_docs(
+            "2a",
+            caption=caption,
+            manifest_path=PAPER_2A_MANIFEST,
+            alt=PAPER_2A_REPLICATION_ALT,
+            repo_rel=repo_rel,
+        caption_required=True,
+        )
     refresh_mehregan_gate_tables(update_docs=update_docs)
     materialize_ship_png(png_path, PAPER_2A_PNG)
     _after_promote_publish(png_path, update_docs=update_docs)
     return {
         "png": str(png_path),
-        "manifest": str(PAPER_2A_MANIFEST),
+        "png_repo_rel": repo_rel,
+        "manifest": PAPER_2A_MANIFEST,
         "series": str(series_path),
         "caption": caption,
         "doc": str(PAPER_1_DOC),
@@ -1241,19 +1128,17 @@ def promote_2b(
     png_path: Path,
     update_docs: bool = True,
 ) -> dict[str, str]:
-    """Refresh Fig 2b caption + replication image link in ``docs/controllers/ddpg/README.md``."""
+    """Refresh Fig 2b caption + replication image link (``docs/controllers/ddpg/figures/2b.md``)."""
     caption = _caption_2b(manifest)
     repo_rel = repo_rel_posix(png_path)
     if update_docs:
-        _ensure_paper_1_doc(caption_1b=None, caption_2a=None, caption_2b=caption)
-        text = PAPER_1_DOC.read_text()
-        text = _set_markdown_image_link(
-            text,
+        _promote_mehregan_docs(
+            "2b",
+            caption=caption,
+            manifest_path=PAPER_2B_MANIFEST,
             alt=PAPER_2B_REPLICATION_ALT,
             repo_rel=repo_rel,
         )
-        PAPER_1_DOC.write_text(text)
-    materialize_docs_figure_papers()
     refresh_mehregan_gate_tables(update_docs=update_docs)
     materialize_ship_png(png_path, PAPER_2B_PNG)
     _after_promote_publish(png_path, update_docs=update_docs)
@@ -1277,42 +1162,37 @@ def promote_4b(
     png_path: Path | None = None,
     combined_png_path: Path | None = None,
 ) -> dict[str, str]:
-    """Refresh Fig 4b caption + replication image links in ``docs/controllers/ddpg/README.md``."""
+    """Refresh Fig 4b caption + replication image links (``docs/controllers/ddpg/figures/4b.md``)."""
     if png_path is not None:
         reward_png_path = png_path
     caption = _caption_4b(manifest)
     reward_rel = repo_rel_posix(reward_png_path)
     psd_rel = repo_rel_posix(psd_png_path)
-    if update_docs:
-        _ensure_paper_1_doc_4b(caption_4b=caption)
-        text = PAPER_1_DOC.read_text()
-        reward_link = _doc_figure_link(reward_rel)
-        psd_link = _doc_figure_link(psd_rel)
-        repl_block = (
-            f"**Reward vs episode**\n\n"
-            f"![Replication Fig 4b reward]({reward_link})\n\n"
-            f"**Episode-mean PSD vs episode**\n\n"
-            f"![Replication Fig 4b PSD]({psd_link})\n"
-        )
-        repl_start = text.find("### Replication\n\n", text.find("## Fig 4b"))
-        if repl_start >= 0:
-            repl_start += len("### Replication\n\n")
-            caption_start = text.find("\n<!-- caption-4b:start -->", repl_start)
-            if caption_start >= 0:
-                text = text[:repl_start] + repl_block + text[caption_start:]
-        text = _set_markdown_image_link(
-            text,
-            alt=PAPER_4B_REPLICATION_ALT,
-            repo_rel=reward_rel,
-        )
-        if PAPER_4B_PSD_REPLICATION_ALT in text:
-            text = _set_markdown_image_link(
-                text,
-                alt=PAPER_4B_PSD_REPLICATION_ALT,
-                repo_rel=psd_rel,
-            )
-        PAPER_1_DOC.write_text(text)
-    materialize_docs_figure_papers()
+    docs = panel_docs("mehregan", "4b")
+    if update_docs and docs.exists():
+        _set_caption(docs, "caption-4b", caption, PAPER_4B_MANIFEST)
+        doc = docs.marker_doc("caption-4b")
+        text = docs.text(doc) if doc is not None else None
+        if text is not None:
+            # Rebuild the "### Replication" block above the caption. In the tracker only
+            # under its "## Fig 4b" section; a figure page holds just this panel.
+            anchor = text.find("## Fig 4b")
+            if anchor >= 0 or doc != PAPER_1_DOC:
+                repl_start = text.find("### Replication\n\n", max(anchor, 0))
+                if repl_start >= 0:
+                    repl_start += len("### Replication\n\n")
+                    caption_start = text.find("\n<!-- caption-4b:start -->", repl_start)
+                    if caption_start >= 0:
+                        repl_block = (
+                            f"**Reward vs episode**\n\n"
+                            f"![{PAPER_4B_REPLICATION_ALT}]({docs.href(reward_rel, doc)})\n\n"
+                            f"**Episode-mean PSD vs episode**\n\n"
+                            f"![{PAPER_4B_PSD_REPLICATION_ALT}]({docs.href(psd_rel, doc)})\n"
+                        )
+                        docs.set_text(doc, text[:repl_start] + repl_block + text[caption_start:])
+        set_image_link(docs, alt=PAPER_4B_REPLICATION_ALT, repo_rel=reward_rel)
+        set_image_link(docs, alt=PAPER_4B_PSD_REPLICATION_ALT, repo_rel=psd_rel, required=False)
+        docs.save()
     refresh_mehregan_gate_tables(update_docs=update_docs)
     materialize_ship_png(reward_png_path, PAPER_4B_PNG)
     if combined_png_path is not None:
@@ -1336,25 +1216,18 @@ def promote_4a(
     png_path: Path,
     update_docs: bool = True,
 ) -> dict[str, str]:
-    """Refresh Fig 4a caption + replication image link in ``docs/controllers/ddpg/README.md``."""
+    """Refresh Fig 4a caption + replication image link (``docs/controllers/ddpg/figures/4a.md``)."""
     caption = _caption_4a(manifest)
     repo_rel = repo_rel_posix(png_path)
     materialize_ship_png(png_path, PAPER_4A_PNG)
     if update_docs:
-        _ensure_paper_1_doc(
-            caption_1b=None,
-            caption_2a=None,
-            caption_2b=None,
-            caption_4a=caption,
-        )
-        text = PAPER_1_DOC.read_text()
-        text = _set_markdown_image_link(
-            text,
+        _promote_mehregan_docs(
+            "4a",
+            caption=caption,
+            manifest_path=PAPER_4A_MANIFEST,
             alt=PAPER_4A_REPLICATION_ALT,
             repo_rel=repo_rel,
         )
-        PAPER_1_DOC.write_text(text)
-    materialize_docs_figure_papers()
     refresh_mehregan_gate_tables(update_docs=update_docs)
     _after_promote_publish(png_path, update_docs=update_docs)
     return {
@@ -1402,20 +1275,6 @@ def _caption_5a(manifest: dict[str, Any]) -> str:
     return f"{', '.join(bits)} ({_today()})"
 
 
-def _ensure_paper_1_doc_5a(*, caption_5a: str) -> None:
-    if not PAPER_1_DOC.exists():
-        return
-    text = PAPER_1_DOC.read_text()
-    if "<!-- caption-5a:start -->" not in text:
-        return
-    text = _replace_marker(
-        text,
-        "caption-5a",
-        _caption_block(caption_5a, PAPER_5A_MANIFEST),
-    )
-    PAPER_1_DOC.write_text(text)
-
-
 def _caption_5b(manifest: dict[str, Any]) -> str:
     seed = manifest.get("seed", 0)
     panel = manifest.get("panel") or {}
@@ -1449,20 +1308,6 @@ def _caption_5b(manifest: dict[str, Any]) -> str:
     return f"{', '.join(bits)} ({_today()})"
 
 
-def _ensure_paper_1_doc_5b(*, caption_5b: str) -> None:
-    if not PAPER_1_DOC.exists():
-        return
-    text = PAPER_1_DOC.read_text()
-    if "<!-- caption-5b:start -->" not in text:
-        return
-    text = _replace_marker(
-        text,
-        "caption-5b",
-        _caption_block(caption_5b, PAPER_5B_MANIFEST),
-    )
-    PAPER_1_DOC.write_text(text)
-
-
 def promote_5b(
     *,
     manifest: dict[str, Any],
@@ -1470,19 +1315,17 @@ def promote_5b(
     png_path: Path,
     update_docs: bool = True,
 ) -> dict[str, str]:
-    """Refresh Fig 5b caption + replication image link in ``docs/controllers/ddpg/README.md``."""
+    """Refresh Fig 5b caption + replication image link (``docs/controllers/ddpg/figures/5b.md``)."""
     caption = _caption_5b(manifest)
     repo_rel = repo_rel_posix(png_path)
     if update_docs:
-        _ensure_paper_1_doc_5b(caption_5b=caption)
-        text = PAPER_1_DOC.read_text()
-        text = _set_markdown_image_link(
-            text,
+        _promote_mehregan_docs(
+            "5b",
+            caption=caption,
+            manifest_path=PAPER_5B_MANIFEST,
             alt=PAPER_5B_REPLICATION_ALT,
             repo_rel=repo_rel,
         )
-        PAPER_1_DOC.write_text(text)
-    materialize_docs_figure_papers()
     refresh_mehregan_gate_tables(update_docs=update_docs)
     materialize_ship_png(png_path, PAPER_5B_PNG)
     _after_promote_publish(png_path, update_docs=update_docs)
@@ -1503,26 +1346,18 @@ def promote_5a(
     png_path: Path,
     update_docs: bool = True,
 ) -> dict[str, str]:
-    """Refresh Fig 5a caption + replication image link in ``docs/controllers/ddpg/README.md``."""
+    """Refresh Fig 5a caption + replication image link (``docs/controllers/ddpg/figures/5a.md``)."""
     caption = _caption_5a(manifest)
     repo_rel = repo_rel_posix(png_path)
     if update_docs:
-        _ensure_paper_1_doc_5a(caption_5a=caption)
-        text = PAPER_1_DOC.read_text()
-        repl_old = "*Not yet generated.* Target: `docs/controllers/ddpg/figures/images/5a/efficacy_45hz.png`"
-        if repl_old in text:
-            text = text.replace(
-                repl_old,
-                f"![Replication Fig 5a]({_doc_figure_link(repo_rel)})",
-                1,
-            )
-        text = _set_markdown_image_link(
-            text,
+        _promote_mehregan_docs(
+            "5a",
+            caption=caption,
+            manifest_path=PAPER_5A_MANIFEST,
             alt=PAPER_5A_REPLICATION_ALT,
             repo_rel=repo_rel,
+        placeholder='*Not yet generated.* Target: `docs/controllers/ddpg/figures/images/5a/efficacy_45hz.png`',
         )
-        PAPER_1_DOC.write_text(text)
-    materialize_docs_figure_papers()
     refresh_mehregan_gate_tables(update_docs=update_docs)
     materialize_ship_png(png_path, PAPER_5A_PNG)
     _after_promote_publish(png_path, update_docs=update_docs)
@@ -1571,20 +1406,6 @@ def _caption_6a(manifest: dict[str, Any]) -> str:
     return ", ".join(bits)
 
 
-def _ensure_paper_1_doc_6a(*, caption_6a: str) -> None:
-    if not PAPER_1_DOC.exists():
-        return
-    text = PAPER_1_DOC.read_text()
-    if "<!-- caption-6a:start -->" not in text:
-        return
-    text = _replace_marker(
-        text,
-        "caption-6a",
-        _caption_block(caption_6a, PAPER_6A_MANIFEST),
-    )
-    PAPER_1_DOC.write_text(text)
-
-
 def promote_6a(
     *,
     manifest: dict[str, Any],
@@ -1592,26 +1413,18 @@ def promote_6a(
     png_path: Path,
     update_docs: bool = True,
 ) -> dict[str, str]:
-    """Refresh Fig 6a caption + replication image link in ``docs/controllers/ddpg/README.md``."""
+    """Refresh Fig 6a caption + replication image link (``docs/controllers/ddpg/figures/6a.md``)."""
     caption = _caption_6a(manifest)
     repo_rel = repo_rel_posix(png_path)
     if update_docs:
-        _ensure_paper_1_doc_6a(caption_6a=caption)
-        text = PAPER_1_DOC.read_text()
-        repl_old = "*Not yet generated.* Target: `docs/controllers/ddpg/figures/images/6a/ptq_qat_45hz.png`"
-        if repl_old in text:
-            text = text.replace(
-                repl_old,
-                f"![Replication Fig 6a]({_doc_figure_link(repo_rel)})",
-                1,
-            )
-        text = _set_markdown_image_link(
-            text,
+        _promote_mehregan_docs(
+            "6a",
+            caption=caption,
+            manifest_path=PAPER_6A_MANIFEST,
             alt=PAPER_6A_REPLICATION_ALT,
             repo_rel=repo_rel,
+        placeholder='*Not yet generated.* Target: `docs/controllers/ddpg/figures/images/6a/ptq_qat_45hz.png`',
         )
-        PAPER_1_DOC.write_text(text)
-    materialize_docs_figure_papers()
     refresh_mehregan_gate_tables(update_docs=update_docs)
     materialize_ship_png(png_path, PAPER_6A_PNG)
     _after_promote_publish(png_path, update_docs=update_docs)
@@ -1647,20 +1460,6 @@ def _caption_6b(manifest: dict[str, Any]) -> str:
     return ", ".join(bits)
 
 
-def _ensure_paper_1_doc_6b(*, caption_6b: str) -> None:
-    if not PAPER_1_DOC.exists():
-        return
-    text = PAPER_1_DOC.read_text()
-    if "<!-- caption-6b:start -->" not in text:
-        return
-    text = _replace_marker(
-        text,
-        "caption-6b",
-        _caption_block(caption_6b, PAPER_6B_MANIFEST),
-    )
-    PAPER_1_DOC.write_text(text)
-
-
 def promote_6b(
     *,
     manifest: dict[str, Any],
@@ -1668,26 +1467,18 @@ def promote_6b(
     png_path: Path,
     update_docs: bool = True,
 ) -> dict[str, str]:
-    """Refresh Fig 6b caption + replication image link in ``docs/controllers/ddpg/README.md``."""
+    """Refresh Fig 6b caption + replication image link (``docs/controllers/ddpg/figures/6b.md``)."""
     caption = _caption_6b(manifest)
     repo_rel = repo_rel_posix(png_path)
     if update_docs:
-        _ensure_paper_1_doc_6b(caption_6b=caption)
-        text = PAPER_1_DOC.read_text()
-        repl_old = "*Not yet generated.* Target: `docs/controllers/ddpg/figures/images/6b/ptq_qat_30hz.png`"
-        if repl_old in text:
-            text = text.replace(
-                repl_old,
-                f"![Replication Fig 6b]({_doc_figure_link(repo_rel)})",
-                1,
-            )
-        text = _set_markdown_image_link(
-            text,
+        _promote_mehregan_docs(
+            "6b",
+            caption=caption,
+            manifest_path=PAPER_6B_MANIFEST,
             alt=PAPER_6B_REPLICATION_ALT,
             repo_rel=repo_rel,
+        placeholder='*Not yet generated.* Target: `docs/controllers/ddpg/figures/images/6b/ptq_qat_30hz.png`',
         )
-        PAPER_1_DOC.write_text(text)
-    materialize_docs_figure_papers()
     refresh_mehregan_gate_tables(update_docs=update_docs)
     materialize_ship_png(png_path, PAPER_6B_PNG)
     _after_promote_publish(png_path, update_docs=update_docs)
@@ -1707,39 +1498,34 @@ def promote_nguyen_2_3(
     png_path: Path,
     update_docs: bool = True,
 ) -> dict[str, str]:
-    """Refresh Fig 3 caption + replication image link in ``docs/controllers/snn/README.md``."""
+    """Refresh Fig 3 caption + replication image link (``docs/controllers/snn/figures/3.md``)."""
     caption = manifest.get("caption") or "see manifest"
     if manifest.get("png_version") is not None:
         caption = f"{caption} (v{manifest['png_version']})"
-    link = papers_tracker_image_link(png_path, doc=PAPER_NGUYEN_DOC)
-    if update_docs and PAPER_NGUYEN_DOC.exists():
-        text = PAPER_NGUYEN_DOC.read_text()
-        text = _replace_marker_in(
-            text,
+    repo_rel = repo_rel_posix(png_path)
+    docs = panel_docs("nguyen", "3")
+    link_doc = docs.marker_doc("caption-3") or docs.find(f"![{PAPER_NGUYEN_2_3_REPLICATION_ALT}]")
+    link = docs.href(repo_rel, link_doc or PAPER_NGUYEN_DOC)
+    if update_docs and docs.exists():
+        caption_doc = docs.replace_marker(
             "caption-3",
             _caption_block(caption, PAPER_NGUYEN_2_3_MANIFEST),
-            doc=PAPER_NGUYEN_DOC,
         )
-        text = _set_papers_tracker_image_link(
-            text,
-            alt=PAPER_NGUYEN_2_3_REPLICATION_ALT,
-            link=link,
-            doc=PAPER_NGUYEN_DOC,
-        )
+        set_image_link(docs, alt=PAPER_NGUYEN_2_3_REPLICATION_ALT, repo_rel=repo_rel)
         _pass = bool(manifest.get("gates", {}).get("pass"))
         _status = (
             f"**Status:** Pass — 500 × 100 ms samples; see `{png_path.name}`."
             if _pass
             else f"**Status:** Open — see `{png_path.name}`."
         )
-        text = re.sub(
+        docs.sub(
             r"(<!-- caption-3:end -->\s*\n)\*\*Status:\*\*[^\n]+",
-            r"\1" + _status,
-            text,
+            lambda m: m.group(1) + _status,
             count=1,
+            path=caption_doc,
         )
-        text = refresh_nguyen_gate_tables_in_text(text)
-        PAPER_NGUYEN_DOC.write_text(text)
+        refresh_nguyen_gate_tables_in_docs(docs)
+        docs.save()
     materialize_ship_png(png_path, PAPER_NGUYEN_3_PNG)
     _after_promote_publish(png_path, update_docs=update_docs)
     return {
@@ -1747,7 +1533,7 @@ def promote_nguyen_2_3(
         "png_link": link,
         "manifest": PAPER_NGUYEN_2_3_MANIFEST,
         "caption": caption,
-        "doc": str(PAPER_NGUYEN_DOC),
+        "doc": str(link_doc or PAPER_NGUYEN_DOC),
     }
 
 
@@ -1757,50 +1543,30 @@ def promote_nguyen_4(
     png_path: Path,
     update_docs: bool = True,
 ) -> dict[str, str]:
-    """Refresh Fig 4 caption + replication image link in ``docs/controllers/snn/README.md``."""
+    """Refresh Fig 4 caption + replication image link (``docs/controllers/snn/figures/4.md``)."""
     caption = manifest.get("caption") or "see manifest"
     version = manifest.get("png_version")
     if version is not None:
         caption = f"{caption} (v{version})"
-    link = papers_tracker_image_link(png_path, doc=PAPER_NGUYEN_DOC)
-    if update_docs and PAPER_NGUYEN_DOC.exists():
-        text = PAPER_NGUYEN_DOC.read_text()
+    repo_rel = repo_rel_posix(png_path)
+    docs = panel_docs("nguyen", "4")
+    link_doc = docs.marker_doc("caption-4-latest") or docs.marker_doc("caption-4")
+    link = docs.href(repo_rel, link_doc or PAPER_NGUYEN_DOC)
+    if update_docs and docs.exists():
         latest_caption = _caption_block(caption, PAPER_NGUYEN_4_MANIFEST)
-        if "<!-- caption-4-latest:start -->" in text:
-            text = _replace_marker_in(
-                text,
-                "caption-4-latest",
-                latest_caption,
-                doc=PAPER_NGUYEN_DOC,
-            )
+        if docs.has_marker("caption-4-latest"):
+            caption_doc = docs.replace_marker("caption-4-latest", latest_caption)
         else:
-            text = _replace_marker_in(
-                text,
-                "caption-4",
-                latest_caption,
-                doc=PAPER_NGUYEN_DOC,
-            )
-        # Dual-image tracker: update latest; legacy single-alt trackers optional.
-        if PAPER_NGUYEN_4_REPLICATION_LATEST_ALT in text:
-            text = _set_papers_tracker_image_link(
-                text,
-                alt=PAPER_NGUYEN_4_REPLICATION_LATEST_ALT,
-                link=link,
-                doc=PAPER_NGUYEN_DOC,
-            )
+            caption_doc = docs.replace_marker("caption-4", latest_caption)
+        # Dual-image page: update latest; legacy single-alt docs optional.
+        if docs.find(f"![{PAPER_NGUYEN_4_REPLICATION_LATEST_ALT}]") is not None:
+            set_image_link(docs, alt=PAPER_NGUYEN_4_REPLICATION_LATEST_ALT, repo_rel=repo_rel)
         else:
-            text = _set_papers_tracker_image_link_if_present(
-                text,
-                alt=PAPER_NGUYEN_4_REPLICATION_ALT,
-                link=link,
-            )
-            text = _set_papers_tracker_image_link_if_present(
-                text,
-                alt=PAPER_NGUYEN_4_REPLICATION_BEST_ALT,
-                link=link,
+            set_image_link(docs, alt=PAPER_NGUYEN_4_REPLICATION_ALT, repo_rel=repo_rel, required=False)
+            set_image_link(
+                docs, alt=PAPER_NGUYEN_4_REPLICATION_BEST_ALT, repo_rel=repo_rel, required=False
             )
         # Refresh Fig 4 Status line (any prior Open/Pass wording after caption-4).
-        import re as _re
         _pass = bool(manifest.get("gates", {}).get("pass"))
         _shape = bool(manifest.get("gates", {}).get("shape_pass"))
         gates = manifest.get("gates", {})
@@ -1817,25 +1583,26 @@ def promote_nguyen_4(
                 else f"**Status:** Open — see manifest gates (`{png_path.name}`)."
             )
         )
-        text = _re.sub(
+        docs.sub(
             r"(<!-- caption-4(?:-latest)?:end -->\s*\n)\*\*Status:\*\*[^\n]+",
-            r"\1" + _status,
-            text,
+            lambda m: m.group(1) + _status,
             count=1,
+            path=caption_doc,
         )
-        # Keep summary-table Status column in sync for Fig 4 row.
-        text = _re.sub(
+        # Keep the tracker summary-table Status column in sync for the Fig 4 row.
+        docs.sub(
             r"(\| Fig 4 — training reward \+ episode length \|[^|]+\|[^|]+\|[^|]+\| )(Open|Pass)( \|)",
-            r"\1" + ("Pass" if _pass else "Open") + r"\3",
-            text,
+            lambda m: m.group(1) + ("Pass" if _pass else "Open") + m.group(3),
             count=1,
         )
-        text = text.replace(
+        replace_placeholder(
+            docs,
             "*Not yet generated.* Target: `docs/controllers/snn/figures/images/4/training_reward_length.png`",
-            f"![Replication Fig 4]({link})",
+            alt="Replication Fig 4",
+            repo_rel=repo_rel,
         )
-        text = refresh_nguyen_gate_tables_in_text(text)
-        PAPER_NGUYEN_DOC.write_text(text)
+        refresh_nguyen_gate_tables_in_docs(docs)
+        docs.save()
     materialize_ship_png(png_path, PAPER_NGUYEN_4_PNG)
     _after_promote_publish(png_path, update_docs=update_docs)
     return {
@@ -1843,7 +1610,7 @@ def promote_nguyen_4(
         "png_link": link,
         "manifest": PAPER_NGUYEN_4_MANIFEST,
         "caption": caption,
-        "doc": str(PAPER_NGUYEN_DOC),
+        "doc": str(link_doc or PAPER_NGUYEN_DOC),
     }
 
 
@@ -1858,54 +1625,46 @@ def _promote_nguyen_panel(
     placeholder: str | None = None,
     update_docs: bool = True,
 ) -> dict[str, str]:
-    """Shared Nguyen tracker refresh for Fig 5–7."""
+    """Shared Nguyen refresh for Fig 5–7 (figure page ``figures/<n>.md``, else tracker)."""
     caption = manifest.get("caption") or "see manifest"
     if manifest.get("png_version") is not None:
         caption = f"{caption} (v{manifest['png_version']})"
-    link = papers_tracker_image_link(png_path, doc=PAPER_NGUYEN_DOC)
-    if update_docs and PAPER_NGUYEN_DOC.exists():
-        text = PAPER_NGUYEN_DOC.read_text()
-        text = _replace_marker_in(
-            text,
-            caption_marker,
-            _caption_block(caption, manifest_path),
-            doc=PAPER_NGUYEN_DOC,
-        )
-        text = _set_papers_tracker_image_link(
-            text,
-            alt=replication_alt,
-            link=link,
-            doc=PAPER_NGUYEN_DOC,
-        )
+    panel = caption_marker.removeprefix("caption-")
+    repo_rel = repo_rel_posix(png_path)
+    docs = panel_docs("nguyen", panel)
+    link_doc = docs.marker_doc(caption_marker)
+    link = docs.href(repo_rel, link_doc or PAPER_NGUYEN_DOC)
+    if update_docs and docs.exists():
+        caption_doc = docs.replace_marker(caption_marker, _caption_block(caption, manifest_path))
+        if placeholder:
+            replace_placeholder(docs, placeholder, alt=replication_alt, repo_rel=repo_rel)
+        set_image_link(docs, alt=replication_alt, repo_rel=repo_rel)
         _pass = bool(manifest.get("gates", {}).get("pass"))
         _status = (
             f"**Status:** Pass — see manifest gates (`{png_path.name}`)."
             if _pass
             else f"**Status:** Open — see manifest gates (`{png_path.name}`)."
         )
-        text = re.sub(
+        docs.sub(
             rf"(<!-- {caption_marker}:end -->\s*\n)\*\*Status:\*\*[^\n]+",
-            r"\1" + _status,
-            text,
+            lambda m: m.group(1) + _status,
             count=1,
+            path=caption_doc,
         )
-        text = re.sub(
+        docs.sub(
             status_row_pattern,
-            lambda m: m.group(1) + ("Pass" if _pass else "Open") + m.group(2),
-            text,
+            lambda m: m.group(1) + ("Pass" if _pass else "Open") + m.group(3),
             count=1,
         )
-        if placeholder:
-            text = text.replace(placeholder, f"![{replication_alt}]({link})")
-        text = refresh_nguyen_gate_tables_in_text(text)
-        PAPER_NGUYEN_DOC.write_text(text)
+        refresh_nguyen_gate_tables_in_docs(docs)
+        docs.save()
     _after_promote_publish(png_path, update_docs=update_docs)
     return {
         "png": str(png_path),
         "png_link": link,
         "manifest": manifest_path,
         "caption": caption,
-        "doc": str(PAPER_NGUYEN_DOC),
+        "doc": str(link_doc or PAPER_NGUYEN_DOC),
     }
 
 
@@ -1973,8 +1732,8 @@ def promote_nguyen_7(
 
 
 def resolve_ravivarapu_doc(checkout: Path | None = None) -> Path:
-    root = main_checkout_root(checkout or CHECKOUT_ROOT)
-    return root / "figures" / "ravivarapu" / "replications.md"
+    """Ravivarapu tracker ``docs/controllers/sea_dbs/README.md``."""
+    return resolve_tracker("ravivarapu", checkout)
 
 
 PAPER_RAVIVARAPU_DOC = resolve_ravivarapu_doc()
@@ -1984,9 +1743,10 @@ def require_notes_dir() -> Path:
     """Notes folder for ``--export-notes`` / ``--update-report`` (``rl_adaptive_dbs.notes_export``)."""
     from rl_adaptive_dbs.notes_export import require_notes_dir as _require_notes_dir
 
-    trackers = (resolve_paper_1_doc(), resolve_nguyen_doc(), resolve_ravivarapu_doc())
-    return _require_notes_dir(trackers, repo_root=REPO_ROOT)
-PAPER_RAVIVARAPU_4A_PNG = "docs/controllers/sea_dbs/figures/images/4a/training_psd.png"
+    return _require_notes_dir(doc_paths.all_trackers(REPO_ROOT), repo_root=REPO_ROOT)
+
+
+PAPER_RAVIVARAPU_4A_PNG = _image_rel("ravivarapu", "4a", "training_psd.png")
 
 
 def refresh_ravivarapu_gate_tables(*, update_docs: bool = True) -> None:
@@ -2035,37 +1795,68 @@ def _ravivarapu_4a_status_line(manifest: dict[str, Any]) -> str:
     )
 
 
+def _promote_ravivarapu_docs(
+    panel: str,
+    *,
+    caption_marker: str,
+    caption: str,
+    manifest_path: str,
+    replication_alt: str,
+    repo_rel: str,
+    status_line: str | None,
+    status_after_caption: bool = True,
+    placeholder: str | None = None,
+    extra: Any = None,
+) -> None:
+    """Caption, replication image link and Status line for one Ravivarapu panel.
+
+    Edits go to ``figures/<panel>.md`` when it holds the target, else the tracker.
+    ``status_after_caption`` rewrites the first ``**Status:**`` line after the
+    caption block; otherwise the first one in the doc that holds the caption.
+    """
+    docs = panel_docs("ravivarapu", panel)
+    if not docs.exists():
+        return
+    _set_caption(docs, caption_marker, caption, manifest_path)
+    if placeholder:
+        replace_placeholder(docs, placeholder, alt=replication_alt, repo_rel=repo_rel)
+    set_image_link(docs, alt=replication_alt, repo_rel=repo_rel, required=False)
+    if extra is not None:
+        extra(docs)
+    if status_line is not None:
+        doc = docs.marker_doc(caption_marker) or docs.find("**Status:**")
+        text = docs.text(doc) if doc is not None else None
+        if text is not None:
+            end = f"<!-- {caption_marker}:end -->"
+            if status_after_caption:
+                head, sep, tail = text.partition(end)
+                if sep:
+                    tail = re.sub(r"(?m)^\*\*Status:\*\*.*$", lambda _m: status_line, tail, count=1)
+                    docs.set_text(doc, head + sep + tail)
+            else:
+                docs.set_text(
+                    doc, re.sub(r"(?m)^\*\*Status:\*\*.*$", lambda _m: status_line, text, count=1)
+                )
+    docs.save()
+
+
 def promote_ravivarapu_4a(*, manifest: dict[str, Any], png_path: Path, update_docs: bool = True) -> dict[str, str]:
     caption = manifest.get("caption") or "see manifest"
     if manifest.get("png_version") is not None:
         caption = f"{caption} (v{manifest['png_version']})"
-    link = repo_rel_posix(png_path)
-    if PAPER_RAVIVARAPU_DOC.exists():
-        text = PAPER_RAVIVARAPU_DOC.read_text()
-        if "<!-- caption-4a:start -->" in text:
-            text = _replace_marker(
-                text,
-                "caption-4a",
-                _caption_block(caption, "artifacts/figures/papers/ravivarapu/4/manifest_4a.json"),
-            )
-        text = text.replace(
-            "*Not yet generated.* Target: `docs/controllers/sea_dbs/figures/images/4a/training_psd.png`",
-            f"![Replication Fig 4a](images/4a/{png_path.name})",
-        )
-        text = re.sub(
-            r"!\[Replication Fig 4a\]\(images/4a/training_psd_v\d+\.png\)",
-            f"![Replication Fig 4a](images/4a/{png_path.name})",
-            text,
-        )
-        # Rewrite the first panel Status line (Fig 4a) on every promote — including
-        # Pass→Pass version bumps. The old Open-only replace left stale ``rep vN``.
-        text = re.sub(
-            r"(?m)^\*\*Status:\*\*.*$",
-            _ravivarapu_4a_status_line(manifest),
-            text,
-            count=1,
-        )
-        PAPER_RAVIVARAPU_DOC.write_text(text)
+    # Rewrite the panel Status line on every promote — including Pass→Pass version
+    # bumps (the old Open-only replace left a stale ``rep vN``).
+    _promote_ravivarapu_docs(
+        "4a",
+        caption_marker="caption-4a",
+        caption=caption,
+        manifest_path="artifacts/figures/papers/ravivarapu/4/manifest_4a.json",
+        replication_alt="Replication Fig 4a",
+        repo_rel=repo_rel_posix(png_path),
+        status_line=_ravivarapu_4a_status_line(manifest),
+        status_after_caption=False,
+        placeholder="*Not yet generated.* Target: `docs/controllers/sea_dbs/figures/images/4a/training_psd.png`",
+    )
     refresh_ravivarapu_gate_tables(update_docs=update_docs)
     materialize_ship_png(png_path, PAPER_RAVIVARAPU_4A_PNG)
     _after_promote_publish(png_path, update_docs=update_docs)
@@ -2076,37 +1867,34 @@ def promote_ravivarapu_4b(*, manifest: dict[str, Any], png_path: Path, update_do
     caption = manifest.get("caption") or "see manifest"
     if manifest.get("png_version") is not None:
         caption = f"{caption} (v{manifest['png_version']})"
-    if PAPER_RAVIVARAPU_DOC.exists():
-        text = PAPER_RAVIVARAPU_DOC.read_text()
-        if "<!-- caption-4b:start -->" in text:
-            text = _replace_marker(
-                text,
-                "caption-4b",
-                _caption_block(caption, "artifacts/figures/papers/ravivarapu/4/manifest_4b.json"),
-            )
-        text = text.replace(
-            "*Not yet generated.* Target: `docs/controllers/sea_dbs/figures/images/4b/training_reward.png`",
-            f"![Replication Fig 4b](images/4b/{png_path.name})",
-        )
-        text = re.sub(
-            r"!\[Replication Fig 4b\]\(images/4b/training_reward.*?\)",
-            f"![Replication Fig 4b](images/4b/{png_path.name})",
-            text,
-        )
-        text = text.replace(
+    status = "Pass" if manifest.get("gates", {}).get("pass") else "Open"
+
+    def _status(docs: DocSet) -> None:
+        docs.replace(
             "**Status:** Open — pair with Fig 4a locked run.",
-            f"**Status:** {'Pass' if manifest.get('gates', {}).get('pass') else 'Open'} — see manifest gates.",
+            f"**Status:** {status} — see manifest gates.",
         )
-        PAPER_RAVIVARAPU_DOC.write_text(text)
+
+    _promote_ravivarapu_docs(
+        "4b",
+        caption_marker="caption-4b",
+        caption=caption,
+        manifest_path="artifacts/figures/papers/ravivarapu/4/manifest_4b.json",
+        replication_alt="Replication Fig 4b",
+        repo_rel=repo_rel_posix(png_path),
+        status_line=None,
+        placeholder="*Not yet generated.* Target: `docs/controllers/sea_dbs/figures/images/4b/training_reward.png`",
+        extra=_status,
+    )
     refresh_ravivarapu_gate_tables(update_docs=update_docs)
     _after_promote_publish(png_path, update_docs=update_docs)
     return {"png": str(png_path), "caption": caption, "doc": str(PAPER_RAVIVARAPU_DOC)}
 
 
-PAPER_RAVIVARAPU_5A_PNG = "docs/controllers/sea_dbs/figures/images/5a/inference_50hz.png"
-PAPER_RAVIVARAPU_5B_PNG = "docs/controllers/sea_dbs/figures/images/5b/inference_30hz.png"
-PAPER_RAVIVARAPU_6_PNG = "docs/controllers/sea_dbs/figures/images/6/ptq_fp16_50hz.png"
-PAPER_RAVIVARAPU_7_PNG = "docs/controllers/sea_dbs/figures/images/7/ablation_psd.png"
+PAPER_RAVIVARAPU_5A_PNG = _image_rel("ravivarapu", "5a", "inference_50hz.png")
+PAPER_RAVIVARAPU_5B_PNG = _image_rel("ravivarapu", "5b", "inference_30hz.png")
+PAPER_RAVIVARAPU_6_PNG = _image_rel("ravivarapu", "6", "ptq_fp16_50hz.png")
+PAPER_RAVIVARAPU_7_PNG = _image_rel("ravivarapu", "7", "ablation_psd.png")
 
 
 def _ravivarapu_inference_status_line(manifest: dict[str, Any], *, panel: str) -> str:
@@ -2146,41 +1934,23 @@ def _promote_ravivarapu_inference(
     caption = manifest.get("caption") or "see manifest"
     if manifest.get("png_version") is not None:
         caption = f"{caption} (v{manifest['png_version']})"
-    if PAPER_RAVIVARAPU_DOC.exists() and update_docs:
-        text = PAPER_RAVIVARAPU_DOC.read_text()
-        if f"<!-- {caption_marker}:start -->" in text:
-            text = _replace_marker(
-                text,
-                caption_marker,
-                _caption_block(
-                    caption,
-                    f"artifacts/figures/papers/ravivarapu/{panel}/manifest.json",
-                ),
-            )
-        text = re.sub(
-            rf"!\[{re.escape(replication_alt)}\]\(images/{panel}/\w+_v\d+\.png\)",
-            f"![{replication_alt}](images/{panel}/{png_path.name})",
-            text,
+    if update_docs:
+        _promote_ravivarapu_docs(
+            panel,
+            caption_marker=caption_marker,
+            caption=caption,
+            manifest_path=f"artifacts/figures/papers/ravivarapu/{panel}/manifest.json",
+            replication_alt=replication_alt,
+            repo_rel=repo_rel_posix(png_path),
+            status_line=_ravivarapu_inference_status_line(manifest, panel=panel),
         )
-        # Rewrite this panel's Status line (first match after the caption marker).
-        parts = text.split(f"<!-- {caption_marker}:end -->", 1)
-        if len(parts) == 2:
-            head, tail = parts
-            tail = re.sub(
-                r"(?m)^\*\*Status:\*\*.*$",
-                _ravivarapu_inference_status_line(manifest, panel=panel),
-                tail,
-                count=1,
-            )
-            text = f"<!-- {caption_marker}:end -->".join((head, tail))
-        PAPER_RAVIVARAPU_DOC.write_text(text)
     refresh_ravivarapu_gate_tables(update_docs=update_docs)
     materialize_ship_png(png_path, ship_alias)
     _after_promote_publish(png_path, update_docs=update_docs)
     return {"png": str(png_path), "caption": caption, "doc": str(PAPER_RAVIVARAPU_DOC)}
 
 
-PAPER_RAVIVARAPU_T2_PNG = "docs/controllers/sea_dbs/figures/images/table2/avg_psd.png"
+PAPER_RAVIVARAPU_T2_PNG = _image_rel("ravivarapu", "table2", "avg_psd.png")
 
 
 def promote_ravivarapu_table2(
@@ -2247,33 +2017,22 @@ def promote_ravivarapu_6(*, manifest: dict[str, Any], png_path: Path, update_doc
     caption = manifest.get("caption") or "see manifest"
     if manifest.get("png_version") is not None:
         caption = f"{caption} (v{manifest['png_version']})"
-    if PAPER_RAVIVARAPU_DOC.exists() and update_docs:
-        text = PAPER_RAVIVARAPU_DOC.read_text()
-        if "<!-- caption-6:start -->" in text:
-            text = _replace_marker(
-                text,
-                "caption-6",
-                _caption_block(
-                    caption,
-                    "artifacts/figures/papers/ravivarapu/6/manifest.json",
-                ),
-            )
-        text = re.sub(
-            r"!\[Replication Fig 6\]\(images/6/\w+_v\d+\.png\)",
-            f"![Replication Fig 6](images/6/{png_path.name})",
-            text,
+    if update_docs:
+        _promote_ravivarapu_docs(
+            "6",
+            caption_marker="caption-6",
+            caption=caption,
+            manifest_path="artifacts/figures/papers/ravivarapu/6/manifest.json",
+            replication_alt="Replication Fig 6",
+            repo_rel=repo_rel_posix(png_path),
+            status_line=_ravivarapu_fig6_status_line(manifest),
         )
-        parts = text.split("<!-- caption-6:end -->", 1)
-        if len(parts) == 2:
-            head, tail = parts
-            tail = re.sub(
-                r"(?m)^\*\*Status:\*\*.*$",
-                _ravivarapu_fig6_status_line(manifest),
-                tail,
-                count=1,
-            )
-            text = "<!-- caption-6:end -->".join((head, tail))
-        PAPER_RAVIVARAPU_DOC.write_text(text)
+    refresh_ravivarapu_gate_tables(update_docs=update_docs)
+    materialize_ship_png(png_path, PAPER_RAVIVARAPU_6_PNG)
+    _after_promote_publish(png_path, update_docs=update_docs)
+    return {"png": str(png_path), "caption": caption, "doc": str(PAPER_RAVIVARAPU_DOC)}
+
+
 def _ravivarapu_fig7_status_line(manifest: dict[str, Any]) -> str:
     gates = manifest.get("gates") or {}
     rep = f" (rep v{manifest['png_version']})" if manifest.get("png_version") is not None else ""
@@ -2289,33 +2048,16 @@ def promote_ravivarapu_7(*, manifest: dict[str, Any], png_path: Path, update_doc
     caption = manifest.get("caption") or "see manifest"
     if manifest.get("png_version") is not None:
         caption = f"{caption} (v{manifest['png_version']})"
-    if PAPER_RAVIVARAPU_DOC.exists() and update_docs:
-        text = PAPER_RAVIVARAPU_DOC.read_text()
-        if "<!-- caption-7:start -->" in text:
-            text = _replace_marker(
-                text,
-                "caption-7",
-                _caption_block(
-                    caption,
-                    "artifacts/figures/papers/ravivarapu/7/manifest.json",
-                ),
-            )
-        text = re.sub(
-            r"!\[Replication Fig 7\]\(images/7/\w+_v\d+\.png\)",
-            f"![Replication Fig 7](images/7/{png_path.name})",
-            text,
+    if update_docs:
+        _promote_ravivarapu_docs(
+            "7",
+            caption_marker="caption-7",
+            caption=caption,
+            manifest_path="artifacts/figures/papers/ravivarapu/7/manifest.json",
+            replication_alt="Replication Fig 7",
+            repo_rel=repo_rel_posix(png_path),
+            status_line=_ravivarapu_fig7_status_line(manifest),
         )
-        parts = text.split("<!-- caption-7:end -->", 1)
-        if len(parts) == 2:
-            head, tail = parts
-            tail = re.sub(
-                r"(?m)^\*\*Status:\*\*.*$",
-                _ravivarapu_fig7_status_line(manifest),
-                tail,
-                count=1,
-            )
-            text = "<!-- caption-7:end -->".join((head, tail))
-        PAPER_RAVIVARAPU_DOC.write_text(text)
     refresh_ravivarapu_gate_tables(update_docs=update_docs)
     materialize_ship_png(png_path, PAPER_RAVIVARAPU_7_PNG)
     _after_promote_publish(png_path, update_docs=update_docs)

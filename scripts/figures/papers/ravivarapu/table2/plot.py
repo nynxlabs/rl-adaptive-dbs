@@ -18,6 +18,7 @@ Run:
 """
 from __future__ import annotations
 
+from rl_adaptive_dbs import doc_paths
 from rl_adaptive_dbs.panel import load_script_module
 
 from rl_adaptive_dbs import panel as _panel
@@ -61,7 +62,7 @@ from ravivarapu_gates import (  # noqa: E402
 )
 
 CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/table2")
-FIGURES_DIR = Path("docs/controllers/sea_dbs/figures/images/table2")
+FIGURES_DIR = Path(doc_paths.figure_images_rel("ravivarapu", "table2"))
 OUT_STEM = "avg_psd"
 VARIANTS = ("baseline", "paper")
 PSD_UNITS = 1000.0

@@ -12,6 +12,7 @@ Run:
 """
 from __future__ import annotations
 
+from rl_adaptive_dbs import doc_paths
 from rl_adaptive_dbs.panel import load_script_module
 
 from rl_adaptive_dbs import panel as _panel
@@ -54,7 +55,7 @@ _paper_overlay = _overlay_import.load_paper_overlay()
 
 CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/7")
 FIG5A_SERIES = Path("artifacts/figures/papers/ravivarapu/5a/series.json")
-FIGURES_DIR = Path("docs/controllers/sea_dbs/figures/images/7")
+FIGURES_DIR = Path(doc_paths.figure_images_rel("ravivarapu", "7"))
 OUT_STEM = "ablation_psd"
 VARIANTS = ("baseline", "baseline-pm", "baseline-gs", "paper")
 FIG4_VARIANTS = ("baseline", "paper")

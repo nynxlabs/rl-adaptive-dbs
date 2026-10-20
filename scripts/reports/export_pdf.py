@@ -7,8 +7,8 @@ Usage::
 
     uv sync --group reports
     uv run python -m rl_adaptive_dbs.run scripts/reports/export_pdf.py \\
-        "$RL_DBS_NOTES_DIR"/reports/2026-08-10.md \\
-        -o "$RL_DBS_NOTES_DIR"/reports/2026-08-10.pdf
+        "$RL_DBS_NOTES_DIR"/docs/reports/2026-08-10.md \\
+        -o "$RL_DBS_NOTES_DIR"/docs/reports/2026-08-10.pdf
 
     # One long scroll (no forced page breaks):
     uv run python -m rl_adaptive_dbs.run scripts/reports/export_pdf.py docs/reports/2026-08-10.md --continuous

@@ -27,12 +27,13 @@ Run:
   uv run python scripts/figures/papers/mehregan/2a/plot.py --plot-only
   uv run python scripts/figures/papers/mehregan/2a/plot.py --protocol single
   uv run python scripts/figures/papers/mehregan/2a/plot.py --sampling segment --protocol single
-  uv run python scripts/figures/papers/mehregan/2a/plot.py --no-update-docs  # skip docs/controllers/ddpg/README.md refresh
+  uv run python scripts/figures/papers/mehregan/2a/plot.py --no-update-docs  # skip docs/controllers/ddpg/figures/2a.md refresh
 
 Plant efficacy simulation only — no RL training; checkpoint resume is not applicable.
 """
 from __future__ import annotations
 
+from rl_adaptive_dbs import doc_paths
 from rl_adaptive_dbs.panel import load_script_module
 
 from rl_adaptive_dbs import panel as _panel
@@ -64,7 +65,7 @@ _OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
 _overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
-FIGURES_DIR = Path("docs/controllers/ddpg/figures/images/2a")
+FIGURES_DIR = Path(doc_paths.figure_images_rel("mehregan", "2a"))
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/2a")
 DEFAULT_SERIES = CACHE_DIR / "series.json"
 OUT_STEM = "beta_power"  # versioned as beta_power_vN.png; promote ships beta_power.png
@@ -692,7 +693,7 @@ def main() -> int:
     parser.add_argument(
         "--no-update-docs",
         action="store_true",
-        help="Skip docs/controllers/ddpg/README.md caption refresh",
+        help="Skip the docs/controllers/ddpg/figures/2a.md caption refresh",
     )
     parser.add_argument(
         "--export-notes",

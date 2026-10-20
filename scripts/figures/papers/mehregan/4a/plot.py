@@ -20,6 +20,7 @@ Writes ``docs/controllers/ddpg/figures/images/4a/training_beta_vN.png`` (N auto-
 """
 from __future__ import annotations
 
+from rl_adaptive_dbs import doc_paths
 from rl_adaptive_dbs.panel import load_script_module
 
 from rl_adaptive_dbs import panel as _panel
@@ -59,7 +60,7 @@ _OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
 _overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
-FIGURES_DIR = Path("docs/controllers/ddpg/figures/images/4a")
+FIGURES_DIR = Path(doc_paths.figure_images_rel("mehregan", "4a"))
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/4a")
 DEFAULT_SERIES = CACHE_DIR / "series.json"
 DEFAULT_CHECKPOINT = CACHE_DIR / "checkpoint.pt"
@@ -209,7 +210,7 @@ def main() -> int:
         "--no-update-docs",
         dest="update_docs",
         action="store_false",
-        help="Skip the tracker caption / image link refresh",
+        help="Skip the figure page caption / image link refresh",
     )
     parser.set_defaults(update_docs=True)
     _resume_cli.add_export_notes_arg(parser)

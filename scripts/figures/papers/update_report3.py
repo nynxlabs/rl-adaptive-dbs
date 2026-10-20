@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Refresh replication image paths in ``<notes_dir>/reports/2026-08-10.md``.
+"""Refresh replication image paths in ``<notes_dir>/docs/reports/2026-08-10.md``.
 
 The 2026-08-10 report gallery embeds use **co-located copies** under
 ``docs/reports/images/gallery/`` (``./images/gallery/rep_*.png``) so notes apps
 resolve them from the note folder regardless of its root. Ship PNGs under
-``docs/controllers/<controller>/figures/images/`` are still refreshed for trackers.
+``docs/controllers/<controller>/figures/images/<panel>/`` are still refreshed for
+the docs.
 
-``sync_report3_gallery_ships()`` copies tracker versioned PNGs into ship paths.
+``sync_report3_gallery_ships()`` copies the versioned PNGs the figure pages (or the
+trackers, for panels not yet moved) link into ship paths.
 ``sync_report3_gallery_embeds()`` copies bytes beside the report.
 ``update_report3()`` rewrites gallery ``![Rep …](…)`` hrefs.
 ``sync_report3_panel_notes()`` ensures claim, status, quoted caption, and brief
@@ -19,6 +21,7 @@ Panel ``plot.py`` runs enable gallery refresh with ``--update-report`` (see
 
 from __future__ import annotations
 
+from rl_adaptive_dbs import doc_paths
 from rl_adaptive_dbs.panel import load_script_module
 
 import argparse
@@ -31,7 +34,8 @@ _promote = load_script_module("figure_promote", _PROMOTE)
 
 REPO_ROOT = _promote.REPO_ROOT
 
-# The 2026-08-10 report alt text -> (paper dir under figures/, stable ship path under paper/).
+# The 2026-08-10 report alt text -> (paper, stable ship path under the paper's
+# ``docs/controllers/<controller>/figures/`` folder).
 REPORT3_SHIP_PATHS: dict[str, tuple[str, str]] = {
     "Rep 1b": ("mehregan", "images/1b/gpi_psd.png"),
     "Rep 2a": ("mehregan", "images/2a/beta_power.png"),
@@ -63,7 +67,7 @@ REPORT3_GALLERY_FILES: dict[str, str] = {
     "Rep R4a": "rep_r4a.png",
 }
 
-# The 2026-08-10 report alt -> tracker ``![…](images/…)`` alt substring for the versioned source.
+# The 2026-08-10 report alt -> figure page / tracker ``![…](…)`` alt substring for the versioned source.
 REPORT3_TRACKER_ALTS: dict[str, tuple[str, str]] = {
     "Rep 1b": ("mehregan", "Replication Fig 1b"),
     "Rep 2a": ("mehregan", "Replication Fig 2a"),
@@ -79,7 +83,7 @@ REPORT3_TRACKER_ALTS: dict[str, tuple[str, str]] = {
     "Rep R4a": ("ravivarapu", "Replication Fig 4a"),
 }
 
-_IMAGE_LINK_RE = re.compile(r"!\[([^\]]*)\]\((images/[^)]+)\)")
+_IMAGE_LINK_RE = re.compile(r"!\[([^\]]*)\]\(([^)\s]+)\)")
 
 REPORT3_PAPER_CITE: dict[str, str] = {
     "mehregan": "Mehregan et al.",
@@ -441,8 +445,8 @@ def sync_report3_paper_captions(*, dry_run: bool = False, verbose: bool = True) 
 
 
 def report3_path() -> Path:
-    """``<notes_dir>/reports/2026-08-10.md`` (see ``rl_adaptive_dbs.notes_export``)."""
-    candidate = _promote.require_notes_dir() / "reports" / "2026-08-10.md"
+    """``<notes_dir>/docs/reports/2026-08-10.md`` (see ``rl_adaptive_dbs.notes_export``)."""
+    candidate = doc_paths.reports_dir(_promote.require_notes_dir()) / "2026-08-10.md"
     if not candidate.is_file():
         msg = f"2026-08-10 report not found at {candidate}"
         raise FileNotFoundError(msg)
@@ -465,27 +469,37 @@ def _report_href(report_alt: str) -> str:
 
 
 def _ship_path(paper: str, ship_rel: str) -> Path:
-    return REPO_ROOT / "figures" / paper / ship_rel
+    return doc_paths.figures_dir(paper, REPO_ROOT) / ship_rel
+
+
+def _ship_repo_rel(paper: str, ship_rel: str) -> str:
+    return (doc_paths.figures_rel(paper) / ship_rel).as_posix()
 
 
 def _versioned_source(report_alt: str) -> Path | None:
+    """The versioned PNG the panel's figure page (else the tracker) links for ``report_alt``."""
     paper, tracker_alt = REPORT3_TRACKER_ALTS[report_alt]
-    tracker_doc = REPO_ROOT / "figures" / paper / "replications.md"
-    if not tracker_doc.is_file():
-        return None
-    tracker_rel = _tracker_link(tracker_doc.read_text(encoding="utf-8"), tracker_alt)
-    if tracker_rel is None:
-        return None
-    source = REPO_ROOT / "figures" / paper / tracker_rel
-    return source if source.is_file() else None
+    _, ship_rel = REPORT3_SHIP_PATHS[report_alt]
+    panel = ship_rel.split("/")[1]  # images/<panel>/<name>.png
+    tracker = doc_paths.tracker_path(paper, REPO_ROOT)
+    for doc in (doc_paths.tracker_figure_page(tracker, panel), tracker):
+        if not doc.is_file():
+            continue
+        href = _tracker_link(doc.read_text(encoding="utf-8"), tracker_alt)
+        if href is None:
+            continue
+        doc_rel = doc_paths.rel_to_root(doc, REPO_ROOT) or doc.name
+        source = REPO_ROOT / doc_paths.resolve_doc_href(href, doc_rel)
+        return source if source.is_file() else None
+    return None
 
 
 def sync_report3_gallery_ships(*, verbose: bool = True) -> list[dict[str, str]]:
-    """Copy tracker-linked versioned PNGs into the 2026-08-10 report stable ship paths."""
+    """Copy page/tracker-linked versioned PNGs into the 2026-08-10 report stable ship paths."""
     synced: list[dict[str, str]] = []
     for report_alt, (paper, ship_rel) in REPORT3_SHIP_PATHS.items():
         source = _versioned_source(report_alt)
-        ship_repo_rel = f"figures/{paper}/{ship_rel}"
+        ship_repo_rel = _ship_repo_rel(paper, ship_rel)
         if source is None:
             if verbose:
                 print(f"report3-ship: skip {report_alt} (no tracker source)", flush=True)
@@ -574,7 +588,7 @@ def refresh_report3_gallery(*, dry_run: bool = False, verbose: bool = True) -> d
             {
                 "alt": alt,
                 "source": str(_versioned_source(alt) or ""),
-                "ship": f"figures/{paper}/{rel}",
+                "ship": _ship_repo_rel(paper, rel),
             }
             for alt, (paper, rel) in REPORT3_SHIP_PATHS.items()
         ]

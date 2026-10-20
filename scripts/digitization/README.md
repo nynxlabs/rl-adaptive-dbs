@@ -167,7 +167,7 @@ uv run python scripts/digitization/redraw_digitized.py --panel mehregan/4a --pan
 - input: `curves_*.json` under `--artifacts` (default `artifacts/figures/papers`).
   `artifacts/` is gitignored, so from a worktree pass the main checkout's folder.
 - output: `docs/controllers/<controller>/figures/images/<panel>/digitized_v<N>.png` (`--version`, default 1).
-  `--out-root` defaults to `figures/`.
+  `--out-root` defaults to the repo root (images land in `docs/controllers/<controller>/figures/images/<panel>/`).
 - every image has the caption `Digitized from Fig. X of <paper>` and the footer
   `Our redraw of values read off the published figure; not the original figure.`
 - axis labels come from each panel's `plot.py`. Axis ranges come from

@@ -30,6 +30,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
+from rl_adaptive_dbs import doc_paths
 from rl_adaptive_dbs import panel as _panel
 from rl_adaptive_dbs.panel import load_script_module
 
@@ -65,7 +66,7 @@ class QuantPanel:
 
     @property
     def figures_dir(self) -> Path:
-        return Path(f"docs/controllers/ddpg/figures/images/{self.panel}")
+        return Path(doc_paths.figure_images_rel("mehregan", self.panel))
 
     @property
     def cache_dir(self) -> Path:

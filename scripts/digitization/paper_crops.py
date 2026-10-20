@@ -64,6 +64,11 @@ except ImportError:  # pragma: no cover - reported at run time
     Image = None
 
 REPO = Path(__file__).resolve().parents[2]
+try:
+    from rl_adaptive_dbs import doc_paths
+except ImportError:  # run outside the project venv
+    sys.path.insert(0, str(REPO / "src"))
+    from rl_adaptive_dbs import doc_paths
 SPEC_PATH = Path(__file__).with_name("paper_crops.json")
 DEFAULT_PAPERS_DIR = REPO / "reference-material" / "papers"
 PAPERS_DIR_ENV = "RL_DBS_PAPERS_DIR"
@@ -91,14 +96,14 @@ def save_spec(spec: dict, path: Path = SPEC_PATH) -> None:
 
 def _notes_papers_dir() -> Path | None:
     """``<notes_dir>/papers`` when a notes folder is configured (``RL_DBS_NOTES_DIR`` /
-    ``export.notes_dir``) or detected from symlinked ``replications.md`` trackers."""
+    ``export.notes_dir``) or detected from symlinked paper trackers
+    (``docs/controllers/<controller>/README.md``)."""
     try:
         from rl_adaptive_dbs.notes_export import resolve_notes_dir
     except Exception:  # package not importable (e.g. run outside the project venv)
         return None
-    trackers = sorted((REPO / "figures").glob("*/replications.md"))
     try:
-        notes = resolve_notes_dir(trackers, repo_root=REPO)
+        notes = resolve_notes_dir(doc_paths.all_trackers(REPO), repo_root=REPO)
     except Exception:
         return None
     return notes / "papers" if notes is not None else None
@@ -129,8 +134,9 @@ def panel_paper(panel: str) -> str:
 
 
 def output_path(root: Path, panel: str, name: str) -> Path:
+    """``<root>/docs/controllers/<controller>/figures/images/<panel>/<name>``."""
     paper, sub = panel.split("/", 1)
-    return root / "figures" / paper / "images" / sub / name
+    return doc_paths.figure_images_dir(paper, sub, root) / name
 
 
 def sha256_of(path: Path) -> str:
@@ -575,7 +581,7 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("build", help="write docs/controllers/<controller>/figures/images/<panel>/paper.png (or arxiv_v1.png with --arxiv)")
     common(p)
-    p.add_argument("--out-root", help="write under this folder instead of the repo (same figures/... layout)")
+    p.add_argument("--out-root", help="write under this folder instead of the repo (same docs/controllers/... layout)")
     p.set_defaults(func=cmd_build)
 
     p = sub.add_parser("verify", help="compare freshly rendered crops with existing ones")

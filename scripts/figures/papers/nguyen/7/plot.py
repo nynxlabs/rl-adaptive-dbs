@@ -22,6 +22,7 @@ Run:
 """
 from __future__ import annotations
 
+from rl_adaptive_dbs import doc_paths
 from rl_adaptive_dbs.panel import load_script_module
 
 from rl_adaptive_dbs import panel as _panel
@@ -62,7 +63,7 @@ from controllers.snn.eval import evaluate
 FIG4_CACHE = Path("artifacts/figures/papers/nguyen/4")
 FIG4_CHECKPOINT = FIG4_CACHE / "checkpoint.pt"
 FIG3_MANIFEST = Path("artifacts/figures/papers/nguyen/3/manifest.json")
-FIGURES_DIR = Path("docs/controllers/snn/figures/images/7")
+FIGURES_DIR = Path(doc_paths.figure_images_rel("nguyen", "7"))
 CACHE_DIR = Path("artifacts/figures/papers/nguyen/7")
 DEFAULT_EVAL = CACHE_DIR / "eval.json"
 DEFAULT_MANIFEST = CACHE_DIR / "manifest.json"

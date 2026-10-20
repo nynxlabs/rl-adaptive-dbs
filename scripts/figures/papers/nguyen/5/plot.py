@@ -10,6 +10,7 @@ Run:
 """
 from __future__ import annotations
 
+from rl_adaptive_dbs import doc_paths
 from rl_adaptive_dbs.panel import load_script_module
 
 from rl_adaptive_dbs import panel as _panel
@@ -47,7 +48,7 @@ from controllers.snn.energy import dbs_energy_index
 FIG4_CACHE = Path("artifacts/figures/papers/nguyen/4")
 FIG4_SERIES = FIG4_CACHE / "series.json"
 FIG4_MANIFEST = FIG4_CACHE / "manifest.json"
-FIGURES_DIR = Path("docs/controllers/snn/figures/images/5")
+FIGURES_DIR = Path(doc_paths.figure_images_rel("nguyen", "5"))
 CACHE_DIR = Path("artifacts/figures/papers/nguyen/5")
 DEFAULT_MANIFEST = CACHE_DIR / "manifest.json"
 OUT_STEM = "spikes_energy"

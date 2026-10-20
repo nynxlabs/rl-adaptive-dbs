@@ -1,4 +1,4 @@
-"""Docs layout: plant.md presence, sections, and resolvable markdown links."""
+"""Docs layout: plant spec (docs/plant/README.md) presence, sections, and resolvable links."""
 
 from __future__ import annotations
 
@@ -9,9 +9,9 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DOCS = REPO_ROOT / "docs"
-PLANT_MD = DOCS / "plant.md"
+PLANT_MD = DOCS / "plant" / "README.md"
 
-# Headings required in plant.md (stable contract for the spec).
+# Headings required in the plant spec (stable contract for the spec).
 PLANT_REQUIRED_SECTIONS = (
     "# Plant specification",
     "## 1. Scope",
@@ -54,31 +54,28 @@ def test_plant_md_links_resolve() -> None:
     for target, resolved in _markdown_link_targets(PLANT_MD):
         if not resolved.exists():
             missing.append(f"{target} -> {resolved}")
-    assert not missing, "broken links in plant.md:\n" + "\n".join(missing)
+    assert not missing, "broken links in docs/plant/README.md:\n" + "\n".join(missing)
 
 
 @pytest.mark.parametrize(
     "doc_path",
     [
-        DOCS / "environment.md",
+        DOCS / "plant" / "environment.md",
         DOCS / "development" / "README.md",
         DOCS / "development" / "roadmap.md",
-        DOCS / "benchmarking.md",
-        DOCS / "setup.md",
+        DOCS / "guides" / "benchmarking.md",
+        DOCS / "guides" / "setup.md",
         DOCS / "development" / "testing.md",
         DOCS / "development" / "fresh-validation.md",
         REPO_ROOT / "README.md",
     ],
-    ids=lambda p: p.name,
+    ids=lambda p: str(p.relative_to(REPO_ROOT)),
 )
 def test_docs_linking_to_plant_resolve(doc_path: Path) -> None:
-    """Files that reference plant.md must use a resolvable relative link."""
+    """Files that link the plant spec must use a resolvable relative link."""
     if not doc_path.is_file():
         pytest.skip(f"{doc_path} not present")
-    text = doc_path.read_text(encoding="utf-8")
-    if "plant.md" not in text:
-        return
     for target, resolved in _markdown_link_targets(doc_path):
-        if target.endswith("plant.md") or target.endswith("/plant.md"):
+        if target.endswith(("plant.md", "plant/README.md")):
             assert resolved == PLANT_MD.resolve(), f"{doc_path.name}: plant link points to {resolved}"
             assert PLANT_MD.is_file()

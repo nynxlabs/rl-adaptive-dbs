@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from rl_adaptive_dbs.doc_paths import tracker_path
 from rl_adaptive_dbs.notes_export import require_notes_dir, resolve_notes_dir
 from rl_adaptive_dbs.user_config import resolve_config
 
@@ -22,7 +23,7 @@ def repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def _tracker(root: Path) -> Path:
-    path = root / "figures" / "nguyen" / "replications.md"
+    path = tracker_path("nguyen", root)
     path.parent.mkdir(parents=True)
     return path
 
@@ -51,9 +52,21 @@ def test_env_overrides_yaml(repo: Path, tmp_path: Path, monkeypatch: pytest.Monk
 @pytest.mark.skipif(os.name == "nt", reason="symlinks need privileges on Windows")
 def test_detects_from_symlinked_tracker(repo: Path, tmp_path: Path) -> None:
     notes = tmp_path / "notes"
-    target = notes / "figures" / "nguyen" / "replications.md"
+    target = tracker_path("nguyen", notes)
     target.parent.mkdir(parents=True)
     target.write_text("# tracker\n", encoding="utf-8")
     tracker = _tracker(repo)
     tracker.symlink_to(target)
     assert require_notes_dir([tracker], repo_root=repo) == notes.resolve()
+    # Default tracker list covers every paper.
+    assert require_notes_dir(repo_root=repo) == notes.resolve()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symlinks need privileges on Windows")
+def test_skips_tracker_symlink_that_does_not_mirror_repo(repo: Path, tmp_path: Path) -> None:
+    target = tmp_path / "elsewhere" / "nguyen.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("# tracker\n", encoding="utf-8")
+    tracker = _tracker(repo)
+    tracker.symlink_to(target)
+    assert resolve_notes_dir([tracker], repo_root=repo) is None

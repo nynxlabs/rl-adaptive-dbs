@@ -20,6 +20,7 @@ Run:
 """
 from __future__ import annotations
 
+from rl_adaptive_dbs import doc_paths
 from rl_adaptive_dbs.panel import load_script_module
 
 from rl_adaptive_dbs import panel as _panel
@@ -50,7 +51,7 @@ _OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
 _overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
-FIGURES_DIR = Path("docs/controllers/ddpg/figures/images/4b")
+FIGURES_DIR = Path(doc_paths.figure_images_rel("mehregan", "4b"))
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/4b")
 FIG4A_CACHE_DIR = Path("artifacts/figures/papers/mehregan/4a")
 DEFAULT_FIG4A_SERIES = FIG4A_CACHE_DIR / "series.json"
@@ -476,12 +477,36 @@ def _checklist_rows(gates: dict[str, Any], summary: dict[str, Any]) -> list[tupl
     ]
 
 
-def update_checklist_in_doc(rows: list[tuple[str, str, str, str]]) -> None:
+_FIG4B_HEADING = "## Fig 4b — training reward vs episode"
+
+
+def _fig4b_section() -> tuple[Path, str, int] | None:
+    """``(doc, text, start)`` of the Fig 4b section to edit.
+
+    The figure page ``docs/controllers/ddpg/figures/4b.md`` is all Fig 4b (start
+    at its caption block, else the top); the tracker only under its Fig 4b heading.
+    """
+    page = _figure_promote.resolve_figure_page("mehregan", "4b")
+    if page.is_file():
+        text = page.read_text(encoding="utf-8")
+        start = text.find("<!-- caption-4b:end -->")
+        return page, text, max(start, 0)
     doc = _figure_promote.PAPER_1_DOC
-    text = doc.read_text()
-    start = text.find("## Fig 4b — training reward vs episode")
+    if not doc.is_file():
+        return None
+    text = doc.read_text(encoding="utf-8")
+    start = text.find(_FIG4B_HEADING)
     if start < 0:
+        return None
+    return doc, text, start
+
+
+def update_checklist_in_doc(rows: list[tuple[str, str, str, str]]) -> None:
+    section = _fig4b_section()
+    if section is None:
         return
+    doc, text, _ = section
+    start = 0 if doc != _figure_promote.PAPER_1_DOC else text.find(_FIG4B_HEADING)
     table_hdr = (
         "| Check | Paper | Replication | Match? |\n"
         "|-------|-------|-------------|--------|\n"
@@ -494,7 +519,7 @@ def update_checklist_in_doc(rows: list[tuple[str, str, str, str]]) -> None:
     if run_pos < 0:
         return
     new_rows = "".join(f"| {a} | {b} | {c} | {d} |\n" for a, b, c, d in rows)
-    doc.write_text(text[:body_start] + new_rows + text[run_pos:])
+    doc.write_text(text[:body_start] + new_rows + text[run_pos:], encoding="utf-8")
 
 
 def update_status_in_doc(*, passed: bool, note: str) -> None:
@@ -503,12 +528,11 @@ def update_status_in_doc(*, passed: bool, note: str) -> None:
     A previous ``find("\\n\\n###")`` end-cut ate the 4b gates block and the
     ``## Fig 5a`` heading (tracker, 2026-08-13).
     """
-    doc = _figure_promote.PAPER_1_DOC
-    text = doc.read_text()
-    new_status = f"**Status:** Pass — {note}" if passed else f"**Status:** Open — {note}"
-    start = text.find("## Fig 4b — training reward vs episode")
-    if start < 0:
+    section = _fig4b_section()
+    if section is None:
         return
+    doc, text, start = section
+    new_status = f"**Status:** Pass — {note}" if passed else f"**Status:** Open — {note}"
     next_h2 = text.find("\n## ", start + 1)
     status_pos = text.find("**Status:**", start)
     if status_pos < 0 or (next_h2 >= 0 and status_pos > next_h2):
@@ -516,7 +540,7 @@ def update_status_in_doc(*, passed: bool, note: str) -> None:
     line_end = text.find("\n", status_pos)
     if line_end < 0:
         return
-    doc.write_text(text[:status_pos] + new_status + text[line_end:])
+    doc.write_text(text[:status_pos] + new_status + text[line_end:], encoding="utf-8")
 
 
 def _load_fig4a_payload(series_path: Path, manifest_path: Path | None) -> dict[str, Any]:
@@ -570,12 +594,12 @@ def main() -> int:
         "--no-update-docs",
         dest="update_docs",
         action="store_false",
-        help="Skip docs/controllers/ddpg/README.md updates",
+        help="Skip docs updates (docs/controllers/ddpg/figures/4b.md and README.md)",
     )
     parser.add_argument(
         "--update-checklist",
         action="store_true",
-        help="Rewrite Fig 4b checklist in docs/controllers/ddpg/README.md (off by default; passed panels use Status only)",
+        help="Rewrite the Fig 4b checklist in docs/controllers/ddpg/figures/4b.md (off by default; passed panels use Status only)",
     )
     parser.set_defaults(update_checklist=False)
     parser.set_defaults(update_docs=True)

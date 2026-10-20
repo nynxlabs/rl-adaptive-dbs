@@ -4,7 +4,7 @@ __pycache__/
 results/
 artifacts/
 logs/
-docs/figures/papers/
+docs/controllers/*/figures/images/_full/
 *.bak.*
 nohup.out
 _probe_patterns.py
@@ -39,8 +39,7 @@ logs/
 # Publisher material (the papers' figures, the papers themselves, reports that
 # embed them) is built locally from your own copies and never committed:
 # python scripts/digitization/paper_crops.py build
-figures/*/images/*/paper.png
-figures/*/images/_full/
+docs/controllers/*/figures/images/*/paper.png
 reports/*.pdf
 reports/images/Pasted image *
 /reference-material/papers/

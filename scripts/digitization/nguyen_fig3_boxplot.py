@@ -22,8 +22,10 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from rl_adaptive_dbs import doc_paths
+
 REPO = Path(__file__).resolve().parents[2]
-PAPER_PNG = REPO / "figures" / "nguyen" / "images" / "3" / "paper.png"
+PAPER_PNG = doc_paths.figure_images_dir("nguyen", "3", REPO) / "paper.png"
 OUT = REPO / "artifacts" / "figures" / "papers" / "nguyen" / "paper_digitization" / "curves_fig3_boxplot.json"
 
 TICK_VALUES = (400, 350, 300, 250, 200, 150, 100, 50)  # top to bottom

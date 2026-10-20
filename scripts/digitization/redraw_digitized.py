@@ -32,9 +32,11 @@ from matplotlib.lines import Line2D
 
 from paper_gates import load_refined
 
+from rl_adaptive_dbs import doc_paths
+
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_ARTIFACTS = REPO / "artifacts" / "figures" / "papers"
-DEFAULT_OUT_ROOT = REPO / "figures"
+DEFAULT_OUT_ROOT = REPO  # images go to <root>/docs/controllers/<controller>/figures/images/
 FIGS_DIR = Path(__file__).resolve().parent / "figs"
 
 DPI = 150
@@ -96,7 +98,7 @@ PANELS: dict[str, Panel] = {
         "4a",
         (Axis(_M.format(p="4a"), "Steps", "PSD (×10³)", "mehregan_fig4a"),),
     ),
-    # Reward left, PSD right: the same order as the replication tracker's 4b pair.
+    # Reward left, PSD right: the same order as the 4b figure page's replication pair.
     "mehregan/4b": Panel(
         "mehregan",
         "4b",
@@ -356,7 +358,7 @@ def draw_panel(key: str, panel: Panel, *, artifacts: Path, out_root: Path, versi
     fig.text(0.5, 0.012, FOOTER, ha="center", va="bottom", fontsize=8.5, color="0.3")
     fig.tight_layout(rect=(0.0, 0.05, 1.0, 0.93))
 
-    out = out_root / panel.paper / "images" / panel.fig / f"digitized_v{version}.png"
+    out = doc_paths.figure_images_dir(panel.paper, panel.fig, out_root) / f"digitized_v{version}.png"
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=DPI, facecolor="white")
     return out
@@ -382,7 +384,10 @@ def main(argv: list[str] | None = None) -> int:
         "--out-root",
         type=Path,
         default=DEFAULT_OUT_ROOT,
-        help=f"figures root (default {DEFAULT_OUT_ROOT})",
+        help=(
+            "repo-shaped root; writes docs/controllers/<controller>/figures/images/<panel>/ "
+            f"under it (default {DEFAULT_OUT_ROOT})"
+        ),
     )
     parser.add_argument("--version", type=int, default=1, help="output suffix: digitized_v<N>.png (default 1)")
     args = parser.parse_args(argv)

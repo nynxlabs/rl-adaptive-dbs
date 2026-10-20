@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 """Materialize replication figure PNGs into the notes folder.
 
-Scans ``docs/controllers/<controller>/README.md`` for ``![...](images/...)`` links and
-copies bytes into ``<notes_dir>/figures/`` (``RL_DBS_NOTES_DIR`` /
+Scans each paper tracker ``docs/controllers/<controller>/README.md`` and its
+figure pages ``docs/controllers/<controller>/figures/<panel>.md`` for image links
+into ``docs/controllers/<controller>/figures/images/``, and copies the bytes to
+the same repo-relative path under the notes folder (``RL_DBS_NOTES_DIR`` /
 ``export.notes_dir``, or detected from symlinked trackers — see
 ``rl_adaptive_dbs.notes_export``).
+
+Images are addressed as ``(paper, rel)`` with ``rel`` relative to the paper's
+``docs/controllers/<controller>/figures/`` folder (``images/<panel>/<name>.png``).
 
 Plot scripts call this via ``promote.py`` when you pass ``--export-notes``; run manually anytime:
 
@@ -13,6 +18,7 @@ Plot scripts call this via ``promote.py`` when you pass ``--export-notes``; run 
 
 from __future__ import annotations
 
+from rl_adaptive_dbs import doc_paths
 from rl_adaptive_dbs.panel import load_script_module
 
 import argparse
@@ -26,21 +32,16 @@ _PROMOTE = Path(__file__).resolve().parent / "promote.py"
 _promote = load_script_module("figure_promote", _PROMOTE)
 
 REPO_ROOT = _promote.REPO_ROOT
-PAPER_TRACKERS = (
-    _promote.resolve_paper_1_doc(),
-    _promote.resolve_nguyen_doc(),
-    _promote.resolve_ravivarapu_doc(),
-)
+PAPER_TRACKERS = doc_paths.all_trackers(REPO_ROOT)
 
-_IMAGE_LINK_RE = re.compile(r"!\[[^\]]*\]\((images/[^)]+)\)")
-_REPORT3_HREF_RE = re.compile(r"!\[[^\]]*\]\(\.\./figures/([^)]+)\)")
-_PAPERS = ("mehregan", "nguyen", "ravivarapu")
+_IMAGE_LINK_RE = re.compile(r"!\[[^\]]*\]\(([^)\s]+)\)")
+_PAPERS = doc_paths.PAPERS
 _SKIP_REPO_GLOB = ("paper.png", "/_full/")
 
 
-def notes_figures_root() -> Path:
-    """Notes-folder ``figures/`` directory."""
-    return _promote.require_notes_dir() / "figures"
+def notes_root_dir() -> Path:
+    """The notes folder (mirrors repo-relative paths)."""
+    return _promote.require_notes_dir()
 
 
 def _add_link(
@@ -62,24 +63,38 @@ def _add_link(
     out.append(key)
 
 
+def _doc_image_links(doc: Path, doc_rel: str) -> list[tuple[str, str]]:
+    """``(paper, rel)`` for every image link in ``doc`` that lands in a figures folder."""
+    out: list[tuple[str, str]] = []
+    text = doc.read_text(encoding="utf-8")
+    for match in _IMAGE_LINK_RE.finditer(text):
+        href = match.group(1)
+        if "://" in href or href.startswith("/"):
+            continue
+        split = doc_paths.split_figures_rel(doc_paths.resolve_doc_href(href, doc_rel))
+        if split is not None:
+            out.append(split)
+    return out
+
+
 def iter_tracker_image_links() -> list[tuple[str, str]]:
-    """(paper, repo-relative path under figures/<paper>/)."""
+    """(paper, path under ``docs/controllers/<controller>/figures/``) from trackers + figure pages."""
     out: list[tuple[str, str]] = []
     seen: set[tuple[str, str]] = set()
-    for doc in PAPER_TRACKERS:
-        if not doc.is_file():
-            continue
-        paper = doc.resolve().parent.name
-        if paper not in _PAPERS:
-            continue
-        text = doc.read_text(encoding="utf-8")
-        for match in _IMAGE_LINK_RE.finditer(text):
-            _add_link(seen, out, paper, match.group(1))
+    for paper in _PAPERS:
+        tracker = doc_paths.tracker_path(paper, REPO_ROOT)
+        docs = [tracker, *doc_paths.figure_pages(paper, REPO_ROOT)]
+        for doc in docs:
+            if not doc.is_file():
+                continue
+            doc_rel = doc_paths.rel_to_root(doc, REPO_ROOT) or doc.name
+            for link_paper, rel in _doc_image_links(doc, doc_rel):
+                _add_link(seen, out, link_paper, rel)
     return out
 
 
 def iter_report3_image_links() -> list[tuple[str, str]]:
-    """Gallery embeds from ``<notes_dir>/reports/2026-08-10.md``."""
+    """Image links in ``<notes_dir>/docs/reports/2026-08-10.md`` that point into figures folders."""
     out: list[tuple[str, str]] = []
     seen: set[tuple[str, str]] = set()
     try:
@@ -94,10 +109,9 @@ def iter_report3_image_links() -> list[tuple[str, str]]:
         return out
     if not report_file.is_file():
         return out
-    for match in _REPORT3_HREF_RE.finditer(report_file.read_text(encoding="utf-8")):
-        tail = match.group(1).strip()
-        paper, _, rest = tail.partition("/")
-        _add_link(seen, out, paper, rest)
+    report_rel = (doc_paths.REPORTS_REL / report_file.name).as_posix()
+    for paper, rel in _doc_image_links(report_file, report_rel):
+        _add_link(seen, out, paper, rel)
     return out
 
 
@@ -106,13 +120,14 @@ def iter_materialized_repo_pngs() -> list[tuple[str, str]]:
     out: list[tuple[str, str]] = []
     seen: set[tuple[str, str]] = set()
     for paper in _PAPERS:
-        images_dir = REPO_ROOT / "figures" / paper / "images"
+        figures = doc_paths.figures_dir(paper, REPO_ROOT)
+        images_dir = doc_paths.figure_images_dir(paper, root=REPO_ROOT)
         if not images_dir.is_dir():
             continue
         for path in images_dir.rglob("*.png"):
             if path.is_symlink():
                 continue
-            rel_path = str(path.relative_to(REPO_ROOT / "figures" / paper)).replace("\\", "/")
+            rel_path = str(path.relative_to(figures)).replace("\\", "/")
             if any(skip in rel_path for skip in _SKIP_REPO_GLOB):
                 continue
             _add_link(seen, out, paper, rel_path)
@@ -120,7 +135,7 @@ def iter_materialized_repo_pngs() -> list[tuple[str, str]]:
 
 
 def iter_all_push_targets(*, include_repo_materialized: bool = True) -> list[tuple[str, str]]:
-    """Union of tracker links, the 2026-08-10 report gallery, and materialized repo PNGs."""
+    """Union of tracker/page links, the 2026-08-10 report gallery, and materialized repo PNGs."""
     out: list[tuple[str, str]] = []
     seen: set[tuple[str, str]] = set()
     for links in (iter_tracker_image_links(), iter_report3_image_links()):
@@ -142,14 +157,14 @@ def _resolve_source(paper: str, rel: str) -> Path | None:
     candidates: list[Path] = []
     checkout = getattr(_promote, "CHECKOUT_ROOT", None)
     if isinstance(checkout, Path) and checkout.resolve() != REPO_ROOT.resolve():
-        candidates.append(checkout / "figures" / paper / rel)
-    candidates.append(REPO_ROOT / "figures" / paper / rel)
+        candidates.append(doc_paths.figures_dir(paper, checkout) / rel)
+    candidates.append(doc_paths.figures_dir(paper, REPO_ROOT) / rel)
     for repo_path in candidates:
         if repo_path.is_file() and not repo_path.is_symlink():
             return repo_path
         if repo_path.is_symlink() and repo_path.is_file():
             return repo_path.resolve()
-    notes_path = notes_figures_root() / paper / rel
+    notes_path = doc_paths.figures_dir(paper, notes_root_dir()) / rel
     if notes_path.is_file():
         return notes_path.resolve()
     for repo_path in candidates:
@@ -166,9 +181,13 @@ def push_image(
     notes_root: Path | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
-    """Copy one replication PNG into the notes folder if source bytes differ."""
-    notes_root = notes_root or notes_figures_root()
-    dest = notes_root / paper / rel
+    """Copy one replication PNG into the notes folder if source bytes differ.
+
+    ``notes_root`` is the notes folder; the copy lands at the image's repo-relative
+    path under it (``docs/controllers/<controller>/figures/<rel>``).
+    """
+    notes_root = notes_root or notes_root_dir()
+    dest = doc_paths.figures_dir(paper, notes_root) / rel
     src = _resolve_source(paper, rel)
     result: dict[str, Any] = {
         "paper": paper,
@@ -208,7 +227,7 @@ def push_all(
     include_repo_materialized: bool = True,
     tracker_only: bool = False,
 ) -> dict[str, Any]:
-    notes_root = notes_figures_root()
+    notes_root = notes_root_dir()
     results: list[dict[str, Any]] = []
     if tracker_only:
         targets = iter_tracker_image_links()
@@ -238,13 +257,9 @@ def push_all(
 
 def push_repo_rel_png(repo_rel: str, *, dry_run: bool = False) -> None:
     """Push a single ``docs/controllers/<controller>/figures/images/...`` path, then refresh all links."""
-    text = repo_rel.replace("\\", "/")
-    marker = "figures/"
-    idx = text.find(marker)
-    tail = text[idx + len(marker) :] if idx >= 0 else text
-    paper, _, rest = tail.partition("/")
-    if paper in _PAPERS and rest.startswith("images/"):
-        push_image(paper, rest, dry_run=dry_run)
+    split = doc_paths.split_figures_rel(doc_paths.repo_rel_posix(repo_rel))
+    if split is not None and split[1].startswith("images/"):
+        push_image(split[0], split[1], dry_run=dry_run)
     push_all(dry_run=dry_run, verbose=False)
 
 
@@ -254,7 +269,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--tracker-only",
         action="store_true",
-        help="only ``replications.md`` links (skip the 2026-08-10 report + materialized repo PNG scan)",
+        help="only tracker + figure page links (skip the 2026-08-10 report + materialized repo PNG scan)",
     )
     parser.add_argument("-q", "--quiet", action="store_true")
     args = parser.parse_args(argv)

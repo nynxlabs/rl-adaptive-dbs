@@ -25,6 +25,7 @@ potential instead of spike trains). Seed count and duration are already flags
 """
 from __future__ import annotations
 
+from rl_adaptive_dbs import doc_paths
 from rl_adaptive_dbs.panel import load_script_module
 
 from rl_adaptive_dbs import panel as _panel
@@ -57,7 +58,7 @@ _PROMOTE = Path(__file__).resolve().parents[2] / "promote.py"
 _figure_promote = load_script_module("figure_promote", _PROMOTE)
 
 FIGURE_DIR = Path("artifacts/figures/papers/mehregan/1b")
-FIGURES_DIR = Path("docs/controllers/ddpg/figures/images/1b")
+FIGURES_DIR = Path(doc_paths.figure_images_rel("mehregan", "1b"))
 DEFAULT_CURVES = FIGURE_DIR / "curves.json"
 OUT_STEM = "gpi_psd"  # versioned as gpi_psd_vN.png; promote ships gpi_psd.png
 DEFAULT_MANIFEST = FIGURE_DIR / "manifest.json"
@@ -409,7 +410,7 @@ def main() -> int:
     parser.add_argument(
         "--no-update-docs",
         action="store_true",
-        help="Skip docs/controllers/ddpg/README.md caption and image refresh",
+        help="Skip the docs/controllers/ddpg/figures/1b.md caption and image refresh",
     )
     parser.add_argument(
         "--export-notes",

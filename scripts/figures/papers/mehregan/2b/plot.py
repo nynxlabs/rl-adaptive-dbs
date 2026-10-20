@@ -18,7 +18,7 @@ Run:
   uv run --group figures python scripts/figures/papers/mehregan/2b/plot.py --plot-only
 
 Each run writes ``docs/controllers/ddpg/figures/images/2b/error_index_vN.png`` (N auto-increments)
-and updates the replication image link in ``docs/controllers/ddpg/README.md``.
+and updates the replication image link in ``docs/controllers/ddpg/figures/2b.md``.
 
 Plant EI simulation only — no RL training; checkpoint resume is not applicable.
 
@@ -35,6 +35,7 @@ SMC additive), --ggith.
 """
 from __future__ import annotations
 
+from rl_adaptive_dbs import doc_paths
 from rl_adaptive_dbs.panel import load_script_module
 
 from rl_adaptive_dbs import panel as _panel
@@ -76,7 +77,7 @@ _OVERLAY_IMPORT = Path(__file__).resolve().parents[2] / "overlay_import.py"
 _overlay_import = load_script_module("figure_overlay_import", _OVERLAY_IMPORT)
 _paper_overlay = _overlay_import.load_paper_overlay()
 
-FIGURES_DIR = Path("docs/controllers/ddpg/figures/images/2b")
+FIGURES_DIR = Path(doc_paths.figure_images_rel("mehregan", "2b"))
 CACHE_DIR = Path("artifacts/figures/papers/mehregan/2b")
 DEFAULT_SERIES = CACHE_DIR / "series.json"
 OUT_STEM = "error_index"
