@@ -278,15 +278,15 @@ PAPER_4A_MANIFEST = "artifacts/figures/papers/mehregan/4a/manifest.json"
 PAPER_4B_PNG = "figures/mehregan/images/4b/training_reward.png"
 PAPER_4B_COMBINED_PNG = "figures/mehregan/images/4b/training_fig4b.png"
 PAPER_4B_MANIFEST = "artifacts/figures/papers/mehregan/4b/manifest.json"
-PAPER_1B_REF = "figures/mehregan/images/1b/paper.png"
-PAPER_2A_REF = "figures/mehregan/images/2a/paper.png"
-PAPER_2B_REF = "figures/mehregan/images/2b/paper.png"
+PAPER_1B_REF = "figures/mehregan/images/1b/digitized_v1.png"
+PAPER_2A_REF = "figures/mehregan/images/2a/digitized_v1.png"
+PAPER_2B_REF = "figures/mehregan/images/2b/digitized_v1.png"
 PAPER_1B_REPLICATION_ALT = "Replication Fig 1b"
 PAPER_2A_REPLICATION_ALT = "Replication Fig 2a"
 PAPER_2B_REPLICATION_ALT = "Replication Fig 2b"
-PAPER_4A_REF = "figures/mehregan/images/4a/paper.png"
+PAPER_4A_REF = "figures/mehregan/images/4a/digitized_v1.png"
 PAPER_4A_REPLICATION_ALT = "Replication Fig 4a"
-PAPER_4B_REF = "figures/mehregan/images/4b/paper.png"
+PAPER_4B_REF = "figures/mehregan/images/4b/digitized_v1.png"
 PAPER_4B_REPLICATION_ALT = "Replication Fig 4b reward"
 PAPER_4B_PSD_REPLICATION_ALT = "Replication Fig 4b PSD"
 PAPER_5A_PNG = "figures/mehregan/images/5a/efficacy_45hz.png"
@@ -297,11 +297,11 @@ PAPER_5B_MANIFEST = "artifacts/figures/papers/mehregan/5b/manifest.json"
 PAPER_5B_REPLICATION_ALT = "Replication Fig 5b"
 PAPER_6A_PNG = "figures/mehregan/images/6a/ptq_qat_45hz.png"
 PAPER_6A_MANIFEST = "artifacts/figures/papers/mehregan/6a/manifest.json"
-PAPER_6A_REF = "figures/mehregan/images/6a/paper.png"
+PAPER_6A_REF = "figures/mehregan/images/6a/digitized_v1.png"
 PAPER_6A_REPLICATION_ALT = "Replication Fig 6a"
 PAPER_6B_PNG = "figures/mehregan/images/6b/ptq_qat_30hz.png"
 PAPER_6B_MANIFEST = "artifacts/figures/papers/mehregan/6b/manifest.json"
-PAPER_6B_REF = "figures/mehregan/images/6b/paper.png"
+PAPER_6B_REF = "figures/mehregan/images/6b/digitized_v1.png"
 PAPER_6B_REPLICATION_ALT = "Replication Fig 6b"
 
 _VERSIONED_PNG_RE = re.compile(r"^(?P<stem>.+)_v(?P<ver>\d+)\.png$")
@@ -875,7 +875,7 @@ def _default_paper_1_doc(*, caption_1b: str, caption_2a: str) -> str:
     link_2a_png = _doc_figure_link(PAPER_2A_PNG)
     return f"""# Mehregan et al.  — figure comparisons
 
-Side-by-side **paper panel** vs **our replication** for qualitative checks. Plot scripts write replication PNGs to `figures/mehregan/images/`; JSON caches to `artifacts/figures/papers/`.
+Side-by-side **digitized paper panel** (our redraw of the values read off the paper) vs **our replication** for qualitative checks. Plot scripts write replication PNGs to `figures/mehregan/images/`; JSON caches to `artifacts/figures/papers/`.
 
 | Panel | Script | Spec |
 |-------|--------|------|
@@ -888,9 +888,9 @@ Side-by-side **paper panel** vs **our replication** for qualitative checks. Plot
 
 Mean GPi multitaper power spectral density (1–50 Hz) for three conditions: **healthy control**, **PD no treatment**, and **PD + 130 Hz STN cDBS**. In the paper panel, untreated PD shows a sharp beta-band peak (~12–13 Hz) well above healthy; 130 Hz cDBS suppresses that peak while leaving a smaller secondary bump at higher frequency. Our replication should preserve the ordering **PD > healthy** on beta power and **130 Hz cDBS < PD** (see [plant.md](../plant.md); seeds 0–9 mean in manifest).
 
-### Paper (Mehregan et al.)
+### Digitized paper (Mehregan et al.) — our redraw
 
-![Paper Fig 1b]({link_1b_ref})
+![Digitized paper Fig 1b (our redraw)]({link_1b_ref})
 
 ### Replication
 
@@ -908,9 +908,9 @@ Mean GPi multitaper power spectral density (1–50 Hz) for three conditions: **h
 
 GPi beta-band power ($P_\\beta$, Eq. 1, 13–35 Hz) over **12 s**: **PD no treatment** (red) vs **PD + 130 Hz cDBS** (blue). Both traces share a high, overlapping baseline for **0–2 s** (no STN stimulation). A dashed vertical at **2 s** marks cDBS onset for the blue trace only. After onset, blue falls quickly to a low plateau; red stays elevated. Dense continuous lines (not 2 s step bins).
 
-### Paper (Mehregan et al.)
+### Digitized paper (Mehregan et al.) — our redraw
 
-![Paper Fig 2a]({link_2a_ref})
+![Digitized paper Fig 2a (our redraw)]({link_2a_ref})
 
 ### Replication
 

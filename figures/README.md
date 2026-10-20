@@ -1,8 +1,12 @@
 # Figures
 
-Replication PNGs and paper crops: **`figures/<paper>/images/<panel>/`**. Trackers: **`figures/<paper>/replications.md`**.
+Replication PNGs and the paper references they're compared with: **`figures/<paper>/images/<panel>/`**. Trackers: **`figures/<paper>/replications.md`**.
 
-The paper crops (`paper.png`) are reproduced from the published papers and remain the publishers' material; they are not covered by this project's MIT License. See [LICENSING.md](../LICENSING.md).
+The published figures themselves are not in this repository. What each panel folder holds instead:
+
+- **`digitized_v*.png`** (Mehregan et al., Nguyen et al.): our redraw of the values digitized from the paper's figure, labelled "Digitized from Fig. N of …" (`scripts/digitization/redraw_digitized.py`).
+- **`arxiv_v*.png`** (Ravivarapu et al.): a crop of the figure in the authors' arXiv version (arXiv:2507.06326v1), © the authors, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); attribution in [LICENSING.md](../LICENSING.md#figures-from-the-replicated-papers).
+- **`paper.png`** (only on your machine, gitignored): a crop of the published figure that `scripts/digitization/paper_crops.py build` makes from your own copy of the paper, for the digitization tools. Never commit it.
 
 Panel trackers:
 

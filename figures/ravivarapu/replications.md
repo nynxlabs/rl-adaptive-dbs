@@ -52,7 +52,7 @@ No panel regressed. SEA-DBS learns gradually now, but every actor still stimulat
 | Table II | Avg PSD with the plant reseeded every n steps | Fail — 2/6 gates pass (rep v3) |
 <!-- summary:end -->
 
-Replication PNGs: `figures/ravivarapu/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/ravivarapu/images/<panel>/paper.png` (from KB paper-note embeds; Fig 4/5 split from combined panels). Full composites also under `figures/ravivarapu/images/_full/`. Controller spec: [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md). Schematics (paper Figs 1, 3) are **out of scope**. Fig 2 (reward curve) is optional polish, not a gate.
+Replication PNGs: `figures/ravivarapu/images/`. JSON caches: `artifacts/figures/papers/`. Paper references: `images/<panel>/arxiv_v*.png`, crops of the figures in the authors' arXiv version — Ravivarapu, Bagwe, Yuan, Yu, Zhang, *Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson's Disease*, arXiv:2507.06326v1, © the authors, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); cropped, otherwise unchanged ([LICENSING.md](../../LICENSING.md#figures-from-the-replicated-papers)). A local, gitignored `paper.png` crop of the published figure for the digitization tools comes from `scripts/digitization/paper_crops.py build`. Controller spec: [sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md). Schematics (paper Figs 1, 3) are **out of scope**. Fig 2 (reward curve) is optional polish, not a gate.
 
 ---
 
@@ -64,9 +64,9 @@ Average **beta-band PSD** across **training episodes** for **Baseline (DDPG)** v
 
 Related numeric protocol: **Table II** (seed change every $n \in \{10, 20, 50, 75\}$ steps) — [own section below](#table-ii--avg-psd-with-the-plant-reseeded-every-n-steps).
 
-### Paper (Ravivarapu et al.)
+### Paper (Ravivarapu et al.): arXiv version, CC BY 4.0
 
-![Paper Fig 4a](images/4a/paper.png)
+![Fig. 4a of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](images/4a/arxiv_v1.png)
 
 ### Replication
 
@@ -132,9 +132,9 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/4a/plot.p
 
 **Cumulative / episode reward** during the same training comparison as Fig 4a (§V.B / Fig. 4(b)). Paper claim: SEA-DBS reaches **higher** rewards with a **faster** early rise than Baseline.
 
-### Paper (Ravivarapu et al.)
+### Paper (Ravivarapu et al.): arXiv version, CC BY 4.0
 
-![Paper Fig 4b](images/4b/paper.png)
+![Fig. 4b of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](images/4b/arxiv_v1.png)
 
 ### Replication
 
@@ -194,9 +194,9 @@ Post-train **inference** comparison of SEA-DBS vs Baseline with stimulation **ca
 
 Carrier frequency is a **fixed eval setting**, not a per-step RL action ([sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md) §14.10). Figs 5–7 roll out the Fig 4 checkpoints on their training plant setup; the paper's stimulation frequency is the only override.
 
-### Paper (Ravivarapu et al.)
+### Paper (Ravivarapu et al.): arXiv version, CC BY 4.0
 
-![Paper Fig 5a](images/5a/paper.png)
+![Fig. 5a of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](images/5a/arxiv_v1.png)
 
 ### Replication
 
@@ -254,9 +254,9 @@ Panel lab notebook: [docs/figures/ravivarapu/5b.md](../../docs/figures/ravivarap
 
 Same inference layout at **30 Hz** carrier (overlaps pathological beta; Fig. 5(b)). Paper claim: **less effective** than 50 Hz; SEA-DBS still **beats** Baseline on PSD / reward.
 
-### Paper (Ravivarapu et al.)
+### Paper (Ravivarapu et al.): arXiv version, CC BY 4.0
 
-![Paper Fig 5b](images/5b/paper.png)
+![Fig. 5b of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](images/5b/arxiv_v1.png)
 
 ### Replication
 
@@ -316,9 +316,9 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/5b/plot.p
 
 QAT is **out of scope** for SEA-DBS (not reported).
 
-### Paper (Ravivarapu et al.)
+### Paper (Ravivarapu et al.): arXiv version, CC BY 4.0
 
-![Paper Fig 6](images/6/paper.png)
+![Fig. 6 of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](images/6/arxiv_v1.png)
 
 ### Replication
 
@@ -371,9 +371,9 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/6/plot.py
 
 Map to trainer `variant`: `baseline`, `baseline-pm`, `baseline-gs`, `paper` ([sea_dbs/replication.md](../../docs/controllers/sea_dbs/replication.md) §12).
 
-### Paper (Ravivarapu et al.)
+### Paper (Ravivarapu et al.): arXiv version, CC BY 4.0
 
-![Paper Fig 7](images/7/paper.png)
+![Fig. 7 of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](images/7/arxiv_v1.png)
 
 ### Replication
 

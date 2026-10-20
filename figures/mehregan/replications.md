@@ -18,7 +18,7 @@ Side-by-side **paper panel** vs **our replication**. Plot scripts write replicat
 | Fig 6b | PTQ / QAT @ 30 Hz | Fail (`qat_elevated_vs_fp32`, closed loop, int8 QAT, rep v49) |
 <!-- summary:end -->
 
-Replication PNGs: `figures/mehregan/images/`. JSON caches: `artifacts/figures/papers/`. Paper crops: `figures/mehregan/images/<panel>/paper.png` (from paper-note embeds; composite Figs 1/2/4/5/6 split into panels). Full composites under `figures/mehregan/images/_full/`.
+Replication PNGs: `figures/mehregan/images/`. JSON caches: `artifacts/figures/papers/`. Paper references: `images/<panel>/digitized_v*.png`, our redraw of the values digitized from each published panel (`scripts/digitization/redraw_digitized.py`); the published figures are not in this repository ([LICENSING.md](../../LICENSING.md#figures-from-the-replicated-papers)). A local, gitignored `paper.png` crop for the digitization tools comes from `scripts/digitization/paper_crops.py build`.
 
 ---
 
@@ -26,9 +26,9 @@ Replication PNGs: `figures/mehregan/images/`. JSON caches: `artifacts/figures/pa
 
 Mean GPi multitaper power spectral density (1–50 Hz) for three conditions: **healthy control**, **PD no treatment**, and **PD + 130 Hz STN cDBS**. Ordering gate: **PD > healthy** on beta power and **130 Hz cDBS < PD** (see [plant.md](../../docs/plant.md)).
 
-### Paper (Mehregan et al.)
+### Paper (Mehregan et al.): digitized, our redraw
 
-![Paper Fig 1b](images/1b/paper.png)
+![Digitized from Fig. 1b of Mehregan et al. (2024) (our redraw)](images/1b/digitized_v1.png)
 
 ### Replication
 
@@ -75,9 +75,9 @@ uv run python scripts/figures/papers/mehregan/1b/plot.py --plot-only
 
 GPi beta-band power ($P_\beta$, Eq. 1, 13–35 Hz) over **12 s**: **PD no treatment** (red) vs **PD + 130 Hz cDBS** (blue). Shared baseline 0–2 s; dashed vertical at **2 s** (cDBS onset for blue). After onset, blue falls to a low plateau; red stays elevated.
 
-### Paper (Mehregan et al.)
+### Paper (Mehregan et al.): digitized, our redraw
 
-![Paper Fig 2a](images/2a/paper.png)
+![Digitized from Fig. 2a of Mehregan et al. (2024) (our redraw)](images/2a/digitized_v1.png)
 
 ### Replication
 
@@ -125,9 +125,9 @@ uv run python scripts/figures/papers/mehregan/2a/plot.py --protocol single   # e
 
 Windowed Error Index (EI, Eq. 2) over **12 s** with **So-style SMC pulses into TH** (path A): BoC inverse-gamma on **Iappth**, `iappth_baseline=0`, `ggith=0.112`. **PD no treatment** (red) vs **PD + 130 Hz cDBS** (blue). Same timing as Fig 2a. Y-axis **Error Index** (replication default **0.10–0.4**; paper panel reads ~0–0.4).
 
-### Paper (Mehregan et al.)
+### Paper (Mehregan et al.): digitized, our redraw
 
-![Paper Fig 2b](images/2b/paper.png)
+![Digitized from Fig. 2b of Mehregan et al. (2024) (our redraw)](images/2b/digitized_v1.png)
 
 ### Replication
 
@@ -180,9 +180,9 @@ Each run writes a new ``figures/mehregan/images/2b/error_index_vN.png`` (N auto-
 
 Per-step GPi beta-band power during DDPG training of the **45 Hz** model (§IV.A.1): **300** environment steps (10 episodes × 30 steps of 2 s). Y-axis **PSD(x10³)** = raw $P_\beta / 1000$. This run is the paper's one 45 Hz model: the same checkpoint feeds Fig 4b, Fig 5a and Fig 6a.
 
-### Paper (Mehregan et al.)
+### Paper (Mehregan et al.): digitized, our redraw
 
-![Paper Fig 4a](images/4a/paper.png)
+![Digitized from Fig. 4a of Mehregan et al. (2024) (our redraw)](images/4a/digitized_v1.png)
 
 ### Replication
 
@@ -237,9 +237,9 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/4a/plot.py 
 
 Episode **total reward** and **episode-mean PSD(x10³)** of the same **45 Hz** training run as Fig 4a (§IV.A.1), episodes **0–8**: reward rises from about **−80** toward **0**, episode-mean PSD falls ~0.50 → ~0.37. Plotted as two panels.
 
-### Paper (Mehregan et al.)
+### Paper (Mehregan et al.): digitized, our redraw
 
-![Paper Fig 4b](images/4b/paper.png)
+![Digitized from Fig. 4b of Mehregan et al. (2024) (our redraw)](images/4b/digitized_v1.png)
 
 ### Replication
 
@@ -298,9 +298,9 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/4b/plot.py 
 
 Post-training evaluation of the **45 Hz** model (§IV.A.2) on a fixed seed: 2 s reset, then five 2 s steps of the trained policy, **closed loop** (each step plays $\arg\max$ of the actor on the previous step's $P_\beta$). Same seed for **PD no stim**, **fully trained 45 Hz**, **periodic 45 Hz** and **periodic 130 Hz**. Trace = trailing 2 s $P_\beta$ every 0.2 s (Fig 2a protocol). Paper: trained reduces beta vs no stim; periodic 45 Hz and 130 Hz are lower still.
 
-### Paper (Mehregan et al.)
+### Paper (Mehregan et al.): digitized, our redraw
 
-![Paper Fig 5a](images/5a/paper.png)
+![Digitized from Fig. 5a of Mehregan et al. (2024) (our redraw)](images/5a/digitized_v1.png)
 
 ### Replication
 
@@ -349,9 +349,9 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/5a/plot.py 
 
 Same closed-loop eval for the **30 Hz** model (§IV.A.2), trained with the Fig 4a recipe ("all other parameters fixed"). Series: **PD no stim**, **fully trained 30 Hz**, **periodic 30 Hz**. Paper: periodic 30 Hz *raises* beta (inside the beta band); the trained irregular pattern lowers it below both.
 
-### Paper (Mehregan et al.)
+### Paper (Mehregan et al.): digitized, our redraw
 
-![Paper Fig 5b](images/5b/paper.png)
+![Digitized from Fig. 5b of Mehregan et al. (2024) (our redraw)](images/5b/digitized_v1.png)
 
 ### Replication
 
@@ -403,9 +403,9 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/5b/plot.py 
 
 Quantization on the **45 Hz** model (§IV.A.3), same closed-loop eval and seed. **Fully trained** = Fig 4a fp32 checkpoint; **PTQ fp16** = fp16 cast; **PTQ int8** = PyTorch `quantize_dynamic`; **QAT** = separate 10-episode quantization-aware run with the same recipe (fake-quant stub on the input, dequant stub on the logits). Paper: PTQ tracks fp32 suppression; 10-episode QAT does not reduce beta (stays at or above the pre-stim level).
 
-### Paper (Mehregan et al.)
+### Paper (Mehregan et al.): digitized, our redraw
 
-![Paper Fig 6a](images/6a/paper.png)
+![Digitized from Fig. 6a of Mehregan et al. (2024) (our redraw)](images/6a/digitized_v1.png)
 
 ### Replication
 
@@ -460,9 +460,9 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/mehregan/6a/plot.py 
 
 Same quantization panel for the **30 Hz** model (§IV.A.3): Fig 5b fp32 checkpoint, PTQ fp16 / int8, and a 10-episode QAT run with the same recipe.
 
-### Paper (Mehregan et al.)
+### Paper (Mehregan et al.): digitized, our redraw
 
-![Paper Fig 6b](images/6b/paper.png)
+![Digitized from Fig. 6b of Mehregan et al. (2024) (our redraw)](images/6b/digitized_v1.png)
 
 ### Replication
 

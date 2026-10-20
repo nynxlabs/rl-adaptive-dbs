@@ -2,7 +2,7 @@
 
 **Primary replication tracker** for the DSQN / closed-loop neuromorphic DBS paper. Spec: [controllers/snn/replication.md](../../docs/controllers/snn/replication.md). Work proceeds **in parallel** with Mehregan ([Mehregan replications](../mehregan/replications.md)): each row is an exit criterion with automated gates, a committed `plot.py` (when present), and side-by-side PNGs.
 
-Plot scripts write replication PNGs to `figures/nguyen/images/`; JSON caches to `artifacts/figures/papers/nguyen/`. Paper panels: `figures/nguyen/images/<panel>/paper.png`.
+Plot scripts write replication PNGs to `figures/nguyen/images/`; JSON caches to `artifacts/figures/papers/nguyen/`. Paper references: `images/<panel>/digitized_v*.png`, our redraw of the values digitized from each published panel (`scripts/digitization/redraw_digitized.py`); the published figures are not in this repository ([LICENSING.md](../../LICENSING.md#figures-from-the-replicated-papers)). A local, gitignored `paper.png` crop for the digitization tools comes from `scripts/digitization/paper_crops.py build`.
 
 Figs **1–2** are schematics — **not** replication targets.
 
@@ -24,9 +24,9 @@ Figs **1–2** are schematics — **not** replication targets.
 
 Distribution of GPi **α–β** oscillation power (**7–35 Hz**) for **PD On** vs **PD Off** (no DBS). **PD On** = parkinsonian (`pd=1`); **PD Off** = healthy (`pd=0`). Reward threshold θ = 150 is **not** drawn on this panel.
 
-### Paper (Nguyen et al.)
+### Paper (Nguyen et al.): digitized, our redraw
 
-![Paper Fig 3](images/3/paper.png)
+![Digitized from Fig. 3 of Nguyen et al. (2025) (our redraw)](images/3/digitized_v1.png)
 
 ### Replication
 
@@ -73,9 +73,9 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/3/plot.py --p
 
 Episode **rewards** (a) and **lengths** (b) over **500** training episodes. Init DBS **40 Hz / 0.3 ms / 300 nA/cm²**; seed **1**; max **25** steps/episode; θ = 150; early stop after $t_u=3$ consecutive steps below θ. Config: `fig4_nguyen_config` — the paper, the authors' published training loop (arXiv 2606.28600), and documented conventions; reasoning and the 13-seed check in [docs/figures/nguyen/4.md](../../docs/figures/nguyen/4.md).
 
-### Paper (Nguyen et al.)
+### Paper (Nguyen et al.): digitized, our redraw
 
-![Paper Fig 4](images/4/paper.png)
+![Digitized from Fig. 4 of Nguyen et al. (2025) (our redraw)](images/4/digitized_v1.png)
 
 ### Replication (**v165**, passes every gate)
 
@@ -140,9 +140,9 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/nguyen/4/plot.py --p
 
 Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the same **500**-episode train as Fig 4 (`artifacts/figures/papers/nguyen/4/series.json`).
 
-### Paper (Nguyen et al.)
+### Paper (Nguyen et al.): digitized, our redraw
 
-![Paper Fig 5](images/5/paper.png)
+![Digitized from Fig. 5 of Nguyen et al. (2025) (our redraw)](images/5/digitized_v1.png)
 
 ### Replication
 
@@ -197,9 +197,9 @@ Per-episode **CBGT spike counts** (a) and **DBS energy** (b, Eq. (6)) from the s
 
 GPi **α–β** (a) and DBS amplitude / frequency / pulse width (b) over **500** episodes; shared train with Figs 4–5.
 
-### Paper (Nguyen et al.)
+### Paper (Nguyen et al.): digitized, our redraw
 
-![Paper Fig 6](images/6/paper.png)
+![Digitized from Fig. 6 of Nguyen et al. (2025) (our redraw)](images/6/digitized_v1.png)
 
 ### Replication
 
@@ -268,9 +268,9 @@ The paper's late frequency (81.3 Hz) is a required gate; its late amplitude (~26
 
 Seeded eval of the trained policy: **50** episodes × **25** steps, different seed per episode.
 
-### Paper (Nguyen et al.)
+### Paper (Nguyen et al.): digitized, our redraw
 
-![Paper Fig 7](images/7/paper.png)
+![Digitized from Fig. 7 of Nguyen et al. (2025) (our redraw)](images/7/digitized_v1.png)
 
 ### Replication
 
