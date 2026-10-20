@@ -1,0 +1,180 @@
+{
+  "_about": "Crop boxes for the paper figure crops. box_pt is [x0, y0, x1, y1] in PDF points from the page's top-left corner (y down); size_px is the output [width, height]; the render scale is size_px / box size. Built with scripts/digitization/paper_crops.py; publisher crops (paper.png) stay local and are never committed.",
+  "sources": {
+    "publisher": {
+      "output": "paper.png",
+      "committed": false,
+      "papers": {
+        "mehregan": {
+          "file": "mehregan.pdf",
+          "aliases": ["paper_1.pdf"],
+          "citation": "Mehregan et al., Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning, IEEE MobileCloud 2024",
+          "doi": "10.1109/MobileCloud62079.2024.00013",
+          "sha256": "730660c2c24415f88c60a4370bfbd2412b615609d09aabf32a98304058dbc130"
+        },
+        "nguyen": {
+          "file": "nguyen.pdf",
+          "aliases": ["paper_2.pdf"],
+          "citation": "Nguyen et al., Closed-Loop Neuromorphic Deep Brain Stimulation using Deep Spiking Q-Networks, IEEE ISCAS 2025",
+          "doi": "10.1109/ISCAS56072.2025.11043472",
+          "sha256": "3fb1f28541016688d8984649351784e0b67a6037b5423b25708320e91cacce35"
+        },
+        "ravivarapu": {
+          "file": "ravivarapu.pdf",
+          "aliases": ["paper_3.pdf"],
+          "citation": "Ravivarapu et al., Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson's Disease, IEEE MobileCloud 2025",
+          "doi": "10.1109/MobileCloud66020.2025.00006",
+          "sha256": "a070d8e3e5d4c9fc7ee30b5c0455227cfb8f3208df617fa77c35654cf22200cf"
+        }
+      },
+      "panels": {
+        "mehregan/1b": {
+          "page": 2,
+          "box_pt": [461.9636, 55.0999, 557.5675, 169.3137],
+          "size_px": [262, 313]
+        },
+        "mehregan/2a": {
+          "page": 2,
+          "box_pt": [317.732, 270.054, 445.4799, 368.6856],
+          "size_px": [351, 271]
+        },
+        "mehregan/2b": {
+          "page": 2,
+          "box_pt": [445.6414, 269.8647, 564.163, 368.6935],
+          "size_px": [325, 271]
+        },
+        "mehregan/4a": {
+          "page": 5,
+          "box_pt": [311.8026, 49.5967, 459.1339, 171.0356],
+          "size_px": [404, 333]
+        },
+        "mehregan/4b": {
+          "page": 5,
+          "box_pt": [459.1339, 49.5967, 557.5979, 171.0356],
+          "size_px": [270, 333]
+        },
+        "mehregan/5a": {
+          "page": 6,
+          "box_pt": [40.139, 129.9044, 157.2719, 240.1041],
+          "size_px": [321, 302]
+        },
+        "mehregan/5b": {
+          "page": 6,
+          "box_pt": [157.1776, 129.8265, 272.0522, 239.9602],
+          "size_px": [315, 302]
+        },
+        "mehregan/6a": {
+          "page": 6,
+          "box_pt": [39.3856, 383.6452, 154.9897, 490.1322],
+          "size_px": [317, 292]
+        },
+        "mehregan/6b": {
+          "page": 6,
+          "box_pt": [154.9897, 383.6451, 270.2291, 490.1321],
+          "size_px": [316, 292]
+        },
+        "nguyen/3": {
+          "page": 3,
+          "box_pt": [308.463, 176.1083, 568.4325, 307.7338],
+          "size_px": [713, 361]
+        },
+        "nguyen/4": {
+          "page": 4,
+          "box_pt": [42.303, 43.0324, 304.1442, 249.0773],
+          "size_px": [718, 565]
+        },
+        "nguyen/5": {
+          "page": 4,
+          "box_pt": [42.2945, 286.9462, 304.0828, 494.0433],
+          "size_px": [718, 568]
+        },
+        "nguyen/6": {
+          "page": 4,
+          "box_pt": [308.1558, 45.5852, 565.9856, 231.9374],
+          "size_px": [707, 511]
+        },
+        "nguyen/7": {
+          "page": 4,
+          "box_pt": [313.6253, 274.6045, 564.1609, 426.6763],
+          "size_px": [687, 417]
+        },
+        "ravivarapu/4a": {
+          "page": 6,
+          "box_pt": [332.5222, 66.7232, 532.3271, 177.9285],
+          "size_px": [548, 305]
+        },
+        "ravivarapu/4b": {
+          "page": 6,
+          "box_pt": [332.5235, 177.9293, 532.3293, 284.0305],
+          "size_px": [548, 291]
+        },
+        "ravivarapu/5a": {
+          "page": 7,
+          "box_pt": [77.3123, 67.1013, 274.9693, 196.5629],
+          "size_px": [542, 355]
+        },
+        "ravivarapu/5b": {
+          "page": 7,
+          "box_pt": [77.313, 196.5646, 274.9716, 313.6281],
+          "size_px": [542, 321]
+        },
+        "ravivarapu/6": {
+          "page": 7,
+          "box_pt": [79.7376, 326.5964, 275.2585, 436.9183],
+          "size_px": [537, 303]
+        },
+        "ravivarapu/7": {
+          "page": 7,
+          "box_pt": [330.4013, 69.6541, 537.9049, 183.4347],
+          "size_px": [569, 312]
+        }
+      }
+    },
+    "arxiv": {
+      "output": "arxiv_v1.png",
+      "committed": true,
+      "papers": {
+        "ravivarapu": {
+          "file": "2507.06326v1.pdf",
+          "url": "https://arxiv.org/pdf/2507.06326v1",
+          "arxiv": "2507.06326v1",
+          "license": "CC BY 4.0",
+          "citation": "Ravivarapu et al., Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson's Disease, arXiv:2507.06326v1",
+          "sha256": "886cc7a7101e5374fb88f158f6c411fb5f04bd6afe4864ddd2b7b1b80db44b10"
+        }
+      },
+      "panels": {
+        "ravivarapu/4a": {
+          "page": 6,
+          "box_pt": [330.5757, 43.405, 542.9503, 161.6062],
+          "size_px": [548, 305]
+        },
+        "ravivarapu/4b": {
+          "page": 6,
+          "box_pt": [330.3224, 161.6719, 542.7833, 274.4933],
+          "size_px": [548, 291]
+        },
+        "ravivarapu/5a": {
+          "page": 7,
+          "box_pt": [68.2084, 45.3431, 278.2591, 182.9224],
+          "size_px": [542, 355]
+        },
+        "ravivarapu/5b": {
+          "page": 7,
+          "box_pt": [67.9293, 182.827, 278.3162, 307.4288],
+          "size_px": [542, 321]
+        },
+        "ravivarapu/6": {
+          "page": 7,
+          "box_pt": [70.5755, 321.0799, 278.8121, 438.5765],
+          "size_px": [537, 303]
+        },
+        "ravivarapu/7": {
+          "page": 7,
+          "box_pt": [327.2254, 45.8038, 548.0928, 166.9121],
+          "size_px": [569, 312]
+        }
+      }
+    }
+  }
+}

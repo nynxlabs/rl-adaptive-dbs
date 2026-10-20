@@ -35,3 +35,12 @@ logs/
 /src/envs/plant/network/synapses.py
 /src/envs/plant/network/numba_loop.py
 /src/envs/plant/python_backend.py
+
+# Publisher material (the papers' figures, the papers themselves, reports that
+# embed them) is built locally from your own copies and never committed:
+# python scripts/digitization/paper_crops.py build
+figures/*/images/*/paper.png
+figures/*/images/_full/
+reports/*.pdf
+reports/images/Pasted image *
+/reference-material/papers/

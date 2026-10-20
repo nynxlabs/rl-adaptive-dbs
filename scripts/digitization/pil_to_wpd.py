@@ -9,6 +9,10 @@ WPD has no remote load API; this is the automation we can do without
 driving a browser. Clean up points in WPD, then Save / export CSV and
 ``normalize_wpd.py`` as usual.
 
+The paper PNG is the local-only crop ``paper.png``, built from your own copy
+of the paper by ``paper_crops.py build`` (never committed). A ``.tar`` that
+embeds it holds the published figure, so keep it under ``artifacts/``.
+
 Requires a digitization fig config (axis box + ranges) and a schema JSON
 that includes per-series ``xy`` traces (``extract_pil.py`` writes these).
 
@@ -161,7 +165,7 @@ def main() -> None:
     ap.add_argument("--curves", type=Path, required=True, help="curves_pil.json (with xy)")
     ap.add_argument("--config", type=Path, required=True, help="figs/<panel>.json")
     ap.add_argument("--out", type=Path, required=True, help="output .wpd.json")
-    ap.add_argument("--png", type=Path, help="paper PNG (required with --tar)")
+    ap.add_argument("--png", type=Path, help="local paper crop, built by paper_crops.py build (required with --tar)")
     ap.add_argument("--tar", type=Path, help="also write a one-click WPD .tar project")
     ap.add_argument("--project-name", default=None,
                     help="folder name inside the .tar (default: --tar stem)")

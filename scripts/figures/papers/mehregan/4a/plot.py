@@ -81,27 +81,12 @@ STYLE = {
 }
 
 
-def _linked_png(path: Path) -> Path:
-    """Ensure ``path`` is a symlink into the linked figure dir when ``paper.png`` is.
+_LINKED = load_script_module("figure_linked", Path(__file__).resolve().parents[2] / "_linked.py")
 
-    Fig assets under ``figures/<paper>/images/`` may be symlinks into an external notes folder. New
-    versioned PNGs must follow the same pattern so the main checkout and docs see them.
-    """
-    path = Path(path)
-    paper = path.parent / "paper.png"
-    if not paper.is_symlink():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return path
-    linked_dir = paper.resolve().parent
-    linked_target = linked_dir / path.name
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() or path.is_symlink():
-        return path
-    # Create/overwrite the linked file on savefig through this symlink.
-    if not linked_target.exists():
-        linked_target.touch()
-    path.symlink_to(linked_target)
-    return path
+
+def _linked_png(path: Path) -> Path:
+    """New versioned PNGs follow the panel folder's notes link (``papers/_linked.py``)."""
+    return _LINKED.linked_png(path)
 
 
 def _window_mean(trace: list[float], start: int, end: int) -> float:

@@ -39,6 +39,10 @@ reports = [
     "latex2mathml>=3.78.0",
     "weasyprint>=63.0",
 ]
+papers = [
+    "pillow>=10",
+    "pypdfium2>=4.30",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

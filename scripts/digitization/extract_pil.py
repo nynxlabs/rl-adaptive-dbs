@@ -11,6 +11,10 @@ Usage (after `cd` to repo root, with venv active):
         --config scripts/digitization/figs/mehregan_fig1b.json \
         --out artifacts/figures/papers/mehregan/1b/paper_digitization/curves_pil.json
 
+``paper.png`` is a local-only crop of the published figure, built from your
+own copy of the paper by ``paper_crops.py build`` and never committed; the
+config's pixel boxes are measured on that crop.
+
 The config JSON describes the axis box (pixels), tick calibration
 (data ranges), and one color mask per series. See
 `scripts/digitization/figs/mehregan_fig1b.json` for the shape.
@@ -114,6 +118,11 @@ def digitize_series(
 
 def extract(config_path: Path, png_path: Path) -> dict:
     cfg = json.loads(config_path.read_text())
+    if not Path(png_path).is_file():
+        raise SystemExit(
+            f"missing {png_path}: paper crops are local-only; build them from your copy of the paper "
+            "with `uv run --group papers python scripts/digitization/paper_crops.py build`"
+        )
     rgb = np.asarray(Image.open(png_path).convert("RGB"))
 
     panel = cfg["panel"]
@@ -150,7 +159,7 @@ def extract(config_path: Path, png_path: Path) -> dict:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--png", type=Path, required=True)
+    ap.add_argument("--png", type=Path, required=True, help="local paper crop (paper.png), built by paper_crops.py build")
     ap.add_argument("--config", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()

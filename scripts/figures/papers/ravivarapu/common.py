@@ -8,6 +8,10 @@ from typing import Any
 
 import numpy as np
 
+from rl_adaptive_dbs.panel import load_script_module
+
+_LINKED = load_script_module("figure_linked", Path(__file__).resolve().parents[1] / "_linked.py")
+
 FIG4_CACHE_DIR = Path("artifacts/figures/papers/ravivarapu/4")
 
 
@@ -41,8 +45,9 @@ def rolling_mean(values: Any, window: int) -> np.ndarray:
 def linked_png(path: Path, promote_module: Any, *, promote: bool = True) -> Path:
     """Where ``savefig`` should write a versioned replication PNG.
 
-    With ``promote`` the PNG lands next to the main checkout's ``paper.png``
-    symlink target (the notes folder), so tracker and gallery links resolve.
+    With ``promote`` the PNG lands in the notes folder the main checkout's
+    panel folder links into (``paper.png`` or another symlinked PNG there;
+    ``papers/_linked.py``), so tracker and gallery links resolve.
     Without it the PNG stays a plain local file (worktree iteration).
     """
     path = Path(path)
@@ -56,17 +61,16 @@ def linked_png(path: Path, promote_module: Any, *, promote: bool = True) -> Path
         roots.append(main_root)
     roots.append(Path.cwd())
     for root in roots:
-        paper = root / path.parent / "paper.png"
-        if paper.is_symlink():
-            linked_dir = paper.resolve().parent
-        else:
-            # Panels without a paper crop (Table II): map through a sibling
-            # panel's paper.png link to the same notes images folder.
-            siblings = sorted((root / path.parent.parent).glob("*/paper.png"))
-            linked = [s for s in siblings if s.is_symlink()]
+        linked_dir = _LINKED.linked_dir(root / path.parent)
+        if linked_dir is None:
+            # Panels without a linked PNG yet (Table II): map through a
+            # sibling panel's link to the same notes images folder.
+            images = root / path.parent.parent
+            siblings = sorted(p for p in images.iterdir() if p.is_dir()) if images.is_dir() else []
+            linked = [d for d in map(_LINKED.linked_dir, siblings) if d is not None]
             if not linked:
                 continue
-            linked_dir = linked[0].resolve().parent.parent / path.parent.name
+            linked_dir = linked[0].parent / path.parent.name
         linked_target = linked_dir / path.name
         local = path if path.is_absolute() else Path.cwd() / path
         local.parent.mkdir(parents=True, exist_ok=True)

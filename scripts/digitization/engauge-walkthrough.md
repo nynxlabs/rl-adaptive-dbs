@@ -25,7 +25,10 @@ export DISPLAY=:0
 engauge
 ```
 
-Optional: open a panel image immediately:
+Optional: open a panel image immediately. `paper.png` is a local-only crop
+(not in the repository); build it first from your own copy of the paper with
+`uv run --group papers python scripts/digitization/paper_crops.py build --panel mehregan/1b`
+(see `README.md` § paper crops):
 
 ```bash
 export DISPLAY=:0

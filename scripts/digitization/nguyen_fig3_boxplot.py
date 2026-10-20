@@ -8,6 +8,10 @@ the two mean lines from pixel rows, with the y axis calibrated on the eight tick
     uv run python scripts/digitization/nguyen_fig3_boxplot.py
 
 Writes ``artifacts/figures/papers/nguyen/paper_digitization/curves_fig3_boxplot.json``.
+
+Reads ``figures/nguyen/images/3/paper.png``, a local-only crop built from your own copy of
+the paper by ``paper_crops.py build --panel nguyen/3`` (never committed); the pixel
+columns below are measured on that crop.
 """
 
 from __future__ import annotations
@@ -50,6 +54,11 @@ def _row_centres(mask: np.ndarray, min_px: int) -> list[float]:
 
 
 def read_fig3(png: Path = PAPER_PNG) -> dict:
+    if not png.is_file():
+        raise SystemExit(
+            f"missing {png}: build the local paper crop first with "
+            "`uv run --group papers python scripts/digitization/paper_crops.py build --panel nguyen/3`"
+        )
     im = np.asarray(Image.open(png).convert("RGB")).astype(int)
     dark = im.sum(axis=2) < 500
     slope, intercept = _calibration(dark)

@@ -100,21 +100,12 @@ CONDITIONS: tuple[Condition, ...] = (
 )
 
 
+_LINKED = load_script_module("figure_linked", Path(__file__).resolve().parents[2] / "_linked.py")
+
+
 def _linked_png(path: Path) -> Path:
-    path = Path(path)
-    paper = path.parent / "paper.png"
-    if not paper.is_symlink():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return path
-    linked_dir = paper.resolve().parent
-    linked_target = linked_dir / path.name
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() or path.is_symlink():
-        return path
-    if not linked_target.exists():
-        linked_target.touch()
-    path.symlink_to(linked_target)
-    return path
+    """New versioned PNGs follow the panel folder's notes link (``papers/_linked.py``)."""
+    return _LINKED.linked_png(path)
 
 
 def parse_seeds(raw: str) -> tuple[int, ...]:

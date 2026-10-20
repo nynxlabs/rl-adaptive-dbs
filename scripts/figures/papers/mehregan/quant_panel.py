@@ -106,16 +106,12 @@ def _style(cfg: QuantPanel) -> dict[str, dict[str, Any]]:
     }
 
 
+_LINKED = load_script_module("figure_linked", Path(__file__).resolve().parents[1] / "_linked.py")
+
+
 def _linked_png(path: Path) -> Path:
-    paper = path.parent / "paper.png"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if not paper.is_symlink() or path.exists() or path.is_symlink():
-        return path
-    target = paper.resolve().parent / path.name
-    if not target.exists():
-        target.touch()
-    path.symlink_to(target)
-    return path
+    """New versioned PNGs follow the panel folder's notes link (``papers/_linked.py``)."""
+    return _LINKED.linked_png(path)
 
 
 def _logit_drift(fp32: list[list[float]], other: list[list[float]]) -> float:
