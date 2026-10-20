@@ -9,12 +9,8 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-# Public-facing docs. docs/reports/ holds frozen copies of sent reports and is excluded.
-REPORTS_DIR = REPO_ROOT / "docs" / "reports"
-PUBLIC_MARKDOWN = sorted(
-    [REPO_ROOT / "README.md"]
-    + [p for p in (REPO_ROOT / "docs").rglob("*.md") if not p.is_relative_to(REPORTS_DIR)]
-)
+# Public-facing docs.
+PUBLIC_MARKDOWN = sorted([REPO_ROOT / "README.md"] + list((REPO_ROOT / "docs").rglob("*.md")))
 
 FENCED_CODE_RE = re.compile(r"```.*?```", re.DOTALL)
 INLINE_CODE_RE = re.compile(r"`[^`\n]*`")

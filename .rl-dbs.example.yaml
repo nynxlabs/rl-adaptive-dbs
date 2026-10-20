@@ -38,7 +38,7 @@ defaults:
   # checkpoint_dir: artifacts/ddpg
 
 export:
-  # Optional notes folder for plot --export-notes / --update-report
-  # (writes <notes_dir>/figures/<paper>/... and <notes_dir>/reports/2026-08-10.md).
+  # Optional notes folder for plot --export-notes
+  # (writes <notes_dir>/figures/<paper>/...).
   # Unset: inferred from tracker docs symlinked into an outside folder.
   # notes_dir: ~/notes/rl-adaptive-dbs

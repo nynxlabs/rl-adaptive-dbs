@@ -26,10 +26,6 @@ All three controllers run on one biophysical model of the cortex–basal ganglia
 
 Every figure panel has its own gates: numeric checks against curves digitized from the paper, like where a curve starts, which way it trends, and how two conditions are ordered. A panel counts as replicated only when all of its gates pass, so a panel that passes most of its gates is still open. Each tracker lists every gate with its current pass/fail state and the command that reproduces the panel.
 
-## Progress reports
-
-Dated progress reports live in [docs/reports/](docs/reports/) (`docs/reports/YYYY-MM-DD.md`, with a PDF of each). They are snapshots: the October 2026 gate audits replaced some of their results, so the trackers above are the current state.
-
 ## Quick start
 
 Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/). MATLAB is optional; it's only needed for the reference-equivalence checks against the original Kumaravelu model.
@@ -104,7 +100,7 @@ Python packages live under **`src/`** (editable install via `uv sync`):
   - [guides/](docs/guides/) — [setup](docs/guides/setup.md), [CLI](docs/guides/cli.md), [TUI](docs/guides/tui.md), [MATLAB](docs/guides/matlab.md), [benchmarking](docs/guides/benchmarking.md).
   - [plant/](docs/plant/) — the shared [plant](docs/plant/README.md) and [RL environment](docs/plant/environment.md).
   - [controllers/](docs/controllers/) — per controller: tracker (`README.md`), `method.md`, `extensions.md`, and one page per figure (`figures/<panel>.md`, images in `figures/images/<panel>/`).
-  - [development/](docs/development/) — roadmap, conventions, `uv`, pytest; [reports/](docs/reports/) — dated progress reports, snapshots rather than the current state.
+  - [development/](docs/development/) — roadmap, conventions, `uv`, pytest.
 - `results/` — benchmark outputs from `rl-dbs benchmark` (local, gitignored).
 - `reference-material/` — Where third-party reference models go. The Kumaravelu et al. (2016) MATLAB network is **not included**: `python scripts/matlab/fetch_kumaravelu.py` downloads the pinned upstream revision into `reference-material/KumaraveluEtAl2016/` (gitignored) and applies our integration patches from the private `kumaravelu_plant` package, if it is installed ([`changes.md`](reference-material/KumaraveluEtAl2016/changes.md); license status in [LICENSING.md](LICENSING.md)). Only the optional MATLAB backend needs it.
 - `scripts/` — layout in [`scripts/README.md`](scripts/README.md): panel ship scripts under **`scripts/figures/papers/`**, digitization/gates, MATLAB/plant helpers; **`scripts/probes/`** keeps only reusable extension diagnostics (see [`scripts/probes/README.md`](scripts/probes/README.md)).

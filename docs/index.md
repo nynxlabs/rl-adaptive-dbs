@@ -9,7 +9,6 @@ Where everything in `docs/` lives. Start with the [README](../README.md) for wha
 | [controllers/](controllers/) | One folder per replicated paper's controller: its tracker, method spec, extensions, and one page per figure. [Overview and side-by-side showcase](controllers/README.md) |
 | [extensions/](extensions/) | Work beyond the papers ([alphabet diversity](extensions/alphabet-diversity/README.md)) |
 | [development/](development/) | Contributing: roadmap, conventions, testing, `uv`, fresh-machine validation, replication fidelity; finished snapshots in [development/history/](development/history/) |
-| [reports/](reports/) | Dated progress reports. Snapshots, not the current state |
 
 ## Controllers, papers, and where their files live
 

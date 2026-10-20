@@ -8,7 +8,7 @@ This file maps each part of the repository to its license status. It is a statem
 
 | Material | Where | Status |
 |----------|-------|--------|
-| Original project code and docs | `src/`, `scripts/`, `tests/`, `suites/`, `docs/` (including `docs/reports/` and our replication figures under `docs/controllers/*/figures/images/`) — except the items listed in the rows below | MIT ([LICENSE](LICENSE)) |
+| Original project code and docs | `src/`, `scripts/`, `tests/`, `suites/`, `docs/` (including our replication figures under `docs/controllers/*/figures/images/`) — except the items listed in the rows below | MIT ([LICENSE](LICENSE)) |
 | Kumaravelu et al. (2016) MATLAB model | **Not included.** `python scripts/matlab/fetch_kumaravelu.py` downloads it from upstream into gitignored files under `reference-material/KumaraveluEtAl2016/` | **No license found — permission pending.** Not MIT; not redistributed by this project. |
 | Our edits to that model | **Not included.** Kept in the private `kumaravelu_plant` package (unified diffs against the pinned upstream revision) | Our changes, but they quote the upstream lines they replace — private while permission is pending. |
 | Chronux multitaper helpers | **Not included.** Part of the fetched `simulate_network_model.m` and of the fetched, generated `plant_band_power.m` | **GNU GPL version 2** (Chronux's license) — [CHRONUX_LICENSE.txt](reference-material/KumaraveluEtAl2016/CHRONUX_LICENSE.txt), kept so the fetched copy carries its license text |
@@ -75,7 +75,7 @@ Earlier commits in this repository's git history contain the moved files.
 | Nguyen et al., *Closed-Loop Neuromorphic Deep Brain Stimulation using Deep Spiking Q-Networks* | IEEE ISCAS 2025, © 2025 IEEE, doi:10.1109/ISCAS56072.2025.11043472 | none found |
 | Ravivarapu et al., *Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson's Disease* | IEEE MobileCloud 2025, © 2025 IEEE, doi:10.1109/MobileCloud66020.2025.00006 | arXiv:2507.06326 (CC BY 4.0) |
 
-**Published figures are not in this repository.** Until October 2026 it held crops of the published IEEE figures (`figures/*/images/*/paper.png`), a pasted crop in `docs/reports/images/`, and the progress-report PDFs that embedded them (`docs/reports/*.pdf`). Those are the publishers' material, and we had no permission or clear exception to republish them, so they were removed from the repository and from its entire git history. The markdown sources of the old reports stay in `docs/reports/`; their links to the removed images no longer resolve.
+**Published figures are not in this repository.** Until October 2026 it held crops of the published IEEE figures (`figures/*/images/*/paper.png`), a pasted crop in `docs/reports/images/`, and the progress-report PDFs that embedded them (`docs/reports/*.pdf`). Those are the publishers' material, and we had no permission or clear exception to republish them, so they were removed from the repository and from its entire git history. The markdown sources of the old reports were removed later in October 2026.
 
 **Local crops for digitization.** The digitization tools in `scripts/digitization/` read a crop of each published panel. `scripts/digitization/paper_crops.py build` makes those crops on your machine from your own copy of each paper (where it looks for the PDFs: `scripts/digitization/README.md`). `paper_crops.json` records only where each panel sits on its page (page number and box), not image content. The crops it writes are gitignored and must never be committed.
 
