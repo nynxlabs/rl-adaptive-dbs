@@ -40,6 +40,6 @@ logs/
 # embed them) is built locally from your own copies and never committed:
 # python scripts/digitization/paper_crops.py build
 docs/controllers/*/figures/images/*/paper.png
-reports/*.pdf
-reports/images/Pasted image *
+docs/reports/*.pdf
+docs/reports/images/Pasted image *
 /reference-material/papers/
