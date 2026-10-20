@@ -24,7 +24,7 @@ Phases and implementation status for **rl-adaptive-dbs**. Contributor rules: [co
 | Mehregan (paper 1) | [docs/controllers/ddpg/README.md](../controllers/ddpg/README.md) | Figs 1b–6b Pass |
 | Nguyen (paper 2) | [docs/controllers/snn/README.md](../controllers/snn/README.md) | Fig 3 Pass; Fig 4–7 open |
 
-**Contributors:** read the panel checklist before large sweeps; promote stable findings into the panel `plot.py` and update the matching `figures/paper_*.md` in the same pass. See [conventions.md](conventions.md) § Figure replication.
+**Contributors:** read the panel checklist before large sweeps; promote stable findings into the panel `plot.py` and update the matching figure page (`docs/controllers/<controller>/figures/<panel>.md`) in the same pass. See [conventions.md](conventions.md) § Figure replication.
 
 ---
 

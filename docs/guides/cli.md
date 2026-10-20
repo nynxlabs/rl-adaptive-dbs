@@ -111,7 +111,7 @@ By default the runner caps in-process thread pools at **1** (one OpenMP/OpenBLAS
 
 ### 5.1 `train`
 
-Train a **learned** controller (not baselines). Behavior must match the controller’s [replication.md](../controllers/ddpg/method.md) (and siblings) and the env/adapter profile for that controller.
+Train a **learned** controller (not baselines). Behavior must match the controller’s [method.md](../controllers/ddpg/method.md) (and siblings) and the env/adapter profile for that controller.
 
 ```
 rl-dbs train --controller NAME --variant VARIANT [options]

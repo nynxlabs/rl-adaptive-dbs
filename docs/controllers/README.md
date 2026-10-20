@@ -1,8 +1,16 @@
 # Figure replication showcase
 
+| Controller | Paper | Tracker and figure pages | Method |
+|------------|-------|--------------------------|--------|
+| DDPG (`ddpg`) | Mehregan et al. | [ddpg/README.md](ddpg/README.md) | [ddpg/method.md](ddpg/method.md) |
+| Deep spiking Q-network (`snn`) | Nguyen et al. | [snn/README.md](snn/README.md) | [snn/method.md](snn/method.md) |
+| SEA-DBS (`sea_dbs`) | Ravivarapu et al. | [sea_dbs/README.md](sea_dbs/README.md) | [sea_dbs/method.md](sea_dbs/method.md) |
+
+Each figure has its own page under `<controller>/figures/<panel>.md`: what the paper shows, status, how to reproduce it, gates, deviations and conventions, what was tried, and open questions. [fusion.md](fusion.md) covers cross-controller work.
+
 This is a short, visual summary of my **qualitative replications** of three adaptive deep brain stimulation (DBS) reinforcement-learning papers, all running on one shared simulated parkinsonian brain circuit. Each section shows **the paper's panel** next to **my reproduction**. For Mehregan et al. and Nguyen et al. the paper side is my redraw of the values digitized from the published figure (the published figures aren't reproduced here); for Ravivarapu et al. it is the figure from the authors' CC BY 4.0 arXiv version ([LICENSING.md](../../LICENSING.md#figures-from-the-replicated-papers)), with a plain-language note on what I checked. These are still rough. I'm not claiming these are 100% correct, but I wanted to show the progress I've made so far. There's a lot of refactoring, cleaning up, organizing, and small improvements I want to add everywhere, so these will keep getting refined.
 
-I built these from the paper text and figures. Mehregan and Ravivarapu have no released training or environment source; for Nguyen, where the ISCAS paper is silent I follow the same group's June 2026 follow-up paper (its published training loop and hyperparameters) and the code released with it (the Fig. 7 evaluation reset window). The shared dynamics use the **Kumaravelu et al. (2016)** cortex-basal ganglia-thalamus model. Full run commands, manifests, and internal gates live in the per-paper trackers: [Mehregan](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/figures/mehregan/replications.md), [Nguyen](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/figures/nguyen/replications.md), [Ravivarapu](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/figures/ravivarapu/replications.md).
+I built these from the paper text and figures. Mehregan and Ravivarapu have no released training or environment source; for Nguyen, where the ISCAS paper is silent I follow the same group's June 2026 follow-up paper (its published training loop and hyperparameters) and the code released with it (the Fig. 7 evaluation reset window). The shared dynamics use the **Kumaravelu et al. (2016)** cortex-basal ganglia-thalamus model. Full run commands, manifests, and internal gates live in the per-paper trackers: [Mehregan](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/docs/controllers/ddpg/README.md), [Nguyen](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/docs/controllers/snn/README.md), [Ravivarapu](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/docs/controllers/sea_dbs/README.md).
 
 **Status (October 14, 2026):** Mehregan 7/9 (Fig. 6a and 6b fail on QAT), Ravivarapu 0/7, Nguyen 4/5 (Fig. 7 passes 13 of its 14 gates). The October 12–14 gate audits withdrew the earlier Ravivarapu passes and the Mehregan Fig. 6 passes: they rested on mechanisms the papers don't describe or on gates that were too loose. The per-paper trackers have the current gates.
 
@@ -150,7 +158,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 |:-----:|:---------------:|
 | ![Digitized from Fig. 6a of Mehregan et al. (2024) (our redraw)](ddpg/figures/images/6a/digitized_v1.png) | ![Replication Fig. 6a](ddpg/figures/images/6a/ptq_qat_45hz_v69.png) |
 
-**Status:** Fail. fp32 and both PTQ policies reach the same suppressed level and pass every fp32 / PTQ gate. QAT fails: over 15 training seeds most QAT policies suppress beta instead of staying high, because 10 episodes of int8 QAT don't converge on this action space. Details in the [Mehregan tracker](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/figures/mehregan/replications.md).
+**Status:** Fail. fp32 and both PTQ policies reach the same suppressed level and pass every fp32 / PTQ gate. QAT fails: over 15 training seeds most QAT policies suppress beta instead of staying high, because 10 episodes of int8 QAT don't converge on this action space. Details in the [Mehregan tracker](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/docs/controllers/ddpg/README.md).
 
 ---
 
@@ -246,7 +254,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 **Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson's Disease (SEA-DBS).** An actor-critic that picks binary pulse actions every 2 ms, adding a **predictive reward model (PM)** and **Gumbel-Softmax exploration (GS)** on top of a DDPG baseline.
 
-**Status: every Ravivarapu panel currently fails.** The earlier passes rested on mechanisms the paper doesn't describe (scheduled actor boosts, per-variant plants and learning rates, hand-picked eval seeds, loosened gates), which were removed in October 2026. With one training config as the paper specifies, two root causes dominate: Eq. (7) has no stimulation cost, so every variant learns to stimulate on every step and their rollouts coincide; and on the Kumaravelu model, 30 Hz stimulation raises beta. The [Ravivarapu tracker](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/figures/ravivarapu/replications.md) lists all five root causes and every gate. The images below are the current, failing replications.
+**Status: every Ravivarapu panel currently fails.** The earlier passes rested on mechanisms the paper doesn't describe (scheduled actor boosts, per-variant plants and learning rates, hand-picked eval seeds, loosened gates), which were removed in October 2026. With one training config as the paper specifies, two root causes dominate: Eq. (7) has no stimulation cost, so every variant learns to stimulate on every step and their rollouts coincide; and on the Kumaravelu model, 30 Hz stimulation raises beta. The [Ravivarapu tracker](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/docs/controllers/sea_dbs/README.md) lists all five root causes and every gate. The images below are the current, failing replications.
 
 ## Fig. 4a: Training beta PSD vs episode
 
@@ -306,6 +314,20 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 | ![Fig. 7 of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea_dbs/figures/images/7/arxiv_v1.png) | ![Replication Fig. 7](sea_dbs/figures/images/7/ablation_psd_v29.png) |
 
 <div style="page-break-after: always;"></div>
+
+## Figure images and sources
+
+Replication PNGs and the paper references they're compared with: **`docs/controllers/<controller>/figures/images/<panel>/`**. Trackers: **`docs/controllers/<controller>/README.md`**.
+
+The published figures themselves are not in this repository. What each panel folder holds instead:
+
+- **`digitized_v*.png`** (Mehregan et al., Nguyen et al.): our redraw of the values digitized from the paper's figure, labelled "Digitized from Fig. N of …" (`scripts/digitization/redraw_digitized.py`).
+- **`arxiv_v*.png`** (Ravivarapu et al.): a crop of the figure in the authors' arXiv version (arXiv:2507.06326v1), © the authors, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); attribution in [LICENSING.md](../../LICENSING.md#figures-from-the-replicated-papers).
+- **`paper.png`** (only on your machine, gitignored): a crop of the published figure that `scripts/digitization/paper_crops.py build` makes from your own copy of the paper, for the digitization tools. Never commit it.
+
+Plot scripts: `scripts/figures/papers/`. JSON caches: `artifacts/figures/papers/`.
+
+**Source papers.** The papers these figures replicate are kept with the notes, not in git (they are publisher PDFs): `papers/paper_1.{pdf,md}` (Mehregan et al.), `papers/paper_2.{pdf,md}` (Nguyen et al.), and `papers/paper_3.{pdf,md}` (Ravivarapu et al.) under the notes folder that `export.notes_dir` / `RL_DBS_NOTES_DIR` points to ([docs/guides/cli.md](../guides/cli.md) §5.6). The `.md` files are text transcriptions; prefer them over the PDFs when reading methods.
 
 ## How this was produced
 

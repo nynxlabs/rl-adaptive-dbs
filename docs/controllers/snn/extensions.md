@@ -1,6 +1,6 @@
 # SNN extensions — post-replication directions
 
-*Exploratory work beyond Nguyen et al. paper replication. See [replication.md](method.md) for the paper-accurate spec.*
+*Exploratory work beyond Nguyen et al. paper replication. See [method.md](method.md) for the paper-accurate spec.*
 
 ---
 

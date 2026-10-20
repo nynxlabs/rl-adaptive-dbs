@@ -100,9 +100,11 @@ Python packages live under **`src/`** (editable install via `uv sync`):
 - **`suites/`** — Versioned eval configs (`mehregan_eval.yaml`, smoke variant for CI).
 - **`src/rl_adaptive_dbs/`** — CLI (`rl-dbs`), TUI (`rl-dbs-tui`), and shared entry helpers.
 
-- `docs/` — [setup.md](docs/guides/setup.md) (setup & use), [development/](docs/development/) (roadmap, conventions, `uv`, pytest), [plant.md](docs/plant/README.md), [environment.md](docs/plant/environment.md), [controllers/](docs/controllers/), [benchmarking.md](docs/guides/benchmarking.md), [cli.md](docs/guides/cli.md), [tui.md](docs/guides/tui.md).
-- `docs/controllers/<controller>/README.md` — ship trackers (Mehregan / Nguyen / Ravivarapu).
-- `docs/reports/` — dated progress reports (`YYYY-MM-DD.md` + PDF); snapshots, not the current state.
+- `docs/` — map in [docs/index.md](docs/index.md):
+  - [guides/](docs/guides/) — [setup](docs/guides/setup.md), [CLI](docs/guides/cli.md), [TUI](docs/guides/tui.md), [MATLAB](docs/guides/matlab.md), [benchmarking](docs/guides/benchmarking.md).
+  - [plant/](docs/plant/) — the shared [plant](docs/plant/README.md) and [RL environment](docs/plant/environment.md).
+  - [controllers/](docs/controllers/) — per controller: tracker (`README.md`), `method.md`, `extensions.md`, and one page per figure (`figures/<panel>.md`, images in `figures/images/<panel>/`).
+  - [development/](docs/development/) — roadmap, conventions, `uv`, pytest; [reports/](docs/reports/) — dated progress reports, snapshots rather than the current state.
 - `results/` — benchmark outputs from `rl-dbs benchmark` (local, gitignored).
 - `reference-material/` — Where third-party reference models go. The Kumaravelu et al. (2016) MATLAB network is **not included**: `python scripts/matlab/fetch_kumaravelu.py` downloads the pinned upstream revision into `reference-material/KumaraveluEtAl2016/` (gitignored) and applies our integration patches from the private `kumaravelu_plant` package, if it is installed ([`changes.md`](reference-material/KumaraveluEtAl2016/changes.md); license status in [LICENSING.md](LICENSING.md)). Only the optional MATLAB backend needs it.
 - `scripts/` — layout in [`scripts/README.md`](scripts/README.md): panel ship scripts under **`scripts/figures/papers/`**, digitization/gates, MATLAB/plant helpers; **`scripts/probes/`** keeps only reusable extension diagnostics (see [`scripts/probes/README.md`](scripts/probes/README.md)).
@@ -118,7 +120,7 @@ from controllers.ddpg import train
 
 **[docs/development/roadmap.md](docs/development/roadmap.md)** — phases and status. **[docs/development/conventions.md](docs/development/conventions.md)** — contributor rules.
 
-Specs: [plant.md](docs/plant/README.md), [environment.md](docs/plant/environment.md), [controllers/](docs/controllers/), [docs/controllers/ddpg/README.md](docs/controllers/ddpg/README.md), [benchmarking.md](docs/guides/benchmarking.md), [cli.md](docs/guides/cli.md), [tui.md](docs/guides/tui.md). Tooling: [development/](docs/development/) (`venv.md`, `testing.md`).
+Everything else: [docs/index.md](docs/index.md).
 
 ## Benchmarking
 

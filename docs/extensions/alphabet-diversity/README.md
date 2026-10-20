@@ -107,6 +107,6 @@ See module docstrings in `src/envs/mehregan/extensions/alphabet_diversity/` for 
 
 ## See also
 
-- [docs/controllers/ddpg/README.md](../../controllers/ddpg/README.md) § Fig 6a — shipped panel status
+- [docs/controllers/ddpg/figures/6a.md](../../controllers/ddpg/figures/6a.md) — shipped panel status
 - [environment.md](../../plant/environment.md) — default Mehregan API
 - [controllers/ddpg/extensions.md](../../controllers/ddpg/extensions.md) — quantization deeper dives

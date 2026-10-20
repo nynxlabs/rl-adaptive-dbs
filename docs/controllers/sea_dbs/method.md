@@ -4,7 +4,7 @@ This document specifies the **SEA-DBS** (sample-efficient actor–critic) contro
 
 **Companion spec:** The shared **Kumaravelu et al. (2016)** plant — [plant.md](../../plant/README.md). **Mehregan et al.** Gymnasium API — [environment.md](../../plant/environment.md). **This document is authoritative for the Ravivarapu controller**—binary actions, predictive reward modeling, Gumbel-Softmax exploration, timing, reward shape, and training—unless the others explicitly describe the same quantity.
 
-**Scheduling:** SEA-DBS replication is **Phase 6** and is **active in parallel** with Nguyen ([roadmap.md](../../development/roadmap.md)). Panel tracker and **qualitative gates:** [docs/controllers/sea_dbs/README.md](README.md) (all panels Fail with documented gaps after the oct 2026 honest-replication pass, §15). Gate design notes: [docs/controllers/sea_dbs/gate_readouts.md](gate_readouts.md). Mehregan panel set is Pass — [docs/controllers/ddpg/README.md](../ddpg/README.md).
+**Scheduling:** SEA-DBS replication is **Phase 6** and is **active in parallel** with Nguyen ([roadmap.md](../../development/roadmap.md)). Panel tracker and **qualitative gates:** [docs/controllers/sea_dbs/README.md](README.md) (all panels Fail with documented gaps after the oct 2026 honest-replication pass, §15). Gate design notes: [docs/controllers/sea_dbs/gate_readouts.md](README.md#gate-design). Mehregan panel set is Pass — [docs/controllers/ddpg/README.md](../ddpg/README.md).
 
 ---
 

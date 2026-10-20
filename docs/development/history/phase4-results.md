@@ -52,7 +52,7 @@ Document any gaps between benchmark outcomes and Mehregan et al. §IV figures/ta
 
 | Topic | Chosen convention | Spec reference |
 |-------|-------------------|----------------|
-| γ, τ, update frequency | 0.99, 0.005, 1 | [replication.md](../../controllers/ddpg/method.md) §9.3 |
+| γ, τ, update frequency | 0.99, 0.005, 1 | [method.md](../../controllers/ddpg/method.md) §9.3 |
 | CNN topology | Conv1d 1→16→32, `shrink_dim=4`, adaptive pool | `controllers/ddpg/networks.py` |
 | Eval segment | `eval_steps=5` after reset (≈10 s simulated at 2 s/step) | [environment.md](../../plant/environment.md) §8 |
 | CDBS comparison slack | 5% on `p_beta_mean` vs `cdbs-130hz` | `controllers/ddpg/checklist.py` |
@@ -62,7 +62,7 @@ Document any gaps between benchmark outcomes and Mehregan et al. §IV figures/ta
 
 ## 2. §8 consistency checklist audit (implementation)
 
-Cross-check of [replication.md](../../controllers/ddpg/method.md) §8 against `controllers/ddpg/` (2026-07-01).
+Cross-check of [method.md](../../controllers/ddpg/method.md) §8 against `controllers/ddpg/` (2026-07-01).
 
 | §8 item | Verified | Evidence |
 |---------|----------|----------|

@@ -1,6 +1,6 @@
 # SEA-DBS extensions — post-replication directions
 
-*Exploratory work beyond Ravivarapu et al. paper replication. See [replication.md](method.md) for the paper-accurate spec.*
+*Exploratory work beyond Ravivarapu et al. paper replication. See [method.md](method.md) for the paper-accurate spec.*
 
 ---
 
