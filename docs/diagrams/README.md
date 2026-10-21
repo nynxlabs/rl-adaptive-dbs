@@ -22,14 +22,14 @@ Link the **PNG** from markdown. The SVG names DejaVu Sans, and a viewer without 
 
 ## Style
 
-One image has to read on light and dark pages (GitHub light `#ffffff`, dark `#0d1117`), so renders have a transparent background, mid-grey (`#808080`) edges and edge labels, and edges cut out under their labels. Node colors come from `classDef` lines in each source, using the repo palette (the matplotlib tab10 hues the panel plots use):
+One image has to read on light and dark pages (GitHub light `#ffffff`, dark `#0d1117`), so renders have a transparent background, mid-grey (`#808080`) edges and edge labels, and edges cut out under their labels. Node colors come from `classDef` lines in each source, using the pastel palette the panel plots use (Catppuccin Frappé):
 
 | Role | Fill | Text |
 |------|------|------|
-| Inputs (paper, spec, digitized curves) | `#1f77b4` | white |
-| Plant | `#2ca02c` | white |
-| Training and plots | `#ff7f0e` | `#111111` |
-| Gates, reward, adapters | `#9467bd` | white |
-| Figure page + tracker | `#17becf` | `#111111` |
+| Inputs (paper, spec, digitized curves) | `#8caaee` (blue) | `#232634` |
+| Plant | `#a6d189` (green) | `#232634` |
+| Training and plots | `#ef9f76` (peach) | `#232634` |
+| Gates, reward, adapters | `#ca9ee6` (mauve) | `#232634` |
+| Figure page + tracker | `#81c8be` (teal) | `#232634` |
 
-Orange and cyan are light enough that white text on them falls under 3:1 contrast, so their text is near-black.
+The pastels are light, so every node uses the same dark text for contrast.
