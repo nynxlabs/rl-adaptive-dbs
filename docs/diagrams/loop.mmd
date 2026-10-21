@@ -1,12 +1,12 @@
 %% The shared model: three paper controllers drive one plant through
-%% per-paper adapters (step length, observation, reward). Node text is white on
-%% the darker fills and near-black on orange and cyan, for contrast.
+%% per-paper adapters (step length, observation, reward). Node fills are the
+%% pastel figure palette with dark text, for contrast.
 flowchart LR
   C["controller<br/>DDPG · SEA-DBS · DSQN"]:::train -- "DBS setting" --> A["paper adapter<br/>step · observation · reward"]:::gate
   A -- "stimulation" --> E["shared plant<br/>Kumaravelu et al. (2016)"]:::plant
   E -- "LFP beta power" --> A
   A -- "state + reward" --> C
 
-  classDef plant fill:#2ca02c,stroke:#2ca02c,color:#ffffff
-  classDef train fill:#ff7f0e,stroke:#ff7f0e,color:#111111
-  classDef gate fill:#9467bd,stroke:#9467bd,color:#ffffff
+  classDef plant fill:#a6d189,stroke:#a6d189,color:#232634
+  classDef train fill:#ef9f76,stroke:#ef9f76,color:#232634
+  classDef gate fill:#ca9ee6,stroke:#ca9ee6,color:#232634
