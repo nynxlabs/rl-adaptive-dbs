@@ -221,6 +221,14 @@ def _rgb(color: list[int] | None) -> tuple[float, float, float] | None:
     return (color[0] / 255.0, color[1] / 255.0, color[2] / 255.0)
 
 
+def _readable(color: tuple[float, float, float] | None) -> tuple[float, float, float] | str | None:
+    """A pale, nearly colorless sampled color (e.g. Mehregan Fig 4b's light blue-grey
+    curves) vanishes on a light page, so draw it in the shared neutral grey instead."""
+    if color is not None and min(color) >= 0.6 and max(color) - min(color) <= 0.12:
+        return _figure_style().NEUTRAL
+    return color
+
+
 def _read_curves(path: Path, *, bin_near_duplicates: bool) -> list[_Series]:
     payload = json.loads(path.read_text())
     curves = load_refined(path, bin_near_duplicates=bin_near_duplicates)
@@ -288,7 +296,7 @@ def _draw_curves(ax: Axes, series: list[_Series]) -> None:
             s.x,
             s.y,
             label=s.name,
-            color=s.color,
+            color=_readable(s.color),
             linewidth=0.9 if raw else 1.6,
             alpha=0.5 if raw else 1.0,
             linestyle="--" if dashed else "-",
