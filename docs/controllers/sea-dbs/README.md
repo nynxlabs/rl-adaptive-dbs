@@ -45,13 +45,13 @@ No panel regressed. SEA-DBS learns gradually now, but every actor still stimulat
 <!-- summary:start -->
 | Panel | Description | Status |
 |-------|-------------|--------|
-| Fig 4a | Training PSD vs episode | Fail — 18/28 gates pass (rep v84) |
-| Fig 4b | Training reward vs episode | Fail — 16/20 gates pass (rep v22) |
-| Fig 5a | Inference @ 50 Hz | Fail — 12/20 gates pass (rep v26) |
-| Fig 5b | Inference @ 30 Hz | Fail — 6/22 gates pass (rep v26) |
-| Fig 6 | FP16 PTQ @ 50 Hz | Fail — 10/15 gates pass (rep v26) |
-| Fig 7 | Ablation (Baseline / +PM / +GS / SEA-DBS) | Fail — 7/17 gates pass (rep v31) |
-| Table II | Avg PSD with the plant reseeded every n steps | Fail — 2/6 gates pass (rep v3) |
+| Fig 4a | Training PSD vs episode | Fail — 18/28 gates pass (rep v85) |
+| Fig 4b | Training reward vs episode | Fail — 16/20 gates pass (rep v23) |
+| Fig 5a | Inference @ 50 Hz | Fail — 12/20 gates pass (rep v27) |
+| Fig 5b | Inference @ 30 Hz | Fail — 6/22 gates pass (rep v27) |
+| Fig 6 | FP16 PTQ @ 50 Hz | Fail — 10/15 gates pass (rep v27) |
+| Fig 7 | Ablation (Baseline / +PM / +GS / SEA-DBS) | Fail — 7/17 gates pass (rep v32) |
+| Table II | Avg PSD with the plant reseeded every n steps | Fail — 2/6 gates pass (rep v4) |
 <!-- summary:end -->
 
 Replication PNGs: `docs/controllers/sea-dbs/figures/images/`. JSON caches: `artifacts/figures/papers/`. Paper references: `images/<panel>/arxiv_v*.png`, crops of the figures in the authors' arXiv version — Ravivarapu, Bagwe, Yuan, Yu, Zhang, *Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson's Disease*, arXiv:2507.06326v1, © the authors, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); cropped, otherwise unchanged ([LICENSING.md](../../../LICENSING.md#figures-from-the-replicated-papers)). A local, gitignored `paper.png` crop of the published figure for the digitization tools comes from `scripts/digitization/paper_crops.py build`. Controller spec: [method.md](method.md). Schematics (paper Figs 1, 3) are **out of scope**. Fig 2 (reward curve) is optional polish, not a gate.

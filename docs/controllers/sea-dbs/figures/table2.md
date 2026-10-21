@@ -12,15 +12,15 @@
 
 ### Replication
 
-![Replication Table II](images/table2/avg_psd_v3.png)
+![Replication Table II](images/table2/avg_psd_v4.png)
 
 <!-- caption-t2:start -->
-**Caption:** Table II avg PSD (×1000 normalized) with the plant reseeded every n steps; plant seeds 0–29 once per n (30 blocks of n steps), argmax rollout @ 50 Hz on the Fig 4 checkpoints; pass=False; bars ours, dashes paper. (v3)
+**Caption:** Table II avg PSD (×1000 normalized) with the plant reseeded every n steps; plant seeds 0–29 once per n (30 blocks of n steps), argmax rollout @ 50 Hz on the Fig 4 checkpoints; pass=False; bars ours, dashes paper. (v4)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/table2/manifest.json`
 <!-- caption-t2:end -->
 
-**Status:** Fail (rep v3, 1 × 32 networks) — 2 of 6 gates pass, unchanged from rep v2: both always-on policies give 396 / 366 / 348 / 344 for n = 10 / 20 / 50 / 75 (paper Baseline 364 / 366 / 332 / 328, SEA-DBS 326 / 309 / 304 / 302). Each reseed costs a fixed transient (A ≈ 600 PSD·steps vs the paper's ≈ 273) because a reseed re-prefills the window with untreated values. Manifest `artifacts/figures/papers/ravivarapu/table2/manifest.json`.
+**Status:** Fail (rep v4) (`sea_below_baseline_every_n, gap_near_paper_every_n, baseline_near_paper_every_n, sea_near_paper_every_n`). Manifest `artifacts/figures/papers/ravivarapu/table2/manifest.json`.
 
 ## How to reproduce
 
@@ -36,7 +36,7 @@ uv run python -m rl_adaptive_dbs.run scripts/figures/papers/ravivarapu/table2/pl
 ## Gates
 
 <!-- gates-t2:start -->
-**Gates set** (`artifacts/figures/papers/ravivarapu/table2/manifest.json`; overall **`pass`**: no, 2026-10-19). Every row is required for exit.
+**Gates set** (`artifacts/figures/papers/ravivarapu/table2/manifest.json`; overall **`pass`**: no, 2026-10-21). Every row is required for exit.
 
 | Key | Description | Pass |
 |-----|-------------|------|
