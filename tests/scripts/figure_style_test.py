@@ -44,7 +44,7 @@ def test_saved_png_has_transparent_background() -> None:
     assert img[img.shape[0] // 2, img.shape[1] // 3, 3] == 0  # inside the axes, off the line
 
 
-def test_finalize_recolors_black_but_keeps_series_colors() -> None:
+def test_finalize_recolors_black_and_maps_series_to_pastel() -> None:
     _overlay.apply_figure_style()
     fig, ax = plt.subplots()
     black = ax.plot([0, 1], [0, 1], color="k", alpha=0.5)[0]
@@ -57,11 +57,11 @@ def test_finalize_recolors_black_but_keeps_series_colors() -> None:
     neutral = to_rgba(_style.NEUTRAL)
     assert to_rgba(black.get_color())[:3] == neutral[:3]
     assert black.get_alpha() == 0.5  # keeps the trace's own alpha
-    assert to_hex(blue.get_color()) == "#1f77b4"
+    assert to_hex(blue.get_color()) == _style.PASTEL["blue"]
     assert to_rgba(grid_ref.get_color())[:3] == neutral[:3]
     assert to_rgba(text.get_color())[:3] == neutral[:3]
     assert to_rgba(ax.xaxis.label.get_color())[:3] == neutral[:3]
-    assert to_rgba(leg.get_frame().get_facecolor()) == to_rgba(_style.WASH_RGBA)
+    assert to_rgba(leg.get_frame().get_facecolor())[3] == 0  # unfilled outline
     assert to_rgba(fig.patch.get_facecolor())[3] == 0
     plt.close(fig)
 
@@ -90,6 +90,23 @@ def test_finalize_keeps_colored_twin_axis_ticks() -> None:
     fig.canvas.draw()
     _style.finalize(fig)
     fig.canvas.draw()
-    assert to_hex(twin.yaxis.get_major_ticks()[0].label2.get_color()) == "#d62728"
+    assert to_hex(twin.yaxis.get_major_ticks()[0].label2.get_color()) == _style.PASTEL["red"]
     assert to_hex(ax.xaxis.get_major_ticks()[0].label1.get_color()) == _style.NEUTRAL
+    plt.close(fig)
+
+
+def test_raw_tint_follows_its_series_at_half_alpha() -> None:
+    _overlay.apply_figure_style()
+    fig, ax = plt.subplots()
+    raw = ax.plot([0, 1], [0, 1], color="#9ecae1", alpha=0.8, label="Raw")[0]
+    smooth = ax.plot([0, 1], [1, 0], color="#08519c", linewidth=2.0, label="Smoothed")[0]
+    odd = ax.plot([0, 1], [0.5, 0.5], color="#e6194b", label="Other red")[0]
+    _style.finalize(fig)
+    _style.finalize(fig)  # idempotent: no second remap or widening
+    blue = to_rgba(_style.PASTEL["blue"])
+    assert to_rgba(raw.get_color())[:3] == blue[:3]
+    assert abs(raw.get_alpha() - 0.8 * _style.RAW_TINT_ALPHA) < 1e-6
+    assert to_hex(smooth.get_color()) == _style.PASTEL["blue"]
+    assert abs(smooth.get_linewidth() - 2.0 * _style.LINE_SCALE) < 1e-6
+    assert to_hex(odd.get_color()) == _style.PASTEL["red"]  # nearest-hue fallback
     plt.close(fig)

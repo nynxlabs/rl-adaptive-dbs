@@ -14,13 +14,19 @@ dark, ``#0d1117``), so one image has to read on both:
   become a translucent grey wash;
 - legends are a neutral outline with no fill: each panel places its legend over
   empty plot area, so nothing needs hiding behind it;
-- the semantic series colors (tab10 hues, paper-overlay tints) are left alone.
+- series colors become one pastel palette (Catppuccin Frappé, :data:`PASTEL`): each
+  hue a script picks (tab10, ColorBrewer, the paper-overlay tints) maps to the pastel
+  of the same role (blue stays blue, red stays red), and a pale "raw trace" tint maps
+  to that pastel at half alpha so the smoothed line stays the stronger one. Lines get
+  :data:`LINE_SCALE` wider, since pastels are light on a white page.
 """
 from __future__ import annotations
 
+import colorsys
 from typing import Any
 
 import matplotlib as mpl
+from cycler import cycler
 from matplotlib import colors as mcolors
 
 # Mid-grey: about 3.9:1 contrast on #ffffff and 5.3:1 on #0d1117.
@@ -31,6 +37,46 @@ GRID_ALPHA = 0.35
 WASH_RGBA = "#80808029"  # NEUTRAL at alpha 0.16
 LEGEND_EDGE_RGBA = "#80808099"  # NEUTRAL at alpha 0.6
 DPI = 150
+
+# Catppuccin Frappé accents: soft on dark pages, still visible on white.
+PASTEL = {
+    "blue": "#8caaee",
+    "peach": "#ef9f76",
+    "green": "#a6d189",
+    "red": "#e78284",
+    "mauve": "#ca9ee6",
+    "teal": "#81c8be",
+    "yellow": "#e5c890",
+    "pink": "#f4b8e4",
+}
+# Hues the panel scripts use, by role. Anything else saturated falls back to the
+# pastel of nearest hue (see _pastel_for).
+SERIES_PASTEL = {
+    **dict.fromkeys(
+        ("#1f77b4", "#0a64c0", "#08519c", "#377eb8", "#3756e1", "#1f3fd1"), PASTEL["blue"]
+    ),
+    **dict.fromkeys(("#ff7f0e", "#d95f02", "#e8731a"), PASTEL["peach"]),
+    **dict.fromkeys(
+        ("#2ca02c", "#16a34a", "#4daf4a", "#2ecc40", "#1b7837"), PASTEL["green"]
+    ),
+    **dict.fromkeys(("#d62728", "#e41a1c", "#c81219", "#a50f15"), PASTEL["red"]),
+    **dict.fromkeys(
+        ("#9467bd", "#8336e2", "#4a148c", "#9938b1", "#7b2d8e", "#7b6ba8"), PASTEL["mauve"]
+    ),
+    "#1f6f6f": PASTEL["teal"],
+    "#bcbd22": PASTEL["mauve"],  # yellow is too faint on white for a main series
+}
+# Pale tints scripts use for raw traces under a smoothed line: the pastel at half alpha.
+RAW_TINT_PASTEL = {
+    "#9ecae1": PASTEL["blue"],
+    **dict.fromkeys(("#fcbba1", "#fb9a99"), PASTEL["red"]),
+    **dict.fromkeys(("#a1d99b", "#b2df8a"), PASTEL["green"]),
+}
+RAW_TINT_ALPHA = 0.5
+# Paper overlays are dashed and drawn as pale tints of the series color; a pale tint of
+# a pastel vanishes on white, so dashed lines keep at least this alpha instead.
+DASHED_MIN_ALPHA = 0.85
+LINE_SCALE = 1.2
 
 RC: dict[str, Any] = {
     "figure.facecolor": "none",
@@ -63,6 +109,7 @@ RC: dict[str, Any] = {
     "legend.fontsize": 8.5,
     "figure.titlesize": 12,
     "axes.linewidth": 0.8,
+    "axes.prop_cycle": cycler(color=list(PASTEL.values())),
 }
 
 
@@ -233,10 +280,128 @@ def _recolor_artist(artist) -> None:
         _recolor_collection(artist)
 
 
+_PASTEL_HUES = [(colorsys.rgb_to_hls(*mcolors.to_rgb(c))[0], c) for c in PASTEL.values()]
+
+
+def _pastel_for(rgba: tuple[float, float, float, float] | None) -> tuple[float, ...] | None:
+    """Pastel replacement for a series color, or ``None`` to leave it (neutrals, pastels)."""
+    if rgba is None or rgba[3] == 0:
+        return None
+    key = mcolors.to_hex(rgba[:3])
+    if key in SERIES_PASTEL:
+        return (*mcolors.to_rgb(SERIES_PASTEL[key]), rgba[3])
+    if key in RAW_TINT_PASTEL:
+        return (*mcolors.to_rgb(RAW_TINT_PASTEL[key]), rgba[3] * RAW_TINT_ALPHA)
+    if key in PASTEL.values():
+        return None
+    h, l, sat = colorsys.rgb_to_hls(*rgba[:3])
+    if sat < 0.25 or max(rgba[:3]) - min(rgba[:3]) < 0.12:
+        return None
+    hue = min(_PASTEL_HUES, key=lambda hc: min(abs(h - hc[0]), 1 - abs(h - hc[0])))[1]
+    alpha = rgba[3] * (RAW_TINT_ALPHA if l > 0.72 else 1.0)
+    return (*mcolors.to_rgb(hue), alpha)
+
+
+def _pastelize(artist) -> None:
+    from matplotlib.collections import Collection
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+    from matplotlib.text import Text
+
+    dimmed = False
+
+    def swap(get, set_):
+        nonlocal dimmed
+        old = _rgba(getattr(artist, get)())
+        new = _pastel_for(old)
+        if new is None:
+            return
+        getattr(artist, set_)(new)
+        # An artist-level alpha overrides the color's own, so dim it there too (once).
+        if new[3] < old[3] - 1e-9 and artist.get_alpha() is not None and not dimmed:
+            artist.set_alpha(artist.get_alpha() * RAW_TINT_ALPHA)
+            dimmed = True
+
+    if isinstance(artist, Line2D) and artist.get_linestyle() not in ("-", "solid", "None", "none", ""):
+        # Paper overlay: same pastel as its series, told apart by the dash, not by fading.
+        old = _rgba(artist.get_color())
+        new = _pastel_for(old)
+        if new is not None:
+            artist.set_color((*new[:3], max(old[3], DASHED_MIN_ALPHA)))
+            if artist.get_alpha() is not None:
+                artist.set_alpha(max(artist.get_alpha(), DASHED_MIN_ALPHA))
+        for pair in (("get_markerfacecolor", "set_markerfacecolor"), ("get_markeredgecolor", "set_markeredgecolor")):
+            swap(*pair)
+    elif isinstance(artist, Line2D):
+        for pair in (
+            ("get_color", "set_color"),
+            ("get_markerfacecolor", "set_markerfacecolor"),
+            ("get_markeredgecolor", "set_markeredgecolor"),
+        ):
+            swap(*pair)
+    elif isinstance(artist, Text):
+        swap("get_color", "set_color")
+    elif isinstance(artist, Patch):
+        swap("get_facecolor", "set_facecolor")
+        swap("get_edgecolor", "set_edgecolor")
+    elif isinstance(artist, Collection):
+        for get, set_ in (("get_facecolor", "set_facecolor"), ("get_edgecolor", "set_edgecolor")):
+            try:
+                arr = getattr(artist, get)()
+            except Exception:
+                continue
+            if arr is None or len(arr) == 0:
+                continue
+            out = [_pastel_for(tuple(float(v) for v in c)) or tuple(c) for c in arr]
+            getattr(artist, set_)(out)
+
+
+def _pastelize_figure(fig) -> None:
+    """Map every series color to :data:`PASTEL` and widen lines (once per figure)."""
+    from matplotlib.legend import Legend
+    from matplotlib.lines import Line2D
+
+    if getattr(fig, "_pastelized", False):
+        return
+    fig._pastelized = True
+    seen: set[int] = set()
+    artists = []
+    for ax in fig.get_axes():
+        artists += ax.findobj(include_self=False)
+        for axis in (ax.xaxis, ax.yaxis):
+            artists += axis.get_ticklabels() + [axis.label]
+            for tick in axis.get_major_ticks() + axis.get_minor_ticks():
+                artists += [tick.label1, tick.label2, tick.tick1line, tick.tick2line]
+        artists += list(ax.spines.values())
+    for leg in fig.legends:
+        artists += leg.findobj()
+    for artist in artists:
+        if id(artist) in seen or isinstance(artist, Legend):
+            continue
+        seen.add(id(artist))
+        _pastelize(artist)
+        if isinstance(artist, Line2D) and artist.get_label():  # data lines; grid/tick lines have no label
+            artist.set_linewidth(artist.get_linewidth() * LINE_SCALE)
+    # Colored twin-axis tick labels: set through tick_params so new ticks keep the color.
+    for ax in fig.get_axes():
+        for name, axis in (("x", ax.xaxis), ("y", ax.yaxis)):
+            ticks = axis.get_major_ticks()
+            if not ticks:
+                continue
+            for label in (ticks[0].label1, ticks[0].label2):
+                new = _pastel_for(_rgba(label.get_color()))
+                if new is not None:
+                    ax.tick_params(axis=name, labelcolor=new)
+            new = _pastel_for(_rgba(ticks[0].tick1line.get_color()))
+            if new is not None:
+                ax.tick_params(axis=name, color=new)
+
+
 def finalize(fig) -> None:
     """Make an already-drawn figure match the shared style (idempotent)."""
     from matplotlib.legend import Legend
 
+    _pastelize_figure(fig)
     fig.patch.set_facecolor("none")
     fig.patch.set_edgecolor("none")
     for ax in fig.get_axes():

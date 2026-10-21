@@ -238,8 +238,11 @@ def plot_panel(cfg: EfficacyPanel, payload: dict[str, Any], *, out_path: Path) -
     ax.set_xlabel("Time (sec)")
     ax.set_ylabel("PSD")
     ax.grid(True, axis="y", color="#cccccc", linewidth=0.6, alpha=0.9)
+    # Legend outside the plot, on the right: the traces fill the whole plot area.
+    _paper_overlay.place_legend(
+        ax, loc="upper left", bbox_to_anchor=(1.01, 1.0), borderaxespad=0.0, fontsize=8, ncol=1
+    )
     fig.tight_layout()
-    _paper_overlay.place_legend(ax, loc="lower left", fontsize=8, ncol=1)
     fig.savefig(out_path, facecolor=fig.get_facecolor())
     plt.close(fig)
     means = panel_means(payload)

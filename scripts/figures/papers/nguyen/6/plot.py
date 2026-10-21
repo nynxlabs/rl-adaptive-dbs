@@ -218,7 +218,9 @@ def plot_series(series: dict[str, Any], out_path: Path, *, smooth_window: int) -
             labels=list(labels),
             fontsize=8,
             ncol=3,
+            # Below the axes: the paper frequency peak reaches the top of the plot.
             loc="upper center",
+            bbox_to_anchor=(0.5, -0.16),
         )
 
     last_ep = max(0, ab.size - 1)

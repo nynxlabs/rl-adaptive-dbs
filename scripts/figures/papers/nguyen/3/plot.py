@@ -261,8 +261,11 @@ def plot_samples(samples: dict[str, Any], out_path: Path) -> None:
     )
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
-    _paper_overlay.place_legend(ax0, fontsize=8, loc="lower right")
-    fig.savefig(out_path, dpi=150)
+    # Below panel (a): the scatter fills the whole plot area.
+    _paper_overlay.place_legend(
+        ax0, fontsize=8, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=3
+    )
+    fig.savefig(out_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
 
