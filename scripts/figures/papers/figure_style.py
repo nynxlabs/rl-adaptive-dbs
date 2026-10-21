@@ -281,6 +281,23 @@ def _recolor_artist(artist) -> None:
 
 
 _PASTEL_HUES = [(colorsys.rgb_to_hls(*mcolors.to_rgb(c))[0], c) for c in PASTEL.values()]
+# Per-figure picks for colors not in the tables (set by _pastelize_figure).
+_figure_picks: dict[str, str] = {}
+
+
+def _hue_gap(a: float, b: float) -> float:
+    return min(abs(a - b), 1 - abs(a - b))
+
+
+def _is_other_series(rgba) -> bool:
+    """Saturated color outside the tables (e.g. sampled from a digitized paper figure)."""
+    if rgba is None or rgba[3] == 0:
+        return False
+    key = mcolors.to_hex(rgba[:3])
+    if key in SERIES_PASTEL or key in RAW_TINT_PASTEL or key in PASTEL.values():
+        return False
+    h, l, sat = colorsys.rgb_to_hls(*rgba[:3])
+    return sat >= 0.25 and max(rgba[:3]) - min(rgba[:3]) >= 0.12 and l <= 0.72
 
 
 def _pastel_for(rgba: tuple[float, float, float, float] | None) -> tuple[float, ...] | None:
@@ -297,7 +314,7 @@ def _pastel_for(rgba: tuple[float, float, float, float] | None) -> tuple[float, 
     h, l, sat = colorsys.rgb_to_hls(*rgba[:3])
     if sat < 0.25 or max(rgba[:3]) - min(rgba[:3]) < 0.12:
         return None
-    hue = min(_PASTEL_HUES, key=lambda hc: min(abs(h - hc[0]), 1 - abs(h - hc[0])))[1]
+    hue = _figure_picks.get(key) or min(_PASTEL_HUES, key=lambda hc: _hue_gap(h, hc[0]))[1]
     alpha = rgba[3] * (RAW_TINT_ALPHA if l > 0.72 else 1.0)
     return (*mcolors.to_rgb(hue), alpha)
 
@@ -375,6 +392,40 @@ def _pastelize_figure(fig) -> None:
         artists += list(ax.spines.values())
     for leg in fig.legends:
         artists += leg.findobj()
+    # Distinct colors outside the tables get distinct pastels: nearest hue first, skipping
+    # pastels the figure already uses, so two paper oranges don't both turn yellow.
+    from matplotlib.collections import Collection
+    from matplotlib.patches import Patch
+
+    used = set()
+    others: dict[str, tuple[float, ...]] = {}
+    for artist in artists:
+        if isinstance(artist, Line2D):
+            colors = [_rgba(artist.get_color())]
+        elif isinstance(artist, Patch):
+            colors = [_rgba(artist.get_facecolor())]
+        elif isinstance(artist, Collection):
+            try:
+                colors = [tuple(float(v) for v in c) for c in artist.get_facecolor()]
+            except Exception:
+                colors = []
+        else:
+            continue
+        for rgba in colors:
+            if rgba is None or rgba[3] == 0:
+                continue
+            key = mcolors.to_hex(rgba[:3])
+            if key in SERIES_PASTEL:
+                used.add(SERIES_PASTEL[key])
+            elif _is_other_series(rgba):
+                others.setdefault(key, rgba)
+    _figure_picks.clear()
+    for key, rgba in sorted(others.items(), key=lambda kv: -colorsys.rgb_to_hls(*kv[1][:3])[2]):
+        h = colorsys.rgb_to_hls(*rgba[:3])[0]
+        ranked = sorted(_PASTEL_HUES, key=lambda hc: _hue_gap(h, hc[0]))
+        pick = next((c for _, c in ranked if c not in used), ranked[0][1])
+        _figure_picks[key] = pick
+        used.add(pick)
     for artist in artists:
         if id(artist) in seen or isinstance(artist, Legend):
             continue

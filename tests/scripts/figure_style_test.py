@@ -110,3 +110,14 @@ def test_raw_tint_follows_its_series_at_half_alpha() -> None:
     assert abs(smooth.get_linewidth() - 2.0 * _style.LINE_SCALE) < 1e-6
     assert to_hex(odd.get_color()) == _style.PASTEL["red"]  # nearest-hue fallback
     plt.close(fig)
+
+
+def test_unlisted_colors_get_distinct_pastels() -> None:
+    _overlay.apply_figure_style()
+    fig, ax = plt.subplots()
+    a = ax.plot([0, 1], [0, 1], color="#e8901c", label="paper orange")[0]
+    b = ax.plot([0, 1], [1, 0], color="#d9a441", label="paper tan")[0]
+    _style.finalize(fig)
+    assert to_hex(a.get_color()) != to_hex(b.get_color())
+    assert {to_hex(a.get_color()), to_hex(b.get_color())} <= set(_style.PASTEL.values())
+    plt.close(fig)
