@@ -4,6 +4,7 @@ __pycache__/
 results/
 artifacts/
 logs/
+/logs
 docs/controllers/*/figures/images/_full/
 *.bak.*
 nohup.out

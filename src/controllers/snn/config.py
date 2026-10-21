@@ -362,7 +362,7 @@ def fig4_nguyen_config(
     minibatches per update, 1,650-transition replay warm-up, rewards scaled by 1e-4 for
     learning only. Plant: Kumaravelu's coupling, every STN neuron gets the full DBS current
     (ρ = 1, as in the authors' published simulator; the Oct 11 2026 ρ = 3 deviation was
-    dropped Oct 18 2026 with master's OK). Training redraws the wiring every 100 ms step;
+    dropped Oct 18 2026 with the maintainer's OK). Training redraws the wiring every 100 ms step;
     the Fig 7 eval keeps one wiring per episode (docs/controllers/snn/figures/4.md § Wiring as a
     setting).
     """

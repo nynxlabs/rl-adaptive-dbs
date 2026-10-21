@@ -1,6 +1,6 @@
 """Automated paper-curve extraction via PIL color-mask tracing.
 
-Reusable implementation of the approach the cursor agent used for the
+Reusable implementation of the approach used for the
 ravivarapu fig 4a/4b curves.json (jul 2026). Works on clean paper PNGs:
 white background, distinct saturated curve colors, small images.
 

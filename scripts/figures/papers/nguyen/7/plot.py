@@ -13,7 +13,7 @@ runs the reset window at the initial 40 Hz instead (the eval up to v28).
 Each eval episode is also a fresh network that keeps its wiring for the whole episode
 (``plant_fixed_network=True``), while training redraws the wiring every 100 ms step. §IV:
 "a random seed for each episode to emulate patient-specific neural responses". Adopted
-Oct 18 2026 with master's OK (docs/controllers/snn/figures/4.md § Wiring as a setting);
+Oct 18 2026 with the maintainer's OK (docs/controllers/snn/figures/4.md § Wiring as a setting);
 ``--training-plant`` evaluates on the checkpoint's own plant instead (the eval up to v30).
 
 Run:

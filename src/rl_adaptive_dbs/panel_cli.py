@@ -158,7 +158,7 @@ def _log_window(session: str, log: Path) -> list[str]:
 
     The pane tails the log until the run window's process exits, so the tmux session (and its
     scope) still ends with the run. ``@pounce_readonly`` / ``@pounce_title`` are read by pounce,
-    master's terminal app, which lists every tmux session and attaches to this one read-only.
+    the maintainer's terminal app, which lists every tmux session and attaches to this one read-only.
     """
     target = f"={session}:"
     follow = (

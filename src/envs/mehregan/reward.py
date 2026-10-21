@@ -19,7 +19,7 @@ def mehregan_reward(
     Above $\\beta_t$ both readings are Eq. (8)'s quadratic penalty. Below it the
     printed Eq. (8) is ``(s_sum - beta_t) * 10``, which is negative there and so
     contradicts the prose ("a positive reward if it falls below the threshold").
-    ``"square"`` (default, master-approved Oct 17 2026) is the curve the paper
+    ``"square"`` (default, maintainer-approved Oct 17 2026) is the curve the paper
     plots in Fig. 3c, $+((\\beta_t - s_{sum}) \\cdot 10)^2$ (digitized:
     $R(0) \\approx 11$, fitted exponent 2.1): the text points to Fig. 3c as the
     reward and the printed branch has the wrong sign. ``"linear"`` is the

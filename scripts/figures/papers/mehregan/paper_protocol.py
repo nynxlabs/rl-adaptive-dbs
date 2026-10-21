@@ -113,7 +113,7 @@ class PaperKnobs:
     gamma: float = DEFAULT_GAMMA
     tau: float = DEFAULT_TAU
     # Not paper-silent: reading of Eq. (8) below beta_t. "square" = Fig. 3c's
-    # plotted curve (master-approved Oct 17 2026); "linear" = printed branch,
+    # plotted curve (maintainer-approved Oct 17 2026); "linear" = printed branch,
     # sign flipped (kept to separate the reward effect in candidate runs).
     reward_below: str = "square"
     # Alg. 1 line 15 "for update frequency do": our reading (agreed with the

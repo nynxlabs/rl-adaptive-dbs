@@ -281,7 +281,7 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "Candidate reading (not the shipped one): plot each episode's Q-quantile of its "
             "per-step α–β readings instead of the final reading. Needs a series with "
-            "episode_alpha_beta_steps; never promote a candidate without master's OK"
+            "episode_alpha_beta_steps; never promote a candidate without the maintainer's OK"
         ),
     )
     args = parser.parse_args(argv)
