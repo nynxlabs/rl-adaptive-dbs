@@ -7,6 +7,7 @@ Where everything in `docs/` lives. Start with the [README](../README.md) for wha
 | [guides/](guides/) | Using the tools: [setup](guides/setup.md), [MATLAB backend](guides/matlab.md), [CLI](guides/cli.md), [TUI](guides/tui.md), [benchmarking](guides/benchmarking.md) |
 | [plant/](plant/) | The shared model: the [Kumaravelu et al. (2016) plant](plant/README.md), the [RL environment](plant/environment.md) built on it, and our [patches to the vendor MATLAB code](plant/vendor-patches.md) |
 | [controllers/](controllers/) | One folder per replicated paper's controller: its tracker, method spec, extensions, and one page per figure. [Overview and side-by-side showcase](controllers/README.md) |
+| [diagrams/](diagrams/README.md) | Structure diagrams (Mermaid sources with committed SVG + PNG renders): [how a panel is checked](diagrams/pipeline.png) and [the controller–plant loop](diagrams/loop.png) |
 | [extensions/](extensions/) | Work beyond the papers ([alphabet diversity](extensions/alphabet-diversity/README.md)) |
 | [development/](development/) | Contributing: roadmap, conventions, testing, `uv`, fresh-machine validation, replication fidelity; finished snapshots in [development/history/](development/history/) |
 

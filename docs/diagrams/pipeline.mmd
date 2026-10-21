@@ -1,14 +1,14 @@
 %% How we check: every panel is rebuilt from the paper and scored against
 %% curves digitized from the paper's own figure.
 flowchart LR
-  P["paper text + figures"]:::input --> S["spec in docs/"]:::input
+  P["paper text + figures"]:::input --> S["spec<br/>docs/plant · docs/controllers"]:::input
   P --> D["digitized paper curves"]:::input
   S --> M["plant: Kumaravelu model"]:::plant
   M --> T["train controller"]:::train
   T --> F["panel plot"]:::train
   F --> G{{"gates"}}:::gate
   D --> G
-  G -- "all pass" --> R["tracker: replicated"]:::tracker
+  G -- "all pass" --> R["figure page + tracker:<br/>replicated"]:::tracker
   G -- "any fail" --> S
 
   classDef input fill:#1f77b4,stroke:#1f77b4,color:#ffffff

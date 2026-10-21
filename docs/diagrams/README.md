@@ -4,7 +4,7 @@ Structure diagrams for the README and docs. Each `<name>.mmd` is a [Mermaid](htt
 
 | Source | Shows | Used in |
 |--------|-------|---------|
-| [pipeline.mmd](pipeline.mmd) | How a panel is checked: paper → spec + digitized curves → plant → training → plot → gates → tracker | README, "How we check" |
+| [pipeline.mmd](pipeline.mmd) | How a panel is checked: paper → spec + digitized curves → plant → training → plot → gates → figure page + tracker | README, "How we check" |
 | [loop.mmd](loop.mmd) | The shared model: controller ↔ paper adapter ↔ Kumaravelu plant | README, "The shared model" |
 
 ## Render
@@ -30,6 +30,6 @@ One image has to read on light and dark pages (GitHub light `#ffffff`, dark `#0d
 | Plant | `#2ca02c` | white |
 | Training and plots | `#ff7f0e` | `#111111` |
 | Gates, reward, adapters | `#9467bd` | white |
-| Tracker | `#17becf` | `#111111` |
+| Figure page + tracker | `#17becf` | `#111111` |
 
 Orange and cyan are light enough that white text on them falls under 3:1 contrast, so their text is near-black.
