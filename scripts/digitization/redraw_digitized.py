@@ -3,7 +3,9 @@
 Each panel's digitized values (``curves_*.json`` under the artifacts root, read off
 the published figure) are drawn with matplotlib and saved as
 ``docs/controllers/<controller>/figures/images/<panel>/digitized_v<N>.png``. The caption says the figure
-is ``Digitized from Fig. X of <paper>``, and the footer says it is our redraw.
+is ``Digitized from Fig. X of <paper>``, and the footer says it is our redraw. The
+figure uses the panels' shared style (``scripts/figures/papers/figure_style.py``), so it
+reads on light and dark pages.
 
     uv run python scripts/digitization/redraw_digitized.py --all
     uv run python scripts/digitization/redraw_digitized.py --panel mehregan/4a --panel nguyen/6
@@ -20,6 +22,7 @@ a cached image must refresh.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import sys
 from dataclasses import dataclass
@@ -38,6 +41,7 @@ REPO = Path(__file__).resolve().parents[2]
 DEFAULT_ARTIFACTS = REPO / "artifacts" / "figures" / "papers"
 DEFAULT_OUT_ROOT = REPO  # images go to <root>/docs/controllers/<controller>/figures/images/
 FIGS_DIR = Path(__file__).resolve().parent / "figs"
+FIGURE_STYLE = REPO / "scripts" / "figures" / "papers" / "figure_style.py"
 
 DPI = 150
 FOOTER = "Our redraw of values read off the published figure; not the original figure."
@@ -300,14 +304,28 @@ def _draw_boxplot(ax: Axes, stats: list[dict[str, float]]) -> None:
         positions=[1, 2],
         widths=0.5,
         showmeans=True,
-        meanprops={"marker": "x", "markeredgecolor": "black", "markersize": 6},
+        meanprops={"marker": "x", "markeredgecolor": _figure_style().NEUTRAL, "markersize": 6},
     )
     ax.set_xticks([1, 2], ["PD Off", "PD On"])
     ax.legend(
-        handles=[Line2D([0], [0], marker="x", color="black", linestyle="", label="mean")],
+        handles=[Line2D([0], [0], marker="x", color=_figure_style().NEUTRAL, linestyle="", label="mean")],
         fontsize=8,
         frameon=False,
     )
+
+
+def _figure_style():
+    """The panels' shared style module (transparent background, neutral grey chrome)."""
+    if "figure_style" in sys.modules:
+        return sys.modules["figure_style"]
+    spec = importlib.util.spec_from_file_location("figure_style", FIGURE_STYLE)
+    if spec is None or spec.loader is None:
+        msg = f"cannot load figure style from {FIGURE_STYLE}"
+        raise ImportError(msg)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def _warn(message: str) -> None:
@@ -323,6 +341,8 @@ def draw_panel(key: str, panel: Panel, *, artifacts: Path, out_root: Path, versi
             _warn(f"skip {key}: missing input {p}")
         return None
 
+    style = _figure_style()
+    style.apply()
     rows, cols = _GRID[len(panel.axes)]
     fig = Figure(figsize=_FIGSIZE[len(panel.axes)], dpi=DPI)
     grid = fig.subplots(rows, cols, squeeze=False).ravel()
@@ -355,12 +375,13 @@ def draw_panel(key: str, panel: Panel, *, artifacts: Path, out_root: Path, versi
         ax.set_ylabel(spec.ylabel)
 
     fig.suptitle(f"Digitized from Fig. {panel.fig} of {CITATIONS[panel.paper]}", fontsize=12)
-    fig.text(0.5, 0.012, FOOTER, ha="center", va="bottom", fontsize=8.5, color="0.3")
+    fig.text(0.5, 0.012, FOOTER, ha="center", va="bottom", fontsize=8.5, color=style.NEUTRAL)
     fig.tight_layout(rect=(0.0, 0.05, 1.0, 0.93))
 
     out = doc_paths.figure_images_dir(panel.paper, panel.fig, out_root) / f"digitized_v{version}.png"
     out.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out, dpi=DPI, facecolor="white")
+    style.finalize(fig)
+    fig.savefig(out, dpi=DPI)
     return out
 
 
