@@ -10,8 +10,10 @@ dark, ``#0d1117``), so one image has to read on both:
 - transparent figure and axes backgrounds;
 - text, spines, ticks, and grid in a neutral mid-grey (:data:`NEUTRAL`);
 - near-black artists a script drew (``"k"``, ``"#111111"``, paper overlays) become
-  :data:`NEUTRAL` too, since black disappears on a dark page; near-white fills
-  (opaque legend frames, light box fills) become a translucent grey wash;
+  :data:`NEUTRAL` too, since black disappears on a dark page; near-white box fills
+  become a translucent grey wash;
+- legends are a neutral outline with no fill: each panel places its legend over
+  empty plot area, so nothing needs hiding behind it;
 - the semantic series colors (tab10 hues, paper-overlay tints) are left alone.
 """
 from __future__ import annotations
@@ -24,8 +26,8 @@ from matplotlib import colors as mcolors
 # Mid-grey: about 3.9:1 contrast on #ffffff and 5.3:1 on #0d1117.
 NEUTRAL = "#808080"
 GRID_ALPHA = 0.35
-# Fill for legend frames and light patches: grey at low alpha, so it reads as a
-# card on either page without hiding the page color.
+# Fill for light patches (text boxes, light bar fills): grey at low alpha, so it
+# reads as a card on either page without hiding the page color.
 WASH_RGBA = "#80808029"  # NEUTRAL at alpha 0.16
 LEGEND_EDGE_RGBA = "#80808099"  # NEUTRAL at alpha 0.6
 DPI = 150
@@ -48,7 +50,7 @@ RC: dict[str, Any] = {
     "grid.color": NEUTRAL,
     "grid.alpha": GRID_ALPHA,
     "grid.linewidth": 0.6,
-    "legend.facecolor": WASH_RGBA,
+    "legend.facecolor": "none",
     "legend.edgecolor": LEGEND_EDGE_RGBA,
     "legend.labelcolor": NEUTRAL,
     "legend.framealpha": None,
@@ -198,11 +200,11 @@ def _style_axes(ax) -> None:
 
 
 def style_legend(leg) -> None:
-    """Grey-wash legend frame with neutral text (reads on light and dark pages)."""
+    """Unfilled legend frame with a neutral outline and text (reads on light and dark pages)."""
     frame = leg.get_frame()
     if frame is not None:
         frame.set_alpha(None)
-        frame.set_facecolor(WASH_RGBA)
+        frame.set_facecolor("none")
         frame.set_edgecolor(LEGEND_EDGE_RGBA)
     for text in leg.get_texts():
         rgba = _rgba(text.get_color())

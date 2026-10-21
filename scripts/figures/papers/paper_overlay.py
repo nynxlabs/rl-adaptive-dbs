@@ -103,7 +103,7 @@ PAPER_CONDENSED_LEGEND_COLOR = NEUTRAL
 # Legend sits above paper overlays (PAPER_ZORDER) and all replication artists.
 LEGEND_ZORDER = 1000
 LEGEND_FRAMEALPHA = 1.0
-LEGEND_FACECOLOR = figure_style.WASH_RGBA
+LEGEND_FACECOLOR = "none"  # unfilled frame; legends sit over empty plot area
 LEGEND_EDGECOLOR = figure_style.LEGEND_EDGE_RGBA
 LEGEND_COMPACT_KW = {
     "shadow": False,
@@ -200,7 +200,7 @@ def _reassert_legend_frame(leg, *, opaque: bool, alpha: float, edgecolor: str) -
     fr = leg.get_frame()
     if fr is None:
         return
-    # Legend frames are a translucent grey wash in the shared style (readable on
+    # Legend frames are an unfilled neutral outline in the shared style (readable on
     # light and dark pages); ``opaque`` / ``alpha`` only keep the call shape.
     fr.set_alpha(None)
     fr.set_facecolor(LEGEND_FACECOLOR)
@@ -253,7 +253,7 @@ def _install_savefig_finalize() -> None:
 
 
 def place_legend(ax, *args, **kwargs):
-    """Draw the axes legend in front of traces (opaque frame by default).
+    """Draw the axes legend in front of traces (unfilled neutral frame).
 
     Call this **last** among axes artists (after overlays, grid, vlines). The
     legend patch, handles, and texts share ``LEGEND_ZORDER`` so nothing from the
