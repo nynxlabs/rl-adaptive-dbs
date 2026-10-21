@@ -34,7 +34,7 @@ jobs:
           uv pip install "torch==${torch_version}" --index-url https://download.pytorch.org/whl/cpu
 
       - name: Install project and test dependencies
-        run: uv pip install -e . --group dev --group figures --group reports
+        run: uv pip install -e . --group dev --group figures
 
       - name: Run tests
         run: uv run --no-sync pytest -m "not slow and not matlab"

@@ -85,7 +85,7 @@ tests/
         ├── checkpoint_test.py
         ├── checklist_test.py    # Mehregan §IV replication checklist
         ├── ddpg_fig4a_config_test.py  # Fig 4a training defaults
-        ├── eval_test.py
+        ├── ddpg_eval_test.py
         ├── matlab_trainer_test.py   # train + eval on MatlabPlant (@pytest.mark.matlab)
         ├── networks_test.py
         ├── quantization_test.py     # PTQ/QAT stubs
