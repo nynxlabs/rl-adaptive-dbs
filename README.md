@@ -14,7 +14,7 @@ Every paper panel is scored against automated gates, and a panel counts as repli
 
 | Mehregan Fig. 4a: beta power during training (pass) | Ravivarapu Fig. 4a: SEA-DBS vs baseline (open) | Nguyen Fig. 7: 50-episode evaluation (open) |
 |:---:|:---:|:---:|
-| <img src="docs/controllers/ddpg/figures/images/4a/training_beta_v42.png" width="280" alt="Mehregan Fig. 4a replication"> | <img src="docs/controllers/sea-dbs/figures/images/4a/training_psd_v82.png" width="280" alt="Ravivarapu Fig. 4a replication"> | <img src="docs/controllers/snn/figures/images/7/eval_50ep_v29.png" width="280" alt="Nguyen Fig. 7 replication"> |
+| <img src="docs/controllers/ddpg/figures/images/4a/training_beta_v47.png" width="280" alt="Mehregan Fig. 4a replication"> | <img src="docs/controllers/sea-dbs/figures/images/4a/training_psd_v85.png" width="280" alt="Ravivarapu Fig. 4a replication"> | <img src="docs/controllers/snn/figures/images/7/eval_50ep_v32.png" width="280" alt="Nguyen Fig. 7 replication"> |
 
 > **Status:** active research code. Docs and scripts are still being consolidated, so expect some redundancy.
 
