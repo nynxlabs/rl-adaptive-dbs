@@ -435,7 +435,8 @@ def fig2_time_gates(
     only: the untreated trace is flat noise around its pre-onset level, so its
     correlation with the paper's (one realization) is meaningless.
     """
-    paper = paper or load_refined(paper_path or refined_path(panel))
+    if paper is None:
+        paper = load_refined(paper_path or refined_path(panel))
     ru = rep_untreated or untreated_key
     rt = rep_treated or treated_key
     if ru not in replication or rt not in replication:
@@ -1134,7 +1135,8 @@ def fig6_quant_gates(
     (well above the 1.6–3.9 mean |Δ| between the same curve digitized in two
     panels, e.g. Fig 5a trained vs Fig 6a fp32).
     """
-    paper = paper or load_refined(paper_path or refined_path(panel))
+    if paper is None:
+        paper = load_refined(paper_path or refined_path(panel))
     alias = {
         "fp32": ("Fully Trained 45Hz", "Fully Trained 30Hz", "fp32"),
         "ptq_int8": ("PTQ, INT8", "ptq_int8"),
