@@ -4,7 +4,7 @@ Upstream: [ModelDB 206232](https://github.com/ModelDBRepository/206232), commit 
 
 **Not bundled.** In git this folder holds only this note and `CHRONUX_LICENSE.txt` (the license text for the Chronux routines in the fetched files). Our patches (zero-context diffs against upstream, plus `manifest.json` with the SHA-256 of each patched result) live in the private `kumaravelu_plant` package (`matlab_patches/`; see [LICENSING.md](../../LICENSING.md)). `python scripts/matlab/fetch_kumaravelu.py` downloads the upstream files and writes `simulate_network_model.m`, `run_simulate_network_model.q`, and `readme.txt` here (gitignored). When the package is installed it applies the patches and also writes `plant_band_power.m`; without it, the files are the unmodified upstream versions. After editing the patched files, run it with `--update-patches`, which writes into the package.
 
-**Licensing.** No license has been found for the upstream model, and it is not covered by this project's MIT License; permission is pending. The inlined Chronux routines (§ 5 and the end of the fetched `simulate_network_model.m`) are GNU GPL v2 — [`CHRONUX_LICENSE.txt`](CHRONUX_LICENSE.txt). See [LICENSING.md](../../LICENSING.md).
+**Licensing.** No license has been found for the upstream model, and it is not covered by this project's license (Apache-2.0); permission is pending. The inlined Chronux routines (§ 5 and the end of the fetched `simulate_network_model.m`) are GNU GPL v2 — [`CHRONUX_LICENSE.txt`](CHRONUX_LICENSE.txt). See [LICENSING.md](../../LICENSING.md).
 
 **rl-adaptive-dbs** keeps upstream dynamics; these edits support **base MATLAB** and the Phase 2 plant bridge. Do not merge back to ModelDB without review.
 

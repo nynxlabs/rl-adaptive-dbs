@@ -6,6 +6,7 @@ authors:
   - given-names: Devin
     family-names: Auch
 repository-code: "https://github.com/nynxlabs/rl-adaptive-dbs"
+license: Apache-2.0
 license-url: "https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/LICENSING.md"
 version: 0.1.0
 keywords:

@@ -1,0 +1,7 @@
+rl-adaptive-dbs
+Copyright 2026 nynxlabs LLC
+
+This repository also contains third-party material that is not covered by the
+Apache License 2.0 and keeps its own license, notably figure crops from
+Ravivarapu et al., arXiv:2507.06326 (CC BY 4.0, (c) the authors). See
+LICENSING.md for the full list and attribution.
