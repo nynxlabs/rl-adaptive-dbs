@@ -8,13 +8,13 @@ Every paper panel is scored against automated gates, and a panel counts as repli
 
 | Paper | Controller | Panels passing | Tracker |
 |-------|------------|:--------------:|---------|
-| Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning* | DDPG actor–critic, plus PTQ / QAT quantization | 7 / 9 (Fig 6a, 6b: QAT fails) | [mehregan](docs/controllers/ddpg/README.md) |
+| Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning* | DDPG actor–critic, plus PTQ / QAT quantization | 4 / 9 (open: Fig 1b, 4a, 4b, 6a, 6b) | [mehregan](docs/controllers/ddpg/README.md) |
 | Ravivarapu et al., *Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson's Disease* (SEA-DBS) | Sample-efficient actor–critic | 0 / 7 | [ravivarapu](docs/controllers/sea-dbs/README.md) |
-| Nguyen et al., *Closed-Loop Neuromorphic Deep Brain Stimulation using Deep Spiking Q-Networks* | Deep spiking Q-network | 4 / 5 (Fig 7: 13 of 14 gates) | [nguyen](docs/controllers/snn/README.md) |
+| Nguyen et al., *Closed-Loop Neuromorphic Deep Brain Stimulation using Deep Spiking Q-Networks* | Deep spiking Q-network | 3 / 5 (open: Fig 5, 6) | [nguyen](docs/controllers/snn/README.md) |
 
-| Mehregan Fig. 4a: beta power during training (pass) | Ravivarapu Fig. 4a: SEA-DBS vs baseline (open) | Nguyen Fig. 7: 50-episode evaluation (open) |
+| Mehregan Fig. 5a: post-training efficacy at 45 Hz (pass) | Nguyen Fig. 4: training reward and episode length (pass) | Ravivarapu Fig. 4a: SEA-DBS vs baseline (open, 18 of 28 gates) |
 |:---:|:---:|:---:|
-| <img src="docs/controllers/ddpg/figures/images/4a/training_beta_v47.png" width="280" alt="Mehregan Fig. 4a replication"> | <img src="docs/controllers/sea-dbs/figures/images/4a/training_psd_v85.png" width="280" alt="Ravivarapu Fig. 4a replication"> | <img src="docs/controllers/snn/figures/images/7/eval_50ep_v32.png" width="280" alt="Nguyen Fig. 7 replication"> |
+| <img src="docs/controllers/ddpg/figures/images/5a/efficacy_45hz_v27.png" width="280" alt="Mehregan Fig. 5a replication"> | <img src="docs/controllers/snn/figures/images/4/training_reward_length_v166.png" width="280" alt="Nguyen Fig. 4 replication"> | <img src="docs/controllers/sea-dbs/figures/images/4a/training_psd_v85.png" width="280" alt="Ravivarapu Fig. 4a replication"> |
 
 > **Status:** active research code. Docs and scripts are still being consolidated, so expect some redundancy.
 
@@ -55,7 +55,7 @@ Full install, verification, and day-to-day use: **[docs/guides/setup.md](docs/gu
 
 ## Current goals
 
-**Primary success criterion:** qualitative **figure replication** — side-by-side paper panels vs our plots, with explicit gates per panel. Active work is organized around **open figure panels**, not “advance to the next roadmap phase.” Next: close the open panels (Ravivarapu, Mehregan's QAT panels, Nguyen Fig. 7), then compare the three controllers on the same model.
+**Primary success criterion:** qualitative **figure replication** — side-by-side paper panels vs our plots, with explicit gates per panel. Active work is organized around **open figure panels**, not “advance to the next roadmap phase.” Next: close the open panels (Ravivarapu, Mehregan Figs. 1b, 4a, 4b and the QAT panels, Nguyen Figs. 5 and 6), then compare the three controllers on the same model.
 
 | Focus | Doc | Entry points |
 |-------|-----|--------------|
@@ -70,7 +70,7 @@ The **phase roadmap** ([docs/development/roadmap.md](docs/development/roadmap.md
 
 Architecturally, the repo has three layers (built out in [docs/development/roadmap.md](docs/development/roadmap.md) phases 1–9):
 
-1. **Environment (single source of truth)** — Replicate the **computational RL environment** from Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning*: Kumaravelu et al. (2016) **cortex–basal ganglia–thalamus** dynamics, GPi **beta-band** biomarker, 2 s steps, reward Eq. (8), and a Gymnasium-style API that `ddpg` uses directly. Other papers connect through **adapters** on the same plant. Spec: [docs/plant/environment.md](docs/plant/environment.md). **Current focus:** the open panels: Ravivarapu Figs. 4a–7 and Table II ([docs/controllers/sea-dbs/README.md](docs/controllers/sea-dbs/README.md)), Mehregan Fig. 6a / 6b QAT ([docs/controllers/ddpg/README.md](docs/controllers/ddpg/README.md)), and Nguyen Fig. 7 ([docs/controllers/snn/README.md](docs/controllers/snn/README.md)). Plant panels 1b–2b gate on [docs/plant/README.md](docs/plant/README.md); Mehregan training panels on [docs/plant/environment.md](docs/plant/environment.md) + [docs/controllers/ddpg/method.md](docs/controllers/ddpg/method.md).
+1. **Environment (single source of truth)** — Replicate the **computational RL environment** from Mehregan et al., *Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning*: Kumaravelu et al. (2016) **cortex–basal ganglia–thalamus** dynamics, GPi **beta-band** biomarker, 2 s steps, reward Eq. (8), and a Gymnasium-style API that `ddpg` uses directly. Other papers connect through **adapters** on the same plant. Spec: [docs/plant/environment.md](docs/plant/environment.md). **Current focus:** the open panels: Ravivarapu Figs. 4a–7 and Table II ([docs/controllers/sea-dbs/README.md](docs/controllers/sea-dbs/README.md)), Mehregan Figs. 1b, 4a, 4b and the 6a / 6b QAT panels ([docs/controllers/ddpg/README.md](docs/controllers/ddpg/README.md)), and Nguyen Figs. 5 and 6 ([docs/controllers/snn/README.md](docs/controllers/snn/README.md)). Plant panels 1b–2b gate on [docs/plant/README.md](docs/plant/README.md); Mehregan training panels on [docs/plant/environment.md](docs/plant/environment.md) + [docs/controllers/ddpg/method.md](docs/controllers/ddpg/method.md).
 
 2. **Controllers (one per paper)** — Replicate each paper’s **learning-based controller** under `controllers/`, all driving the **same plant** (no duplicated CBGT dynamics):
 
