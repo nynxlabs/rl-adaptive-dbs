@@ -9,15 +9,15 @@ Method: [method.md](method.md) (paper-accurate DDPG spec) · Extensions beyond t
 <!-- summary:start -->
 | Panel | Description | Status |
 |-------|-------------|--------|
-| Fig 1b | GPi PSD | Fail (`healthy_pd_ratio_near_paper`, rep v4) |
-| Fig 2a | GPi $P_\beta$ time series | Pass (rep v2) |
-| Fig 2b | Error Index time series | Pass (rep v19) |
-| Fig 4a | Training $P_\beta$ vs step | Fail (`early_swing_near_paper`, paper Alg. 1, rep v47) |
-| Fig 4b | Training reward vs episode | Fail (`early_reward_near_paper`, paired to 4a, rep v52) |
-| Fig 5a | Post-train efficacy @ 45 Hz | Pass (closed loop, Fig 4a model, rep v27) |
-| Fig 5b | Post-train efficacy @ 30 Hz | Pass (closed loop, burst alphabet, rep v28) |
-| Fig 6a | PTQ / QAT @ 45 Hz | Fail (`qat_elevated_vs_fp32`, closed loop, int8 QAT, rep v72) |
-| Fig 6b | PTQ / QAT @ 30 Hz | Fail (`qat_elevated_vs_fp32`, closed loop, int8 QAT, rep v50) |
+| Fig 1b | GPi PSD | Fail (`healthy_pd_ratio_near_paper`, rep v5) |
+| Fig 2a | GPi $P_\beta$ time series | Pass (rep v3) |
+| Fig 2b | Error Index time series | Pass (rep v20) |
+| Fig 4a | Training $P_\beta$ vs step | Fail (`early_swing_near_paper`, paper Alg. 1, rep v48) |
+| Fig 4b | Training reward vs episode | Fail (`early_reward_near_paper`, paired to 4a, rep v53) |
+| Fig 5a | Post-train efficacy @ 45 Hz | Pass (closed loop, Fig 4a model, rep v28) |
+| Fig 5b | Post-train efficacy @ 30 Hz | Pass (closed loop, burst alphabet, rep v29) |
+| Fig 6a | PTQ / QAT @ 45 Hz | Fail (`qat_elevated_vs_fp32`, closed loop, int8 QAT, rep v73) |
+| Fig 6b | PTQ / QAT @ 30 Hz | Fail (`qat_elevated_vs_fp32`, closed loop, int8 QAT, rep v51) |
 <!-- summary:end -->
 
 ## Figures

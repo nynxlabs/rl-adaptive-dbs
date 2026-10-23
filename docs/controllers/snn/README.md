@@ -13,11 +13,11 @@ Figs **1–2** are schematics — **not** replication targets.
 <!-- summary:start -->
 | Panel | Description | Status |
 |-------|-------------|--------|
-| Fig 3 | GPi α–β distribution (PD Off vs PD On) | Pass (rep v25) |
-| Fig 4 | Training reward + episode length | Pass (rep v166) |
+| Fig 3 | GPi α–β distribution (PD Off vs PD On) | Pass (rep v26) |
+| Fig 4 | Training reward + episode length | Pass (rep v167) |
 | Fig 5 | CBGT spikes + DBS energy over training | Fail (`paper_energy_pearson_0_500`) |
 | Fig 6 | α–β + DBS parameters over training | Fail (`paper_alpha_beta_mid_near_paper`) |
-| Fig 7 | 50-episode eval (25 steps) | Pass (rep v32) |
+| Fig 7 | 50-episode eval (25 steps) | Pass (rep v33) |
 <!-- summary:end -->
 
 ## Figures
