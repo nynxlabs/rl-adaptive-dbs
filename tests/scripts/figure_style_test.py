@@ -185,3 +185,16 @@ def test_save_themed_follows_a_symlinked_png(tmp_path: Path) -> None:
     dark = repo / "panel_v4_dark.png"
     assert dark.is_symlink() and dark.resolve() == notes / "panel_v4_dark.png"
     assert (notes / "panel_v4_dark.png").stat().st_size > 0
+
+
+def test_theme_keeps_grid_alpha_on_ticks_matplotlib_recreates() -> None:
+    fig, ax, *_ = _themed_fig()
+    for theme in ("light", "dark"):
+        _style.apply_theme(fig, theme)
+        ax.xaxis.reset_ticks()  # new ticks copy the axis's tick settings
+        ax.yaxis.reset_ticks()
+        fig.canvas.draw()
+        for tick in ax.xaxis.get_major_ticks() + ax.yaxis.get_major_ticks():
+            assert to_hex(tick.gridline.get_color()) == _style.INK[theme]
+            assert tick.gridline.get_alpha() == _style.GRID_ALPHA
+    plt.close(fig)

@@ -602,7 +602,11 @@ def apply_theme(fig, theme: str) -> None:
                 ):
                     rgba = _rgba(color)
                     if rgba is not None and mcolors.to_hex(rgba[:3]) in _SOURCE_OF:
-                        kw[key] = rgba
+                        # An opaque color goes in as plain RGB: an RGBA grid color makes
+                        # matplotlib skip ``grid.alpha`` on the ticks it re-creates.
+                        kw[key] = rgba if rgba[3] < 1 else mcolors.to_hex(rgba[:3])
+                if "grid_color" in kw and tick.gridline.get_alpha() is not None:
+                    kw["grid_alpha"] = tick.gridline.get_alpha()
                 if kw:
                     ax.tick_params(axis=name, which=which, **kw)
     fig._figure_theme = theme
