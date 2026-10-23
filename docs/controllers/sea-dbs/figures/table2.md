@@ -12,15 +12,15 @@
 
 ### Replication
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="images/table2/avg_psd_v5_dark.png"><img src="images/table2/avg_psd_v5.png" alt="Replication Table II"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="images/table2/avg_psd_v6_dark.png"><img src="images/table2/avg_psd_v6.png" alt="Replication Table II"></picture>
 
 <!-- caption-t2:start -->
-**Caption:** Table II avg PSD (×1000 normalized) with the plant reseeded every n steps; plant seeds 0–29 once per n (30 blocks of n steps), argmax rollout @ 50 Hz on the Fig 4 checkpoints; pass=False; bars ours, dashes paper. (v5)
+**Caption:** Table II avg PSD (×1000 normalized) with the plant reseeded every n steps; plant seeds 0–29 once per n (30 blocks of n steps), argmax rollout @ 50 Hz on the Fig 4 checkpoints; pass=False; bars ours, dashes paper. (v6)
 
 **Manifest:** `artifacts/figures/papers/ravivarapu/table2/manifest.json`
 <!-- caption-t2:end -->
 
-**Status:** Fail (rep v5) (`sea_below_baseline_every_n, gap_near_paper_every_n, baseline_near_paper_every_n, sea_near_paper_every_n`). Manifest `artifacts/figures/papers/ravivarapu/table2/manifest.json`.
+**Status:** Fail (rep v6) (`sea_below_baseline_every_n, gap_near_paper_every_n, baseline_near_paper_every_n, sea_near_paper_every_n`). Manifest `artifacts/figures/papers/ravivarapu/table2/manifest.json`.
 
 ## How to reproduce
 

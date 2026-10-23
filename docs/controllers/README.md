@@ -58,7 +58,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (digitized, my redraw) | My replication |
 |:-----:|:---------------:|
-| <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/1b/digitized_v3_dark.png"><img src="ddpg/figures/images/1b/digitized_v3.png" alt="Digitized from Fig. 1b of Mehregan et al. (2024) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/1b/gpi_psd_v5_dark.png"><img src="ddpg/figures/images/1b/gpi_psd_v5.png" alt="Replication Fig. 1b"></picture> |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/1b/digitized_v3_dark.png"><img src="ddpg/figures/images/1b/digitized_v3.png" alt="Digitized from Fig. 1b of Mehregan et al. (2024) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/1b/gpi_psd_v6_dark.png"><img src="ddpg/figures/images/1b/gpi_psd_v6.png" alt="Replication Fig. 1b"></picture> |
 
 **Notes:** Mean PSD over seeds 0-9, 10 s segment, native Python plant port of the Kumaravelu model.
 
@@ -72,7 +72,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (digitized, my redraw) | My replication |
 |:-----:|:---------------:|
-| <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/2a/digitized_v3_dark.png"><img src="ddpg/figures/images/2a/digitized_v3.png" alt="Digitized from Fig. 2a of Mehregan et al. (2024) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/2a/beta_power_v3_dark.png"><img src="ddpg/figures/images/2a/beta_power_v3.png" alt="Replication Fig. 2a"></picture> |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/2a/digitized_v3_dark.png"><img src="ddpg/figures/images/2a/digitized_v3.png" alt="Digitized from Fig. 2a of Mehregan et al. (2024) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/2a/beta_power_v4_dark.png"><img src="ddpg/figures/images/2a/beta_power_v4.png" alt="Replication Fig. 2a"></picture> |
 
 **Notes:** Seed 0; 14 s simulation with 2 s pre-roll (display window 0-12 s). Minor polish: blue floor slightly below the paper at late times.
 
@@ -86,7 +86,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (digitized, my redraw) | My replication |
 |:-----:|:---------------:|
-| <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/2b/digitized_v3_dark.png"><img src="ddpg/figures/images/2b/digitized_v3.png" alt="Digitized from Fig. 2b of Mehregan et al. (2024) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/2b/error_index_v20_dark.png"><img src="ddpg/figures/images/2b/error_index_v20.png" alt="Replication Fig. 2b"></picture> |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/2b/digitized_v3_dark.png"><img src="ddpg/figures/images/2b/digitized_v3.png" alt="Digitized from Fig. 2b of Mehregan et al. (2024) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/2b/error_index_v21_dark.png"><img src="ddpg/figures/images/2b/error_index_v21.png" alt="Replication Fig. 2b"></picture> |
 
 **Notes:** The Kumaravelu reference uses constant thalamic bias current instead of the So et al. (2012) SMC pulse drive the Error Index metric assumes. For this panel I restored **So-style SMC pulses into thalamus** (documented hybrid convention in [plant.md](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/docs/plant/README.md)). Seed 0. Minor polish: the red trace sits slightly low at $t = 12$ s.
 
@@ -100,7 +100,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (digitized, my redraw) | My replication |
 |:-----:|:---------------:|
-| <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/4a/digitized_v3_dark.png"><img src="ddpg/figures/images/4a/digitized_v3.png" alt="Digitized from Fig. 4a of Mehregan et al. (2024) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/4a/training_beta_v48_dark.png"><img src="ddpg/figures/images/4a/training_beta_v48.png" alt="Replication Fig. 4a"></picture> |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/4a/digitized_v3_dark.png"><img src="ddpg/figures/images/4a/digitized_v3.png" alt="Digitized from Fig. 4a of Mehregan et al. (2024) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/4a/training_beta_v49_dark.png"><img src="ddpg/figures/images/4a/training_beta_v49.png" alt="Replication Fig. 4a"></picture> |
 
 **Notes:** Seed 0, 300 steps (10 episodes x 30 steps), fixed-mean pulse-pattern action space, trained with the paper's Algorithm 1 as written. Raw per-step trace, no display smoothing. The first-episode mean is 0.444 vs the paper's 0.507 (0.43–0.55 across seeds); the late level is 0.365 vs 0.380.
 
@@ -114,7 +114,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (digitized, my redraw) | My replication |
 |:-----:|:---------------:|
-| <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/4b/digitized_v3_dark.png"><img src="ddpg/figures/images/4b/digitized_v3.png" alt="Digitized from Fig. 4b of Mehregan et al. (2024) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/4b/training_reward_v53_dark.png"><img src="ddpg/figures/images/4b/training_reward_v53.png" alt="Replication Fig. 4b reward"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/4b/training_psd_v53_dark.png"><img src="ddpg/figures/images/4b/training_psd_v53.png" alt="Replication Fig. 4b PSD"></picture> |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/4b/digitized_v3_dark.png"><img src="ddpg/figures/images/4b/digitized_v3.png" alt="Digitized from Fig. 4b of Mehregan et al. (2024) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/4b/training_reward_v54_dark.png"><img src="ddpg/figures/images/4b/training_reward_v54.png" alt="Replication Fig. 4b reward"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/4b/training_psd_v54_dark.png"><img src="ddpg/figures/images/4b/training_psd_v54.png" alt="Replication Fig. 4b PSD"></picture> |
 
 **Notes:** Same seed-0 training run as Fig. 4a. Episode-mean PSD falls from 0.444 to about 0.35 (paper: 0.498 to 0.368) while reward climbs from −81 to about zero (paper: −81 to −2.4). The paper does not report the training RNG seed; different seeds change wiggles and levels. I compare **trends**, not pointwise values.
 
@@ -128,7 +128,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (digitized, my redraw) | My replication |
 |:-----:|:---------------:|
-| <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/5a/digitized_v3_dark.png"><img src="ddpg/figures/images/5a/digitized_v3.png" alt="Digitized from Fig. 5a of Mehregan et al. (2024) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/5a/efficacy_45hz_v28_dark.png"><img src="ddpg/figures/images/5a/efficacy_45hz_v28.png" alt="Replication Fig. 5a"></picture> |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/5a/digitized_v3_dark.png"><img src="ddpg/figures/images/5a/digitized_v3.png" alt="Digitized from Fig. 5a of Mehregan et al. (2024) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/5a/efficacy_45hz_v29_dark.png"><img src="ddpg/figures/images/5a/efficacy_45hz_v29.png" alt="Replication Fig. 5a"></picture> |
 
 **Notes:** Evaluates the Fig. 4a checkpoint, the paper's one 45 Hz model, with the same trailing-window biomarker sampling as Fig. 2a. Seed 0. The policy settles on a burst pattern; late means: trained 339, periodic 45 Hz 299, no stimulation 486, 130 Hz cDBS 169.
 
@@ -142,7 +142,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (digitized, my redraw) | My replication |
 |:-----:|:---------------:|
-| <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/5b/digitized_v3_dark.png"><img src="ddpg/figures/images/5b/digitized_v3.png" alt="Digitized from Fig. 5b of Mehregan et al. (2024) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/5b/efficacy_30hz_v29_dark.png"><img src="ddpg/figures/images/5b/efficacy_30hz_v29.png" alt="Replication Fig. 5b"></picture> |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/5b/digitized_v3_dark.png"><img src="ddpg/figures/images/5b/digitized_v3.png" alt="Digitized from Fig. 5b of Mehregan et al. (2024) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/5b/efficacy_30hz_v30_dark.png"><img src="ddpg/figures/images/5b/efficacy_30hz_v30.png" alt="Replication Fig. 5b"></picture> |
 
 **Notes:** Trained with a burst-pattern alphabet (seed 0). The learned policy settles on a single constant pattern that happens to be a strong open-loop beta suppressor; that still satisfies this panel, but it is not the adaptive behavior the paper implies.
 
@@ -156,7 +156,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (digitized, my redraw) | My replication |
 |:-----:|:---------------:|
-| <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/6a/digitized_v3_dark.png"><img src="ddpg/figures/images/6a/digitized_v3.png" alt="Digitized from Fig. 6a of Mehregan et al. (2024) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/6a/ptq_qat_45hz_v73_dark.png"><img src="ddpg/figures/images/6a/ptq_qat_45hz_v73.png" alt="Replication Fig. 6a"></picture> |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/6a/digitized_v3_dark.png"><img src="ddpg/figures/images/6a/digitized_v3.png" alt="Digitized from Fig. 6a of Mehregan et al. (2024) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/6a/ptq_qat_45hz_v74_dark.png"><img src="ddpg/figures/images/6a/ptq_qat_45hz_v74.png" alt="Replication Fig. 6a"></picture> |
 
 **Status:** Fail. fp32 and both PTQ policies reach the same suppressed level and pass every fp32 / PTQ gate. QAT fails: over 15 training seeds most QAT policies suppress beta instead of staying high, because 10 episodes of int8 QAT don't converge on this action space. Details in the [Mehregan tracker](https://github.com/nynxlabs/rl-adaptive-dbs/blob/main/docs/controllers/ddpg/README.md).
 
@@ -170,7 +170,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (digitized, my redraw) | My replication |
 |:-----:|:---------------:|
-| <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/6b/digitized_v3_dark.png"><img src="ddpg/figures/images/6b/digitized_v3.png" alt="Digitized from Fig. 6b of Mehregan et al. (2024) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/6b/ptq_qat_30hz_v51_dark.png"><img src="ddpg/figures/images/6b/ptq_qat_30hz_v51.png" alt="Replication Fig. 6b"></picture> |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/6b/digitized_v3_dark.png"><img src="ddpg/figures/images/6b/digitized_v3.png" alt="Digitized from Fig. 6b of Mehregan et al. (2024) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="ddpg/figures/images/6b/ptq_qat_30hz_v52_dark.png"><img src="ddpg/figures/images/6b/ptq_qat_30hz_v52.png" alt="Replication Fig. 6b"></picture> |
 
 **Status:** Fail on QAT, for the same reason as Fig. 6a; fp32 and PTQ pass.
 
@@ -188,7 +188,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (digitized, my redraw) | My replication |
 |:-----:|:---------------:|
-| <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/3/digitized_v3_dark.png"><img src="snn/figures/images/3/digitized_v3.png" alt="Digitized from Fig. 3 of Nguyen et al. (2025) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/3/alpha_beta_dist_v26_dark.png"><img src="snn/figures/images/3/alpha_beta_dist_v26.png" alt="Replication Fig. 3"></picture> |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/3/digitized_v3_dark.png"><img src="snn/figures/images/3/digitized_v3.png" alt="Digitized from Fig. 3 of Nguyen et al. (2025) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/3/alpha_beta_dist_v27_dark.png"><img src="snn/figures/images/3/alpha_beta_dist_v27.png" alt="Replication Fig. 3"></picture> |
 
 **Notes:** PD On mean about 291 vs PD Off about 220 (arbitrary PSD units).
 
@@ -202,7 +202,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (digitized, my redraw) | My replication |
 |:-----:|:---------------:|
-| <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/4/digitized_v3_dark.png"><img src="snn/figures/images/4/digitized_v3.png" alt="Digitized from Fig. 4 of Nguyen et al. (2025) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/4/training_reward_length_v167_dark.png"><img src="snn/figures/images/4/training_reward_length_v167.png" alt="Replication Fig. 4"></picture> |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/4/digitized_v3_dark.png"><img src="snn/figures/images/4/digitized_v3.png" alt="Digitized from Fig. 4 of Nguyen et al. (2025) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/4/training_reward_length_v168_dark.png"><img src="snn/figures/images/4/training_reward_length_v168.png" alt="Replication Fig. 4"></picture> |
 
 **Notes:** Seed 1; 15 of 26 seeds pass every Fig. 4 gate. One labelled plant deviation: DBS current reaches the STN neurons with a distance-based falloff (ρ = 3) instead of driving all ten at full strength as the Kumaravelu model does. Without it, pulse width has no effect on our plant and the energy curve in Fig. 5 falls where the paper's rises.
 
@@ -216,7 +216,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (digitized, my redraw) | My replication |
 |:-----:|:---------------:|
-| <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/5/digitized_v3_dark.png"><img src="snn/figures/images/5/digitized_v3.png" alt="Digitized from Fig. 5 of Nguyen et al. (2025) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/5/spikes_energy_v66_dark.png"><img src="snn/figures/images/5/spikes_energy_v66.png" alt="Replication Fig. 5"></picture> |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/5/digitized_v3_dark.png"><img src="snn/figures/images/5/digitized_v3.png" alt="Digitized from Fig. 5 of Nguyen et al. (2025) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/5/spikes_energy_v67_dark.png"><img src="snn/figures/images/5/spikes_energy_v67.png" alt="Replication Fig. 5"></picture> |
 
 **Notes:** The spike count leaves out the stimulated STN and the GPi, which follow the DBS pulses. Late energy (~1,440) sits below the paper's ~2,035 because our agent settles at ~65 Hz / 0.85 ms rather than the paper's ~81 Hz / 1.13 ms.
 
@@ -230,7 +230,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (digitized, my redraw) | My replication |
 |:-----:|:---------------:|
-| <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/6/digitized_v3_dark.png"><img src="snn/figures/images/6/digitized_v3.png" alt="Digitized from Fig. 6 of Nguyen et al. (2025) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/6/alpha_beta_params_v22_dark.png"><img src="snn/figures/images/6/alpha_beta_params_v22.png" alt="Replication Fig. 6"></picture> |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/6/digitized_v3_dark.png"><img src="snn/figures/images/6/digitized_v3.png" alt="Digitized from Fig. 6 of Nguyen et al. (2025) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/6/alpha_beta_params_v23_dark.png"><img src="snn/figures/images/6/alpha_beta_params_v23.png" alt="Replication Fig. 6"></picture> |
 
 **Notes:** Late pulse width (~0.85 ms vs 1.13) and frequency (~65 Hz vs 81) end below the paper's; on our plant α–β stops improving beyond 0.5–0.6 ms, so the agent has no reason to go further. Pulse width and amplitude are reported, not gated.
 
@@ -244,7 +244,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (digitized, my redraw) | My replication |
 |:-----:|:---------------:|
-| <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/7/digitized_v3_dark.png"><img src="snn/figures/images/7/digitized_v3.png" alt="Digitized from Fig. 7 of Nguyen et al. (2025) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/7/eval_50ep_v33_dark.png"><img src="snn/figures/images/7/eval_50ep_v33.png" alt="Replication Fig. 7"></picture> |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/7/digitized_v3_dark.png"><img src="snn/figures/images/7/digitized_v3.png" alt="Digitized from Fig. 7 of Nguyen et al. (2025) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/7/eval_50ep_v34_dark.png"><img src="snn/figures/images/7/eval_50ep_v34.png" alt="Replication Fig. 7"></picture> |
 
 **Notes:** 13 of 14 gates pass: the peak comes at step 2 as in the paper, and the mean-trace Pearson $r$ is 0.88. Still open: step 0 reads 197 against the paper's 153 (gate 115–191). The peak (213 vs 278) and late level (128 vs 153) sit low but inside their gates.
 
@@ -264,7 +264,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (arXiv version, CC BY 4.0) | My replication |
 |:-----:|:---------------:|
-| ![Fig. 4a of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea-dbs/figures/images/4a/arxiv_v1.png) | <picture><source media="(prefers-color-scheme: dark)" srcset="sea-dbs/figures/images/4a/training_psd_v86_dark.png"><img src="sea-dbs/figures/images/4a/training_psd_v86.png" alt="Replication Fig. 4a"></picture> |
+| ![Fig. 4a of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea-dbs/figures/images/4a/arxiv_v1.png) | <picture><source media="(prefers-color-scheme: dark)" srcset="sea-dbs/figures/images/4a/training_psd_v87_dark.png"><img src="sea-dbs/figures/images/4a/training_psd_v87.png" alt="Replication Fig. 4a"></picture> |
 
 **Notes:** Displayed with a 10-episode rolling mean; gates run on the raw per-episode values.
 
@@ -276,7 +276,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (arXiv version, CC BY 4.0) | My replication |
 |:-----:|:---------------:|
-| ![Fig. 4b of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea-dbs/figures/images/4b/arxiv_v1.png) | <picture><source media="(prefers-color-scheme: dark)" srcset="sea-dbs/figures/images/4b/training_reward_v24_dark.png"><img src="sea-dbs/figures/images/4b/training_reward_v24.png" alt="Replication Fig. 4b"></picture> |
+| ![Fig. 4b of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea-dbs/figures/images/4b/arxiv_v1.png) | <picture><source media="(prefers-color-scheme: dark)" srcset="sea-dbs/figures/images/4b/training_reward_v25_dark.png"><img src="sea-dbs/figures/images/4b/training_reward_v25.png" alt="Replication Fig. 4b"></picture> |
 
 <div style="page-break-after: always;"></div>
 
@@ -288,8 +288,8 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (arXiv version, CC BY 4.0) | My replication |
 |:-----:|:---------------:|
-| ![Fig. 5a of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea-dbs/figures/images/5a/arxiv_v1.png) | <picture><source media="(prefers-color-scheme: dark)" srcset="sea-dbs/figures/images/5a/inference_50hz_v28_dark.png"><img src="sea-dbs/figures/images/5a/inference_50hz_v28.png" alt="Replication Fig. 5a"></picture> |
-| ![Fig. 5b of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea-dbs/figures/images/5b/arxiv_v1.png) | <picture><source media="(prefers-color-scheme: dark)" srcset="sea-dbs/figures/images/5b/inference_30hz_v28_dark.png"><img src="sea-dbs/figures/images/5b/inference_30hz_v28.png" alt="Replication Fig. 5b"></picture> |
+| ![Fig. 5a of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea-dbs/figures/images/5a/arxiv_v1.png) | <picture><source media="(prefers-color-scheme: dark)" srcset="sea-dbs/figures/images/5a/inference_50hz_v29_dark.png"><img src="sea-dbs/figures/images/5a/inference_50hz_v29.png" alt="Replication Fig. 5a"></picture> |
+| ![Fig. 5b of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea-dbs/figures/images/5b/arxiv_v1.png) | <picture><source media="(prefers-color-scheme: dark)" srcset="sea-dbs/figures/images/5b/inference_30hz_v29_dark.png"><img src="sea-dbs/figures/images/5b/inference_30hz_v29.png" alt="Replication Fig. 5b"></picture> |
 
 ---
 
@@ -299,7 +299,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (arXiv version, CC BY 4.0) | My replication |
 |:-----:|:---------------:|
-| ![Fig. 6 of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea-dbs/figures/images/6/arxiv_v1.png) | <picture><source media="(prefers-color-scheme: dark)" srcset="sea-dbs/figures/images/6/ptq_fp16_50hz_v28_dark.png"><img src="sea-dbs/figures/images/6/ptq_fp16_50hz_v28.png" alt="Replication Fig. 6"></picture> |
+| ![Fig. 6 of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea-dbs/figures/images/6/arxiv_v1.png) | <picture><source media="(prefers-color-scheme: dark)" srcset="sea-dbs/figures/images/6/ptq_fp16_50hz_v29_dark.png"><img src="sea-dbs/figures/images/6/ptq_fp16_50hz_v29.png" alt="Replication Fig. 6"></picture> |
 
 **Notes:** The SEA-DBS networks shrink from 52 KB to 26 KB (the paper reports about 65 MB to 33 MB for its larger network); the halving is what matters here.
 
@@ -311,7 +311,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (arXiv version, CC BY 4.0) | My replication |
 |:-----:|:---------------:|
-| ![Fig. 7 of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea-dbs/figures/images/7/arxiv_v1.png) | <picture><source media="(prefers-color-scheme: dark)" srcset="sea-dbs/figures/images/7/ablation_psd_v33_dark.png"><img src="sea-dbs/figures/images/7/ablation_psd_v33.png" alt="Replication Fig. 7"></picture> |
+| ![Fig. 7 of Ravivarapu et al. (arXiv:2507.06326v1, CC BY 4.0)](sea-dbs/figures/images/7/arxiv_v1.png) | <picture><source media="(prefers-color-scheme: dark)" srcset="sea-dbs/figures/images/7/ablation_psd_v34_dark.png"><img src="sea-dbs/figures/images/7/ablation_psd_v34.png" alt="Replication Fig. 7"></picture> |
 
 <div style="page-break-after: always;"></div>
 
