@@ -202,7 +202,7 @@ I built these from the paper text and figures. Mehregan and Ravivarapu have no r
 
 | Paper (digitized, my redraw) | My replication |
 |:-----:|:---------------:|
-| <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/4/digitized_v3_dark.png"><img src="snn/figures/images/4/digitized_v3.png" alt="Digitized from Fig. 4 of Nguyen et al. (2025) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/4/training_reward_length_v168_dark.png"><img src="snn/figures/images/4/training_reward_length_v168.png" alt="Replication Fig. 4"></picture> |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/4/digitized_v3_dark.png"><img src="snn/figures/images/4/digitized_v3.png" alt="Digitized from Fig. 4 of Nguyen et al. (2025) (our redraw)"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="snn/figures/images/4/training_reward_length_v169_dark.png"><img src="snn/figures/images/4/training_reward_length_v169.png" alt="Replication Fig. 4"></picture> |
 
 **Notes:** Seed 1; 15 of 26 seeds pass every Fig. 4 gate. One labelled plant deviation: DBS current reaches the STN neurons with a distance-based falloff (ρ = 3) instead of driving all ten at full strength as the Kumaravelu model does. Without it, pulse width has no effect on our plant and the energy curve in Fig. 5 falls where the paper's rises.
 

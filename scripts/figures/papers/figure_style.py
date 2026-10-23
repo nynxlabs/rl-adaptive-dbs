@@ -20,8 +20,10 @@ theme-neutral *source* style that :func:`finalize` sets up:
 - text, spines, ticks, and grid in :data:`NEUTRAL`; near-black artists a script drew
   (``"k"``, ``"#111111"``, paper overlays) become :data:`NEUTRAL` too, and near-white
   box fills become a translucent :data:`NEUTRAL` wash;
+- grid lines stop at each legend's frame (:func:`_clip_grid_around_legends`), so no grid
+  shows through a legend while the figure stays transparent;
 - legends are an unfilled outline: each panel places its legend over empty plot
-  area, so nothing needs hiding behind it;
+  area; only the grid is cut away under it;
 - series colors become one pastel palette (:data:`PASTEL`): each hue a script picks
   (tab10, ColorBrewer, the paper-overlay tints) maps to the pastel of the same role
   (blue stays blue, red stays red), and a pale "raw trace" tint maps to that pastel at
@@ -499,6 +501,43 @@ def finalize(fig) -> None:
         _recolor_text(text)
     if fig._suptitle is not None:
         _recolor_text(fig._suptitle)
+    _clip_grid_around_legends(fig)
+
+
+def _clip_grid_around_legends(fig) -> None:
+    """Cut each legend's frame out of the grid lines under it (oct 23 2026, master: no grid
+    behind a legend). The legend stays unfilled, so the figure stays transparent all the way
+    through; only the grid stops at the frame. Clip paths are in axes fractions, so they hold
+    when ``bbox_inches="tight"`` moves the figure. Data lines are left alone."""
+    from matplotlib.path import Path as MPath
+    from matplotlib.transforms import Bbox
+
+    try:
+        fig.draw_without_rendering()  # places the legends (loc="best" included)
+    except Exception:
+        return
+    legends = list(fig.legends) + [ax.get_legend() for ax in fig.get_axes() if ax.get_legend() is not None]
+    frames = [leg.get_frame().get_window_extent() for leg in legends if leg.get_visible()]
+    for ax in fig.get_axes():
+        box = ax.get_window_extent()
+        holes = []
+        for frame in frames:
+            hit = Bbox.intersection(box, frame)
+            if hit is None or hit.width <= 0 or hit.height <= 0:
+                continue
+            (x0, y0), (x1, y1) = ax.transAxes.inverted().transform([[frame.x0, frame.y0], [frame.x1, frame.y1]])
+            holes.append((x0, y0, x1, y1))
+        if not holes:
+            continue
+        # outer axes rect counter-clockwise, each hole clockwise: nonzero winding leaves the holes unclipped-to
+        verts = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0)]
+        codes = [MPath.MOVETO] + [MPath.LINETO] * 3 + [MPath.CLOSEPOLY]
+        for x0, y0, x1, y1 in holes:
+            verts += [(x0, y0), (x0, y1), (x1, y1), (x1, y0), (x0, y0)]
+            codes += [MPath.MOVETO] + [MPath.LINETO] * 3 + [MPath.CLOSEPOLY]
+        clip = MPath(verts, codes)
+        for line in ax.get_xgridlines() + ax.get_ygridlines():
+            line.set_clip_path(clip, ax.transAxes)
 
 
 # Every theme's ink and palette color back to the source color it came from, so a
