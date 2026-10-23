@@ -47,3 +47,30 @@ def test_relative_links_resolve(markdown_path: Path) -> None:
         if not (markdown_path.parent / target).exists()
     ]
     assert not missing, f"Broken links in {markdown_path.relative_to(REPO_ROOT)}: {missing}"
+
+
+# A replication or paper-redraw image: light/dark pair or a plain one-theme image.
+PICTURE_RE = re.compile(
+    r'<picture><source media="\(prefers-color-scheme: dark\)" srcset="([^"]+)">'
+    r'<img src="([^"]+)" alt="([^"]*)"[^>]*></picture>'
+)
+PLAIN_IMAGE_RE = re.compile(r'!\[([^\]]*)\]\(([^)\s]+\.png)\)|<img src="([^"]+\.png)"[^>]*alt="([^"]*)"')
+_PAIRED_ALT = re.compile(r"^(Replication|Digitized from)|\breplication$")
+
+
+@pytest.mark.parametrize(
+    "markdown_path",
+    PUBLIC_MARKDOWN,
+    ids=lambda p: str(p.relative_to(REPO_ROOT)),
+)
+def test_replication_images_are_light_dark_pairs(markdown_path: Path) -> None:
+    """Replication and redraw PNGs show as a ``<picture>`` with their ``_dark`` variant."""
+    text = INLINE_CODE_RE.sub("", FENCED_CODE_RE.sub("", markdown_path.read_text(encoding="utf-8")))
+    for dark, light, _alt in PICTURE_RE.findall(text):
+        assert dark == light[: -len(".png")] + "_dark.png", f"{markdown_path}: {dark} is not {light}'s dark variant"
+    single = []
+    for match in PLAIN_IMAGE_RE.finditer(PICTURE_RE.sub("", text)):
+        alt = match.group(1) if match.group(1) is not None else match.group(4)
+        if _PAIRED_ALT.search(alt or ""):
+            single.append(match.group(0))
+    assert not single, f"single-theme replication images in {markdown_path.relative_to(REPO_ROOT)}: {single}"
