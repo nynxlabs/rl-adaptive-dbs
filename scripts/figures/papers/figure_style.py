@@ -1,35 +1,49 @@
 """One shared look for every paper panel's replication PNG.
 
 Each ``plot.py`` calls :func:`apply` before it builds its figure, and every save goes
-through :func:`finalize` (``paper_overlay`` hooks it into ``Figure.savefig``). Style
-only: nothing here reads or changes data, gates, or manifests.
+through :func:`finalize` and :func:`save_themed` (``paper_overlay`` hooks both into
+``Figure.savefig``). Style only: nothing here reads or changes data, gates, or
+manifests.
 
-The PNGs are shown on light pages (GitHub light, ``#ffffff``) and dark ones (GitHub
-dark, ``#0d1117``), so one image has to read on both:
+Every PNG is saved twice, once per page theme, and the docs show the pair with
+``<picture>`` so readers see the one that matches their light or dark theme:
 
-- transparent figure and axes backgrounds;
-- text, spines, ticks, and grid in a neutral mid-grey (:data:`NEUTRAL`);
-- near-black artists a script drew (``"k"``, ``"#111111"``, paper overlays) become
-  :data:`NEUTRAL` too, since black disappears on a dark page; near-white box fills
-  become a translucent grey wash;
-- legends are a neutral outline with no fill: each panel places its legend over
-  empty plot area, so nothing needs hiding behind it;
-- series colors become one pastel palette (Catppuccin Frappé, :data:`PASTEL`): each
-  hue a script picks (tab10, ColorBrewer, the paper-overlay tints) maps to the pastel
-  of the same role (blue stays blue, red stays red), and a pale "raw trace" tint maps
-  to that pastel at half alpha so the smoothed line stays the stronger one. Lines get
-  :data:`LINE_SCALE` wider, since pastels are light on a white page.
+- ``{stem}_vN.png`` — the **light** variant (the fallback everywhere): black ink
+  (:data:`INK` ``"light"``) and Catppuccin Latte series colors (:data:`LATTE`);
+- ``{stem}_vN_dark.png`` — the **dark** variant (:func:`dark_path`): ink ``#e6e6e6``
+  and Catppuccin Frappé pastels (:data:`PASTEL`).
+
+Both variants keep transparent figure and axes backgrounds and the same geometry
+(line widths included), so they differ only in color. Drawing happens once, in a
+theme-neutral *source* style that :func:`finalize` sets up:
+
+- text, spines, ticks, and grid in :data:`NEUTRAL`; near-black artists a script drew
+  (``"k"``, ``"#111111"``, paper overlays) become :data:`NEUTRAL` too, and near-white
+  box fills become a translucent :data:`NEUTRAL` wash;
+- legends are an unfilled outline: each panel places its legend over empty plot
+  area, so nothing needs hiding behind it;
+- series colors become one pastel palette (:data:`PASTEL`): each hue a script picks
+  (tab10, ColorBrewer, the paper-overlay tints) maps to the pastel of the same role
+  (blue stays blue, red stays red), and a pale "raw trace" tint maps to that pastel at
+  half alpha so the smoothed line stays the stronger one. Lines get
+  :data:`LINE_SCALE` wider.
+
+:func:`apply_theme` then maps that source style to a theme: :data:`NEUTRAL` becomes
+the theme's ink (keeping each artist's alpha, so grid, wash, and legend outline stay
+as faint as before) and each pastel becomes the same role in the theme's palette.
 """
 from __future__ import annotations
 
 import colorsys
-from typing import Any
+import os
+from pathlib import Path
+from typing import Any, Callable
 
 import matplotlib as mpl
 from cycler import cycler
 from matplotlib import colors as mcolors
 
-# Mid-grey: about 3.9:1 contrast on #ffffff and 5.3:1 on #0d1117.
+# Source ink every figure is drawn in; apply_theme swaps it for the theme's INK.
 NEUTRAL = "#808080"
 GRID_ALPHA = 0.35
 # Fill for light patches (text boxes, light bar fills): grey at low alpha, so it
@@ -38,7 +52,7 @@ WASH_RGBA = "#80808029"  # NEUTRAL at alpha 0.16
 LEGEND_EDGE_RGBA = "#80808099"  # NEUTRAL at alpha 0.6
 DPI = 150
 
-# Catppuccin Frappé accents: soft on dark pages, still visible on white.
+# Catppuccin Frappé accents: the source palette and the dark variant's colors.
 PASTEL = {
     "blue": "#8caaee",
     "peach": "#ef9f76",
@@ -49,6 +63,24 @@ PASTEL = {
     "yellow": "#e5c890",
     "pink": "#f4b8e4",
 }
+# Catppuccin Latte accents (deeper, made for white pages): the light variant's colors,
+# same roles as PASTEL.
+LATTE = {
+    "blue": "#1e66f5",
+    "peach": "#fe640b",
+    "green": "#40a02b",
+    "red": "#d20f39",
+    "mauve": "#8839ef",
+    "teal": "#179299",
+    "yellow": "#df8e1d",
+    "pink": "#ea76cb",
+}
+THEMES = ("light", "dark")
+# Text, spines, ticks, grid, and legend ink per theme: the nynxlabs site's own text
+# colors (its page backgrounds are #ffffff / #000000).
+INK = {"light": "#000000", "dark": "#e6e6e6"}
+PALETTE = {"light": LATTE, "dark": PASTEL}
+DARK_SUFFIX = "_dark"
 # Hues the panel scripts use, by role. Anything else saturated falls back to the
 # pastel of nearest hue (see _pastel_for).
 SERIES_PASTEL = {
@@ -467,3 +499,164 @@ def finalize(fig) -> None:
         _recolor_text(text)
     if fig._suptitle is not None:
         _recolor_text(fig._suptitle)
+
+
+# Every theme's ink and palette color back to the source color it came from, so a
+# figure can switch themes any number of times (light, then dark, then light again).
+_ROLE_OF = {hexc: role for role, hexc in PASTEL.items()}
+_SOURCE_OF: dict[str, str] = {NEUTRAL: NEUTRAL, **{c: c for c in PASTEL.values()}}
+for _theme in THEMES:
+    _SOURCE_OF[INK[_theme]] = NEUTRAL
+    for _role, _hex in PALETTE[_theme].items():
+        _SOURCE_OF[_hex] = PASTEL[_role]
+
+
+def theme_rgba(rgba: tuple[float, ...] | None, theme: str) -> tuple[float, ...] | None:
+    """``rgba`` in ``theme`` (ink or palette swap, alpha kept), or ``None`` to leave it."""
+    if rgba is None or rgba[3] == 0:
+        return None
+    key = mcolors.to_hex(rgba[:3])
+    source = _SOURCE_OF.get(key)
+    if source is None:
+        return None
+    target = INK[theme] if source == NEUTRAL else PALETTE[theme][_ROLE_OF[source]]
+    if target == key:
+        return None
+    return (*mcolors.to_rgb(target), rgba[3])
+
+
+def theme_rc(theme: str) -> dict[str, Any]:
+    """rcParams for artists matplotlib creates while saving (e.g. new ticks)."""
+    ink = INK[theme]
+    return {
+        key: ink
+        for key, value in RC.items()
+        if isinstance(value, str) and value == NEUTRAL
+    } | {
+        "legend.edgecolor": (*mcolors.to_rgb(ink), mcolors.to_rgba(LEGEND_EDGE_RGBA)[3]),
+        "axes.prop_cycle": cycler(color=list(PALETTE[theme].values())),
+    }
+
+
+def _theme_artist(artist, theme: str) -> None:
+    from matplotlib.collections import Collection
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+    from matplotlib.text import Text
+
+    def swap(get, set_):
+        new = theme_rgba(_rgba(getattr(artist, get)()), theme)
+        if new is not None:
+            getattr(artist, set_)(new)
+
+    if isinstance(artist, Line2D):
+        swap("get_color", "set_color")
+        swap("get_markerfacecolor", "set_markerfacecolor")
+        swap("get_markeredgecolor", "set_markeredgecolor")
+    elif isinstance(artist, Text):
+        swap("get_color", "set_color")
+        box = artist.get_bbox_patch()
+        if box is not None:
+            _theme_artist(box, theme)
+    elif isinstance(artist, Patch):
+        swap("get_facecolor", "set_facecolor")
+        swap("get_edgecolor", "set_edgecolor")
+    elif isinstance(artist, Collection):
+        if artist.get_array() is not None:  # colormapped: the colormap decides
+            return
+        for get, set_ in (("get_facecolor", "set_facecolor"), ("get_edgecolor", "set_edgecolor")):
+            try:
+                arr = getattr(artist, get)()
+            except Exception:
+                continue
+            if arr is None or len(arr) == 0:
+                continue
+            rows = [tuple(float(v) for v in c) for c in arr]
+            new = [theme_rgba(c, theme) for c in rows]
+            if any(n is not None for n in new):
+                getattr(artist, set_)([n or c for n, c in zip(new, rows)])
+
+
+def apply_theme(fig, theme: str) -> None:
+    """Recolor a finalized figure for ``theme`` (``"light"`` or ``"dark"``); reversible."""
+    if theme not in THEMES:
+        msg = f"unknown figure theme {theme!r}; expected one of {THEMES}"
+        raise ValueError(msg)
+    for artist in fig.findobj(include_self=False):
+        if artist is fig.patch:
+            continue
+        _theme_artist(artist, theme)
+    # Ticks matplotlib adds later copy the axis's tick settings, so set those too.
+    for ax in fig.get_axes():
+        for name, axis in (("x", ax.xaxis), ("y", ax.yaxis)):
+            for which, ticks in (("major", axis.get_major_ticks()), ("minor", axis.get_minor_ticks())):
+                if not ticks:
+                    continue
+                tick = ticks[0]
+                label = tick.label2 if tick.label2.get_visible() and not tick.label1.get_visible() else tick.label1
+                kw: dict[str, Any] = {}
+                for key, color in (
+                    ("labelcolor", label.get_color()),
+                    ("color", tick.tick1line.get_color()),
+                    ("grid_color", tick.gridline.get_color()),
+                ):
+                    rgba = _rgba(color)
+                    if rgba is not None and mcolors.to_hex(rgba[:3]) in _SOURCE_OF:
+                        kw[key] = rgba
+                if kw:
+                    ax.tick_params(axis=name, which=which, **kw)
+    fig._figure_theme = theme
+
+
+def dark_path(path: str | os.PathLike[str]) -> Path:
+    """The dark variant's path for a light PNG: ``x_v3.png`` → ``x_v3_dark.png``."""
+    path = Path(path)
+    return path.with_name(f"{path.stem}{DARK_SUFFIX}{path.suffix}")
+
+
+def is_dark_path(path: str | os.PathLike[str]) -> bool:
+    return Path(path).stem.endswith(DARK_SUFFIX)
+
+
+def _dark_destination(path: Path) -> Path:
+    """Where the dark variant goes; follows ``path`` into a linked notes folder.
+
+    A light PNG that is a symlink (into the notes folder, ``papers/_linked.py``) gets a
+    dark sibling symlink to the same-named file next to its target.
+    """
+    dark = dark_path(path)
+    if path.is_symlink() and not (dark.exists() or dark.is_symlink()):
+        target = dark_path(path.resolve())
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if not target.exists():
+            target.touch()
+        dark.symlink_to(target)
+    return dark
+
+
+def save_themed(fig, fname, *args, save: Callable[..., Any] | None = None, **kwargs) -> Any:
+    """Save ``fig`` as its light variant at ``fname`` and, for a ``.png`` path, its
+    dark variant at :func:`dark_path`. ``save`` is the unhooked ``Figure.savefig``
+    (default: the original behind ``paper_overlay``'s hook)."""
+    import matplotlib as _mpl
+    from matplotlib.figure import Figure
+
+    if save is None:
+        hooked = Figure.savefig
+        save = getattr(hooked, "_unhooked", hooked)
+    finalize(fig)
+    pairs = [("light", fname)]
+    if isinstance(fname, (str, os.PathLike)) and str(fname).lower().endswith(".png"):
+        if not is_dark_path(fname):
+            pairs.append(("dark", None))
+    result = None
+    for theme, out in pairs:
+        if out is None:
+            out = _dark_destination(Path(fname))
+        apply_theme(fig, theme)
+        with _mpl.rc_context(theme_rc(theme)):
+            got = save(fig, out, *args, **kwargs)
+        if theme == "light":
+            result = got
+    apply_theme(fig, "light")
+    return result

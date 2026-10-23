@@ -33,7 +33,11 @@ _promote = load_script_module("figure_promote", _PROMOTE)
 REPO_ROOT = _promote.REPO_ROOT
 PAPER_TRACKERS = doc_paths.all_trackers(REPO_ROOT)
 
-_IMAGE_LINK_RE = re.compile(r"!\[[^\]]*\]\(([^)\s]+)\)")
+# ``![alt](href)``, ``<img src="href">``, and ``<source srcset="href">`` (the dark
+# variant in a ``<picture>`` pair).
+_IMAGE_LINK_RE = re.compile(
+    r'!\[[^\]]*\]\(([^)\s]+)\)|<img\b[^>]*\bsrc="([^"]+)"|<source\b[^>]*\bsrcset="([^"]+)"'
+)
 _PAPERS = doc_paths.PAPERS
 _SKIP_REPO_GLOB = ("paper.png", "/_full/")
 
@@ -67,7 +71,7 @@ def _doc_image_links(doc: Path, doc_rel: str) -> list[tuple[str, str]]:
     out: list[tuple[str, str]] = []
     text = doc.read_text(encoding="utf-8")
     for match in _IMAGE_LINK_RE.finditer(text):
-        href = match.group(1)
+        href = next(g for g in match.groups() if g)
         if "://" in href or href.startswith("/"):
             continue
         split = doc_paths.split_figures_rel(doc_paths.resolve_doc_href(href, doc_rel))
@@ -232,10 +236,14 @@ def push_all(
 
 
 def push_repo_rel_png(repo_rel: str, *, dry_run: bool = False) -> None:
-    """Push a single ``docs/controllers/<controller>/figures/images/...`` path, then refresh all links."""
+    """Push one ``docs/controllers/<controller>/figures/images/...`` PNG (and its dark
+    variant), then refresh all links."""
     split = doc_paths.split_figures_rel(doc_paths.repo_rel_posix(repo_rel))
     if split is not None and split[1].startswith("images/"):
         push_image(split[0], split[1], dry_run=dry_run)
+        dark = _promote.dark_rel(split[1])
+        if _resolve_source(split[0], dark) is not None:
+            push_image(split[0], dark, dry_run=dry_run)
     push_all(dry_run=dry_run, verbose=False)
 
 

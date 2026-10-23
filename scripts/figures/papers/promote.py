@@ -385,7 +385,8 @@ def _push_notes_image(ship_repo_rel: str) -> None:
 
 
 def materialize_ship_png(source: Path, ship_repo_rel: str) -> Path:
-    """Copy a versioned replication PNG to a stable ship path (repo + linked notes folder).
+    """Copy a versioned replication PNG (and its dark variant) to a stable ship path
+    (repo + linked notes folder).
 
     Gallery embeds use unversioned ship names (e.g.
     ``training_beta.png``) so links from notes apps stay valid after each
@@ -397,14 +398,19 @@ def materialize_ship_png(source: Path, ship_repo_rel: str) -> Path:
         msg = f"ship png source missing: {source}"
         raise FileNotFoundError(msg)
     ship_repo_rel = ship_repo_rel.replace("\\", "/")
-    repo_dest = REPO_ROOT / ship_repo_rel
-    repo_dest.parent.mkdir(parents=True, exist_ok=True)
-    if source.resolve() != repo_dest.resolve():
-        if repo_dest.is_symlink():
-            repo_dest.unlink()
-        shutil.copy2(source, repo_dest)
-    _push_notes_image(ship_repo_rel)
-    return repo_dest
+    pairs = [(source, ship_repo_rel)]
+    dark_source = Path(dark_rel(str(source)))
+    if dark_source.is_file():
+        pairs.append((dark_source, dark_rel(ship_repo_rel)))
+    for src, rel in pairs:
+        repo_dest = REPO_ROOT / rel
+        repo_dest.parent.mkdir(parents=True, exist_ok=True)
+        if src.resolve() != repo_dest.resolve():
+            if repo_dest.is_symlink():
+                repo_dest.unlink()
+            shutil.copy2(src, repo_dest)
+        _push_notes_image(rel)
+    return REPO_ROOT / ship_repo_rel
 
 
 def materialize_docs_figure_papers() -> int:
@@ -412,8 +418,58 @@ def materialize_docs_figure_papers() -> int:
     return 0
 
 
+# Every plot saves a light PNG and a dark variant beside it (``figure_style.dark_path``:
+# ``x_v3.png`` → ``x_v3_dark.png``); the docs show the pair as one ``<picture>``.
+DARK_SUFFIX = "_dark"
+_DARK_MEDIA = "(prefers-color-scheme: dark)"
+
+
+def dark_rel(repo_rel: str) -> str:
+    """Repo-relative path of the dark variant of a light PNG."""
+    path = Path(repo_rel)
+    return path.with_name(f"{path.stem}{DARK_SUFFIX}{path.suffix}").as_posix()
+
+
+def has_dark_variant(repo_rel: str) -> bool:
+    """Whether the dark variant of ``repo_rel`` exists (this checkout or main)."""
+    rel = dark_rel(repo_rel)
+    return any((root / rel).is_file() for root in (CHECKOUT_ROOT, REPO_ROOT))
+
+
+def _html_attr(value: str) -> str:
+    return value.replace("&", "&amp;").replace('"', "&quot;")
+
+
+def picture_markup(alt: str, href: str, dark_href: str | None, *, attrs: str = "") -> str:
+    """Doc markup for one replication image: a light/dark ``<picture>`` on one line.
+
+    ``attrs`` are extra ``<img>`` attributes (e.g. `` width="280"``). Without a dark
+    variant this is a plain ``![alt](href)``.
+    """
+    if dark_href is None:
+        if attrs:
+            return f'<img src="{href}" alt="{_html_attr(alt)}"{attrs}>'
+        return f"![{alt}]({href})"
+    return (
+        f'<picture><source media="{_DARK_MEDIA}" srcset="{dark_href}">'
+        f'<img src="{href}" alt="{_html_attr(alt)}"{attrs}></picture>'
+    )
+
+
 def _image_pattern(alt: str) -> re.Pattern[str]:
-    return re.compile(rf"!\[{re.escape(alt)}\]\([^)]+\)")
+    """``![alt](…)`` or a ``<picture>`` whose ``<img>`` has ``alt`` (``attrs`` group: extras)."""
+    md = rf"!\[{re.escape(alt)}\]\([^)]+\)"
+    html = (
+        rf'<picture><source media="{re.escape(_DARK_MEDIA)}" srcset="[^"]*">'
+        rf'<img src="[^"]*" alt="{re.escape(_html_attr(alt))}"(?P<attrs>[^>]*)></picture>'
+    )
+    return re.compile(rf"(?:{md}|{html})")
+
+
+def _image_markup(docs: DocSet, doc: Path, *, alt: str, repo_rel: str, attrs: str = "") -> str:
+    href = docs.href(repo_rel, doc)
+    dark_href = docs.href(dark_rel(repo_rel), doc) if has_dark_variant(repo_rel) else None
+    return picture_markup(alt, href, dark_href, attrs=attrs)
 
 
 def set_image_link(
@@ -423,10 +479,12 @@ def set_image_link(
     repo_rel: str,
     required: bool = True,
 ) -> Path | None:
-    """Point ``![alt](…)`` at ``repo_rel`` in the first doc that has it.
+    """Point the image with ``alt`` at ``repo_rel`` (and its dark variant) in the first doc
+    that has it.
 
-    The href is relative to that doc (``images/<panel>/…`` from a figure page,
-    ``figures/images/<panel>/…`` from the tracker).
+    Finds ``![alt](…)`` or the ``<picture>`` form and writes the ``<picture>`` form
+    (:func:`picture_markup`). Hrefs are relative to that doc (``images/<panel>/…``
+    from a figure page, ``figures/images/<panel>/…`` from the tracker).
     """
     pattern = _image_pattern(alt)
     doc = docs.search(pattern)
@@ -435,16 +493,20 @@ def set_image_link(
             msg = f"missing markdown image for alt={alt!r} in {docs.missing_label()}"
             raise ValueError(msg)
         return None
-    href = docs.href(repo_rel, doc)
-    docs.sub(pattern, lambda _m: f"![{alt}]({href})", count=1, path=doc)
+    docs.sub(
+        pattern,
+        lambda m: _image_markup(docs, doc, alt=alt, repo_rel=repo_rel, attrs=m.group("attrs") or ""),
+        count=1,
+        path=doc,
+    )
     return doc
 
 
 def replace_placeholder(docs: DocSet, placeholder: str, *, alt: str, repo_rel: str) -> Path | None:
-    """Swap a ``*Not yet generated.*`` placeholder for ``![alt](…)``."""
+    """Swap a ``*Not yet generated.*`` placeholder for the image (:func:`picture_markup`)."""
     return docs.replace(
         placeholder,
-        lambda doc: f"![{alt}]({docs.href(repo_rel, doc)})",
+        lambda doc: _image_markup(docs, doc, alt=alt, repo_rel=repo_rel),
         count=1,
     )
 

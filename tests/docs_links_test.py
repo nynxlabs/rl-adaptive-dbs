@@ -18,13 +18,15 @@ INLINE_CODE_RE = re.compile(r"`[^`\n]*`")
 MD_LINK_RE = re.compile(r"\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 # <img src="target">
 HTML_SRC_RE = re.compile(r"<img\b[^>]*\bsrc=\"([^\"]+)\"", re.IGNORECASE)
+# <source srcset="target"> (the dark variant in a light/dark <picture> pair)
+HTML_SRCSET_RE = re.compile(r"<source\b[^>]*\bsrcset=\"([^\"]+)\"", re.IGNORECASE)
 SCHEME_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*:")
 
 
 def _relative_targets(markdown_path: Path) -> list[str]:
     text = markdown_path.read_text(encoding="utf-8")
     text = INLINE_CODE_RE.sub("", FENCED_CODE_RE.sub("", text))
-    targets = MD_LINK_RE.findall(text) + HTML_SRC_RE.findall(text)
+    targets = MD_LINK_RE.findall(text) + HTML_SRC_RE.findall(text) + HTML_SRCSET_RE.findall(text)
     out = []
     for raw in targets:
         target = raw.split("#", 1)[0].strip()

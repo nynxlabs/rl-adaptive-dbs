@@ -2,10 +2,11 @@
 
 Each panel's digitized values (``curves_*.json`` under the artifacts root, read off
 the published figure) are drawn with matplotlib and saved as
-``docs/controllers/<controller>/figures/images/<panel>/digitized_v<N>.png``. The caption says the figure
-is ``Digitized from Fig. X of <paper>``, and the footer says it is our redraw. The
-figure uses the panels' shared style (``scripts/figures/papers/figure_style.py``), so it
-reads on light and dark pages.
+``docs/controllers/<controller>/figures/images/<panel>/digitized_v<N>.png``, plus its dark
+variant ``digitized_v<N>_dark.png``. The caption says the figure is ``Digitized from
+Fig. X of <paper>``, and the footer says it is our redraw. The figure uses the panels'
+shared style (``scripts/figures/papers/figure_style.py``): the docs show the light and
+dark variants as a ``<picture>`` pair.
 
     uv run python scripts/digitization/redraw_digitized.py --all
     uv run python scripts/digitization/redraw_digitized.py --panel mehregan/4a --panel nguyen/6
@@ -388,8 +389,7 @@ def draw_panel(key: str, panel: Panel, *, artifacts: Path, out_root: Path, versi
 
     out = doc_paths.figure_images_dir(panel.paper, panel.fig, out_root) / f"digitized_v{version}.png"
     out.parent.mkdir(parents=True, exist_ok=True)
-    style.finalize(fig)
-    fig.savefig(out, dpi=DPI)
+    style.save_themed(fig, out, dpi=DPI)  # digitized_vN.png (light) + digitized_vN_dark.png
     return out
 
 

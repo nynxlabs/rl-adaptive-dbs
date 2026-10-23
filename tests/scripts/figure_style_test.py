@@ -121,3 +121,67 @@ def test_unlisted_colors_get_distinct_pastels() -> None:
     assert to_hex(a.get_color()) != to_hex(b.get_color())
     assert {to_hex(a.get_color()), to_hex(b.get_color())} <= set(_style.PASTEL.values())
     plt.close(fig)
+
+
+def _themed_fig():
+    _overlay.apply_figure_style()
+    fig, ax = plt.subplots(figsize=(2, 2))
+    blue = ax.plot([0, 1], [0, 1], color="#1f77b4", label="ours")[0]
+    raw = ax.plot([0, 1], [1, 0], color="#9ecae1", label="raw")[0]
+    ax.set_xlabel("time")
+    ax.grid(True)
+    ax.legend()
+    _style.finalize(fig)
+    return fig, ax, blue, raw
+
+
+def test_apply_theme_swaps_ink_and_palette_and_round_trips() -> None:
+    fig, ax, blue, raw = _themed_fig()
+    raw_alpha = to_rgba(raw.get_color())[3]
+    for theme in ("light", "dark", "light", "dark"):
+        _style.apply_theme(fig, theme)
+        ink = _style.INK[theme]
+        assert to_hex(blue.get_color()) == _style.PALETTE[theme]["blue"]
+        assert to_hex(raw.get_color()) == _style.PALETTE[theme]["blue"]
+        assert abs(to_rgba(raw.get_color())[3] - raw_alpha) < 1e-6  # half-alpha raw tint kept
+        assert to_hex(ax.xaxis.label.get_color()) == ink
+        assert to_hex(ax.spines["left"].get_edgecolor()) == ink
+        assert to_hex(ax.xaxis.get_major_ticks()[0].label1.get_color()) == ink
+        grid = ax.xaxis.get_major_ticks()[0].gridline
+        assert to_hex(grid.get_color()) == ink
+        frame = ax.get_legend().get_frame()
+        assert to_hex(frame.get_edgecolor()) == ink
+        assert abs(to_rgba(frame.get_edgecolor())[3] - to_rgba(_style.LEGEND_EDGE_RGBA)[3]) < 1e-6
+    plt.close(fig)
+
+
+def test_save_themed_writes_light_and_dark_png(tmp_path: Path) -> None:
+    fig, *_ = _themed_fig()
+    out = tmp_path / "panel_v3.png"
+    fig.savefig(out)  # hooked: light at out, dark beside it
+    plt.close(fig)
+    dark = tmp_path / "panel_v3_dark.png"
+    assert out.is_file() and dark.is_file()
+    assert _style.dark_path(out) == dark
+    light_px = np.asarray(Image.open(out).convert("RGBA"))
+    dark_px = np.asarray(Image.open(dark).convert("RGBA"))
+    assert light_px.shape == dark_px.shape  # same geometry, only colors differ
+    assert light_px[0, 0, 3] == 0 and dark_px[0, 0, 3] == 0  # both transparent
+    opaque = light_px[..., 3] == 255
+    # Light ink is darker than dark ink wherever both drew opaque text/lines.
+    assert light_px[opaque][:, :3].mean() < dark_px[opaque][:, :3].mean()
+
+
+def test_save_themed_follows_a_symlinked_png(tmp_path: Path) -> None:
+    notes = tmp_path / "notes"
+    notes.mkdir()
+    (notes / "panel_v4.png").touch()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "panel_v4.png").symlink_to(notes / "panel_v4.png")
+    fig, *_ = _themed_fig()
+    fig.savefig(repo / "panel_v4.png")
+    plt.close(fig)
+    dark = repo / "panel_v4_dark.png"
+    assert dark.is_symlink() and dark.resolve() == notes / "panel_v4_dark.png"
+    assert (notes / "panel_v4_dark.png").stat().st_size > 0

@@ -49,7 +49,7 @@ def _load_figure_style():
     return mod
 
 
-# Shared panel style (transparent background, neutral grey chrome); see figure_style.py.
+# Shared panel style (transparent background, light + dark PNG per save); see figure_style.py.
 figure_style = _load_figure_style()
 apply_figure_style = figure_style.apply
 NEUTRAL = figure_style.NEUTRAL
@@ -225,7 +225,8 @@ def finalize_figure_legends(fig) -> None:
 
 
 def save_figure(fig, fname, *args, **kwargs):
-    """``fig.savefig`` wrapper that finalizes legend tables and the shared style first."""
+    """``fig.savefig`` wrapper: finalizes legend tables and the shared style, then saves
+    the light PNG at ``fname`` and its dark variant (``figure_style.save_themed``)."""
     return fig.savefig(fname, *args, **kwargs)
 
 
@@ -243,12 +244,13 @@ def _install_savefig_finalize() -> None:
         except Exception:
             pass
         finalize_figure_legends(self)
-        figure_style.finalize(self)
         kwargs["transparent"] = True
         kwargs.pop("facecolor", None)
-        return _orig_savefig(self, fname, *args, **kwargs)
+        # Light variant at ``fname``, dark variant at ``*_dark.png`` (figure_style.py).
+        return figure_style.save_themed(self, fname, *args, save=_orig_savefig, **kwargs)
 
     savefig._opaque_legend_patched = True  # type: ignore[attr-defined]
+    savefig._unhooked = _orig_savefig  # type: ignore[attr-defined]
     Figure.savefig = savefig  # type: ignore[method-assign]
 
 
