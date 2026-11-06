@@ -8,9 +8,9 @@ paper's pawtrace spec (`papers/<paper>/spec.yaml`), never here.
 | Piece | State |
 | --- | --- |
 | Repo scaffold, pawtrace project, paper rights | done |
-| Ravivarapu intake (arXiv 2507.06326) | in progress |
+| Ravivarapu intake (arXiv 2507.06326) | spec done: 100 items (32 missing, 12 ambiguous, 1 contradicted), 7 open questions |
 | Mehregan, Nguyen intake | waiting on Devin's human-intake forms |
-| Kumaravelu 2016 plant (clean-room, from the manuscript) | in progress |
+| Kumaravelu 2016 plant (clean-room, from the manuscript) | intake done; first implementation under review, not yet matching the paper's network behaviour |
 | Adapters, baselines, RL controllers | not started |
 
 ## Open questions and hypotheses
