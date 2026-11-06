@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.worktrees/
+# local run outputs; regenerate from configs
+runs/
+logs/
+artifacts/
+.env
