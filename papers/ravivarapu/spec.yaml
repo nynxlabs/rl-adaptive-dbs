@@ -1,0 +1,39 @@
+# Ravivarapu et al. (SEA-DBS) — AI intake from arXiv 2507.06326 (CC BY 4.0) only.
+# Rules for this paper: AGENTS.md § Source rules. `pawtrace playbook intake` explains the fields.
+paper:
+  id: ravivarapu
+  title: "Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson's Disease"
+  authors: []
+  year: 2025
+  doi: ""
+  version: preprint         # arXiv 2507.06326 v1 — the only copy we work from
+
+rights:
+  license: CC-BY-4.0
+  license_url: "https://creativecommons.org/licenses/by/4.0/"
+  copy_url: "https://arxiv.org/abs/2507.06326"
+  open_version: "https://arxiv.org/abs/2507.06326"
+  access: open-access
+  access_terms: "arXiv listing: CC BY 4.0, no AI clause. Never the IEEE Xplore version of this paper (its terms forbid AI tools)."
+  rules:
+    redistribute: false     # CC BY would allow it with attribution; keep false until we decide what to publish
+    quotes_in_spec: true
+    ai_tools: allowed       # the arXiv copy only
+  permissions: []
+
+policy:
+  when_silent: [author-question, convention, deviation]
+  authors_code:
+    url: ""                   # no released code
+    license: unknown
+    use: reference-only
+  # Short tokens: lint errors when a ledger entry's evidence or source cites one of these.
+  # The full source rules are in AGENTS.md § Source rules.
+  off_limits:
+    - rl-adaptive-dbs-legacy          # the earlier version of this project: code, docs, specs, trackers, digitization configs, figures, plant port
+    - kumaravelu-plant                # the earlier version's plant package
+    - modeldb.science/206232          # Kumaravelu et al. ModelDB code: no license; the plant is rebuilt from the paper
+    - modeldbrepository/206232        # its GitHub mirror
+    - fleming2020-code                # Fleming, Dunn & Lowery 2020 code (GPL-3.0): never opened
+
+items: []

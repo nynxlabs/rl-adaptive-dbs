@@ -1,0 +1,41 @@
+# Kumaravelu, Brocker & Grill 2016 — the plant, clean-room from the PMC author manuscript. Every parameter is an item with its section.
+# Rules for this paper: AGENTS.md § Source rules. `pawtrace playbook intake` explains the fields.
+paper:
+  id: kumaravelu2016
+  title: "A biophysical model of the cortex-basal ganglia-thalamus network in the 6-OHDA lesioned rat model of Parkinson's disease"
+  authors: [Karthik Kumaravelu, David T. Brocker, Warren M. Grill]
+  year: 2016
+  doi: "10.1007/s10827-016-0593-9"
+  version: accepted manuscript   # PMC author manuscript, PMC4975943
+
+rights:
+  license: publisher-copyright
+  license_url: "https://pmc.ncbi.nlm.nih.gov/about/copyright/"
+  copy_url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC4975943/"
+  open_version: "https://pmc.ncbi.nlm.nih.gov/articles/PMC4975943/"
+  access: open-access
+  access_terms: "PMC author manuscript: free to read and text mine, other uses within fair use (https://pmc.ncbi.nlm.nih.gov/about/copyright/). No AI clause found. Keep the text out of public places; quote briefly."
+  rules:
+    redistribute: false
+    quotes_in_spec: true
+    ai_tools: allowed
+  permissions: []
+
+policy:
+  when_silent: [convention, cited-work, deviation]
+  authors_code:
+    # The authors' ModelDB code carries no license. The plant is a clean-room rebuild from the
+    # manuscript: nobody writing it opens the code.
+    url: "https://modeldb.science/206232"
+    license: none
+    use: off-limits
+  # Short tokens: lint errors when a ledger entry's evidence or source cites one of these.
+  # The full source rules are in AGENTS.md § Source rules.
+  off_limits:
+    - rl-adaptive-dbs-legacy          # the earlier version of this project: code, docs, specs, trackers, digitization configs, figures, plant port
+    - kumaravelu-plant                # the earlier version's plant package
+    - modeldb.science/206232          # Kumaravelu et al. ModelDB code: no license; the plant is rebuilt from the paper
+    - modeldbrepository/206232        # its GitHub mirror
+    - fleming2020-code                # Fleming, Dunn & Lowery 2020 code (GPL-3.0): never opened
+
+items: []

@@ -1,0 +1,42 @@
+# Nguyen et al. 2025 (IEEE ISCAS) — human intake only (ai_tools: never).
+# Rules for this paper: AGENTS.md § Source rules. `pawtrace playbook intake` explains the fields.
+paper:
+  id: nguyen
+  title: "Closed-Loop Neuromorphic Deep Brain Stimulation Using Deep Spiking Q-Networks"   # Devin confirms title, authors and DOI at intake
+  authors: []
+  year: 2025
+  doi: ""
+  version: published
+
+rights:
+  license: publisher-copyright
+  license_url: "https://ieeexplore.ieee.org/Xplorehelp/downloads/license-information/IEEE.html"
+  copy_url: ""              # the IEEE ISCAS 2025 DOI (Devin)
+  open_version: "none found"
+  access: subscription
+  access_terms: "IEEE Xplore Terms of Use forbid using AI tools to ingest, analyze, process or generate output from licensed content, and uploading it to AI tools (https://ieeexplore.ieee.org/Xplorehelp/overview-of-ieee-xplore/terms-of-use). Intake is by Devin, by hand: agents never open this copy or anything made from it."
+  rules:
+    redistribute: false
+    quotes_in_spec: true
+    ai_tools: never         # hard rule: agents get this paper's facts only from Devin's spec items and ledger answers
+  permissions: []
+
+policy:
+  when_silent: [authors-code, author-question, convention, deviation]
+  authors_code:
+    # The group's follow-up code (MIT). Allowed for gap-fills where the paper is silent, never over
+    # what Devin's spec says. Its plant files port the Kumaravelu model: those keep the plant rules
+    # (off-limits for whoever writes our plant).
+    url: "https://github.com/howyoubinh/CL-DBS-RL"
+    license: MIT
+    use: allowed
+  # Short tokens: lint errors when a ledger entry's evidence or source cites one of these.
+  # The full source rules are in AGENTS.md § Source rules.
+  off_limits:
+    - rl-adaptive-dbs-legacy          # the earlier version of this project: code, docs, specs, trackers, digitization configs, figures, plant port
+    - kumaravelu-plant                # the earlier version's plant package
+    - modeldb.science/206232          # Kumaravelu et al. ModelDB code: no license; the plant is rebuilt from the paper
+    - modeldbrepository/206232        # its GitHub mirror
+    - fleming2020-code                # Fleming, Dunn & Lowery 2020 code (GPL-3.0): never opened
+
+items: []

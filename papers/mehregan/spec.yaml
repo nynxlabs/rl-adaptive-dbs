@@ -1,0 +1,39 @@
+# Mehregan et al. 2024 — human intake only (ai_tools: never).
+# Rules for this paper: AGENTS.md § Source rules. `pawtrace playbook intake` explains the fields.
+paper:
+  id: mehregan
+  title: "Enhancing Adaptive Deep Brain Stimulation via Efficient Reinforcement Learning"
+  authors: []               # Devin fills these in at intake
+  year: 2024
+  doi: "10.1109/MobileCloud62079.2024.00013"
+  version: published
+
+rights:
+  license: publisher-copyright
+  license_url: "https://ieeexplore.ieee.org/Xplorehelp/downloads/license-information/IEEE.html"
+  copy_url: "https://doi.org/10.1109/MobileCloud62079.2024.00013"
+  open_version: "none found"
+  access: subscription
+  access_terms: "IEEE Xplore Terms of Use forbid using AI tools to ingest, analyze, process or generate output from licensed content, and uploading it to AI tools (https://ieeexplore.ieee.org/Xplorehelp/overview-of-ieee-xplore/terms-of-use). Intake is by Devin, by hand: agents never open this copy or anything made from it."
+  rules:
+    redistribute: false
+    quotes_in_spec: true    # Devin's short quotes with section citations
+    ai_tools: never         # hard rule: agents get this paper's facts only from Devin's spec items and ledger answers
+  permissions: []
+
+policy:
+  when_silent: [author-question, convention, deviation]
+  authors_code:
+    url: ""                   # no released code
+    license: unknown
+    use: reference-only
+  # Short tokens: lint errors when a ledger entry's evidence or source cites one of these.
+  # The full source rules are in AGENTS.md § Source rules.
+  off_limits:
+    - rl-adaptive-dbs-legacy          # the earlier version of this project: code, docs, specs, trackers, digitization configs, figures, plant port
+    - kumaravelu-plant                # the earlier version's plant package
+    - modeldb.science/206232          # Kumaravelu et al. ModelDB code: no license; the plant is rebuilt from the paper
+    - modeldbrepository/206232        # its GitHub mirror
+    - fleming2020-code                # Fleming, Dunn & Lowery 2020 code (GPL-3.0): never opened
+
+items: []

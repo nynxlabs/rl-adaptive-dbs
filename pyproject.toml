@@ -1,0 +1,29 @@
+[project]
+name = "rl-adaptive-dbs"
+version = "0.0.1"
+description = "A shared testbed for adaptive deep brain stimulation controllers: RL and conventional baselines on simulated brain circuits."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    # pawtrace: intake, specs, gates (no package index name yet; pinned to a commit)
+    "pawtrace @ git+https://github.com/nynxlabs/pawtrace@f71ea17",
+    "pyyaml>=6.0.3",
+]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["plants", "controllers", "adapters"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "plants"]

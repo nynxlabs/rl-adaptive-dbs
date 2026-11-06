@@ -1,0 +1,24 @@
+# Ledger — how every missing / ambiguous item got its value, and every deviation.
+# Deviations go proposed → testing (fresh seeds) → adopted; never adopted straight
+# to pass a gate.
+entries: []
+#  - id: gap.example
+#    item: example.param
+#    type: gap-fill           # gap-fill | interpretation | deviation
+#    value: 0.99
+#    source: convention       # paper | authors-code | convention | cited-work | author | deviation
+#    reason: "why this value"
+#    status: adopted          # proposed | testing | adopted | rejected | superseded
+#    evidence: []
+#    tested_on: {seeds: [], runs: []}
+#    decided: 2026-01-01
+questions: []
+#  - id: q.example
+#    question: "..."          # the text you'd send (`pawtrace questions` renders them send-ready)
+#    why: "..."               # what the answer would change
+#    items: [example.param]   # spec items it's about
+#    panels: []               # panels it affects
+#    evidence: []             # runs, overlays, ledger entries that show the problem
+#    status: open             # open | answered-by-us | asked | answered
+#    asked: 2026-01-01        # asked / answered: when it was sent (and `to:` whom)
+#    answer: ""               # answered / answered-by-us; answered-by-us also names answer_source

@@ -11,3 +11,5 @@ runs/
 logs/
 artifacts/
 .env
+# the paper PDF + extracted text/figures stay local unless the paper's license allows
+papers/*/source/
