@@ -13,8 +13,9 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=8",
-    # pawtrace: intake, specs, gates (no package index name yet; pinned to a commit)
-    "pawtrace @ git+https://github.com/nynxlabs/pawtrace@f71ea17",
+    # pawtrace: intake, specs, gates (no package index name yet; pinned to a commit);
+    # the extract extra brings pypdfium2 + pillow for `pawtrace extract`
+    "pawtrace[extract] @ git+https://github.com/nynxlabs/pawtrace@f71ea17",
     "pyyaml>=6.0.3",
 ]
 
