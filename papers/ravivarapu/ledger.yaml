@@ -12,7 +12,56 @@ entries: []
 #    evidence: []
 #    tested_on: {seeds: [], runs: []}
 #    decided: 2026-01-01
-questions: []
+questions:
+  - id: q.plant_model
+    question: "Which published model (and code) is the SEA-DBS environment: the Kumaravelu, Brocker & Grill 2016 basal ganglia model as used by Mehregan et al. 2024, or another one? What did you change (populations, neurons per population, PD condition, DBS pulse amplitude and width, integrator), and what does the environment seed control?"
+    why: "The paper names no plant paper besides Mehregan et al., and says both 'ten neurons per population' and 'the basal ganglia consist of 10 neurons'. Without the plant we can't rebuild any result."
+    items: [plant.model, plant.neurons_per_population, plant.synapses, plant.equations, plant.pd_condition, plant.dbs_pulse, plant.integrator, plant.reset, plant.seed]
+    panels: []
+    evidence: []
+    status: open
+  - id: q.beta_computation
+    question: "How is P_beta computed each 2 ms step: which PSD estimator, on what signal (spike times, binned spikes, voltage), over how long a window, and how is it scaled so that the 0.35 threshold applies? What is n_obs, and do the networks take the n_obs-long window or the mean P̄_beta?"
+    why: "Sets the observation and the reward. Fig. 4a plots PSD x 10^-3 while Table II reports PSD around 300, and Table II's rewards match Eq. (7) at PSD/1000."
+    items: [obs.psd_method, obs.psd_window, obs.scale, obs.n_obs, obs.network_input, reward.timing]
+    panels: []
+    evidence: []
+    status: open
+  - id: q.stimulation
+    question: "How does the binary action relate to the 50 Hz and 30 Hz stimulation frequencies in Fig. 5-6: does a_t = 1 turn on a pulse train at that frequency, or gate single pulses? Which frequency was used in training, and which in Fig. 7 and Table II?"
+    why: "Decides what an action does in the plant and which condition each result panel uses."
+    items: [action.stim_frequency, plant.dbs_pulse]
+    panels: []
+    evidence: []
+    status: open
+  - id: q.networks
+    question: "What are the actor, critic and predictive-model architectures (layers, widths, activations), how many logits does the actor output, and is the predictive model f_theta a separate network from the actor? Which networks does the 65 MB / 33 MB model size count?"
+    why: "No architecture is given; 65 MB is large for a scalar or short-window input, so the size claim can't be checked without it."
+    items: [arch.actor, arch.critic, arch.pred_model, explore.n_classes, algo.pred_params, claim.model_size]
+    panels: []
+    evidence: []
+    status: open
+  - id: q.gumbel_and_updates
+    question: "What are tau_0, tau_min and lambda_tau, and is t in Eq. (14) the step within an episode or a global counter? Is the Gumbel noise applied once (softmax of Eq. (13)'s z) or twice (Eq. (11) applied to z)? How is the executed a_t taken from the relaxed sample, and what action form does the critic see in the critic loss, the target and the actor loss? Does the target use the stored r̂_t or a fresh prediction? What are the soft-update rate, optimizer, predictive-model learning rate, warm-up and terminal handling?"
+    why: "These decide the update rule; the paper's Table I only covers the learning rates, gamma, buffer and batch."
+    items: [explore.anneal_params, explore.anneal_clock, explore.gs_composition, action.discretize, action.critic_input, algo.target_action, algo.rhat_source, algo.predictive_target_updates, train.soft_update_rate, train.optimizer, train.pred_lr, algo.warmup, algo.terminal, train.init]
+    panels: []
+    evidence: []
+    status: open
+  - id: q.baseline
+    question: "How is the Baseline (DDPG) set up: exploration noise, how its continuous output becomes a binary action, architecture and hyperparameters? Is 'guided sampling' in the ablation the same Gumbel-Softmax exploration, and were all ablation variants trained for 150 episodes with Table I's settings?"
+    why: "Every result compares against the Baseline; without its setup the comparison can't be rebuilt."
+    items: [baseline.ddpg, ablation.gs_name, ablation.training_budget]
+    panels: []
+    evidence: []
+    status: open
+  - id: q.evaluation
+    question: "For Table II: what does n in {10, 20, 50, 75} control (how often the seed changes, or the stimulation update interval), how long is each test run, how many runs, and are Avg PSD and Avg Reward means over steps (or is Avg Reward Eq. (7) of the mean PSD)? For Fig. 4-7: how many seeds, which checkpoint, is a test 'step' one 2 ms env step, are actions sampled or greedy at test time, and how was FP16 PTQ applied?"
+    why: "Defines the gates for Table II and Fig. 4-7."
+    items: [eval.table2_protocol, eval.table2_averaging, eval.inference_steps, eval.ptq_fp16, action.eval_mode, train.seeds]
+    panels: []
+    evidence: []
+    status: open
 #  - id: q.example
 #    question: "..."          # the text you'd send (`pawtrace questions` renders them send-ready)
 #    why: "..."               # what the answer would change

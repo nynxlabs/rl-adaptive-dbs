@@ -1,17 +1,20 @@
 # Ravivarapu et al. (SEA-DBS) — AI intake from arXiv 2507.06326 (CC BY 4.0) only.
 # Rules for this paper: AGENTS.md § Source rules. `pawtrace playbook intake` explains the fields.
+# Sections follow the arXiv v1 numbering: §III (PD brain model, problem), §IV-A..D (RL setup,
+# predictive model, Gumbel-Softmax, overall framework), §V-A/B (setup, results), Alg. 1,
+# Eq. (1)-(14), Table I-II, Fig. 1-7. Values read off a figure by eye say so.
 paper:
   id: ravivarapu
   title: "Sample-Efficient Reinforcement Learning Controller for Deep Brain Stimulation in Parkinson's Disease"
-  authors: []
+  authors: [Harsh Ravivarapu, Gaurav Bagwe, Xiaoyong Yuan, Chunxiu Yu, Lan Zhang]
   year: 2025
-  doi: ""
-  version: preprint         # arXiv 2507.06326 v1 — the only copy we work from
+  doi: "10.48550/arXiv.2507.06326"
+  version: "preprint, arXiv 2507.06326v1 (8 Jul 2025; arXiv comment: accepted by IEEE IMC 2025)"   # the only copy we work from
 
 rights:
   license: CC-BY-4.0
   license_url: "https://creativecommons.org/licenses/by/4.0/"
-  copy_url: "https://arxiv.org/abs/2507.06326"
+  copy_url: "https://arxiv.org/abs/2507.06326v1"
   open_version: "https://arxiv.org/abs/2507.06326"
   access: open-access
   access_terms: "arXiv listing: CC BY 4.0, no AI clause. Never the IEEE Xplore version of this paper (its terms forbid AI tools)."
@@ -36,4 +39,636 @@ policy:
     - modeldbrepository/206232        # its GitHub mirror
     - fleming2020-code                # Fleming, Dunn & Lowery 2020 code (GPL-3.0): never opened
 
-items: []
+items:
+  # ---------------------------------------------------------------- plant (environment)
+  - id: plant.model
+    kind: protocol
+    text: "'We adopt a well-established computational model of PD, inspired by Mehregan et al. [18], that simulates the cortical-basal ganglia-thalamic network under both healthy and Parkinsonian conditions [37]-[40].' The paper names no plant paper besides Mehregan et al.; refs [37]-[40] are RL-control papers (seizure control, vessel tracking, arm control), and Kumaravelu et al. 2016 is not cited. Which published model (and which modifications) is missing."
+    section: "§III; §V-A"
+    status: missing
+
+  - id: plant.populations
+    kind: protocol
+    text: "Regions: 'excitatory and inhibitory cortical layers, the direct and indirect striatal pathways, the STN, GPi, GPe, and the thalamus' (Fig. 1 labels: rcortex, icortex, direct striatum, indirect striatum, GPe, GPi, STN, thalamus)."
+    section: "§III; Fig. 1"
+    status: stated
+    value: [rcortex, icortex, direct_striatum, indirect_striatum, STN, GPe, GPi, thalamus]
+
+  - id: plant.neuron_model
+    kind: protocol
+    text: "'each region is modeled using Hodgkin-Huxley-type single-compartment neurons'."
+    section: "§III"
+    status: stated
+
+  - id: plant.neurons_per_population
+    kind: parameter
+    text: "§III: 'with ten neurons per population'. §V-A: 'The basal ganglia consist of 10 neurons'. Reading 1: 10 neurons in each population. Reading 2: 10 neurons in the basal ganglia in total."
+    section: "§III; §V-A"
+    status: contradicted
+
+  - id: plant.connectivity
+    kind: protocol
+    text: "Fig. 1 schematic (green = excitatory, red = inhibitory, as drawn): icortex->rcortex (red); rcortex->indirect striatum, rcortex->direct striatum, rcortex->STN (green); indirect striatum->GPe (green as drawn); indirect striatum, GPe and direct striatum self-loops (red); GPe->GPi, GPe->STN (red); STN->GPe, STN->GPi (green); direct striatum->GPi (red); GPi->thalamus (red); thalamus->rcortex (green). Caption credits the schematic to Mehregan et al. [18]."
+    section: "Fig. 1"
+    status: stated
+
+  - id: plant.synapses
+    kind: protocol
+    text: "'Both stochastic and deterministic synaptic connections are included'. Which connections are stochastic, their connection rules and synaptic parameters are missing."
+    section: "§III"
+    status: missing
+
+  - id: plant.equations
+    kind: equation
+    text: "No neuron or synapse equations, currents, conductances, applied currents or other plant parameters are given."
+    section: "§III"
+    status: missing
+
+  - id: plant.pd_condition
+    kind: protocol
+    text: "The model runs 'under both healthy and Parkinsonian conditions'; the environment 'is designed to mimic PD patients' oscillatory activity'. How the PD condition is set (which parameters change) is missing; experiments appear to use the PD condition only."
+    section: "§III; §V-A"
+    status: missing
+
+  - id: plant.dbs_target
+    kind: protocol
+    text: "'DBS is applied to the STN'; 'stimulation applied to the STN'."
+    section: "§III; §V-A"
+    status: stated
+    value: STN
+
+  - id: plant.dbs_pulse
+    kind: parameter
+    text: "DBS pulse shape, amplitude, width and how the pulse enters the STN neurons (all cells, current injection, ...) are not given."
+    section: "§III; §IV-A"
+    status: missing
+
+  - id: plant.dt
+    kind: parameter
+    text: "'Within each step, the underlying neural dynamics are integrated at a resolution of 0.02 ms'."
+    section: "§V-A"
+    status: stated
+    value: "0.02 ms"
+
+  - id: plant.integrator
+    kind: protocol
+    text: "Integration method (Euler, RK4, ...) is not given."
+    section: "§V-A"
+    status: missing
+
+  - id: plant.reset
+    kind: protocol
+    text: "Alg. 1 line 3: 'Reset environment and obtain initial STATE s_0'. Initial conditions, any warm-up simulated before s_0, and whether the plant state carries over between episodes are missing."
+    section: "Alg. 1 line 3"
+    status: missing
+
+  - id: plant.seed
+    kind: protocol
+    text: "Test runs change 'the environment seed every n in {10, 20, 50, 75} step' 'to simulate varying PD progression rates'. What the seed controls (noise, initial state, connectivity, PD parameters) is missing."
+    section: "§V-B"
+    status: missing
+
+  # ---------------------------------------------------------------- observation / state
+  - id: obs.beta_power.eq1
+    kind: equation
+    text: "P_beta = (1/n) sum_{j=1..n} integral_{2pi*13}^{2pi*35} P_GPi^j(omega) d omega, where P_GPi^j is the PSD of the j-th GPi neuron and n the number of GPi neurons."
+    section: "§III, Eq. (1)"
+    status: stated
+
+  - id: obs.beta_band
+    kind: parameter
+    text: "Beta band 13-35 Hz for the biomarker (§III, Eq. (1) limits, §V-B). §I mentions 'beta-band oscillations (12-35 Hz)' as background only."
+    section: "§III, Eq. (1); §V-B"
+    status: stated
+    value: "13-35 Hz"
+
+  - id: obs.gpi_source
+    kind: protocol
+    text: "'we analyze the power spectral density (PSD) of spiking activity from GPi neurons'; the state is 'processed using PSD estimation'."
+    section: "§III; §V-A"
+    status: stated
+
+  - id: obs.psd_method
+    kind: protocol
+    text: "The PSD estimator (periodogram, Welch, multitaper), how spiking activity is turned into a signal (spike times, binned trains, membrane voltage), sampling rate and any detrending are missing."
+    section: "§III; §V-A"
+    status: missing
+
+  - id: obs.psd_window
+    kind: parameter
+    text: "Length of the simulated signal each P_beta(i) is computed from is missing. Each env step is 2 ms and an episode 60 ms (§V-A), so the window cannot be a single step if 13-35 Hz is to be resolved."
+    section: "§III; §V-A"
+    status: missing
+
+  - id: obs.scale
+    kind: parameter
+    text: "Scale/units of P_beta. Eq. (7) compares P̄_beta with beta_t = 0.35 and Fig. 2 spans P̄_beta 0-1; Fig. 4a plots '(PSD x 10^-3)' at 0.32-0.48; Table II and Fig. 5-7 report 'PSD' around 300-470. Reading 1: the reward's P̄_beta is the reported PSD / 1000 (Table II's Avg Reward equals Eq. (7) at Avg PSD/1000 in all eight cells, our arithmetic). Reading 2: some other normalization. Units of the PSD itself are not given."
+    section: "Eq. (7); Fig. 2; Fig. 4a; Table II"
+    status: ambiguous
+
+  - id: obs.state.eq4
+    kind: equation
+    text: "s_t = { P_beta(i) | i = 1, 2, ..., n_obs }: 'a fixed-length window of past beta estimates', P_beta(i) the beta power at timestep i."
+    section: "§IV-A, Eq. (4); §V-A"
+    status: stated
+
+  - id: obs.n_obs
+    kind: parameter
+    text: "Window length n_obs is not given, nor how the window is filled at the start of an episode."
+    section: "§IV-A, Eq. (4)"
+    status: missing
+
+  - id: obs.mean.eq5
+    kind: equation
+    text: "P̄_beta = (1/n_obs) sum_{i=1..n_obs} P_beta(i)."
+    section: "§IV-A, Eq. (5)"
+    status: stated
+
+  - id: obs.network_input
+    kind: architecture
+    text: "After Eq. (5) the mean P̄_beta 'is used as input to both actor and critic networks'; Eq. (4) and §V-A call the state s_t the window of n_obs values. Reading 1: the networks take the scalar P̄_beta. Reading 2: they take the n_obs-long window s_t."
+    section: "§IV-A, Eq. (4)-(5); §V-A"
+    status: ambiguous
+
+  # ---------------------------------------------------------------- action
+  - id: action.space.eq6
+    kind: equation
+    text: "a_t in A = {0, 1}; 'a_t = 1 corresponds to delivering a DBS pulse and a_t = 0 to no stimulation'. 'Each action determines whether a stimulation pulse is administered at the current timestep'."
+    section: "§IV-A, Eq. (6); §V-A"
+    status: stated
+    value: "{0, 1}"
+
+  - id: action.stim_frequency
+    kind: protocol
+    text: "Fig. 5 compares 'Beta stimulation freq. 50 Hz' and '30 Hz'; Fig. 6 is 'at 50 Hz'. How a stimulation frequency maps onto a binary action per 2 ms step is not said, nor which frequency is used in training. Reading 1: a_t = 1 switches on a pulse train at that frequency for the step. Reading 2: the frequency sets the pulse timing grid and the agent gates individual pulses."
+    section: "§V-B; Fig. 5; Fig. 6"
+    status: ambiguous
+
+  - id: action.discretize
+    kind: protocol
+    text: "How the executed a_t in {0,1} is taken from the Gumbel-Softmax relaxed sample (argmax, hard one-hot / straight-through, threshold) is not given."
+    section: "§IV-C; Alg. 1 lines 6-8"
+    status: missing
+
+  - id: action.critic_input
+    kind: architecture
+    text: "What action representation the critic Q_phi(s, a) receives (executed a_t, relaxed Gumbel-Softmax probabilities, or logits) in the critic loss, the target and the actor loss is not given; Alg. 1 line 10 stores both a_t and a_logits but doesn't say where a_logits is used."
+    section: "Alg. 1 lines 10-15"
+    status: missing
+
+  - id: action.eval_mode
+    kind: protocol
+    text: "Whether test runs (Table II, Fig. 5-7) sample with Gumbel noise or act greedily is not given."
+    section: "§V-B"
+    status: missing
+
+  # ---------------------------------------------------------------- reward
+  - id: reward.eq7
+    kind: equation
+    text: "r_t = ((P̄_beta - beta_t) x 10)^2 if P̄_beta < beta_t; -((P̄_beta - beta_t) x 10)^2 otherwise. Fig. 2 plots this curve (by eye: about +12 at P̄_beta = 0, 0 at 0.35, about -42 at 1.0)."
+    section: "§IV-A, Eq. (7); Fig. 2"
+    status: stated
+
+  - id: reward.threshold
+    kind: parameter
+    text: "'beta_t is a fixed threshold (set to 0.35)'; 'a clinical threshold beta_t = 0.35'."
+    section: "§IV-A; §V-A"
+    status: stated
+    value: 0.35
+
+  - id: reward.energy_term
+    kind: equation
+    text: "The text says the reward penalizes 'unnecessary stimulation' and 'overstimulation while promoting energy efficiency', but Eq. (7) has no action or energy term. Reading 1: Eq. (7) is the whole reward and energy efficiency is only a hoped-for effect. Reading 2: there is an unstated stimulation cost."
+    section: "§IV-A, Eq. (7); §V-A"
+    status: ambiguous
+
+  - id: reward.timing
+    kind: protocol
+    text: "Whether r_t is computed from the window after executing a_t (s_{t+1}) or before it (s_t) is not given; Alg. 1 line 8 only says the env returns s_{t+1} and r_t."
+    section: "Alg. 1 line 8"
+    status: missing
+
+  # ---------------------------------------------------------------- algorithm
+  - id: algo.backbone
+    kind: protocol
+    text: "'SEA-DBS builds on a DDPG backbone'; actor outputs stimulation decisions, critic estimates a learned Q-function; target critic Q_phi' and target actor pi_theta'."
+    section: "§IV, §IV-A"
+    status: stated
+    value: DDPG
+
+  - id: algo.critic_loss.eq2
+    kind: equation
+    text: "L_critic = MSE(Q(s_t, a_t), Q_target); Alg. 1 line 14: L_critic = (1/B) sum_i (Q_phi(s_i, a_i) - Q_target)^2."
+    section: "§IV-A, Eq. (2); Alg. 1 line 14"
+    status: stated
+
+  - id: algo.q_target.eq3
+    kind: equation
+    text: "Standard DDPG target, printed as 'Q_actor = r_t + gamma Q_phi'(s_{t+1}, pi_theta'(s_{t+1}))' (labelled Q_actor though the text calls it the target Q-value). Replaced by Eq. (9) in SEA-DBS."
+    section: "§IV-A, Eq. (3)"
+    status: stated
+
+  - id: algo.q_target.eq9
+    kind: equation
+    text: "SEA-DBS target: Q_target = r_t + r̂_t + gamma Q_phi'(s_{t+1}, pi_theta'(s_{t+1})), r_t from Eq. (7), r̂_t from the predictive model (Eq. (8))."
+    section: "§IV-B, Eq. (9); Alg. 1 line 13"
+    status: stated
+
+  - id: algo.rhat_source
+    kind: protocol
+    text: "Alg. 1 lines 9-10 compute r̂_t at collection time and store it in the buffer; line 13 then uses Eq. (9). Reading 1: the stored r̂_t is used in the target. Reading 2: r̂ is recomputed by the current f_theta at update time."
+    section: "Alg. 1 lines 9-13; Eq. (9)"
+    status: ambiguous
+
+  - id: algo.target_action
+    kind: protocol
+    text: "How pi_theta'(s_{t+1}) in the target is turned into the critic's action input (deterministic softmax, argmax, Gumbel sample) is not given."
+    section: "Eq. (9)"
+    status: missing
+
+  - id: algo.terminal
+    kind: protocol
+    text: "Handling of the last step of an episode in the target (done mask or bootstrapping through) is not given."
+    section: "Eq. (9); Alg. 1"
+    status: missing
+
+  - id: algo.actor_loss
+    kind: equation
+    text: "L_actor = -E_{s~D}[ Q_phi(s, pi_theta(s)) ]."
+    section: "Alg. 1 line 15"
+    status: stated
+
+  - id: algo.pred_model.eq8
+    kind: equation
+    text: "r̂_t = f_theta(s_t, a_t): a predictive reward model from state-action pairs, 'trained concurrently'."
+    section: "§IV-B, Eq. (8); Alg. 1 line 9"
+    status: stated
+
+  - id: algo.pred_loss.eq10
+    kind: equation
+    text: "L_pred = (1/B) sum_{i=1..B} (r_i - r̂_i)^2 (MSE between predicted and actual rewards over the mini-batch)."
+    section: "§IV-B, Eq. (10); Alg. 1 line 16"
+    status: stated
+
+  - id: algo.pred_params
+    kind: architecture
+    text: "The predictive model is written f_theta, the same theta as the actor pi_theta. Reading 1: a separate network (Alg. 1 line 1 initializes 'Predictive model f_theta' separately from the actor). Reading 2: it shares the actor's parameters."
+    section: "§IV-B, Eq. (8); Alg. 1 line 1"
+    status: ambiguous
+
+  - id: algo.update_schedule
+    kind: protocol
+    text: "Alg. 1 runs the update block (sample mini-batch, target, critic/actor/predictive losses, gradient step, soft target update) inside the per-step loop: one update per environment step."
+    section: "Alg. 1 lines 4-19"
+    status: stated
+    value: "1 update per env step"
+
+  - id: algo.warmup
+    kind: protocol
+    text: "When updates start (e.g. once the buffer holds a batch) and any random-action warm-up are not given; Alg. 1 updates from the first step."
+    section: "Alg. 1 lines 11-12"
+    status: missing
+
+  - id: algo.soft_update
+    kind: equation
+    text: "theta' <- tau theta + (1 - tau) theta'; phi' <- tau phi + (1 - tau) phi'. The rate shares the symbol tau with the Gumbel-Softmax temperature."
+    section: "Alg. 1 lines 17-19"
+    status: stated
+
+  - id: algo.predictive_target_updates
+    kind: protocol
+    text: "Text after Eq. (9): Q_phi' and pi_theta' are 'the target critic and actor networks updated using actor in Eq. (3) and critic loss in Eq. (2) respectively'. Alg. 1 updates the targets by soft (Polyak) averaging. Reading 1: the sentence loosely describes how the online actor and critic are trained, and the targets follow by soft update only (Alg. 1). Reading 2: some other target-update rule is meant."
+    section: "§IV-B after Eq. (9); Alg. 1 lines 17-19"
+    status: ambiguous
+
+  # ---------------------------------------------------------------- exploration (Gumbel-Softmax)
+  - id: explore.gs.eq11
+    kind: equation
+    text: "ã_i = exp((log pi_i + g_i)/tau) / sum_{j=1..k} exp((log pi_j + g_j)/tau), for class probabilities pi_1..pi_k."
+    section: "§IV-C, Eq. (11); Alg. 1 line 7"
+    status: stated
+
+  - id: explore.gumbel_noise.eq12
+    kind: equation
+    text: "g_i = -log(-log(U_i)), U_i ~ Uniform(0,1)."
+    section: "§IV-C, Eq. (12)"
+    status: stated
+
+  - id: explore.logits.eq13
+    kind: equation
+    text: "'the actor outputs logits log pi_theta(s)', perturbed and temperature-scaled: z_i = (log(pi_theta(s_i)) + g_i)/tau; 'These z_i values are then passed through Eq. 11'."
+    section: "§IV-C, Eq. (13); Alg. 1 line 6"
+    status: stated
+
+  - id: explore.gs_composition
+    kind: protocol
+    text: "Eq. (13) already adds the Gumbel noise and divides by tau, and Eq. (11) does both again. Reading 1: ã = softmax(z), noise and temperature applied once. Reading 2: Eq. (11) applied literally to z (noise twice, temperature squared)."
+    section: "§IV-C, Eq. (11), (13)"
+    status: ambiguous
+
+  - id: explore.anneal.eq14
+    kind: equation
+    text: "tau_t = max(tau_min, tau_0 exp(-lambda_tau t)); computed every step (Alg. 1 line 5)."
+    section: "§IV-C, Eq. (14); Alg. 1 line 5"
+    status: stated
+
+  - id: explore.anneal_params
+    kind: parameter
+    text: "tau_0, tau_min and lambda_tau are not given (Table I lists only 'Gumbel-Softmax with Annealing')."
+    section: "Eq. (14); Table I"
+    status: missing
+
+  - id: explore.anneal_clock
+    kind: parameter
+    text: "Reading 1: t in Eq. (14) is Alg. 1's within-episode step index (t = 1..T, so tau resets every episode). Reading 2: a global step or episode counter across training ('we anneal the temperature tau over time')."
+    section: "Eq. (14); Alg. 1 lines 4-5"
+    status: ambiguous
+
+  - id: explore.n_classes
+    kind: architecture
+    text: "Number of actor outputs (k in Eq. (11)) is not given: two logits for {0,1}, or one."
+    section: "§IV-C, Eq. (11), (13)"
+    status: missing
+
+  # ---------------------------------------------------------------- architecture
+  - id: arch.actor
+    kind: architecture
+    text: "Actor layers, widths, activations and output head are not given."
+    section: "§IV"
+    status: missing
+
+  - id: arch.critic
+    kind: architecture
+    text: "Critic layers, widths, activations and where the action enters are not given."
+    section: "§IV"
+    status: missing
+
+  - id: arch.pred_model
+    kind: architecture
+    text: "Predictive model f_theta layers, widths and activations are not given."
+    section: "§IV-B"
+    status: missing
+
+  # ---------------------------------------------------------------- training
+  - id: train.actor_lr
+    kind: parameter
+    text: "Actor learning rate (alpha_a) 0.0005."
+    section: "Table I"
+    status: stated
+    value: 0.0005
+
+  - id: train.critic_lr
+    kind: parameter
+    text: "Critic learning rate (alpha_c) 0.001."
+    section: "Table I"
+    status: stated
+    value: 0.001
+
+  - id: train.pred_lr
+    kind: parameter
+    text: "Learning rate of the predictive model is not given."
+    section: "Table I"
+    status: missing
+
+  - id: train.gamma
+    kind: parameter
+    text: "Discount factor gamma 0.99."
+    section: "Table I"
+    status: stated
+    value: 0.99
+
+  - id: train.buffer_size
+    kind: parameter
+    text: "Replay buffer size 8192."
+    section: "Table I"
+    status: stated
+    value: 8192
+
+  - id: train.batch_size
+    kind: parameter
+    text: "Batch size 32."
+    section: "Table I"
+    status: stated
+    value: 32
+
+  - id: train.exploration
+    kind: parameter
+    text: "Exploration strategy: 'Gumbel-Softmax with Annealing'."
+    section: "Table I"
+    status: stated
+
+  - id: train.soft_update_rate
+    kind: parameter
+    text: "Soft target update rate tau (Alg. 1 lines 18-19) is not given."
+    section: "Alg. 1; Table I"
+    status: missing
+
+  - id: train.optimizer
+    kind: parameter
+    text: "Optimizer (and its settings) is not given: 'optimized using the hyperparameters listed in Table I'."
+    section: "§V-A; Table I"
+    status: missing
+
+  - id: train.init
+    kind: protocol
+    text: "'All networks are initialized randomly'; the initialization scheme is not given."
+    section: "§V-A"
+    status: missing
+
+  - id: train.episodes
+    kind: parameter
+    text: "'The agent is trained over 150 episodes'."
+    section: "§V-A"
+    status: stated
+    value: 150
+
+  - id: train.episode_length
+    kind: parameter
+    text: "'Each episode simulates 60 ms of brain activity, divided into 30 environment steps of 2 ms each'."
+    section: "§V-A"
+    status: stated
+    value: {episode_ms: 60, steps: 30, step_ms: 2}
+
+  - id: train.seeds
+    kind: protocol
+    text: "Number of training runs/seeds and how the reported curves combine them are not given."
+    section: "§V"
+    status: missing
+
+  # ---------------------------------------------------------------- baselines and ablations
+  - id: baseline.ddpg
+    kind: protocol
+    text: "'Baseline (DDPG)' / 'standard DDPG baselines'. Its exploration noise, how its continuous actor output becomes a binary action, architecture and hyperparameters (same as Table I or not) are not given."
+    section: "§V-B; Table II"
+    status: missing
+
+  - id: ablation.variants
+    kind: protocol
+    text: "Four variants: Baseline, Baseline+PM (predictive modeling), Baseline+GS ('guided sampling'), SEA-DBS (PM+GS)."
+    section: "§V-B Ablation; Fig. 7"
+    status: stated
+
+  - id: ablation.training_budget
+    kind: protocol
+    text: "Training budget, seeds and hyperparameters of each ablation variant (same 150 episodes and Table I or not) are not given."
+    section: "§V-B Ablation"
+    status: missing
+
+  - id: ablation.gs_name
+    kind: protocol
+    text: "The ablation calls GS 'guided sampling'; everywhere else GS is Gumbel-Softmax. Reading 1: the same Gumbel-Softmax exploration. Reading 2: a different 'guided sampling' scheme."
+    section: "§V-B Ablation; §IV-C"
+    status: ambiguous
+
+  # ---------------------------------------------------------------- evaluation and post-training
+  - id: eval.table2_protocol
+    kind: protocol
+    text: "Text: 'We evaluate SEA-DBS to simulate varying PD progression rates by changing the environment seed every n in {10, 20, 50, 75} step'. Table II caption: 'across different stimulation update intervals'. Reading 1: n = how often the env seed changes during a test run. Reading 2: n = the stimulation update interval. Run length, number of runs and which trained checkpoint are not given."
+    section: "§V-B; Table II"
+    status: ambiguous
+
+  - id: eval.table2_averaging
+    kind: protocol
+    text: "What 'Avg PSD' and 'Avg Reward' average over is not given. Reading 1: Avg Reward = Eq. (7) evaluated at P̄_beta = Avg PSD/1000 (matches all eight cells to rounding, our arithmetic: e.g. 326 -> (0.024 x 10)^2 = 5.76e-2). Reading 2: mean of per-step rewards."
+    section: "Table II; Eq. (7)"
+    status: ambiguous
+
+  - id: eval.inference_steps
+    kind: protocol
+    text: "Fig. 5-7 run trained models for 10 'stimulation steps' (x-axis Steps 0-10) from a common start (PSD about 462 by eye). Whether a step is one 2 ms env step or something longer, the start state, number of runs and which checkpoint are not given."
+    section: "§V-B; Fig. 5-7"
+    status: missing
+
+  - id: eval.ptq_fp16
+    kind: protocol
+    text: "'16-bit floating point (FP16) post-training quantization' of trained SEA-DBS and Baseline models, evaluated at 50 Hz over 10 stimulation steps. Which networks and tensors (weights, activations) are cast, and with what tool, are not given."
+    section: "§V-B; Fig. 6"
+    status: missing
+
+  # ---------------------------------------------------------------- panels
+  - id: panel.fig1
+    kind: panel
+    text: "Schematic of the PD brain model with excitatory (green) and inhibitory (red) pathways, credited to Mehregan et al. [18]. Not a result; see plant.connectivity."
+    section: "Fig. 1"
+    status: stated
+
+  - id: panel.fig2
+    kind: panel
+    text: "'Reward as a function of average beta power P̄_beta': Eq. (7) on P̄_beta 0-1 with beta_t = 0.35 marked. Not a result; checks reward.eq7."
+    section: "Fig. 2"
+    status: stated
+
+  - id: panel.fig3
+    kind: panel
+    text: "Training-loop diagram: generate action probabilities -> 'Select Best Action (Eq. 11)' -> 'Add Gumbel Noise (Eq. 12)' -> sample action -> brain model -> feedback -> policy updates. The caption orders it (1) probabilities, (2) Gumbel noise, (3) sample; the box order puts Eq. 11 before the noise. Not a result."
+    section: "Fig. 3"
+    status: stated
+
+  - id: panel.fig4a
+    kind: panel
+    text: "'PSD over training episodes': per-episode beta PSD (y '(PSD x 10^-3)'), Baseline vs SEA-DBS, episodes 1-150. Claim: SEA-DBS shows 'more pronounced and consistent suppression of beta activity', the Baseline 'only a modest decline'. By eye both start near 0.47; at episode 150 Baseline is about 0.36, SEA-DBS about 0.32."
+    section: "Fig. 4a; §V-B"
+    status: stated
+
+  - id: panel.fig4b
+    kind: panel
+    text: "'Reward during training': per-episode reward, Baseline vs SEA-DBS, episodes 1-150. Claim: SEA-DBS 'achieves higher cumulative rewards with a faster initial learning rate'. By eye both start near -1.5 and end near 0 (SEA-DBS slightly above 0, Baseline slightly below). Per-episode aggregation (sum vs mean of step rewards) is not stated."
+    section: "Fig. 4b; §V-B"
+    status: stated
+
+  - id: panel.fig5a
+    kind: panel
+    text: "Inference at 'Beta stimulation freq. 50 Hz': PSD vs steps 0-10, Baseline vs SEA-DBS. Claim: 50 Hz lies above the beta band and 'more effectively disrupts abnormal oscillations, leading to greater PSD reduction'; SEA-DBS lower. By eye both start at about 462; at step 10 Baseline about 352, SEA-DBS about 308."
+    section: "Fig. 5a; §V-B"
+    status: stated
+
+  - id: panel.fig5b
+    kind: panel
+    text: "Inference at 'Beta stimulation freq. 30 Hz': PSD vs steps 0-10, Baseline vs SEA-DBS. Claim: 30 Hz 'overlaps with the pathological beta band and is less effective'. By eye both start at about 462; at step 10 Baseline about 398, SEA-DBS about 388."
+    section: "Fig. 5b; §V-B"
+    status: stated
+
+  - id: panel.fig6
+    kind: panel
+    text: "FP16 PTQ at 50 Hz: PSD vs steps 0-10 for Baseline, Baseline + PTQ(fp16), SEA-DBS, SEA-DBS + PTQ(fp16). Claim: the quantized SEA-DBS 'closely matches the full-precision version' and 'continues to outperform the Baseline'. By eye the Baseline and SEA-DBS curves are the same as Fig. 5a; at step 10 Baseline+PTQ about 378, SEA-DBS+PTQ about 312."
+    section: "Fig. 6; §V-B"
+    status: stated
+
+  - id: panel.fig7
+    kind: panel
+    text: "Ablation: PSD vs steps 0-10 for Baseline, Baseline+GS, Baseline+PM, SEA-DBS. Claim: SEA-DBS 'achieves the strongest and most stable reduction'; Baseline+PM 'some improvement', Baseline+GS 'limited gains'. Stimulation frequency not stated; by eye the Baseline and SEA-DBS curves are the same as Fig. 5a (50 Hz). By eye at step 10: Baseline+GS about 400, Baseline+PM about 354, Baseline about 352, SEA-DBS about 308."
+    section: "Fig. 7; §V-B"
+    status: stated
+
+  - id: panel.table1
+    kind: panel
+    text: "Training hyperparameters: actor LR 0.0005, critic LR 0.001, gamma 0.99, replay buffer 8192, batch 32, exploration 'Gumbel-Softmax with Annealing'. Not a result; see train.*."
+    section: "Table I"
+    status: stated
+
+  - id: panel.table2
+    kind: panel
+    text: "Avg PSD (lower better) and Avg Reward (x10^-2, higher better) for Baseline (DDPG) vs SEA-DBS at n = 10, 20, 50, 75 steps. Claim: SEA-DBS 'achieves lower PSD and higher average reward' at every n. Values in claim.table2.*."
+    section: "Table II; §V-B"
+    status: stated
+
+  # ---------------------------------------------------------------- numeric claims
+  - id: claim.table2.n10
+    kind: claim
+    text: "n = 10: Baseline Avg PSD 364, Avg Reward -1.96e-2; SEA-DBS 326, 5.76e-2."
+    section: "Table II"
+    status: stated
+    value: {baseline: {psd: 364, reward_e2: -1.96}, sea_dbs: {psd: 326, reward_e2: 5.76}}
+
+  - id: claim.table2.n20
+    kind: claim
+    text: "n = 20: Baseline Avg PSD 366, Avg Reward -2.56e-2; SEA-DBS 309, 16.81e-2."
+    section: "Table II"
+    status: stated
+    value: {baseline: {psd: 366, reward_e2: -2.56}, sea_dbs: {psd: 309, reward_e2: 16.81}}
+
+  - id: claim.table2.n50
+    kind: claim
+    text: "n = 50: Baseline Avg PSD 332, Avg Reward 3.24e-2; SEA-DBS 304, 21.16e-2."
+    section: "Table II"
+    status: stated
+    value: {baseline: {psd: 332, reward_e2: 3.24}, sea_dbs: {psd: 304, reward_e2: 21.16}}
+
+  - id: claim.table2.n75
+    kind: claim
+    text: "n = 75: Baseline Avg PSD 328, Avg Reward 4.84e-2; SEA-DBS 302, 23.00e-2. The text repeats it: 'at 75 steps, SEA-DBS reduces PSD to 302 and achieves a reward of 23.00x10^-2, while the Baseline remains at 328 PSD and 4.84x10^-2'."
+    section: "Table II; §V-B"
+    status: stated
+    value: {baseline: {psd: 328, reward_e2: 4.84}, sea_dbs: {psd: 302, reward_e2: 23.00}}
+
+  - id: claim.model_size
+    kind: claim
+    text: "'Quantization reduces the model size from 65MB to 33MB'. Which networks the size counts (actor only, or actor + critic + predictive model) is not said. (65 MB of FP32 weights would be about 16M parameters: our arithmetic, not the paper's.)"
+    section: "§V-B"
+    status: stated
+    value: {fp32_mb: 65, fp16_mb: 33}
+
+  - id: claim.ptq_matches
+    kind: claim
+    text: "'The quantized model closely matches the full-precision version in reducing PSD over 10 stimulation steps and continues to outperform the Baseline.'"
+    section: "§V-B; Fig. 6"
+    status: stated
+
+  - id: claim.training_samples
+    kind: claim
+    text: "Baseline+PM's early performance 'is limited due to noisy predictions and a small training set (4,500 samples)'. Consistent with 150 episodes x 30 steps."
+    section: "§V-B Ablation"
+    status: stated
+    value: 4500
+
+  - id: claim.faster_convergence
+    kind: claim
+    text: "SEA-DBS shows 'faster convergence, stronger suppression of pathological beta-band power, and resilience to post-training FP16 quantization' (abstract; §VI)."
+    section: "Abstract; §V-B; §VI"
+    status: stated
+
+  - id: claim.freq_50_vs_30
+    kind: claim
+    text: "50 Hz stimulation (above 13-35 Hz) gives greater PSD reduction than 30 Hz (inside the band), for both controllers."
+    section: "§V-B; Fig. 5"
+    status: stated
