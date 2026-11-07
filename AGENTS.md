@@ -49,6 +49,24 @@ off-limits source, and `tests/test_layout.py` checks the rights blocks.
    questions in `docs/tracker.md`, worded as hypotheses to check against the spec, never as
    paper facts.
 
+6. **Each piece keeps its own license** (`LICENSES.md`, map in `licenses.yaml`). Our own code is
+   Apache-2.0.
+   - **Vendor** (copy in) only small, stable, permissive pieces: MIT, BSD, Apache-2.0 code, CC BY
+     non-code. Keep the license text and notice next to the copy.
+   - **Link** (an opt-in extra or install-time fetch, never copied in): GPL/LGPL/AGPL code (opt-in
+     modules that import it from its own package, so the core stays Apache-2.0); non-commercial
+     or academic-only terms; code whose authors allow use but not redistribution; big maintained
+     upstreams (NEURON, Stable-Baselines3, NetPyNE, Gymnasium) as normal dependencies; anything
+     needing proprietary tools (MATLAB); large datasets, weights, or data under a use agreement.
+   - **Nothing:** code with no license and no written permission (e.g. ModelDB 206232) stays out
+     entirely, linked or not, until its rights holders grant use; then follow their grant.
+   - Paper rules (1–3) are unchanged. Fleming 2020's code stays unopened (rule 4) until Devin
+     decides otherwise.
+   - Every new plant, controller, baseline, adapter, dataset or dependency gets a
+     `licenses.yaml` entry in the same commit; for a paper-based piece, point `spec:` at its
+     pawtrace spec instead of repeating its license. `uv run python tools/licenses.py --write`
+     renders the table; the tests fail on a stale table or a rule break.
+
 On nynxbox, the exact local paths these rules cover are listed in a private note:
 `~/vault/research/rl-adaptive-dbs-testbed/source-rules-local.md`. Read it before starting.
 
