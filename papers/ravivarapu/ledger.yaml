@@ -42,7 +42,7 @@ questions:
     evidence: []
     status: open
   - id: q.gumbel_and_updates
-    question: "What are tau_0, tau_min and lambda_tau, and is t in Eq. (14) the step within an episode or a global counter? Is the Gumbel noise applied once (softmax of Eq. (13)'s z) or twice (Eq. (11) applied to z)? How is the executed a_t taken from the relaxed sample, and what action form does the critic see in the critic loss, the target and the actor loss? Does the target use the stored r̂_t or a fresh prediction? What are the soft-update rate, optimizer, predictive-model learning rate, warm-up and terminal handling?"
+    question: "What are tau_0, tau_min and lambda_tau, and is t in Eq. (14) the step within an episode or a global counter? Is the Gumbel noise applied once (softmax of Eq. (13)'s z) or twice (Eq. (11) applied to z)? How is the executed a_t taken from the relaxed sample, and what action form does the critic see in the critic loss, the target and the actor loss? Does the target use the stored r̂_t or a fresh prediction? What are the soft-update rate, optimizer, predictive-model learning rate, warm-up and terminal handling, and how are the networks initialized (scheme and seeds)?"
     why: "These decide the update rule; the paper's Table I only covers the learning rates, gamma, buffer and batch."
     items: [explore.anneal_params, explore.anneal_clock, explore.gs_composition, action.discretize, action.critic_input, algo.target_action, algo.rhat_source, algo.predictive_target_updates, train.soft_update_rate, train.optimizer, train.pred_lr, algo.warmup, algo.terminal, train.init]
     panels: []
@@ -56,9 +56,9 @@ questions:
     evidence: []
     status: open
   - id: q.evaluation
-    question: "For Table II: what does n in {10, 20, 50, 75} control (how often the seed changes, or the stimulation update interval), how long is each test run, how many runs, and are Avg PSD and Avg Reward means over steps (or is Avg Reward Eq. (7) of the mean PSD)? For Fig. 4-7: how many seeds, which checkpoint, is a test 'step' one 2 ms env step, are actions sampled or greedy at test time, and how was FP16 PTQ applied?"
+    question: "For Table II: what does n in {10, 20, 50, 75} control (how often the seed changes, or the stimulation update interval), how long is each test run, how many runs, and are Avg PSD and Avg Reward means over steps (or is Avg Reward Eq. (7) of the mean PSD)? For Fig. 4: is each point the sum or the mean of the episode's step rewards (and the mean or final PSD), and is it smoothed? For Fig. 4-7: how many seeds, which checkpoint, is a test 'step' one 2 ms env step, are actions sampled or greedy at test time, and how was FP16 PTQ applied?"
     why: "Defines the gates for Table II and Fig. 4-7."
-    items: [eval.table2_protocol, eval.table2_averaging, eval.inference_steps, eval.ptq_fp16, action.eval_mode, train.seeds]
+    items: [eval.table2_protocol, eval.table2_averaging, eval.inference_steps, eval.ptq_fp16, action.eval_mode, train.seeds, eval.fig4_aggregation]
     panels: []
     evidence: []
     status: open

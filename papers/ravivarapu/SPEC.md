@@ -23,7 +23,7 @@ authors: ['Harsh Ravivarapu', 'Gaurav Bagwe', 'Xiaoyong Yuan', 'Chunxiu Yu', 'La
 
 ## spec
 
-100 items — 55 stated, 32 missing, 12 ambiguous, 1 contradicted
+101 items — 52 stated, 33 missing, 13 ambiguous, 3 contradicted
 
 | id | kind | status | section | text | ledger |
 | --- | --- | --- | --- | --- | --- |
@@ -31,7 +31,7 @@ authors: ['Harsh Ravivarapu', 'Gaurav Bagwe', 'Xiaoyong Yuan', 'Chunxiu Yu', 'La
 | plant.populations | protocol | stated | §III; Fig. 1 | Regions: 'excitatory and inhibitory cortical layers, the direct and indirect striatal pathways, the STN, GPi, GPe, and the thalamus' (Fig. 1 labels: rcortex, icortex, direct striatum, indirect striatum, GPe, GPi, STN, thalamus). |  |
 | plant.neuron_model | protocol | stated | §III | 'each region is modeled using Hodgkin-Huxley-type single-compartment neurons'. |  |
 | plant.neurons_per_population | parameter | contradicted | §III; §V-A | §III: 'with ten neurons per population'. §V-A: 'The basal ganglia consist of 10 neurons'. Reading 1: 10 neurons in each population. Reading 2: 10 neurons in the basal ganglia in total. |  |
-| plant.connectivity | protocol | stated | Fig. 1 | Fig. 1 schematic (green = excitatory, red = inhibitory, as drawn): icortex->rcortex (red); rcortex->indirect striatum, rcortex->direct striatum, rcortex->STN (green); indirect striatum->GPe (green as drawn); indirect striatum, GPe and direct striatum self-loops (red); GPe->GPi, GPe->STN (red); STN->GPe, STN->GPi (green); direct striatum->GPi (red); GPi->thalamus (red); thalamus->rcortex (green). Caption credits the schematic to Mehregan et al. [18]. |  |
+| plant.connectivity | protocol | ambiguous | Fig. 1 | Fig. 1 schematic (green = excitatory, red = inhibitory, as drawn): icortex->rcortex (red); rcortex->indirect striatum, rcortex->direct striatum, rcortex->STN (green); indirect striatum->GPe (green); indirect striatum, GPe and direct striatum self-loops (red); GPe->GPi, GPe->STN (red); STN->GPe, STN->GPi (green); direct striatum->GPi (red); GPi->thalamus (red); thalamus->rcortex (green). Caption credits the schematic to Mehregan et al. [18]. The indirect striatum->GPe arrow is the one edge in question. Reading 1: excitatory, as drawn. Reading 2: a drawing error and the edge is inhibitory; the figure's own direct-pathway counterpart (direct striatum->GPi) is red, and striatal projections are inhibitory in standard anatomy (general knowledge, not stated in the paper; §III gives no sign per connection). |  |
 | plant.synapses | protocol | missing | §III | 'Both stochastic and deterministic synaptic connections are included'. Which connections are stochastic, their connection rules and synaptic parameters are missing. |  |
 | plant.equations | equation | missing | §III | No neuron or synapse equations, currents, conductances, applied currents or other plant parameters are given. |  |
 | plant.pd_condition | protocol | missing | §III; §V-A | The model runs 'under both healthy and Parkinsonian conditions'; the environment 'is designed to mimic PD patients' oscillatory activity'. How the PD condition is set (which parameters change) is missing; experiments appear to use the PD condition only. |  |
@@ -62,7 +62,7 @@ authors: ['Harsh Ravivarapu', 'Gaurav Bagwe', 'Xiaoyong Yuan', 'Chunxiu Yu', 'La
 | reward.timing | protocol | missing | Alg. 1 line 8 | Whether r_t is computed from the window after executing a_t (s_{t+1}) or before it (s_t) is not given; Alg. 1 line 8 only says the env returns s_{t+1} and r_t. |  |
 | algo.backbone | protocol | stated | §IV, §IV-A | 'SEA-DBS builds on a DDPG backbone'; actor outputs stimulation decisions, critic estimates a learned Q-function; target critic Q_phi' and target actor pi_theta'. |  |
 | algo.critic_loss.eq2 | equation | stated | §IV-A, Eq. (2); Alg. 1 line 14 | L_critic = MSE(Q(s_t, a_t), Q_target); Alg. 1 line 14: L_critic = (1/B) sum_i (Q_phi(s_i, a_i) - Q_target)^2. |  |
-| algo.q_target.eq3 | equation | stated | §IV-A, Eq. (3) | Standard DDPG target, printed as 'Q_actor = r_t + gamma Q_phi'(s_{t+1}, pi_theta'(s_{t+1}))' (labelled Q_actor though the text calls it the target Q-value). Replaced by Eq. (9) in SEA-DBS. |  |
+| algo.q_target.eq3 | equation | contradicted | §IV-A, Eq. (2)-(3); §IV-B after Eq. (9) | Standard DDPG target, printed as 'Q_actor = r_t + gamma Q_phi'(s_{t+1}, pi_theta'(s_{t+1}))'; replaced by Eq. (9) in SEA-DBS. The left side and §IV-B ('updated using actor in Eq. (3)') call it the actor's; the sentence before it ('with the target Q-value computed as') and Eq. (2)'s Q_target call it the critic target. Reading 1: Q_actor is a mislabel for Q_target, the standard DDPG critic target. Reading 2: Eq. (3) is some separate quantity used for the actor update. |  |
 | algo.q_target.eq9 | equation | stated | §IV-B, Eq. (9); Alg. 1 line 13 | SEA-DBS target: Q_target = r_t + r̂_t + gamma Q_phi'(s_{t+1}, pi_theta'(s_{t+1})), r_t from Eq. (7), r̂_t from the predictive model (Eq. (8)). |  |
 | algo.rhat_source | protocol | ambiguous | Alg. 1 lines 9-13; Eq. (9) | Alg. 1 lines 9-10 compute r̂_t at collection time and store it in the buffer; line 13 then uses Eq. (9). Reading 1: the stored r̂_t is used in the target. Reading 2: r̂ is recomputed by the current f_theta at update time. |  |
 | algo.target_action | protocol | missing | Eq. (9) | How pi_theta'(s_{t+1}) in the target is turned into the critic's action input (deterministic softmax, argmax, Gumbel sample) is not given. |  |
@@ -106,12 +106,13 @@ authors: ['Harsh Ravivarapu', 'Gaurav Bagwe', 'Xiaoyong Yuan', 'Chunxiu Yu', 'La
 | eval.table2_protocol | protocol | ambiguous | §V-B; Table II | Text: 'We evaluate SEA-DBS to simulate varying PD progression rates by changing the environment seed every n in {10, 20, 50, 75} step'. Table II caption: 'across different stimulation update intervals'. Reading 1: n = how often the env seed changes during a test run. Reading 2: n = the stimulation update interval. Run length, number of runs and which trained checkpoint are not given. |  |
 | eval.table2_averaging | protocol | ambiguous | Table II; Eq. (7) | What 'Avg PSD' and 'Avg Reward' average over is not given. Reading 1: Avg Reward = Eq. (7) evaluated at P̄_beta = Avg PSD/1000 (matches all eight cells to rounding, our arithmetic: e.g. 326 -> (0.024 x 10)^2 = 5.76e-2). Reading 2: mean of per-step rewards. |  |
 | eval.inference_steps | protocol | missing | §V-B; Fig. 5-7 | Fig. 5-7 run trained models for 10 'stimulation steps' (x-axis Steps 0-10) from a common start (PSD about 462 by eye). Whether a step is one 2 ms env step or something longer, the start state, number of runs and which checkpoint are not given. |  |
+| eval.fig4_aggregation | protocol | missing | Fig. 4a-b; §V-B | How each Fig. 4 point is aggregated over an episode's 30 steps is not given: the reward (sum or mean of step rewards, or the last step's) and the PSD (mean over steps or final value), and whether curves are smoothed or averaged over seeds. The text says 'higher cumulative rewards', but values near -1.5 at episode 1 match one step of Eq. (7) at P̄_beta about 0.47 (Fig. 4a) rather than a 30-step sum (our arithmetic). |  |
 | eval.ptq_fp16 | protocol | missing | §V-B; Fig. 6 | '16-bit floating point (FP16) post-training quantization' of trained SEA-DBS and Baseline models, evaluated at 50 Hz over 10 stimulation steps. Which networks and tensors (weights, activations) are cast, and with what tool, are not given. |  |
 | panel.fig1 | panel | stated | Fig. 1 | Schematic of the PD brain model with excitatory (green) and inhibitory (red) pathways, credited to Mehregan et al. [18]. Not a result; see plant.connectivity. |  |
 | panel.fig2 | panel | stated | Fig. 2 | 'Reward as a function of average beta power P̄_beta': Eq. (7) on P̄_beta 0-1 with beta_t = 0.35 marked. Not a result; checks reward.eq7. |  |
-| panel.fig3 | panel | stated | Fig. 3 | Training-loop diagram: generate action probabilities -> 'Select Best Action (Eq. 11)' -> 'Add Gumbel Noise (Eq. 12)' -> sample action -> brain model -> feedback -> policy updates. The caption orders it (1) probabilities, (2) Gumbel noise, (3) sample; the box order puts Eq. 11 before the noise. Not a result. |  |
+| panel.fig3 | panel | contradicted | Fig. 3 boxes vs Fig. 3 caption; §IV-C, Eq. (11)-(12) | Training-loop diagram: generate action probabilities -> 'Select Best Action (Eq. 11)' -> 'Add Gumbel Noise (Eq. 12)' -> sample action -> brain model -> feedback -> policy updates. The caption orders it (1) probabilities, (2) Gumbel noise, (3) sample, as do §IV-C and Eq. (11), whose relaxed sample already contains the noise g_i; the box order puts 'Select Best Action (Eq. 11)' before 'Add Gumbel Noise (Eq. 12)'. Reading 1: the caption and §IV-C are right (logits -> add Gumbel noise -> sample). Reading 2: the boxes are right (pick a best action first, then add noise). Not a result. |  |
 | panel.fig4a | panel | stated | Fig. 4a; §V-B | 'PSD over training episodes': per-episode beta PSD (y '(PSD x 10^-3)'), Baseline vs SEA-DBS, episodes 1-150. Claim: SEA-DBS shows 'more pronounced and consistent suppression of beta activity', the Baseline 'only a modest decline'. By eye both start near 0.47; at episode 150 Baseline is about 0.36, SEA-DBS about 0.32. |  |
-| panel.fig4b | panel | stated | Fig. 4b; §V-B | 'Reward during training': per-episode reward, Baseline vs SEA-DBS, episodes 1-150. Claim: SEA-DBS 'achieves higher cumulative rewards with a faster initial learning rate'. By eye both start near -1.5 and end near 0 (SEA-DBS slightly above 0, Baseline slightly below). Per-episode aggregation (sum vs mean of step rewards) is not stated. |  |
+| panel.fig4b | panel | stated | Fig. 4b; §V-B | 'Reward during training': per-episode reward, Baseline vs SEA-DBS, episodes 1-150. Claim: SEA-DBS 'achieves higher cumulative rewards with a faster initial learning rate'. By eye both start near -1.5 and end near 0 (SEA-DBS slightly above 0, Baseline slightly below). Per-episode aggregation is not stated: see eval.fig4_aggregation. |  |
 | panel.fig5a | panel | stated | Fig. 5a; §V-B | Inference at 'Beta stimulation freq. 50 Hz': PSD vs steps 0-10, Baseline vs SEA-DBS. Claim: 50 Hz lies above the beta band and 'more effectively disrupts abnormal oscillations, leading to greater PSD reduction'; SEA-DBS lower. By eye both start at about 462; at step 10 Baseline about 352, SEA-DBS about 308. |  |
 | panel.fig5b | panel | stated | Fig. 5b; §V-B | Inference at 'Beta stimulation freq. 30 Hz': PSD vs steps 0-10, Baseline vs SEA-DBS. Claim: 30 Hz 'overlaps with the pathological beta band and is less effective'. By eye both start at about 462; at step 10 Baseline about 398, SEA-DBS about 388. |  |
 | panel.fig6 | panel | stated | Fig. 6; §V-B | FP16 PTQ at 50 Hz: PSD vs steps 0-10 for Baseline, Baseline + PTQ(fp16), SEA-DBS, SEA-DBS + PTQ(fp16). Claim: the quantized SEA-DBS 'closely matches the full-precision version' and 'continues to outperform the Baseline'. By eye the Baseline and SEA-DBS curves are the same as Fig. 5a; at step 10 Baseline+PTQ about 378, SEA-DBS+PTQ about 312. |  |
@@ -146,20 +147,21 @@ authors: ['Harsh Ravivarapu', 'Gaurav Bagwe', 'Xiaoyong Yuan', 'Chunxiu Yu', 'La
 - **q.networks** (open): What are the actor, critic and predictive-model architectures (layers, widths, activations), how many logits does the actor output, and is the predictive model f_theta a separate network from the actor? Which networks does the 65 MB / 33 MB model size count?
   - why it matters: No architecture is given; 65 MB is large for a scalar or short-window input, so the size claim can't be checked without it.
   - about: arch.actor (§IV), arch.critic (§IV), arch.pred_model (§IV-B), explore.n_classes (§IV-C, Eq. (11), (13)), algo.pred_params (§IV-B, Eq. (8); Alg. 1 line 1), claim.model_size (§V-B)
-- **q.gumbel_and_updates** (open): What are tau_0, tau_min and lambda_tau, and is t in Eq. (14) the step within an episode or a global counter? Is the Gumbel noise applied once (softmax of Eq. (13)'s z) or twice (Eq. (11) applied to z)? How is the executed a_t taken from the relaxed sample, and what action form does the critic see in the critic loss, the target and the actor loss? Does the target use the stored r̂_t or a fresh prediction? What are the soft-update rate, optimizer, predictive-model learning rate, warm-up and terminal handling?
+- **q.gumbel_and_updates** (open): What are tau_0, tau_min and lambda_tau, and is t in Eq. (14) the step within an episode or a global counter? Is the Gumbel noise applied once (softmax of Eq. (13)'s z) or twice (Eq. (11) applied to z)? How is the executed a_t taken from the relaxed sample, and what action form does the critic see in the critic loss, the target and the actor loss? Does the target use the stored r̂_t or a fresh prediction? What are the soft-update rate, optimizer, predictive-model learning rate, warm-up and terminal handling, and how are the networks initialized (scheme and seeds)?
   - why it matters: These decide the update rule; the paper's Table I only covers the learning rates, gamma, buffer and batch.
   - about: explore.anneal_params (Eq. (14); Table I), explore.anneal_clock (Eq. (14); Alg. 1 lines 4-5), explore.gs_composition (§IV-C, Eq. (11), (13)), action.discretize (§IV-C; Alg. 1 lines 6-8), action.critic_input (Alg. 1 lines 10-15), algo.target_action (Eq. (9)), algo.rhat_source (Alg. 1 lines 9-13; Eq. (9)), algo.predictive_target_updates (§IV-B after Eq. (9); Alg. 1 lines 17-19), train.soft_update_rate (Alg. 1; Table I), train.optimizer (§V-A; Table I), train.pred_lr (Table I), algo.warmup (Alg. 1 lines 11-12), algo.terminal (Eq. (9); Alg. 1), train.init (§V-A)
 - **q.baseline** (open): How is the Baseline (DDPG) set up: exploration noise, how its continuous output becomes a binary action, architecture and hyperparameters? Is 'guided sampling' in the ablation the same Gumbel-Softmax exploration, and were all ablation variants trained for 150 episodes with Table I's settings?
   - why it matters: Every result compares against the Baseline; without its setup the comparison can't be rebuilt.
   - about: baseline.ddpg (§V-B; Table II), ablation.gs_name (§V-B Ablation; §IV-C), ablation.training_budget (§V-B Ablation)
-- **q.evaluation** (open): For Table II: what does n in {10, 20, 50, 75} control (how often the seed changes, or the stimulation update interval), how long is each test run, how many runs, and are Avg PSD and Avg Reward means over steps (or is Avg Reward Eq. (7) of the mean PSD)? For Fig. 4-7: how many seeds, which checkpoint, is a test 'step' one 2 ms env step, are actions sampled or greedy at test time, and how was FP16 PTQ applied?
+- **q.evaluation** (open): For Table II: what does n in {10, 20, 50, 75} control (how often the seed changes, or the stimulation update interval), how long is each test run, how many runs, and are Avg PSD and Avg Reward means over steps (or is Avg Reward Eq. (7) of the mean PSD)? For Fig. 4: is each point the sum or the mean of the episode's step rewards (and the mean or final PSD), and is it smoothed? For Fig. 4-7: how many seeds, which checkpoint, is a test 'step' one 2 ms env step, are actions sampled or greedy at test time, and how was FP16 PTQ applied?
   - why it matters: Defines the gates for Table II and Fig. 4-7.
-  - about: eval.table2_protocol (§V-B; Table II), eval.table2_averaging (Table II; Eq. (7)), eval.inference_steps (§V-B; Fig. 5-7), eval.ptq_fp16 (§V-B; Fig. 6), action.eval_mode (§V-B), train.seeds (§V)
+  - about: eval.table2_protocol (§V-B; Table II), eval.table2_averaging (Table II; Eq. (7)), eval.inference_steps (§V-B; Fig. 5-7), eval.ptq_fp16 (§V-B; Fig. 6), action.eval_mode (§V-B), train.seeds (§V), eval.fig4_aggregation (Fig. 4a-b; §V-B)
 
 ## open gaps
 
 - plant.model
 - plant.neurons_per_population
+- plant.connectivity
 - plant.synapses
 - plant.equations
 - plant.pd_condition
@@ -178,6 +180,7 @@ authors: ['Harsh Ravivarapu', 'Gaurav Bagwe', 'Xiaoyong Yuan', 'Chunxiu Yu', 'La
 - action.eval_mode
 - reward.energy_term
 - reward.timing
+- algo.q_target.eq3
 - algo.rhat_source
 - algo.target_action
 - algo.terminal
@@ -202,4 +205,6 @@ authors: ['Harsh Ravivarapu', 'Gaurav Bagwe', 'Xiaoyong Yuan', 'Chunxiu Yu', 'La
 - eval.table2_protocol
 - eval.table2_averaging
 - eval.inference_steps
+- eval.fig4_aggregation
 - eval.ptq_fp16
+- panel.fig3

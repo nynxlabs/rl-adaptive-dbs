@@ -68,9 +68,9 @@ items:
 
   - id: plant.connectivity
     kind: protocol
-    text: "Fig. 1 schematic (green = excitatory, red = inhibitory, as drawn): icortex->rcortex (red); rcortex->indirect striatum, rcortex->direct striatum, rcortex->STN (green); indirect striatum->GPe (green as drawn); indirect striatum, GPe and direct striatum self-loops (red); GPe->GPi, GPe->STN (red); STN->GPe, STN->GPi (green); direct striatum->GPi (red); GPi->thalamus (red); thalamus->rcortex (green). Caption credits the schematic to Mehregan et al. [18]."
+    text: "Fig. 1 schematic (green = excitatory, red = inhibitory, as drawn): icortex->rcortex (red); rcortex->indirect striatum, rcortex->direct striatum, rcortex->STN (green); indirect striatum->GPe (green); indirect striatum, GPe and direct striatum self-loops (red); GPe->GPi, GPe->STN (red); STN->GPe, STN->GPi (green); direct striatum->GPi (red); GPi->thalamus (red); thalamus->rcortex (green). Caption credits the schematic to Mehregan et al. [18]. The indirect striatum->GPe arrow is the one edge in question. Reading 1: excitatory, as drawn. Reading 2: a drawing error and the edge is inhibitory; the figure's own direct-pathway counterpart (direct striatum->GPi) is red, and striatal projections are inhibitory in standard anatomy (general knowledge, not stated in the paper; §III gives no sign per connection)."
     section: "Fig. 1"
-    status: stated
+    status: ambiguous
 
   - id: plant.synapses
     kind: protocol
@@ -264,9 +264,9 @@ items:
 
   - id: algo.q_target.eq3
     kind: equation
-    text: "Standard DDPG target, printed as 'Q_actor = r_t + gamma Q_phi'(s_{t+1}, pi_theta'(s_{t+1}))' (labelled Q_actor though the text calls it the target Q-value). Replaced by Eq. (9) in SEA-DBS."
-    section: "§IV-A, Eq. (3)"
-    status: stated
+    text: "Standard DDPG target, printed as 'Q_actor = r_t + gamma Q_phi'(s_{t+1}, pi_theta'(s_{t+1}))'; replaced by Eq. (9) in SEA-DBS. The left side and §IV-B ('updated using actor in Eq. (3)') call it the actor's; the sentence before it ('with the target Q-value computed as') and Eq. (2)'s Q_target call it the critic target. Reading 1: Q_actor is a mislabel for Q_target, the standard DDPG critic target. Reading 2: Eq. (3) is some separate quantity used for the actor update."
+    section: "§IV-A, Eq. (2)-(3); §IV-B after Eq. (9)"
+    status: contradicted
 
   - id: algo.q_target.eq9
     kind: equation
@@ -539,6 +539,12 @@ items:
     section: "§V-B; Fig. 5-7"
     status: missing
 
+  - id: eval.fig4_aggregation
+    kind: protocol
+    text: "How each Fig. 4 point is aggregated over an episode's 30 steps is not given: the reward (sum or mean of step rewards, or the last step's) and the PSD (mean over steps or final value), and whether curves are smoothed or averaged over seeds. The text says 'higher cumulative rewards', but values near -1.5 at episode 1 match one step of Eq. (7) at P̄_beta about 0.47 (Fig. 4a) rather than a 30-step sum (our arithmetic)."
+    section: "Fig. 4a-b; §V-B"
+    status: missing
+
   - id: eval.ptq_fp16
     kind: protocol
     text: "'16-bit floating point (FP16) post-training quantization' of trained SEA-DBS and Baseline models, evaluated at 50 Hz over 10 stimulation steps. Which networks and tensors (weights, activations) are cast, and with what tool, are not given."
@@ -560,9 +566,9 @@ items:
 
   - id: panel.fig3
     kind: panel
-    text: "Training-loop diagram: generate action probabilities -> 'Select Best Action (Eq. 11)' -> 'Add Gumbel Noise (Eq. 12)' -> sample action -> brain model -> feedback -> policy updates. The caption orders it (1) probabilities, (2) Gumbel noise, (3) sample; the box order puts Eq. 11 before the noise. Not a result."
-    section: "Fig. 3"
-    status: stated
+    text: "Training-loop diagram: generate action probabilities -> 'Select Best Action (Eq. 11)' -> 'Add Gumbel Noise (Eq. 12)' -> sample action -> brain model -> feedback -> policy updates. The caption orders it (1) probabilities, (2) Gumbel noise, (3) sample, as do §IV-C and Eq. (11), whose relaxed sample already contains the noise g_i; the box order puts 'Select Best Action (Eq. 11)' before 'Add Gumbel Noise (Eq. 12)'. Reading 1: the caption and §IV-C are right (logits -> add Gumbel noise -> sample). Reading 2: the boxes are right (pick a best action first, then add noise). Not a result."
+    section: "Fig. 3 boxes vs Fig. 3 caption; §IV-C, Eq. (11)-(12)"
+    status: contradicted
 
   - id: panel.fig4a
     kind: panel
@@ -572,7 +578,7 @@ items:
 
   - id: panel.fig4b
     kind: panel
-    text: "'Reward during training': per-episode reward, Baseline vs SEA-DBS, episodes 1-150. Claim: SEA-DBS 'achieves higher cumulative rewards with a faster initial learning rate'. By eye both start near -1.5 and end near 0 (SEA-DBS slightly above 0, Baseline slightly below). Per-episode aggregation (sum vs mean of step rewards) is not stated."
+    text: "'Reward during training': per-episode reward, Baseline vs SEA-DBS, episodes 1-150. Claim: SEA-DBS 'achieves higher cumulative rewards with a faster initial learning rate'. By eye both start near -1.5 and end near 0 (SEA-DBS slightly above 0, Baseline slightly below). Per-episode aggregation is not stated: see eval.fig4_aggregation."
     section: "Fig. 4b; §V-B"
     status: stated
 
