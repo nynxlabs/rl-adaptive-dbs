@@ -5,6 +5,8 @@
 #   own        our code, Apache-2.0, Copyright (c) 2026 nynxlabs LLC
 #   vendored   copied into this repo; its license text + notice are kept next to it (`license_file`)
 #   linked     not in this repo: an installed dependency or an opt-in extra fetched from upstream
+#   extra      our own opt-in package under extras/<id>/ with its own license (e.g. GPL-3.0 glue
+#              around linked GPL code); the core never imports it
 #   reference  read for facts only (equations, values, conventions); no code or text is copied
 #   excluded   kept out entirely, linked or not (no license, or our own rules), until `until`
 #
@@ -85,10 +87,11 @@ components:
   - id: code.fleming2020
     name: Fleming, Dunn & Lowery 2020 model code
     kind: code
-    mode: excluded
+    mode: linked
     license: GPL-3.0
     credit: Fleming, Dunn & Lowery
-    until: we decide whether to add it as a linked, opt-in GPL module. Until then nobody opens it.
+    source: the authors' official GPL-3.0 repository; URL and pinned commit set in extras/fleming2020 when it lands
+    note: Fetched from the authors' official repository at install time, pinned to a commit, for the opt-in extras/fleming2020 module only; never copied into this repo.
 
   - id: dep.pawtrace
     name: pawtrace

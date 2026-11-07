@@ -37,7 +37,7 @@ policy:
     - kumaravelu-plant                # the earlier version's plant package
     - modeldb.science/206232          # Kumaravelu et al. ModelDB code: no license; the plant is rebuilt from the paper
     - modeldbrepository/206232        # its GitHub mirror
-    - fleming2020-code                # Fleming, Dunn & Lowery 2020 code (GPL-3.0): never opened
+    - fleming2020-code                # Fleming, Dunn & Lowery 2020 code (GPL-3.0): only via extras/fleming2020, never a source for this paper
 
 items:
   # ---------------------------------------------------------------- plant (environment)

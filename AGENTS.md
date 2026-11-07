@@ -38,7 +38,16 @@ off-limits source, and `tests/test_layout.py` checks the rights blocks.
    the `kumaravelu-plant` package, the authors' ModelDB code (model 206232) or its GitHub mirror,
    or older plant notes. Every parameter is a spec item in `papers/kumaravelu2016/spec.yaml`
    with its section (provenance), and its value in code cites that item id.
-4. **Fleming, Dunn & Lowery 2020 code (GPL-3.0): never open it.** The paper (CC BY 4.0) is fine.
+4. **Fleming, Dunn & Lowery 2020 code (GPL-3.0): only through the linked opt-in module.** Devin
+   lifted the never-open rule for this one purpose (nov 6 2026). The authors' code is used only
+   as published, from their official GPL-3.0 repository pinned to a commit (never ModelDB 262046
+   or any unlicensed copy), and never copied into this repo: it's fetched or installed at
+   install time. Our glue lives in `extras/fleming2020/` under GPL-3.0 with its own LICENSE, as an
+   optional extra; the Apache core never imports it (a test checks). Agents may read the code
+   to build that module. The paper (CC BY 4.0) is its own spec, `papers/fleming2020/`, written
+   from the paper only: keep notes about the code out of the paper-side spec and ledger, and
+   cite code facts only in `extras/fleming2020/`. A later clean-room rebuild from the papers
+   must be done by an agent that has never read Fleming's code (`docs/tracker.md`).
    **CL-DBS-RL** (MIT, the Nguyen group's follow-up code) is allowed for gap-fills where Devin's
    Nguyen spec is silent, never over it; its plant files keep rule 3. Other baselines follow
    their paper's license: CC BY papers (e.g. Su 2019, Zhu 2021, Bronte-Stewart 2020) are fine;
@@ -60,8 +69,7 @@ off-limits source, and `tests/test_layout.py` checks the rights blocks.
      needing proprietary tools (MATLAB); large datasets, weights, or data under a use agreement.
    - **Nothing:** code with no license and no written permission (e.g. ModelDB 206232) stays out
      entirely, linked or not, until its rights holders grant use; then follow their grant.
-   - Paper rules (1–3) are unchanged. Fleming 2020's code stays unopened (rule 4) until Devin
-     decides otherwise.
+   - Paper rules (1–3) are unchanged. Fleming 2020's code is linked, never vendored (rule 4).
    - Every new plant, controller, baseline, adapter, dataset or dependency gets a
      `licenses.yaml` entry in the same commit; for a paper-based piece, point `spec:` at its
      pawtrace spec instead of repeating its license. `uv run python tools/licenses.py --write`

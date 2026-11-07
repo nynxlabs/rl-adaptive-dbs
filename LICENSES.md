@@ -18,6 +18,9 @@ credit its authors. Our own code is Apache-2.0, Copyright (c) 2026 nynxlabs LLC
     dependencies;
   - anything that needs proprietary tools (e.g. MATLAB);
   - large datasets or model weights, and data under a use agreement.
+- **Extra** (our own opt-in package under `extras/<id>/`, with its own license): the glue around
+  linked copyleft code is licensed to match it (e.g. GPL-3.0), installed only on request, and
+  never imported by the Apache-2.0 core.
 - **Reference** (read for facts only): papers and code we take equations, values or conventions
   from, without copying their code or text.
 - **Excluded:** code with no license and no written permission stays out entirely, linked or
@@ -43,7 +46,7 @@ tests fail if this table is stale or a piece breaks the rules above.
 | Mehregan et al. 2024 controller | controller | own | Apache-2.0 (paper: publisher-copyright) | never | Method: Mehregan et al. (2024), IEEE MobileCloud. Our implementation. · `controllers/rl/ddpg/` |
 | Nguyen et al. 2025 controller | controller | own | Apache-2.0 (paper: publisher-copyright) | never | Method: Nguyen et al. (2025), IEEE ISCAS. Our implementation. · `controllers/rl/snn/` |
 | CL-DBS-RL (Nguyen group follow-up code) | code | reference | MIT |  | Binh Nguyen · `https://github.com/howyoubinh/CL-DBS-RL` · Gap-fill values only, no code copied. If code is ever vendored, keep its MIT license + notice with it. Its plant files port the Kumaravelu model and keep that model's status. |
-| Fleming, Dunn & Lowery 2020 model code | code | excluded | GPL-3.0 |  | Fleming, Dunn & Lowery · until: we decide whether to add it as a linked, opt-in GPL module. Until then nobody opens it. |
+| Fleming, Dunn & Lowery 2020 model code | code | linked | GPL-3.0 |  | Fleming, Dunn & Lowery · `the authors' official GPL-3.0 repository; URL and pinned commit set in extras/fleming2020 when it lands` · Fetched from the authors' official repository at install time, pinned to a commit, for the opt-in extras/fleming2020 module only; never copied into this repo. |
 | pawtrace | tool | linked | Apache-2.0 |  | nynxlabs LLC · `https://github.com/nynxlabs/pawtrace` |
 | NumPy | library | linked | BSD-3-Clause |  | NumPy developers · `https://numpy.org` |
 <!-- licenses-table:end -->

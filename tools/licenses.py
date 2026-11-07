@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MAP = ROOT / "licenses.yaml"
 DOC = ROOT / "LICENSES.md"
 START, END = "<!-- licenses-table:start -->", "<!-- licenses-table:end -->"
-MODES = ("own", "vendored", "linked", "reference", "excluded")
+MODES = ("own", "vendored", "linked", "extra", "reference", "excluded")
 VENDORABLE = {"MIT", "BSD-2-Clause", "BSD-3-Clause", "Apache-2.0", "ISC", "CC-BY-4.0", "CC0-1.0", "public-domain"}
 COPYLEFT = ("GPL", "LGPL", "AGPL")
 
@@ -49,6 +49,13 @@ def problems(components: list[dict]) -> list[str]:
                 out.append(f"{cid}: {lic} may not be vendored (link it, or leave it out)")
             if not c.get("license_file") or not (ROOT / c["license_file"]).exists():
                 out.append(f"{cid}: vendored code needs its license_file kept next to it")
+        if mode == "extra":
+            if not str(c.get("path", "")).startswith("extras/"):
+                out.append(f"{cid}: an extra lives under extras/<id>/")
+            if not c.get("license_file") or not (ROOT / c["license_file"]).exists():
+                out.append(f"{cid}: an extra needs its own license_file")
+        if mode == "linked" and c.get("kind") == "code" and any(lic.startswith(k) for k in COPYLEFT) and not c.get("source"):
+            out.append(f"{cid}: linked copyleft code needs its pinned upstream `source`")
         if lic == "none" and mode != "excluded" and c.get("kind") == "code":
             out.append(f"{cid}: code with no license stays out entirely (mode: excluded)")
         if any(lic.startswith(k) for k in COPYLEFT) and mode in ("vendored", "own"):
