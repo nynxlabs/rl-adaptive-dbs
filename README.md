@@ -24,4 +24,4 @@ Nothing here runs yet. We're starting with one simulated circuit and three publi
 
 ## License
 
-Apache-2.0. Copyright (c) 2026 nynxlabs LLC. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+Our own code is Apache-2.0, Copyright (c) 2026 nynxlabs LLC: see [LICENSE](LICENSE) and [NOTICE](NOTICE). This is a hub of other people's research, so each piece keeps its own license and credit. Permissive pieces may be copied in with their license; copyleft, non-commercial and other restricted code is linked from upstream as an opt-in extra, never copied in; unlicensed code stays out. The map is in [LICENSES.md](LICENSES.md).

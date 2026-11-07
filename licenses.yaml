@@ -1,0 +1,107 @@
+# Every piece of rl-adaptive-dbs and where its rights come from: the source of truth for
+# LICENSES.md (`uv run python tools/licenses.py --write` renders it; tests check it's current).
+#
+# mode:
+#   own        our code, Apache-2.0, Copyright (c) 2026 nynxlabs LLC
+#   vendored   copied into this repo; its license text + notice are kept next to it (`license_file`)
+#   linked     not in this repo: an installed dependency or an opt-in extra fetched from upstream
+#   reference  read for facts only (equations, values, conventions); no code or text is copied
+#   excluded   kept out entirely, linked or not (no license, or our own rules), until `until`
+#
+# For a paper, `spec:` points at its pawtrace spec; its license and AI rules come from that
+# spec's `rights:` block (one source of truth), so they're never repeated here.
+components:
+  - id: core
+    name: rl-adaptive-dbs (plants, controllers, adapters, baselines, recipes, tests)
+    kind: code
+    mode: own
+    license: Apache-2.0
+    credit: nynxlabs LLC
+    path: .
+
+  - id: plant.kumaravelu2016
+    name: Kumaravelu 2016 cortex-basal ganglia-thalamus plant (clean-room rebuild)
+    kind: plant
+    mode: own
+    license: Apache-2.0
+    credit: "Model: Kumaravelu, Brocker & Grill (2016), J Comput Neurosci. Our implementation, written from the paper."
+    path: plants/parkinsons/kumaravelu2016/
+    spec: papers/kumaravelu2016
+    note: Not on main yet.
+
+  - id: code.modeldb206232
+    name: Kumaravelu et al. ModelDB code (model 206232) and its GitHub mirror
+    kind: code
+    mode: excluded
+    license: none
+    source: https://modeldb.science/206232
+    credit: Kumaravelu, Brocker & Grill
+    until: the rights holders grant use in writing
+
+  - id: paper.so2012
+    name: So, Kent & Grill 2012 (cited by the plant for synapse conventions)
+    kind: paper
+    mode: reference
+    spec: papers/so2012
+    credit: So, Kent & Grill (2012)
+    note: Spec lands with the plant.
+
+  - id: controller.ravivarapu
+    name: SEA-DBS controller (Ravivarapu et al.)
+    kind: controller
+    mode: own
+    license: Apache-2.0
+    path: controllers/rl/sea_dbs/
+    spec: papers/ravivarapu
+    credit: "Method: Ravivarapu et al., arXiv 2507.06326 (CC BY 4.0). Our implementation."
+
+  - id: controller.mehregan
+    name: Mehregan et al. 2024 controller
+    kind: controller
+    mode: own
+    license: Apache-2.0
+    path: controllers/rl/ddpg/
+    spec: papers/mehregan
+    credit: "Method: Mehregan et al. (2024), IEEE MobileCloud. Our implementation."
+
+  - id: controller.nguyen
+    name: Nguyen et al. 2025 controller
+    kind: controller
+    mode: own
+    license: Apache-2.0
+    path: controllers/rl/snn/
+    spec: papers/nguyen
+    credit: "Method: Nguyen et al. (2025), IEEE ISCAS. Our implementation."
+
+  - id: code.cl-dbs-rl
+    name: CL-DBS-RL (Nguyen group follow-up code)
+    kind: code
+    mode: reference
+    license: MIT
+    source: https://github.com/howyoubinh/CL-DBS-RL
+    credit: Binh Nguyen
+    note: Gap-fill values only, no code copied. If code is ever vendored, keep its MIT license + notice with it. Its plant files port the Kumaravelu model and keep that model's status.
+
+  - id: code.fleming2020
+    name: Fleming, Dunn & Lowery 2020 model code
+    kind: code
+    mode: excluded
+    license: GPL-3.0
+    credit: Fleming, Dunn & Lowery
+    until: we decide whether to add it as a linked, opt-in GPL module. Until then nobody opens it.
+
+  - id: dep.pawtrace
+    name: pawtrace
+    kind: tool
+    mode: linked
+    license: Apache-2.0
+    source: https://github.com/nynxlabs/pawtrace
+    credit: nynxlabs LLC
+
+  - id: dep.numpy
+    name: NumPy
+    kind: library
+    mode: linked
+    license: BSD-3-Clause
+    source: https://numpy.org
+    credit: NumPy developers
