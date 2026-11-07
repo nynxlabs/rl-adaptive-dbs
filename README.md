@@ -20,7 +20,8 @@ Nothing here runs yet. We're starting with one simulated circuit and three publi
 - **`controllers/rl/`** — the published RL controllers.
 - **`controllers/baselines/`** — conventional controllers: no stimulation, continuous DBS, and closed-loop rules such as threshold and proportional–integral control.
 - **`adapters/`** — the glue that lets each controller run on every circuit its signals line up with.
-- **`papers/`** — one pawtrace recipe per paper: the spec, the figures we rebuild, and the gates each one has to pass.
+
+Our pawtrace project for these papers (each paper's spec, its ledger and the gates it has to pass) is kept separately for now.
 
 ## License
 

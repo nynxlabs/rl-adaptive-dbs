@@ -1,7 +1,7 @@
 # Tracker
 
 What's done, what's next, and the open questions we check as we go. Paper facts live in each
-paper's pawtrace spec (`papers/<paper>/spec.yaml`), never here.
+paper's pawtrace spec (`.pawtrace/papers/<paper>/spec.yaml`, private), never here.
 
 ## Status
 
@@ -19,7 +19,7 @@ paper's pawtrace spec (`papers/<paper>/spec.yaml`), never here.
 
 - **A clean-room Fleming 2020 rebuild, if we ever do one,** must be written by an agent that has
   never read Fleming's code: a fresh agent whose brief lists the code (and `extras/fleming2020/`)
-  as off-limits, working only from the papers and `papers/fleming2020/`. That's why notes about
+  as off-limits, working only from the papers and `.pawtrace/papers/fleming2020/`. That's why notes about
   the code stay out of the paper-side spec and ledger.
 
 ## Open questions and hypotheses

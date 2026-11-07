@@ -27,12 +27,13 @@ credit its authors. Our own code is Apache-2.0, Copyright (c) 2026 nynxlabs LLC
   not, until its rights holders grant use; then we follow what they grant.
 
 Papers are separate: what we may do with each paper (quote it, publish crops, give it to AI
-tools) is set in its pawtrace spec, `papers/<paper>/spec.yaml` § `rights`.
+tools) is set in its pawtrace spec, which we keep separately; its license and AI-tools rule are
+repeated in `licenses.yaml` so the table below shows them.
 
 ## Map
 
 Generated from [`licenses.yaml`](licenses.yaml) by `uv run python tools/licenses.py --write`;
-paper licenses and AI rules come from each paper's pawtrace spec, so they're recorded once. The
+paper licenses and AI rules are checked against each paper's pawtrace spec where we have it. The
 tests fail if this table is stale or a piece breaks the rules above.
 
 <!-- licenses-table:start -->
@@ -41,7 +42,7 @@ tests fail if this table is stale or a piece breaks the rules above.
 | rl-adaptive-dbs (plants, controllers, adapters, baselines, recipes, tests) | code | own | Apache-2.0 |  | nynxlabs LLC · `.` |
 | Kumaravelu 2016 cortex-basal ganglia-thalamus plant (clean-room rebuild) | plant | own | Apache-2.0 (paper: publisher-copyright) | allowed | Model: Kumaravelu, Brocker & Grill (2016), J Comput Neurosci. Our implementation, written from the paper. · `plants/parkinsons/kumaravelu2016/` · Not on main yet. |
 | Kumaravelu et al. ModelDB code (model 206232) and its GitHub mirror | code | excluded | none |  | Kumaravelu, Brocker & Grill · `https://modeldb.science/206232` · until: the rights holders grant use in writing |
-| So, Kent & Grill 2012 (cited by the plant for synapse conventions) | paper | reference | see spec |  | So, Kent & Grill (2012) · `papers/so2012` · Spec lands with the plant. |
+| So, Kent & Grill 2012 (cited by the plant for synapse conventions) | paper | reference | see spec |  | So, Kent & Grill (2012) · Spec lands with the plant. |
 | SEA-DBS controller (Ravivarapu et al.) | controller | own | Apache-2.0 (paper: CC-BY-4.0) | allowed | Method: Ravivarapu et al., arXiv 2507.06326 (CC BY 4.0). Our implementation. · `controllers/rl/sea_dbs/` |
 | Mehregan et al. 2024 controller | controller | own | Apache-2.0 (paper: publisher-copyright) | never | Method: Mehregan et al. (2024), IEEE MobileCloud. Our implementation. · `controllers/rl/ddpg/` |
 | Nguyen et al. 2025 controller | controller | own | Apache-2.0 (paper: publisher-copyright) | never | Method: Nguyen et al. (2025), IEEE ISCAS. Our implementation. · `controllers/rl/snn/` |

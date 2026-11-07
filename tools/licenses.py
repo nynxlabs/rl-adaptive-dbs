@@ -3,8 +3,9 @@
     uv run python tools/licenses.py            # check (exit 1 on a rule break or a stale table)
     uv run python tools/licenses.py --write    # rewrite the table in LICENSES.md
 
-Paper licenses and AI rules are read from each component's pawtrace spec (`spec:`), never
-repeated in licenses.yaml.
+A paper's license and AI rules come from its pawtrace spec in the private, gitignored
+`.pawtrace/` folder (`spec:` names it). licenses.yaml repeats them as `rights:` so the table
+renders without that folder; when the folder is here, a mismatch with the spec is an error.
 """
 from __future__ import annotations
 
@@ -15,6 +16,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 MAP = ROOT / "licenses.yaml"
+SPECS = ROOT / ".pawtrace" / "papers"
 DOC = ROOT / "LICENSES.md"
 START, END = "<!-- licenses-table:start -->", "<!-- licenses-table:end -->"
 MODES = ("own", "vendored", "linked", "extra", "reference", "excluded")
@@ -26,11 +28,19 @@ def load() -> list[dict]:
     return yaml.safe_load(MAP.read_text())["components"]
 
 
-def spec_rights(c: dict) -> dict | None:
-    if not c.get("spec"):
+def private_rights(c: dict) -> dict | None:
+    """The spec's own rights (license, ai_tools), or None without the private folder or spec."""
+    p = SPECS / str(c.get("spec")) / "spec.yaml"
+    if not c.get("spec") or not p.exists():
         return None
-    p = ROOT / c["spec"] / "spec.yaml"
-    return (yaml.safe_load(p.read_text()) or {}).get("rights") if p.exists() else None
+    r = (yaml.safe_load(p.read_text()) or {}).get("rights") or {}
+    return {"license": r.get("license"), "ai_tools": (r.get("rules") or {}).get("ai_tools")}
+
+
+def spec_rights(c: dict) -> dict | None:
+    """What the table shows for a spec'd piece: the `rights:` repeated in licenses.yaml."""
+    r = c.get("rights")
+    return {"license": r.get("license"), "rules": {"ai_tools": r.get("ai_tools")}} if c.get("spec") and r else None
 
 
 def problems(components: list[dict]) -> list[str]:
@@ -64,8 +74,15 @@ def problems(components: list[dict]) -> list[str]:
             out.append(f"{cid}: non-commercial terms are never vendored")
         if mode == "excluded" and not c.get("until"):
             out.append(f"{cid}: excluded needs `until` (what would let it in)")
-        if c.get("spec") and c.get("note", "").find("lands with") < 0 and spec_rights(c) is None:
-            out.append(f"{cid}: spec {c['spec']} not found")
+        if c.get("spec") and c.get("note", "").find("lands with") < 0:
+            if not c.get("rights"):
+                out.append(f"{cid}: a spec'd piece repeats its spec's rights (license, ai_tools)")
+            elif SPECS.is_dir():
+                own = private_rights(c)
+                if own is None:
+                    out.append(f"{cid}: spec .pawtrace/papers/{c['spec']} not found")
+                elif own != {"license": c["rights"].get("license"), "ai_tools": c["rights"].get("ai_tools")}:
+                    out.append(f"{cid}: rights {c['rights']} don't match the spec's {own}")
     return out
 
 
@@ -81,7 +98,7 @@ def table(components: list[dict]) -> str:
             lic = f"{c.get('license')} (paper: {r.get('license')})"
         ai = (r or {}).get("rules", {}).get("ai_tools", "") if r else ""
         credit = c.get("credit", "")
-        src = c.get("source") or c.get("path") or c.get("spec") or ""
+        src = c.get("source") or c.get("path") or ""
         extra = "; ".join(x for x in (c.get("until") and f"until: {c['until']}", c.get("note")) if x)
         cell = " · ".join(x for x in (credit, f"`{src}`" if src else "", extra) if x)
         rows.append(f"| {c['name']} | {c.get('kind','')} | {c.get('mode','')} | {lic} | {ai} | {cell} |")

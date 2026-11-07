@@ -10,8 +10,10 @@
 #   reference  read for facts only (equations, values, conventions); no code or text is copied
 #   excluded   kept out entirely, linked or not (no license, or our own rules), until `until`
 #
-# For a paper, `spec:` points at its pawtrace spec; its license and AI rules come from that
-# spec's `rights:` block (one source of truth), so they're never repeated here.
+# For a paper, `spec:` names its pawtrace spec, kept in the private `.pawtrace/` folder
+# (`.pawtrace/papers/<spec>/spec.yaml`, gitignored here). `rights:` repeats the two facts the
+# table shows (license, AI tools) so readers without that folder see them; where the folder is
+# present, `tools/licenses.py` checks they still match the spec's `rights:` block.
 components:
   - id: core
     name: rl-adaptive-dbs (plants, controllers, adapters, baselines, recipes, tests)
@@ -28,7 +30,8 @@ components:
     license: Apache-2.0
     credit: "Model: Kumaravelu, Brocker & Grill (2016), J Comput Neurosci. Our implementation, written from the paper."
     path: plants/parkinsons/kumaravelu2016/
-    spec: papers/kumaravelu2016
+    spec: kumaravelu2016
+    rights: {license: publisher-copyright, ai_tools: allowed}
     note: Not on main yet.
 
   - id: code.modeldb206232
@@ -44,7 +47,7 @@ components:
     name: So, Kent & Grill 2012 (cited by the plant for synapse conventions)
     kind: paper
     mode: reference
-    spec: papers/so2012
+    spec: so2012
     credit: So, Kent & Grill (2012)
     note: Spec lands with the plant.
 
@@ -54,7 +57,8 @@ components:
     mode: own
     license: Apache-2.0
     path: controllers/rl/sea_dbs/
-    spec: papers/ravivarapu
+    spec: ravivarapu
+    rights: {license: CC-BY-4.0, ai_tools: allowed}
     credit: "Method: Ravivarapu et al., arXiv 2507.06326 (CC BY 4.0). Our implementation."
 
   - id: controller.mehregan
@@ -63,7 +67,8 @@ components:
     mode: own
     license: Apache-2.0
     path: controllers/rl/ddpg/
-    spec: papers/mehregan
+    spec: mehregan
+    rights: {license: publisher-copyright, ai_tools: never}
     credit: "Method: Mehregan et al. (2024), IEEE MobileCloud. Our implementation."
 
   - id: controller.nguyen
@@ -72,7 +77,8 @@ components:
     mode: own
     license: Apache-2.0
     path: controllers/rl/snn/
-    spec: papers/nguyen
+    spec: nguyen
+    rights: {license: publisher-copyright, ai_tools: never}
     credit: "Method: Nguyen et al. (2025), IEEE ISCAS. Our implementation."
 
   - id: code.cl-dbs-rl

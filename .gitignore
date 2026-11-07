@@ -11,5 +11,6 @@ runs/
 logs/
 artifacts/
 .env
-# the paper PDF + extracted text/figures stay local unless the paper's license allows
-papers/*/source/
+# our pawtrace project (pawtrace.yaml, papers/: specs, ledgers, gates) — its own private repo,
+# nynxlabs/rl-adaptive-dbs.pawtrace, cloned here; paper PDFs stay local inside it
+.pawtrace/
