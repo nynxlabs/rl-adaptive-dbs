@@ -14,3 +14,6 @@ artifacts/
 # our pawtrace project (pawtrace.yaml, papers/: specs, ledgers, gates) — its own private repo,
 # nynxlabs/rl-adaptive-dbs.pawtrace, cloned here; paper PDFs stay local inside it
 .pawtrace/
+# agent notes are private: AGENTS.md is a local symlink into master's vault
+# (research/rl-adaptive-dbs-testbed/AGENTS.md), never committed here
+AGENTS.md
