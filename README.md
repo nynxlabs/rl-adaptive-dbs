@@ -17,8 +17,8 @@ Nothing here runs yet. We're starting with one simulated circuit and three publi
 ## What it will hold
 
 - **`plants/`** — simulated circuits, each rebuilt from its paper, with tests and a record of where every parameter comes from.
-- **`controllers/rl/`** — the published RL controllers.
-- **`controllers/baselines/`** — conventional controllers: no stimulation, continuous DBS, and closed-loop rules such as threshold and proportional–integral control.
+- **`controllers/parkinsons/rl/`** — the published RL controllers.
+- **`controllers/parkinsons/baselines/`** — conventional controllers: no stimulation, continuous DBS, and closed-loop rules such as threshold and proportional–integral control.
 - **`adapters/`** — the glue that lets each controller run on every circuit its signals line up with.
 
 Our pawtrace project for these papers (each paper's spec, its ledger and the gates it has to pass) is kept separately for now.

@@ -56,7 +56,7 @@ components:
     kind: controller
     mode: own
     license: Apache-2.0
-    path: controllers/rl/sea_dbs/
+    path: controllers/parkinsons/rl/sea_dbs/
     spec: ravivarapu
     rights: {license: CC-BY-4.0, ai_tools: allowed}
     credit: "Method: Ravivarapu et al., arXiv 2507.06326 (CC BY 4.0). Our implementation."
@@ -66,7 +66,7 @@ components:
     kind: controller
     mode: own
     license: Apache-2.0
-    path: controllers/rl/ddpg/
+    path: controllers/parkinsons/rl/ddpg/
     spec: mehregan
     rights: {license: publisher-copyright, ai_tools: never}
     credit: "Method: Mehregan et al. (2024), IEEE MobileCloud. Our implementation."
@@ -76,7 +76,7 @@ components:
     kind: controller
     mode: own
     license: Apache-2.0
-    path: controllers/rl/snn/
+    path: controllers/parkinsons/rl/snn/
     spec: nguyen
     rights: {license: publisher-copyright, ai_tools: never}
     credit: "Method: Nguyen et al. (2025), IEEE ISCAS. Our implementation."
