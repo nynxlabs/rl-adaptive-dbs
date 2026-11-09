@@ -7,14 +7,30 @@ authors:
   - given-names: Devin
     family-names: Auch
     affiliation: nynxlabs
+  - name: nynxlabs
     website: "https://nynxlabs.com"
 version: 0.0.1
+date-released: 2026-11-09
 license: Apache-2.0
 repository-code: "https://github.com/nynxlabs/rl-adaptive-dbs"
-url: "https://nynxlabs.com"
+url: "https://github.com/nynxlabs/rl-adaptive-dbs"
 keywords:
   - deep brain stimulation
   - adaptive DBS
   - reinforcement learning
   - Parkinson's disease
   - computational neuroscience
+preferred-citation:
+  type: software
+  title: "rl-adaptive-dbs"
+  authors:
+    - given-names: Devin
+      family-names: Auch
+    - name: nynxlabs
+  version: 0.0.1
+  year: 2026
+  date-released: 2026-11-09
+  publisher:
+    name: nynxlabs
+  url: "https://github.com/nynxlabs/rl-adaptive-dbs"
+  repository-code: "https://github.com/nynxlabs/rl-adaptive-dbs"
