@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use rl-adaptive-dbs in your research, please cite it using these metadata. Parts of this repository come from other authors under their own licenses (see LICENSES.md); please cite those works too."
+title: "rl-adaptive-dbs"
+abstract: "A shared testbed for adaptive deep brain stimulation controllers: reinforcement learning and conventional baselines on simulated brain circuits."
+type: software
+authors:
+  - given-names: Devin
+    family-names: Auch
+    affiliation: nynxlabs
+    website: "https://nynxlabs.com"
+version: 0.0.1
+license: Apache-2.0
+repository-code: "https://github.com/nynxlabs/rl-adaptive-dbs"
+url: "https://nynxlabs.com"
+keywords:
+  - deep brain stimulation
+  - adaptive DBS
+  - reinforcement learning
+  - Parkinson's disease
+  - computational neuroscience
